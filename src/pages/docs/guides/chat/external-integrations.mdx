@@ -6,91 +6,140 @@ meta_keywords: "chat integrations, external systems, webhooks, AI chat, message 
 
 Ably Chat is designed for extensibility. Whether you need to process messages with AI, translate content in real-time, trigger business workflows, or enrich messages with external data, Ably's integration capabilities enable you to extend your chat application without compromising on scale, reliability, or performance.
 
-This guide explains how to architect integrations that process chat messages through external systems and respond back to the chat in real-time. Before diving into the technical implementation, it's important to understand your architectural goals and the role your external system will play.
+This guide explains how to architect integrations that process chat messages through external systems and respond back to the chat in real-time.
 
 ## Why integrate external systems? <a id="why-integrate"/>
 
 Integrating external systems with Ably Chat enables you to extend your chat application beyond simple message delivery. Common integration use cases include:
 
-* **AI-powered assistance:** Process commands or questions through language models and respond with helpful information.
-* **Real-time translation:** Automatically translate messages for multilingual chat rooms.
-* **Notifications:** Detect and process mentions, or other notifications.
-* **Analytics and monitoring:** Analyze sentiment, track engagement metrics, or identify trending topics.
-* **Workflow automation:** Trigger external business processes based on chat activity.
-* **Command processing:** Handle slash commands that invoke server-side logic.
+* **AI-powered assistance:** Process commands or questions through language models and respond with helpful information
+* **Real-time translation:** Automatically translate messages for multilingual chat rooms
+* **Notifications:** Detect and process mentions, or trigger custom notification services
+* **Analytics and monitoring:** Analyze sentiment, track engagement metrics, or identify trending topics
+* **Workflow automation:** Trigger external business processes based on chat activity
+* **Command processing:** Handle slash commands that invoke server-side logic
 
 ## Why Ably for external integrations? <a id="why-ably"/>
 
-Ably Chat integrations are built on Ably's proven platform architecture, designed to handle integration workloads at any scale:
+Ably Chat integrations are built on Ably's proven platform architecture:
 
-* **Reliable message delivery:** Every integration benefits from Ably's [four pillars of dependability](/docs/platform/architecture): Performance, Integrity, Reliability, and Availability.
-* **Flexible routing:** Use channel filters to selectively route only the messages on channels that need processing to your integration.
-* **Multiple integration methods:** Choose webhooks, queues, or streaming based on your architecture and scale requirements.
-* **Proven at scale:** Ably processes over 500 million messages per day for customers, with [serverless scalability](/docs/platform/architecture/platform-scalability) that eliminates infrastructure management.
-* **No vendor lock-in:** Integrate with any external service, using any language or platform that can handle HTTP requests or consume from queues.
+* **Reliable message delivery:** Every integration benefits from Ably's [four pillars of dependability](/docs/platform/architecture): Performance, Integrity, Reliability, and Availability
+* **Flexible routing:** Use channel filters to selectively route only the messages that need processing
+* **Multiple integration methods:** Choose webhooks, queues, or streaming based on your architecture and scale requirements
+* **Proven at scale:** Ably processes over 500 million messages per day with [serverless scalability](/docs/platform/architecture/platform-scalability)
+* **No vendor lock-in:** Integrate with any external service using any language or platform
 
 Because Ably Chat rooms use Pub/Sub channels as their underlying transport, you can leverage all of Ably's [platform integrations](/docs/platform/integrations) to extend your chat application.
 
-## Key considerations <a id="key-considerations"/>
-
-Consider the following when integrating external systems with Ably Chat:
-
-* **Avoiding infinite loops:** When your integration responds back to chat, ensure responses don't trigger the same integration rule. Use separate channels or the [privileged skip integration flag](/docs/platform/integrations/skip-integrations) to break potential loops.
-* **Scale and reliability:** Different integration methods offer different reliability guarantees. Webhooks are simpler to implement but have limited retry windows, queues provide at-least-once delivery with dead letter queues, and streaming offers massive scale but requires more infrastructure management.
-* **External system limitations:** Your external service may have rate limits, processing constraints, or availability issues. Implement retry logic, circuit breakers, and caching to handle these limitations gracefully.
-* **Cost optimization:** Only process messages that require processing. Use channel filters to ensure you only receive messages from relevant chat rooms.
-
-## Implementation options <a id="implementation-options"/>
-
-You can configure many different types of integrations with Ably Chat. The three methods commonly used, and covered in this guide, are:
-
-1. Using [outbound webhooks](#webhook). [HTTP endpoint](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), and others.
-2. Using [Ably queues](#ably-queue).
-3. Using [outbound streaming](#outbound-streaming). Stream to your own [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), and others.
-
-## Understanding integrations <a id="understanding-integrations"/>
-
-Ably Chat rooms are built on Ably Pub/Sub channels, which means you can leverage Ably's integration capabilities to forward messages to external systems for processing:
-
-* **Chat rooms use Pub/Sub channels:** Each chat room is built on an Ably channel, enabling the full range of Ably's integration capabilities.
-* **Message structure:** Chat messages are encoded as Pub/Sub messages with a specific structure. See the [Chat integrations documentation](/docs/chat/integrations) for details on the mapping.
-* **Integration rules:** Configure rules that filter which messages trigger integrations based on channel name patterns and event types.
-* **Bidirectional flow:** Integrations allow you to export messages to external systems, process them, and respond back to chat rooms in real-time.
-
-### Integration flow <a id="integration-flow"/>
+## Understanding the integration flow <a id="integration-flow"/>
 
 The typical integration flow works as follows:
 
-1. A user sends a message to a chat room, optionally including headers or metadata to control processing externally.
-2. An integration rule evaluates the message based on room name pattern matching.
-3. If the rule matches, Ably forwards the message to your external system via the configured integration method.
-4. Your external system processes the message (AI inference, translation, business logic, etc.).
-5. The external system sends a response back to an Ably Chat room.
-6. All subscribed clients receive the response in real-time.
+1. A user sends a message to a chat room, optionally including [metadata or headers](#metadata-headers) to control processing
+2. An integration rule evaluates the message based on room name pattern matching
+3. If the rule matches, Ably forwards the message to your external system
+4. Your external system processes the message (AI inference, translation, business logic, etc.)
+5. The external system [sends a response](#responding) back to the chat room
+6. All subscribed clients receive the response in real-time
 
-[/TODO/]: # (Add a visual showing somethign like *Client → Ably Chat → Integration Rule → External System → Response → Ably Chat → Clients*)
+This bidirectional flow enables powerful patterns like chatbots, automated support, real-time translation, and more.
 
-## Filtering rooms and event types <a id="filtering"/>
+## Choosing an integration method <a id="implementation-options"/>
 
-Integrations allow you to filter which Chat rooms are forwarded to your external system using a regular expression on the room name.
-This is a simple way to reduce the volume of messages you need to process by only receiving messages from the chat rooms you are interested in.
+Ably provides three integration methods, each suited to different use cases:
 
-### Setting up integration rules <a id="setting-up-integration-rules"/>
+### Webhooks
 
-When configuring an integration rule in your Ably dashboard:
+[Outbound webhooks](/docs/platform/integrations/webhooks) are ideal for simple business logic and event-driven actions.
 
-* **Channel filter:** Use a regular expression to match channel names. For example, `^chat:support.*` will match all channels starting with `chat:support`. See [understanding channel names and room names](#understanding-channel-names-and-room-names) for details on how room names map to channel names.
-* **Event type:** Use `channel.message` for all integration types. This forwards all chat messages published to relevant rooms and excludes presence messages and channel lifecycle messages
-* **Enveloped messages:** Enable this to receive all metadata about the message, including the `serial`, `version`, and `extras` (which include the [`headers`](/docs/chat/rooms/messages#structure) of a chat message)
+**Best for:**
+* Processing @mentions or triggering custom notifications
+* Executing lightweight business logic (lookup, validation, etc.)
+* Serverless architectures (AWS Lambda, Cloud Functions, etc.)
 
-### Understanding channel names and room names <a id="understanding-channel-names-and-room-names"/>
+**Learn more:** See [Extract messages via integrations](/docs/chat/rooms/message-extraction#webhooks) for setup details and code examples.
 
-Chat rooms are underpinned by Ably Pub/Sub channels, but with a specific suffix (`::$chat`) added to form the full channel name.
-When using the Chat SDK to create or get a room, this is done automatically for you, you do not need to include the suffix yourself.
+### Ably Queues
+
+[Ably Queues](/docs/platform/integrations/queues) provide strict ordering and fault-tolerant delivery.
+
+**Best for:**
+* Automated support flows where message order matters
+* Processing sequential events (game moves, transaction steps)
+* Fault-tolerant message processing with automatic retries
+
+**Learn more:** See [Extract messages via integrations](/docs/chat/rooms/message-extraction#queues) for setup details and code examples.
+
+### Streaming
+
+[Outbound streaming](/docs/platform/integrations/streaming) enables massive scale and integration with existing infrastructure.
+
+**Best for:**
+* High-throughput scenarios (large-scale chats, millions of messages)
+* Existing streaming infrastructure (Kafka, Kinesis, etc.)
+* Complex data pipelines and analytics
+
+**Learn more:** See [Extract messages via integrations](/docs/chat/rooms/message-extraction#streaming) for setup details and code examples.
+
+## Using metadata and headers <a id="metadata-headers"/>
+
+Metadata and headers enable you to control how messages are processed by external systems and add context for integration logic.
+
+### Metadata
+
+Message [`metadata`](/docs/chat/rooms/messages#structure) is set by the client when sending a message. Use metadata for business data that should persist with the message.
+
+<Code>
+```javascript
+// Client sends message with metadata
+await room.messages.send({
+  text: 'What is the weather in London?',
+  metadata: {
+    intent: 'weather-query',
+    location: 'London',
+    userId: 'user-123'
+  }
+});
+```
+</Code>
+
+**Important:** Metadata is not server-validated. Always treat it as untrusted user input in your integration code.
+
+### Headers
+
+Message [`headers`](/docs/chat/rooms/messages#structure) can be set by the client, but can also be added by integration rules at the server level. This makes headers useful for adding server-authoritative routing data.
+
+<Code>
+```javascript
+// Client sends message with headers
+await room.messages.send({
+  text: '@bot translate "Hello, nice to meet you!"',
+  headers: {
+    'x-command': 'translate',
+    'x-target-lang': 'fr'
+  }
+});
+```
+</Code>
+
+Headers can also be added by your integration rule configuration in the Ably dashboard, providing server-authoritative data that clients cannot tamper with. This is useful for routing decisions or adding trusted context before messages reach your integration.
+
+### Metadata vs Headers
+
+Both metadata and headers are persisted with messages and accessible in your integration:
+
+| | Metadata | Headers |
+|---|----------|---------|
+| **Set by** | Client only | Client or integration rule |
+| **Best for** | Non-critical client specific data | Routing logic and server-authoritative data |
+| **Trusted?** | No (client-controlled) | Partially (rule-added headers are trusted) |
+| **Use case** | Context, intent | Integration routing |
+
+## Understanding channel names and room names <a id="channel-names"/>
+
+Chat rooms are underpinned by Ably Pub/Sub channels with a `::$chat` suffix added to form the full channel name. When using the Chat SDK to create or get a room, this is done automatically - you don't need to include the suffix yourself.
 
 Integration rules match against the full channel name, but you don't need to include the `::$chat` suffix in your filter pattern.
-
-**Example room and channel naming:**
 
 <Code>
 ```javascript
@@ -109,65 +158,9 @@ await generalRoom.messages.send({ text: 'Hi' }); // Won't trigger if filter is ^
 ```
 </Code>
 
-## Decoding and processing messages <a id="decoding-and-processing"/>
+## Processing messages in your integration <a id="processing"/>
 
-When your integration receives messages, you need to decode them and extract the relevant information.
-
-### Understanding enveloped messages <a id="understanding-enveloped-messages"/>
-
-With enveloping enabled (the default), Ably wraps messages in additional metadata like so:
-
-<Code>
-```javascript
-{
-  "source": "channel.message",
-  "appId": "your-app-id",
-  "channel": "chat:support::$chat",
-  "site": "eu-west-1-A",
-  "ruleId": "integration-rule-id",
-  "messages": [
-    {
-      "id": "oWSRIqvv2d:0:0",
-      "clientId": "some-client-id",
-      "name": "chat.message",
-      "timestamp": 1234567890,
-      "serial": "01765820788939-000@108wgxjJwBwuAB37648671:000",
-      "action": 0,
-      "data": {
-        "text": "Message content",
-        "metadata": {}
-      },
-      "extras": {
-        "headers": {
-          "x-integration-action": "weather"
-        }
-      }
-    }
-  ]
-}
-```
-</Code>
-
-### Extracting the room name <a id="extracting-room-name"/>
-
-Your integration receives the full channel name including the `::$chat` suffix. To send responses back to the same room, extract the room name by removing the suffix:
-
-<Code>
-```javascript
-// In your webhook handler or queue consumer
-function processIntegrationPayload(envelopeData) {
-  // Extract room name from channel name
-  const channelName = envelopeData.channel; // e.g., "chat:support::$chat"
-  const roomName = channelName.replace('::$chat', ''); // e.g., "chat:support"
-}
-```
-</Code>
-
-### Extracting message data <a id="extracting-message-data"/>
-
-The Ably SDK provides methods to decode messages from the enveloped payload.
-From there, you can extract the text content, headers, and metadata and process them as needed.
-You can use custom headers to control how messages are processed by your integration. For example, you might define an `x-integration-action` header to specify different processing actions:
+When your integration receives messages, extract the metadata and headers to control processing logic.
 
 <Code>
 ```javascript
@@ -181,101 +174,52 @@ async function processIntegrationPayload(envelopeData) {
     // Extract text content
     const text = msg.data?.text;
 
-    // Extract headers if needed
+    // Extract headers for routing
     const headers = msg.extras?.headers || {};
-    const action = headers['x-integration-action'];
+    const command = headers['x-command'];
 
-    // Extract metadata if needed
+    // Extract metadata for business context (treat as untrusted)
     const metadata = msg.data?.metadata || {};
+    const intent = metadata.intent;
 
-    // Process each message based on action
-    await processServiceRequest(roomName, text, action);
-  }
-}
+    // Extract room name for sending responses
+    const roomName = envelopeData.channel.replace('::$chat', '');
 
-async function processServiceRequest(roomName, text, action) {
-    switch (action) {
-      case 'weather':
-        await handleWeatherRequest(text, roomName);
-        break;
-
-      case 'translate':
-        await handleTranslationRequest(text, roomName);
-        break;
-
-      case 'ai-assist':
-        await handleAIAssistantRequest(text, roomName);
-        break;
-
-      default:
-        // Ignore messages without integration actions
-        break;
+    // Route based on headers or metadata
+    if (command === 'translate') {
+      await handleTranslation(text, headers['x-target-lang'], roomName);
+    } else if (intent === 'weather-query') {
+      await handleWeatherQuery(metadata.location, roomName);
     }
+  }
 }
 ```
 </Code>
 
-## Using a webhook <a id="webhook"/>
-
-Ably can forward messages to your external system via a webhook. This is the simplest integration method to set up and works well for most use cases. This section covers HTTP endpoint webhooks, but the same principles apply to other webhook integrations such as AWS Lambda, Azure Function, Google Cloud Function, and others.
-
-Read the guide on [outbound webhooks](/docs/platform/integrations/webhooks) for more details on how to set up a webhook with Ably for the platform of your choice.
-
-Benefits:
-- Simplest integration method to implement and get started quickly.
-- Automatic retry handling with configurable retry windows.
-- No additional infrastructure required beyond your webhook endpoint or function.
-
-You need to consider:
-- Ably retries failed webhook deliveries, but only for a limited retry window. Monitor the [`[meta]log` channel](/docs/platform/errors#meta) for delivery failures.
-- Messages can arrive out-of-order. Use `serial` and `version.serial` properties to order them correctly if needed.
-- Failed webhook calls that exceed the retry window will lead to message loss. Implement monitoring and alerting to detect failures early.
-- [At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery) means you need to handle duplicate messages. Deduplication can be done by tracking `serial` and `version.serial`.
-
-## Using an Ably queue <a id="ably-queue"/>
-
-Ably can forward messages from chat room channels to an [Ably Queue](/docs/platform/integrations/queues), which you can then consume from your own servers to process messages through your external system and respond back to chat. Read the guide on [Ably queues](/docs/platform/integrations/queues) for more details on how to set up the queue integration with Ably.
-
-Ably ensures that each message is delivered to only one consumer even if multiple consumers are connected.
-
-Benefits of using an Ably queue:
-- You can consume it from your servers, meaning overall this is fault-tolerant. Ably takes care of the complexity of maintaining a queue.
-- You can use multiple queues and configure which channels go to which queue via regex filters on the channel name.
-- Fault-tolerant: if your systems suffer any temporary downtime, you will not miss messages, up to the queue max size. There is a dead letter queue to handle the situation where messages are dropped from the Ably Queue.
-
-You need to consider:
-- During peak times you may need to scale up your consumers to avoid overloading the queue past the maximum queue length allowed.
-- Each message has a time-to-live in the queue. The default and maximum is 60 minutes.
-- Oldest messages are dropped if the maximum queue length is exceeded. Check the [dead letter queue](/docs/platform/integrations/queues#deadletter) to see if this is happening.
-- Always consume messages from the [dead letter queue](/docs/platform/integrations/queues#deadletter) to monitor errors.
-
-## Using outbound streaming <a id="outbound-streaming"/>
-
-Ably can stream messages directly to your own queueing or streaming service: Kafka, Kinesis, AMQP, SQS, Pulsar. Read the guide on [outbound streaming](/docs/platform/integrations/streaming) for more details on how to set up the streaming integration with Ably for the service of your choice.
-
-Benefits:
-- Use your existing queue system to process messages from Ably.
-- You control your own queue system, so you have full control over message ingestion in terms of retry strategies, retention policies, queue lengths, and so on.
-
-You need to consider:
-- You need to maintain and be responsible for a reliable streaming system. If you don't already have such a system, it increases complexity on your end.
-- Consistency. If your streaming system is not reachable, messages may be lost. Errors can be seen in the [`[meta]log` channel](/docs/platform/errors#meta).
+For complete details on message decoding and structure, see [Extract messages via integrations](/docs/chat/rooms/message-extraction#decoding).
 
 ## Responding back to chat <a id="responding"/>
 
-After processing messages through your external system, you will typically want to publish responses back to the chat room. This could be answers from an AI assistant, translated text, enriched content, or status updates.
-To avoid triggering the integration rule on the response message, use Ably's [skip integrations](/docs/platform/integrations/skip-integrations) feature to publish messages that bypass integration rules.
+After processing messages through your external system, publish responses back to the chat room. This completes the bidirectional integration flow.
 
-**Note:** Your API key or token must have the [`privileged-headers`](/docs/auth/capabilities#capability-operations) capability to apply the skip integration flag.
+### Avoiding infinite loops
+
+When your integration responds back to chat, ensure responses don't trigger the same integration rule. Use Ably's [skip integrations](/docs/platform/integrations/skip-integrations) feature to publish messages that bypass integration rules.
+
+**Note:** Your API key or token must have the [`privileged-headers`](/docs/auth/capabilities#capability-operations) capability to skip integrations.
 
 <Code>
 ```javascript
-async function sendResponseToChat(channelName, responseText) {
-  // Extract the room name from the channel name
-  const roomName = channelName.replace('::$chat', ''); // e.g., "chat:support"
+const { ChatClient } = require('@ably/chat');
+
+async function sendResponseToChat(roomName, responseText) {
+  // Initialize Chat client with privileged API key
+  const chatClient = new ChatClient({ key: 'YOUR_API_KEY' });
+
+  // Get the chat room
   const room = await chatClient.rooms.get(roomName);
 
-  // Send response message skipping some or all integration rules
+  // Send response message skipping integration rules
   await room.messages.send({
     text: responseText
   }, {
@@ -289,18 +233,123 @@ async function sendResponseToChat(channelName, responseText) {
 ```
 </Code>
 
-The rule ID is available in the integration webhook envelope's `ruleId` field, or you can find it in your Ably [dashboard](https://ably.com/dashboard) under Integrations.
+Alternatively, you can skip only specific rules by providing the rule IDs as an array instead of `'*'`. The rule ID is available in the integration webhook envelope's `ruleId` field, or you can find it in your Ably [dashboard](https://ably.com/dashboard) under Integrations.
+
+## Complete example: AI assistant integration <a id="example"/>
+
+The following example demonstrates a complete bidirectional integration where messages are processed by an AI assistant and responses are sent back to the chat.
+
+### Step 1: Client sends message with metadata
+
+<Code>
+```javascript
+// Client application
+await room.messages.send({
+  text: '@bot translate "Hello!"',
+  metadata: {
+    intent: 'translate',
+    targetLanguage: 'fr'
+  }
+});
+```
+</Code>
+
+### Step 2: Integration rule forwards to webhook
+
+Configure an integration rule in your dashboard:
+- Channel filter: `^chat:.*` (matches all chat rooms)
+- Event type: `channel.message`
+- Endpoint: `https://your-domain.com/webhook`
+
+### Step 3: Webhook processes and responds
+
+<Code>
+```javascript
+const express = require('express');
+const Ably = require('ably');
+
+const app = express();
+app.use(express.json());
+
+app.post('/webhook', async (req, res) => {
+  const envelope = req.body;
+
+  // Decode messages
+  const messages = Ably.Realtime.Message.fromEncodedArray(envelope.messages);
+
+  for (const msg of messages) {
+    const text = msg.data?.text;
+    const metadata = msg.data?.metadata || {};
+    const roomName = envelope.channel.replace('::$chat', '');
+
+    // Process based on metadata intent
+    if (metadata.intent === 'translate') {
+      const translation = await translateText(text, metadata.targetLanguage);
+      await sendResponseToChat(roomName, `Translation: ${translation}`);
+    }
+  }
+
+  res.status(200).send('OK');
+});
+
+async function translateText(text, targetLang) {
+  // Call your translation service
+  return `[Translated to ${targetLang}]: ${text}`;
+}
+
+async function sendResponseToChat(roomName, responseText) {
+  const { ChatClient } = require('@ably/chat');
+  const chatClient = new ChatClient({ key: process.env.ABLY_API_KEY });
+
+  const room = await chatClient.rooms.get(roomName);
+
+  await room.messages.send({
+    text: responseText
+  }, {
+    extras: {
+      privileged: {
+        skipRule: '*' // Prevent infinite loop
+      }
+    }
+  });
+}
+
+app.listen(3000);
+```
+</Code>
+
+### Step 4: Clients receive the response
+
+All clients subscribed to the room receive the AI assistant's response in real-time:
+
+<Code>
+```javascript
+room.messages.subscribe((event) => {
+  console.log('Received:', event.message.text);
+  // Output: "Translation: [Translated to fr]: Bonjour!"
+});
+```
+</Code>
+
+## Key considerations <a id="key-considerations"/>
+
+Consider the following when integrating external systems with Ably Chat:
+
+* **Avoiding infinite loops:** Always use the [skip integrations flag](#responding) when responding back to chat to prevent your response from triggering the integration again
+* **Scale and reliability:** Different integration methods offer different reliability guarantees. See [choosing an integration method](#implementation-options) for guidance
+* **External system limitations:** Your external service may have rate limits, processing constraints, or availability issues. Implement retry logic, circuit breakers, and caching to handle these limitations gracefully
+* **Cost optimization:** Only process messages that require processing. Use channel filters and metadata/headers to route messages efficiently
+* **Security:** Always validate and sanitize client-provided metadata before using it in your integration logic
 
 ## Next steps <a id="next-steps"/>
 
 Explore related documentation to deepen your integration knowledge:
 
+* [Extract messages via integrations](/docs/chat/rooms/message-extraction) - Complete technical guide for setting up webhooks, queues, and streaming
+* [Chat integrations](/docs/chat/integrations) - Technical reference for Chat message structure
+* [Platform Integrations](/docs/platform/integrations) - Detailed setup for all integration types
+* [Export Chat Data](/docs/guides/chat/export-chat) - Guide for storing chat messages long-term
 * [Chat SDK documentation](/docs/chat) - Comprehensive guide to Ably Chat features
-* [Platform Integrations](/docs/platform/integrations) - Detailed setup for webhooks, queues, and streaming
-* [Chat Integrations](/docs/chat/integrations) - Technical reference for Chat message structure
-* [Export Chat Data](/docs/guides/chat/export-chat) - Guide for storing all chat messages long-term
-* [Architecture Overview](/docs/platform/architecture) - Learn how Ably achieves scale and reliability
-* [Authentication](/docs/auth) - Security best practices for production apps
 * [Chat Moderation](/docs/chat/moderation) - Filter and moderate chat content
 
 For custom integration requirements or questions, [contact Ably support](https://ably.com/support).
