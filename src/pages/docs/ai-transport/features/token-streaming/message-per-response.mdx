@@ -39,15 +39,11 @@ To enable the channel rule:
 
 The examples on this page use the `ai:` namespace prefix, which assumes you have configured the rule for `ai:*`.
 
-## Publishing tokens
+## Publishing tokens <a id="publishing"/>
 
-Publish tokens from a [Realtime](/docs/api/realtime-sdk) client, which maintains a
-persistent connection to the Ably service. This allows you to publish at very high message rates
-with the lowest possible latencies, while preserving guarantees around message delivery order.
-For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
+Publish tokens from a [Realtime](/docs/api/realtime-sdk) client, which maintains a persistent connection to the Ably service. This allows you to publish at very high message rates with the lowest possible latencies, while preserving guarantees around message delivery order. For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
 
-[Channels](/docs/channels) separate message traffic into different topics.
-For token streaming, each conversation or session typically has its own channel.
+[Channels](/docs/channels) separate message traffic into different topics. For token streaming, each conversation or session typically has its own channel.
 
 Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retrieve a channel instance:
 
@@ -57,65 +53,48 @@ const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
 ```
 </Code>
 
-To start streaming an AI response, publish the initial message. Then append each subsequent token
-to that message as it arrives from the AI model:
+To start streaming an AI response, publish the initial message. The message is identified by a server-assigned identifier called a [`serial`](/docs/messages#properties). Use the `serial` to append each subsequent token to the message as it arrives from the AI model:
 
 <Code>
 ```javascript
-// Example: stream yields string tokens like 'Hello', ' world', '!'
-
 // Publish initial message and capture the serial for appending tokens
 const { serials: [msgSerial] } = await channel.publish('response', { data: '' });
 
-for await (const token of stream) {
+// Example: stream returns events like { type: 'token', text: 'Hello' }
+for await (const event of stream) {
   // Append each token as it arrives
-  channel.appendMessage(msgSerial, token);
-}
-```
-</Code>
-
-When publishing tokens, don't await the `channel.appendMessage()` call. Ably rolls up acknowledgments
-and debounces them for efficiency, which means awaiting each append would unnecessarily slow down
-your token stream. Messages are still published in the order that `appendMessage()` is called, so delivery
-order is not affected.
-
-Append only supports concatenating data of the same type as the original message. For example, if
-the initial message data is a string, all appended tokens must also be strings. If the initial
-message data is binary, all appended tokens must be binary.
-
-This pattern allows publishing append operations for multiple concurrent model responses on the same
-channel. As long as you append to the correct message serial, tokens from different responses will
-not interfere with each other, and the final concatenated message for each response will contain only the tokens
-from that response.
-
-### Complete publish example
-
-The following example shows how to stream an AI response, publishing the first token as the initial message and appending subsequent tokens:
-
-<Code>
-```javascript
-const realtime = new Ably.Realtime('{{API_KEY}}');
-const channel = realtime.channels.get('ai:responses');
-
-async function streamAIResponse(prompt) {
-  // Example: stream yields string tokens like 'Hello', ' world', '!'
-  const stream = await getAIModelStream(prompt);
-
-  let messageSerial;
-
-  for await (const token of stream) {
-    if (!messageSerial) {
-      // First token: create the message and get serial
-      const response = await channel.publish('ai-response', token);
-      messageSerial = response.serials[0];
-    } else {
-      // Subsequent tokens: append without awaiting
-      channel.appendMessage(messageSerial, token);
-    }
+  if (event.type === 'token') {
+    channel.appendMessage(msgSerial, event.text);
   }
 }
 ```
 </Code>
+
+When publishing tokens, don't await the `channel.appendMessage()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each append would unnecessarily slow down your token stream. Messages are still published in the order that `appendMessage()` is called, so delivery order is not affected.
+
+<Code>
+```javascript
+// ✅ Do this - append without await for maximum throughput
+for await (const event of stream) {
+  if (event.type === 'token') {
+    channel.appendMessage(msgSerial, event.text);
+  }
+}
+
+// ❌ Don't do this - awaiting each append reduces throughput
+for await (const event of stream) {
+  if (event.type === 'token') {
+    await channel.appendMessage(msgSerial, event.text);
+  }
+}
+```
+</Code>
+
+<Aside data-type="important">
+Append only supports concatenating data of the same type as the original message. For example, if the initial message data is a string, all appended tokens must also be strings. If the initial message data is binary, all appended tokens must be binary.
+</Aside>
+
+This pattern allows publishing append operations for multiple concurrent model responses on the same channel. As long as you append to the correct message serial, tokens from different responses will not interfere with each other, and the final concatenated message for each response will contain only the tokens from that response.
 
 ## Subscribing to token streams
 
