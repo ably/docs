@@ -134,20 +134,17 @@ await channel.subscribe((message) => {
 
 ## Client hydration
 
-Clients joining a channel or recovering from disconnection can efficiently catchup using rewind or
-history. For temporary disconnections, Ably's automatic [connection recovery](docs/connect/states#connection-state-recovery)
-ensures that clients receive all missed tokens in order.
+When clients connect or reconnect, such as after a page refresh, they often need to catch up on complete responses and individual tokens that were published while they were offline or before they joined.
 
-By using either rewind or history with `untilAttach`, clients can efficiently hydrate the existing
-response state without needing to process every individual token. Both rewind and history deliver
-concatenated responses as `message.update` events and seamlessly transition from historical
-responses to live `message.append` events.
+The message per response pattern enables efficient client state hydration without needing to process every individual token and supports seamlessly transitioning from historical responses to live tokens.
 
-### Using rewind
+<Aside data-type="note">
+For temporary disconnections, Ably's automatic [connection recovery](docs/connect/states#connection-state-recovery) ensures that clients receive all missed tokens in order.
+</Aside>
 
-[Rewind](/docs/channels/options/rewind) attaches to a channel starting from a point in the past, delivering complete concatenated
-messages as `message.update` events.
+### Using rewind for recent history <a id="rewind"/>
 
+The simplest approach is to use Ably's [rewind](/docs/channels/options/rewind) channel option to attach to the channel at some point in the recent past, and automatically receive all messages since that point. Historical messages are delivered as `message.update` events containing the complete concatenated response, which then seamlessly transition to live `message.append` events for any ongoing responses:
 
 <Code>
 ```javascript
@@ -159,25 +156,36 @@ const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}', {
 // Track responses by message serial
 const responses = new Map();
 
-await channel.subscribe((msg) => {
-  switch (msg.action) {
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+await channel.subscribe((message) => {
+  switch (message.action) {
     case 'message.create':
       // New response started
-      responses.set(msg.serial, msg.data);
+      responses.set(message.serial, message.data);
       break;
     case 'message.append':
       // Append token to existing response
-      const current = responses.get(msg.serial) || '';
-      responses.set(msg.serial, current + msg.data);
+      const current = responses.get(message.serial) || '';
+      responses.set(message.serial, current + message.data);
       break;
     case 'message.update':
       // Replace entire response content
-      responses.set(msg.serial, msg.data);
+      responses.set(message.serial, message.data);
       break;
   }
 });
 ```
 </Code>
+
+Rewind supports two formats:
+
+- **Time-based**: Use a time interval like `'30s'` or `'2m'` to retrieve messages from that time period
+- **Count-based**: Use a number like `10` or `50` to retrieve the most recent N messages (maximum 100)
+
+<Aside data-type="note">
+At most 100 messages will be retrieved in a rewind request. If more messages exist within the specified interval, only the most recent 100 are sent.
+</Aside>
 
 ### Using history with untilAttach
 
