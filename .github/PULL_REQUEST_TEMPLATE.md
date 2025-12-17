@@ -6,4 +6,4 @@
 
 - [ ] Commits have been rebased.
 - [ ] Linting has been run against the changed file(s).
-- [ ] The PR adheres to the [writing style guide](../docs/blob/main/writing-style-guide.md) and [contribution guide](../docs/blob/main/CONTRIBUTING.md).
+- [ ] The PR adheres to the [writing style guide](../blob/main/writing-style-guide.md) and [contribution guide](../blob/main/CONTRIBUTING.md).
