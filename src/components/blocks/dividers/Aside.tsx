@@ -19,6 +19,7 @@ const versioningColors: { [key: string]: { bg: string; text: string } } = {
   new: { bg: '#FFF0BA', text: '#AC8600' },
   updated: { bg: '#FFB8F1', text: '#9C007E' },
   experimental: { bg: '#D8BCFB', text: '#460894' },
+  'public-preview': { bg: '#B8E6FF', text: '#005A8C' },
 };
 
 const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
