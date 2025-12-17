@@ -302,6 +302,15 @@ export default {
       ],
     },
     {
+      name: 'Tools',
+      pages: [
+        {
+          name: 'Ably CLI',
+          link: '/docs/platform/tools/cli',
+        },
+      ],
+    },
+    {
       name: 'Debugging and errors',
       pages: [
         {

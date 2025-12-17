@@ -1,6 +1,6 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { WindowLocation } from '@reach/router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import { Helmet } from 'react-helmet';
 import If from './mdx/If';
@@ -66,7 +66,36 @@ jest.mock('@ably/ui/core/Code', () => {
   };
 });
 
+// Mock Radix UI Tooltip to avoid act() warnings from async state updates
+jest.mock('@radix-ui/react-tooltip', () => ({
+  Provider: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Root: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Trigger: ({ children, asChild }: { children: ReactNode; asChild?: boolean }) =>
+    asChild ? children : <div>{children}</div>,
+  Portal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Content: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
 describe('MDX component integration', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Suppress console warnings for MSW unhandled .md requests
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      const message = String(args[0]);
+      if (message.includes('[MSW]') && message.includes('.md')) {
+        return;
+      }
+      originalWarn.apply(console, args);
+    };
+  });
+
+  afterEach(() => {
+    // Restore console.warn and clear timers
+    jest.restoreAllMocks();
+    jest.clearAllTimers();
+  });
+
   it('renders basic content correctly', () => {
     render(
       <div>
@@ -276,13 +305,24 @@ describe('MDXWrapper structured data', () => {
         template: 'mdx' as const,
       },
     });
+
+    // Mock fetch to prevent async issues with jsdom teardown
+    global.fetch = jest.fn(() => Promise.reject(new Error('Markdown not available'))) as jest.Mock;
+
+    // Suppress console.error for expected fetch failures
+    jest.spyOn(console, 'error').mockImplementation((message) => {
+      if (typeof message === 'string' && message.includes('Failed to fetch markdown')) {
+        return;
+      }
+    });
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
-  it('does not generate structured data when only one language is present', () => {
+  it('does not generate structured data when only one language is present', async () => {
     render(
       <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
         <MDXWrapper pageContext={defaultPageContext} location={defaultLocation}>
@@ -291,13 +331,18 @@ describe('MDXWrapper structured data', () => {
       </UserContext.Provider>,
     );
 
+    // Wait for any async operations to settle
+    await waitFor(() => {
+      expect(screen.getByText('Test content')).toBeInTheDocument();
+    });
+
     const helmet = Helmet.peek();
     const jsonLdScript = helmet.scriptTags?.find((tag: { type?: string }) => tag.type === 'application/ld+json');
 
     expect(jsonLdScript).toBeUndefined();
   });
 
-  it('generates TechArticle structured data with multiple languages', () => {
+  it('generates TechArticle structured data with multiple languages', async () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         product: 'pubsub',
@@ -319,6 +364,11 @@ describe('MDXWrapper structured data', () => {
         </MDXWrapper>
       </UserContext.Provider>,
     );
+
+    // Wait for any async operations to settle
+    await waitFor(() => {
+      expect(screen.getByText('Test content')).toBeInTheDocument();
+    });
 
     const helmet = Helmet.peek();
     const jsonLdScript = helmet.scriptTags?.find((tag: { type?: string }) => tag.type === 'application/ld+json');
