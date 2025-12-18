@@ -131,6 +131,10 @@ export default {
           link: '/docs/chat/external-storage-and-processing/data-extraction',
         },
         {
+          name: 'Data processing',
+          link: '/docs/chat/external-storage-and-processing/data-processing',
+        },
+        {
           name: 'Data storage',
           link: '/docs/chat/external-storage-and-processing/data-storage',
         },
