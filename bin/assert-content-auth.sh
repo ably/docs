@@ -99,8 +99,8 @@ run_test "/index.html" "301" "text/html" "http://www.example.com/" "" "index.htm
 run_test "/does-not-exist.html" "404" "text/html" "" "foo" "Does not exist with auth token"
 
 # 8. Verify assets requests work without auth
-FIRST_ASSET=$(find public -name "*.jpg" -type f | head -n1 | sed 's|^public/||')
-run_test "/${FIRST_ASSET}" "200" "image/jpeg" "" "" "JPEG without auth"
+FIRST_ASSET=$(find public -name "*.png" -type f -print -quit | sed 's|^public/||')
+run_test "/${FIRST_ASSET}" "200" "image/png" "" "" "PNG without auth"
 
 # 9. Verify JSON requests work without auth
 run_test "/page-data/app-data.json" "200" "application/json" "" "" "Page data without auth"
