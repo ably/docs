@@ -69,73 +69,40 @@ Ably provides three integration methods, each suited to different use cases. All
 
 **Learn more:** See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#streaming) for setup details and code examples.
 
-## Using metadata and headers for routing <a id="metadata-headers"/>
+## Using metadata for structured content <a id="metadata-headers"/>
 
-Metadata and headers enable you to control how messages are processed by external systems and add context for integration logic.
-
-### Metadata
-
-Message [`metadata`](/docs/chat/rooms/messages#structure) is set by the client when sending a message. Use metadata for business data that should persist with the message.
+Clients can provide context for your external services to use while processing by adding data in the [`metadata`](/docs/chat/external-storage-and-processing/data-extraction#metadata-headers) field. For example, when implementing a notification system, you might include the target user ID and notification type:
 
 <Code>
 ```javascript
 // Client sends message with metadata
 await room.messages.send({
-  text: 'What is the weather in London?',
+  text: '@john.123 Can you review this?',
   metadata: {
-    intent: 'weather-query',
-    location: 'London',
-    userId: 'user-123'
+    targetClientId: 'john.123',
+    notificationType: 'mention'
   }
 });
 ```
 </Code>
 
-**Important:** Metadata is not server-validated. Always treat it as untrusted user input in your integration code.
-
-### Headers
-
-Message [`headers`](/docs/chat/rooms/messages#structure) can be set by the client when sending a message, similar to metadata. However, headers can also be added by integration rules when the rule triggers.
+You can then [extract](/docs/src/pages/docs/chat/external-storage-and-processing/data-processing.mdx#decoding) the metadata in your integration to trigger business logic:
 
 <Code>
 ```javascript
-// Client sends message with headers
-await room.messages.send({
-  text: '@bot translate to French',
-  headers: {
-    'x-command': 'translate',
-    'x-target-lang': 'fr'
-  }
-});
+// use metadata in your integration to trigger notifications
+const metadata = msg.data?.metadata || {};
+if (metadata.notificationType === 'mention') {
+  await sendNotification(metadata.targetClientId, {
+    type: 'mention',
+    text: msg.data.text,
+    roomName: roomName
+  });
+}
 ```
 </Code>
 
-#### Adding headers at the rule level
-
-When configuring an integration rule in your Ably dashboard, you can specify headers to be added when the rule triggers. This allows you to attach additional metadata to messages only when they match your integration criteria.
-
-For example, you might add:
-- A `x-rule-id` header to identify which rule processed the message
-- A `x-processed-timestamp` header to track when the rule was triggered
-- A `x-integration-type` header to indicate the processing type (e.g., "translation", "moderation")
-
-These rule-level headers are added after the client publishes the message, so they appear in the enveloped message received by your integration endpoint but not in the original message stored in chat history.
-
-**Important:** While rule-level headers cannot be set or modified by clients, neither headers nor metadata should be treated as fully server-authoritative. Always validate and sanitize all data in your integration code before using it for business logic or security decisions.
-
-### Metadata vs Headers
-
-Both metadata and headers are persisted with messages and accessible in your integration:
-
-| | Metadata | Headers |
-|---|----------|---------|
-| **Set by** | Client only | Client or integration rule |
-| **Added when** | On message publish | On message publish (client) or when rule triggers (rule-level) |
-| **Best for** | Business data that should persist | Routing logic and integration control |
-| **Trusted?** | No (always client-controlled) | No (validate both client and rule-added headers) |
-| **Use case** | User IDs, context, intent | Integration routing, action types, rule metadata |
-
-**Key distinction:** The main advantage of headers over metadata is that headers can be added by integration rules when they trigger, allowing you to attach additional context to messages only when they're being processed by your integration.
+**Important:** Metadata is not server-validated. Always treat it as untrusted user input and validate it in your integration code.
 
 ## Processing messages in your integration <a id="processing"/>
 
@@ -225,7 +192,7 @@ Process user commands through AI models and respond with generated content:
 async function handleAIAssistant(text, roomName) {
   // Call your AI service
   const response = await callAIService(text);
-  
+
   // Send response back to chat
   await sendResponseToChat(roomName, response);
 }
@@ -243,7 +210,7 @@ async function callAIService(text) {
       messages: [{ role: 'user', content: text }]
     })
   });
-  
+
   const data = await response.json();
   return data.choices[0].message.content;
 }
@@ -259,7 +226,7 @@ Automatically translate messages for multilingual chat rooms:
 async function handleTranslation(text, targetLang, roomName) {
   // Call your translation service
   const translation = await translateText(text, targetLang);
-  
+
   // Send translated message back to chat
   await sendResponseToChat(roomName, `[${targetLang.toUpperCase()}] ${translation}`);
 }
@@ -275,7 +242,7 @@ async function translateText(text, targetLang) {
       key: process.env.GOOGLE_TRANSLATE_API_KEY
     })
   });
-  
+
   const data = await response.json();
   return data.data.translations[0].translatedText;
 }
@@ -291,14 +258,14 @@ Filter messages through moderation services:
 async function handleModeration(text, roomName, messageSerial) {
   // Call your moderation service
   const moderationResult = await moderateContent(text);
-  
+
   if (!moderationResult.approved) {
     // Delete the original message
     await deleteMessage(roomName, messageSerial);
-    
+
     // Optionally send moderation notice
     await sendResponseToChat(
-      roomName, 
+      roomName,
       '⚠️ A message was removed for violating community guidelines'
     );
   }
@@ -314,7 +281,7 @@ async function moderateContent(text) {
     },
     body: JSON.stringify({ input: text })
   });
-  
+
   const data = await response.json();
   return {
     approved: !data.results[0].flagged
@@ -332,10 +299,10 @@ Detect mentions and trigger custom notifications:
 async function handleMentions(text, metadata, roomName) {
   // Extract mentions from text
   const mentions = extractMentions(text);
-  
+
   if (mentions.length > 0) {
     // Send notifications to mentioned users
-    await Promise.all(mentions.map(userId => 
+    await Promise.all(mentions.map(userId =>
       sendNotification(userId, {
         type: 'mention',
         room: roomName,
@@ -351,11 +318,11 @@ function extractMentions(text) {
   const mentionRegex = /@(\w+)/g;
   const mentions = [];
   let match;
-  
+
   while ((match = mentionRegex.exec(text)) !== null) {
     mentions.push(match[1]);
   }
-  
+
   return mentions;
 }
 
