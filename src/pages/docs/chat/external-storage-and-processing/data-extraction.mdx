@@ -20,7 +20,7 @@ Each method offers different trade-offs in terms of simplicity, reliability, and
 
 ## Filtering rooms <a id="filtering"/>
 
-Control which chat rooms trigger integrations using channel name filters.
+Integration rules can be configured to match and forward messages from specific chat rooms based on channel name patterns. This enables you to configure any number of integration rules for different use cases and apply them to relevant rooms.
 
 ### Setting up filters <a id="filter-setup"/>
 
@@ -30,17 +30,13 @@ When configuring an integration rule in your Ably dashboard:
 * **Event type**: Use `channel.message` to forward chat messages and exclude presence events
 * **Enveloped messages**: Enable to receive full message metadata including `serial`, `version`, and `headers`
 
-**Note**: Chat rooms use the `::$chat` suffix on channel names internally. Integration filters match against the full channel name, but you don't need to include the suffix in your filter pattern.
-
 ### Example filter configuration
 
 <Code>
 ```javascript
 // Room name: support:ticket-123
-// Internal channel: support:ticket-123::$chat
 // Filter pattern: ^support:.*
-// Result: Messages from this room will be forwarded
-
+// Result: Messages from support:ticket-123 will be forwarded
 const supportRoom = await chatClient.rooms.get('support:ticket-123');
 await supportRoom.messages.send({ text: 'Help needed' }); // Will trigger integration
 ```
@@ -71,11 +67,12 @@ await generalRoom.messages.send({ text: 'Hi' }); // Won't trigger if filter is ^
 
 ## Decoding messages <a id="decoding"/>
 
-Messages received through integrations are encoded as Ably Pub/Sub messages and need to be decoded into Chat messages. Full details on the mapping are available in the [Chat integrations](/docs/chat/integrations) documentation.
+Messages received through integrations are encoded as Ably Pub/Sub messages and need to be decoded into Chat messages. The Ably-js SDK exposes [functions](#decode-data) you can use to handle this, or you can see the page on [chat integrations](/docs/chat/integrations) for more details on how to manually decode messages.
+By default, these messages are sent in an envelope containing additional structured metadata, such as the channel name, app ID, and rule ID.
 
 ### Understanding enveloped messages <a id="envelope"/>
 
-With enveloping enabled (recommended), messages arrive wrapped in metadata:
+With enveloping enabled (recommended), messages arrive wrapped in useful metadata:
 
 <Code>
 ```javascript
@@ -105,9 +102,9 @@ With enveloping enabled (recommended), messages arrive wrapped in metadata:
 ```
 </Code>
 
-### Extracting room name <a id="extract-room"/>
+### Extracting the room name <a id="extract-room"/>
 
-Remove the `::$chat` suffix to get the room name:
+The enveloped payload contains the underlying channel name from which the contained messages originated. To get the corresponding room name, remove the `::$chat` suffix from the string value of the `channel` field:
 
 <Code>
 ```javascript
@@ -118,9 +115,11 @@ function extractRoomName(channelName) {
 ```
 </Code>
 
+This room name can then be used to interact with the Chat SDK and REST API as needed.
+
 ### Decoding message data <a id="decode-data"/>
 
-Use the Ably SDK to decode messages from the envelope:
+You can use the Ably SDK to decode messages from the envelope:
 
 <Code>
 ```javascript
@@ -138,6 +137,7 @@ function decodeMessages(envelopeData) {
     timestamp: msg.timestamp,
     action: msg.action,
     versionSerial: msg.version?.serial || msg.serial
+    versionTimestamp: msg.version?.timestamp || msg.timestamp
   }));
 }
 ```
@@ -162,7 +162,7 @@ await room.messages.send({
     targetClientId: 'User123',
     type: 'mention',
     location: 'London',
-    timestamp: Date.now()
+    language: 'en',
   }
 });
 ```
@@ -201,58 +201,35 @@ When configuring an integration rule in your Ably dashboard, you can specify hea
 
 These rule-level headers are added after the client publishes the message, so they appear in the enveloped message received by your integration endpoint but not in the original message stored in chat history. They will also not be visible to other chat clients.
 
-**Important:** While rule-level headers cannot be set or modified by clients, neither headers nor metadata should be treated as fully server-authoritative. Always validate and sanitize all data in your integration code before using it for business logic or security decisions.
+**Important:** Carefully validate and sanitize all data in your integration code before using it for business logic or security decisions.
 
-## Message versioning <a id="versioning"/>
+## Message ordering and versioning <a id="versioning"/>
 
-Chat messages have a versioning system for updates and deletes:
+Chat message `serial` and `version.serial` fields are [globally unique and lexicographically sortable](/docs/chat/rooms/messages#global-ordering) strings that enable you to correctly order chat messages even when they arrive out of sequence.
+Together with the `action` field, these properties allow you to handle message creation, updates, and deletions in the correct order.
 
-* **`serial`**: Unique identifier for the original message
-* **`version.serial`**: Identifier for the specific message version
-* **`action`**: Indicates message type (create, update, delete, or summary for reactions)
+* **`serial`**: Unique identifier for the original message (remains constant across all versions)
+* **`version.serial`**: Identifier for a specific message version (only populated for updated or deleted messages)
+* **`action`**: Indicates message type (`message.created`, `message.updated`, `message.deleted`, or `message.summary` for reactions)
 
-### Handling message versions <a id="handle-versions"/>
+When receiving messages through integrations, `version.serial` will only be present if the message has been updated or deleted (i.e., `action` is not `message.created`).
 
-<Code>
-```javascript
-function processMessage(message) {
-  // Discard reaction summaries if not needed
-  if (message.action === 'message.summary') {
-    return;
-  }
+### Determining message order <a id="handle-versions"/>
 
-  // Process based on action
-  switch (message.action) {
-    case 'message.created':
-      handleNewMessage(message);
-      break;
-    case 'message.updated':
-      handleMessageUpdate(message);
-      break;
-    case 'message.deleted':
-      handleMessageDelete(message);
-      break;
-  }
-}
-```
-</Code>
+Use `serial` and `version.serial` fields to determine the correct order of messages and apply updates or deletions appropriately:
 
-### Version ordering <a id="version-ordering"/>
+* **Comparing different messages**: Compare `serial` fields to determine which message was sent first. A lexicographically higher `serial` value indicates a newer message.
+* **Comparing versions of the same message**: When both messages have the same `serial` (indicating different versions of the same message), compare `version.serial` values to determine which version is newer. A lexicographically higher `version.serial` indicates a more recent update or delete operation.
 
-Version serials are lexicographically ordered. A higher `version.serial` indicates a newer version:
+### Handling out-of-order delivery
 
-<Code>
-```javascript
-function isNewerVersion(existingVersion, newVersion) {
-  return newVersion > existingVersion;
-}
+Messages may arrive out of order due to network conditions, retry logic, or when consuming from multiple integration sources. To handle this correctly:
 
-// Only process if this is a newer version
-if (isNewerVersion(stored.version.serial, incoming.version.serial)) {
-  updateMessage(incoming);
-}
-```
-</Code>
+1. Check if `message.serial === storedMessage.serial` to identify if they're the same message
+2. If the serials match, compare `message.version.serial > storedMessage.version.serial` to see if the incoming version is newer
+3. Only process the update or delete if the incoming version is newer than what you have stored
+
+This approach ensures you always maintain the most recent version of each message, regardless of delivery order.
 
 Read more about [message versioning and sorting](/docs/chat/rooms/messages#ordering-update-delete) in the messages documentation.
 
