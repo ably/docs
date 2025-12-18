@@ -119,6 +119,24 @@ export default {
       ],
     },
     {
+      name: 'External storage and processing',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/chat/external-storage-and-processing',
+          index: true,
+        },
+        {
+          name: 'Data extraction',
+          link: '/docs/chat/external-storage-and-processing/data-extraction',
+        },
+        {
+          name: 'Data storage',
+          link: '/docs/chat/external-storage-and-processing/data-storage',
+        },
+      ],
+    },
+    {
       name: 'React UI Kit',
       pages: [
         {
