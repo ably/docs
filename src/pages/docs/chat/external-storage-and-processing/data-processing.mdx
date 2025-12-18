@@ -1,0 +1,492 @@
+---
+title: "Process and respond to messages"
+meta_description: "Process chat messages through external systems and respond back to chat in real-time with AI, translation, moderation, and more."
+meta_keywords: "chat processing, AI chat, translation, bidirectional integration, message processing, chat automation"
+---
+
+Process chat messages through external systems like AI assistants, translation services, or moderation tools, then respond back to the chat in real-time. This bidirectional integration pattern enables powerful features like chatbots, automated support, real-time translation, and more.
+
+This guide explains how to architect integrations that process messages and respond back to chat, completing the bidirectional flow.
+
+## Why process messages with external systems? <a id="why-process"/>
+
+Integrating external systems with Ably Chat enables you to extend your chat application beyond simple message delivery:
+
+* **AI-powered assistance**: Process commands or questions through language models and respond with helpful information
+* **Real-time translation**: Automatically translate messages for multilingual chat rooms
+* **Content moderation**: Filter messages through moderation services before they appear in chat
+* **Notifications**: Detect mentions or keywords and trigger custom notification systems
+* **Workflow automation**: Trigger external business processes based on chat activity
+* **Command processing**: Handle slash commands that invoke server-side logic
+
+## Understanding the bidirectional flow <a id="integration-flow"/>
+
+The typical bidirectional integration flow works as follows:
+
+1. A user sends a message to a chat room, optionally including [metadata or headers](#metadata-headers) to control processing
+2. An integration rule evaluates the message based on room name pattern matching
+3. If the rule matches, Ably forwards the message to your external system
+4. Your external system processes the message (AI inference, translation, business logic, etc.)
+5. The external system [sends a response](#responding) back to the chat room
+6. All subscribed clients receive the response in real-time
+
+This bidirectional flow enables powerful patterns like chatbots, automated support, real-time translation, and more.
+
+## Choosing an integration method <a id="implementation-options"/>
+
+Ably provides three integration methods, each suited to different use cases. All three support the bidirectional pattern described in this guide.
+
+### Webhooks
+
+[Outbound webhooks](/docs/platform/integrations/webhooks) are ideal for simple business logic and event-driven actions.
+
+**Best for:**
+* Processing @mentions or triggering custom notifications
+* Executing lightweight business logic (lookup, validation, etc.)
+* Serverless architectures (AWS Lambda, Cloud Functions, etc.)
+
+**Learn more:** See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#webhooks) for setup details and code examples.
+
+### Ably Queues
+
+[Ably Queues](/docs/platform/integrations/queues) provide strict ordering and fault-tolerant delivery.
+
+**Best for:**
+* Automated support flows where message order matters
+* Processing sequential events (game moves, transaction steps)
+* Fault-tolerant message processing with automatic retries
+
+**Learn more:** See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#queues) for setup details and code examples.
+
+### Streaming
+
+[Outbound streaming](/docs/platform/integrations/streaming) enables massive scale and integration with existing infrastructure.
+
+**Best for:**
+* High-throughput scenarios (large-scale chats, millions of messages)
+* Existing streaming infrastructure (Kafka, Kinesis, etc.)
+* Complex data pipelines and analytics
+
+**Learn more:** See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#streaming) for setup details and code examples.
+
+## Using metadata and headers for routing <a id="metadata-headers"/>
+
+Metadata and headers enable you to control how messages are processed by external systems and add context for integration logic.
+
+### Metadata
+
+Message [`metadata`](/docs/chat/rooms/messages#structure) is set by the client when sending a message. Use metadata for business data that should persist with the message.
+
+<Code>
+```javascript
+// Client sends message with metadata
+await room.messages.send({
+  text: 'What is the weather in London?',
+  metadata: {
+    intent: 'weather-query',
+    location: 'London',
+    userId: 'user-123'
+  }
+});
+```
+</Code>
+
+**Important:** Metadata is not server-validated. Always treat it as untrusted user input in your integration code.
+
+### Headers
+
+Message [`headers`](/docs/chat/rooms/messages#structure) can be set by the client when sending a message, similar to metadata. However, headers can also be added by integration rules when the rule triggers.
+
+<Code>
+```javascript
+// Client sends message with headers
+await room.messages.send({
+  text: '@bot translate to French',
+  headers: {
+    'x-command': 'translate',
+    'x-target-lang': 'fr'
+  }
+});
+```
+</Code>
+
+#### Adding headers at the rule level
+
+When configuring an integration rule in your Ably dashboard, you can specify headers to be added when the rule triggers. This allows you to attach additional metadata to messages only when they match your integration criteria.
+
+For example, you might add:
+- A `x-rule-id` header to identify which rule processed the message
+- A `x-processed-timestamp` header to track when the rule was triggered
+- A `x-integration-type` header to indicate the processing type (e.g., "translation", "moderation")
+
+These rule-level headers are added after the client publishes the message, so they appear in the enveloped message received by your integration endpoint but not in the original message stored in chat history.
+
+**Important:** While rule-level headers cannot be set or modified by clients, neither headers nor metadata should be treated as fully server-authoritative. Always validate and sanitize all data in your integration code before using it for business logic or security decisions.
+
+### Metadata vs Headers
+
+Both metadata and headers are persisted with messages and accessible in your integration:
+
+| | Metadata | Headers |
+|---|----------|---------|
+| **Set by** | Client only | Client or integration rule |
+| **Added when** | On message publish | On message publish (client) or when rule triggers (rule-level) |
+| **Best for** | Business data that should persist | Routing logic and integration control |
+| **Trusted?** | No (always client-controlled) | No (validate both client and rule-added headers) |
+| **Use case** | User IDs, context, intent | Integration routing, action types, rule metadata |
+
+**Key distinction:** The main advantage of headers over metadata is that headers can be added by integration rules when they trigger, allowing you to attach additional context to messages only when they're being processed by your integration.
+
+## Processing messages in your integration <a id="processing"/>
+
+When your integration receives messages, extract the metadata and headers to control processing logic.
+
+<Code>
+```javascript
+const Ably = require('ably');
+
+async function processIntegrationPayload(envelopeData) {
+  // Decode messages using Ably SDK
+  const decodedMessages = Ably.Realtime.Message.fromEncodedArray(envelopeData.messages);
+
+  for (const msg of decodedMessages) {
+    // Extract text content
+    const text = msg.data?.text;
+
+    // Extract headers for routing
+    const headers = msg.extras?.headers || {};
+    const command = headers['x-command'];
+
+    // Extract metadata for business context (treat as untrusted)
+    const metadata = msg.data?.metadata || {};
+    const intent = metadata.intent;
+
+    // Extract room name for sending responses
+    const roomName = envelopeData.channel.replace('::$chat', '');
+
+    // Route based on headers or metadata
+    if (command === 'translate') {
+      await handleTranslation(text, headers['x-target-lang'], roomName);
+    } else if (intent === 'weather-query') {
+      await handleWeatherQuery(metadata.location, roomName);
+    }
+  }
+}
+```
+</Code>
+
+For complete details on message decoding and structure, see [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#decoding).
+
+## Responding back to chat <a id="responding"/>
+
+After processing messages through your external system, publish responses back to the chat room. This completes the bidirectional integration flow.
+
+### Avoiding infinite loops
+
+When your integration responds back to chat, ensure responses don't trigger the same integration rule. Use Ably's [skip integrations](/docs/platform/integrations/skip-integrations) feature to publish messages that bypass integration rules.
+
+**Note:** Your API key or token must have the [`privileged-headers`](/docs/auth/capabilities#capability-operations) capability to skip integrations.
+
+<Code>
+```javascript
+const { ChatClient } = require('@ably/chat');
+
+async function sendResponseToChat(roomName, responseText) {
+  // Initialize Chat client with privileged API key
+  const chatClient = new ChatClient({ key: 'YOUR_API_KEY' });
+
+  // Get the chat room
+  const room = await chatClient.rooms.get(roomName);
+
+  // Send response message skipping integration rules
+  await room.messages.send({
+    text: responseText
+  }, {
+    extras: {
+      privileged: {
+        skipRule: '*' // Skip all integration rules
+      }
+    }
+  });
+}
+```
+</Code>
+
+Alternatively, you can skip only specific rules by providing the rule IDs as an array instead of `'*'`. The rule ID is available in the integration webhook envelope's `ruleId` field, or you can find it in your Ably [dashboard](https://ably.com/dashboard) under Integrations.
+
+## Common processing patterns <a id="patterns"/>
+
+### AI assistant pattern <a id="ai-pattern"/>
+
+Process user commands through AI models and respond with generated content:
+
+<Code>
+```javascript
+async function handleAIAssistant(text, roomName) {
+  // Call your AI service
+  const response = await callAIService(text);
+  
+  // Send response back to chat
+  await sendResponseToChat(roomName, response);
+}
+
+async function callAIService(text) {
+  // Example: OpenAI, Anthropic, etc.
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: text }]
+    })
+  });
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+```
+</Code>
+
+### Translation pattern <a id="translation-pattern"/>
+
+Automatically translate messages for multilingual chat rooms:
+
+<Code>
+```javascript
+async function handleTranslation(text, targetLang, roomName) {
+  // Call your translation service
+  const translation = await translateText(text, targetLang);
+  
+  // Send translated message back to chat
+  await sendResponseToChat(roomName, `[${targetLang.toUpperCase()}] ${translation}`);
+}
+
+async function translateText(text, targetLang) {
+  // Example: Google Translate, DeepL, etc.
+  const response = await fetch('https://translation.googleapis.com/language/translate/v2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      q: text,
+      target: targetLang,
+      key: process.env.GOOGLE_TRANSLATE_API_KEY
+    })
+  });
+  
+  const data = await response.json();
+  return data.data.translations[0].translatedText;
+}
+```
+</Code>
+
+### Moderation pattern <a id="moderation-pattern"/>
+
+Filter messages through moderation services:
+
+<Code>
+```javascript
+async function handleModeration(text, roomName, messageSerial) {
+  // Call your moderation service
+  const moderationResult = await moderateContent(text);
+  
+  if (!moderationResult.approved) {
+    // Delete the original message
+    await deleteMessage(roomName, messageSerial);
+    
+    // Optionally send moderation notice
+    await sendResponseToChat(
+      roomName, 
+      '⚠️ A message was removed for violating community guidelines'
+    );
+  }
+}
+
+async function moderateContent(text) {
+  // Example: OpenAI Moderation API, custom service, etc.
+  const response = await fetch('https://api.openai.com/v1/moderations', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ input: text })
+  });
+  
+  const data = await response.json();
+  return {
+    approved: !data.results[0].flagged
+  };
+}
+```
+</Code>
+
+### Notification pattern <a id="notification-pattern"/>
+
+Detect mentions and trigger custom notifications:
+
+<Code>
+```javascript
+async function handleMentions(text, metadata, roomName) {
+  // Extract mentions from text
+  const mentions = extractMentions(text);
+  
+  if (mentions.length > 0) {
+    // Send notifications to mentioned users
+    await Promise.all(mentions.map(userId => 
+      sendNotification(userId, {
+        type: 'mention',
+        room: roomName,
+        text: text,
+        from: metadata.userId
+      })
+    ));
+  }
+}
+
+function extractMentions(text) {
+  // Extract @mentions from text
+  const mentionRegex = /@(\w+)/g;
+  const mentions = [];
+  let match;
+  
+  while ((match = mentionRegex.exec(text)) !== null) {
+    mentions.push(match[1]);
+  }
+  
+  return mentions;
+}
+
+async function sendNotification(userId, notificationData) {
+  // Send to your notification service
+  await fetch('https://your-notification-service.com/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      ...notificationData
+    })
+  });
+}
+```
+</Code>
+
+## Complete example: Live translation <a id="example"/>
+
+The following example demonstrates a complete bidirectional integration where messages are processed, translated, and responses are sent back to the chat.
+
+### Step 1: Client sends message with metadata
+
+<Code>
+```javascript
+// Client application
+await room.messages.send({
+  text: "Hello!",
+  metadata: {
+    intent: 'translate',
+    targetLanguage: 'fr' // User specified target language
+  }
+});
+```
+</Code>
+
+### Step 2: Integration rule forwards to webhook
+
+Configure an integration rule in your dashboard:
+- Channel filter: `^chat:.*` (matches all chat rooms)
+- Event type: `channel.message`
+- Endpoint: `https://your-domain.com/webhook`
+
+### Step 3: Webhook processes and responds
+
+<Code>
+```javascript
+const express = require('express');
+const Ably = require('ably');
+const { ChatClient } = require('@ably/chat');
+
+const app = express();
+app.use(express.json());
+
+app.post('/webhook', async (req, res) => {
+  const envelope = req.body;
+
+  // Decode messages
+  const messages = Ably.Realtime.Message.fromEncodedArray(envelope.messages);
+
+  for (const msg of messages) {
+    const text = msg.data?.text;
+    const metadata = msg.data?.metadata || {};
+    const roomName = envelope.channel.replace('::$chat', '');
+
+    // Process based on metadata intent
+    if (metadata.intent === 'translate') {
+      const translation = await translateText(text, metadata.targetLanguage);
+      await sendResponseToChat(roomName, `Translation: ${translation}`);
+    }
+  }
+
+  res.status(200).send('OK');
+});
+
+async function translateText(text, targetLang) {
+  // Call your translation service
+  // This is a placeholder
+  return `[Translated to ${targetLang}]: ${text}`;
+}
+
+async function sendResponseToChat(roomName, responseText) {
+  const chatClient = new ChatClient({ key: process.env.ABLY_API_KEY });
+  const room = await chatClient.rooms.get(roomName);
+
+  await room.messages.send({
+    text: responseText
+  }, {
+    extras: {
+      privileged: {
+        skipRule: '*' // Prevent infinite loop
+      }
+    }
+  });
+}
+
+app.listen(3000);
+```
+</Code>
+
+### Step 4: Clients receive the response
+
+All clients subscribed to the room receive the translation in real-time:
+
+<Code>
+```javascript
+room.messages.subscribe((event) => {
+  console.log('Received:', event.message.text);
+  // Output: "Translation: [Translated to fr]: Bonjour!"
+});
+```
+</Code>
+
+## Key considerations <a id="key-considerations"/>
+
+Consider the following when integrating external systems with Ably Chat:
+
+* **Avoiding infinite loops:** Always use the [skip integrations flag](#responding) when responding back to chat to prevent your response from triggering the integration again
+* **Scale and reliability:** Different integration methods offer different reliability guarantees. See [choosing an integration method](#implementation-options) for guidance
+* **External system limitations:** Your external service may have rate limits, processing constraints, or availability issues. Implement retry logic, circuit breakers, and caching to handle these limitations gracefully
+* **Cost optimization:** Only process messages that require processing. Use channel filters and metadata/headers to route messages efficiently
+* **Security:** Always validate and sanitize client-provided metadata before using it in your integration logic
+* **Error handling:** Handle external system failures gracefully - consider fallback responses or queuing failed requests for retry
+
+## Related documentation
+
+* [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction) - Complete technical guide for setting up webhooks, queues, and streaming
+* [Store messages in your database](/docs/chat/external-storage-and-processing/data-storage) - Guide for long-term storage
+* [Chat integrations](/docs/chat/integrations) - Technical reference for Chat message structure
+* [Platform Integrations](/docs/platform/integrations) - Detailed setup for all integration types
+* [Chat SDK documentation](/docs/chat) - Comprehensive guide to Ably Chat features
+* [Chat Moderation](/docs/chat/moderation) - Filter and moderate chat content
+
+For custom integration requirements or questions, [contact Ably support](https://ably.com/support).
