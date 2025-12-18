@@ -226,10 +226,6 @@ export default {
           name: 'Export chat messages',
           link: '/docs/guides/chat/export-chat',
         },
-        {
-          name: 'Integrate external services',
-          link: '/docs/guides/chat/external-integrations',
-        },
       ],
     },
   ],
