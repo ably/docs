@@ -1,18 +1,19 @@
-import { DefaultRoot, LiveMap, Realtime } from 'ably';
-import Objects from 'ably/objects';
+import { Realtime } from 'ably';
+import { LiveMap, LiveObjects, type PathObject } from 'ably/liveobjects';
 import { nanoid } from 'nanoid';
-import { Tasks } from './ably.config';
 import { config } from './config';
 import './styles.css';
+
+export type Tasks = Record<string, string>;
 
 const client = new Realtime({
   clientId: nanoid(),
   key: config.ABLY_KEY,
-  plugins: { Objects },
+  plugins: { LiveObjects },
 });
 
 const channelName = config.CHANNEL_NAME || 'objects-live-map';
-const channel = client.channels.get(channelName, { modes: ['OBJECT_PUBLISH', 'OBJECT_SUBSCRIBE'] });
+const channel = client.channels.get(channelName, { modes: ['object_publish', 'object_subscribe'] });
 
 const taskInput = document.getElementById('task-input') as HTMLInputElement;
 const addTaskButton = document.getElementById('add-task')!;
@@ -20,59 +21,54 @@ const tasksDiv = document.getElementById('tasks')!;
 const removeAllTasksDiv = document.getElementById('remove-tasks')!;
 
 async function main() {
-  await channel.attach();
+  const tasksObject = await channel.object.get<Tasks>();
 
-  const objects = channel.objects;
-  const root = await objects.getRoot();
-
-  await initTasks(root);
-  addEventListenersToButtons(root);
+  await initTasks(tasksObject);
+  addEventListenersToButtons(tasksObject);
 }
 
-async function initTasks(root: LiveMap<DefaultRoot>) {
-  // subscribe to root to get notified when tasks object gets changed on the root.
-  // for example, when we clear all tasks
-  root.subscribe(({ update }) => {
-    if (update.tasks === 'updated') {
-      subscribeToTasksUpdates(root.get('tasks')!);
+async function initTasks(tasks: PathObject<LiveMap<Tasks>>) {
+  // Subscribe to all changes for the tasks object
+  tasks.subscribe(({ message }) => {
+    if (!message) {
+      return;
+    }
+
+    const operation = message.operation;
+
+    // Handle individual task updates
+    if (operation.action === 'map.set' && operation.mapOp?.key) {
+      tasksOnUpdated(operation.mapOp.key, tasks);
+    } else if (operation.action === 'map.remove' && operation.mapOp?.key) {
+      tasksOnRemoved(operation.mapOp.key);
     }
   });
 
-  if (root.get('tasks')) {
-    subscribeToTasksUpdates(root.get('tasks')!);
+  // Render initial state
+  renderAllTasks(tasks);
+}
+
+function renderAllTasks(tasks: PathObject<LiveMap<Tasks>>) {
+  tasksDiv.innerHTML = '';
+  for (const [taskId] of tasks.entries()) {
+    const title = tasks.get(taskId).value();
+    if (title) {
+      createTaskDiv(taskId, title, tasks);
+    }
+  }
+}
+
+function tasksOnUpdated(taskId: string, tasks: PathObject<LiveMap<Tasks>>) {
+  const title = tasks.get(taskId).value();
+  if (!title) {
     return;
   }
 
-  await root.set('tasks', await channel.objects.createMap());
-}
-
-function subscribeToTasksUpdates(tasks: Tasks) {
-  tasksDiv.innerHTML = '';
-
-  tasks.subscribe(({ update }) => {
-    Object.entries(update).forEach(async ([taskId, change]) => {
-      switch (change) {
-        case 'updated':
-          tasksOnUpdated(taskId, tasks);
-          break;
-        case 'removed':
-          tasksOnRemoved(taskId);
-          break;
-      }
-    });
-  });
-
-  for (const [taskId] of tasks.entries()) {
-    createTaskDiv({ id: taskId, title: tasks.get(taskId)! }, tasks);
-  }
-}
-
-function tasksOnUpdated(taskId: string, tasks: Tasks) {
   const taskSpan = document.querySelector(`.task[data-task-id="${taskId}"] > span`);
   if (taskSpan) {
-    taskSpan.innerHTML = tasks.get(taskId)!;
+    taskSpan.innerHTML = title;
   } else {
-    createTaskDiv({ id: taskId, title: tasks.get(taskId)! }, tasks);
+    createTaskDiv(taskId, title, tasks);
   }
 }
 
@@ -80,9 +76,7 @@ function tasksOnRemoved(taskId: string) {
   document.querySelector(`.task[data-task-id="${taskId}"]`)?.remove();
 }
 
-function createTaskDiv(task: { id: string; title: string }, tasks: Tasks) {
-  const { id, title } = task;
-
+function createTaskDiv(id: string, title: string, tasks: PathObject<LiveMap<Tasks>>) {
   const parser = new DOMParser();
   const taskDiv = parser.parseFromString(
     `<div class="flex justify-between items-center rounded space-x-4 task" data-task-id="${id}">
@@ -107,7 +101,7 @@ function createTaskDiv(task: { id: string; title: string }, tasks: Tasks) {
   });
 }
 
-function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
+function addEventListenersToButtons(tasks: PathObject<LiveMap<Tasks>>) {
   addTaskButton.addEventListener('click', async () => {
     const taskTitle = taskInput.value.trim();
     if (!taskTitle) {
@@ -116,11 +110,16 @@ function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
 
     const taskId = nanoid();
     taskInput.value = '';
-    await root.get('tasks')?.set(taskId, taskTitle);
+    await tasks.set(taskId, taskTitle);
   });
 
   removeAllTasksDiv.addEventListener('click', async () => {
-    await root.set('tasks', await channel.objects.createMap());
+    // Use batch to remove all tasks atomically
+    tasks.batch((ctx) => {
+      for (const [taskId] of tasks.entries()) {
+        ctx.remove(taskId);
+      }
+    });
   });
 }
 
