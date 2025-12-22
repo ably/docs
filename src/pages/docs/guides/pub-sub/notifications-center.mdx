@@ -109,14 +109,14 @@ You need to ensure that clients can only publish to an outbox and only receive n
 
 Ably's [token authentication](/docs/auth/token) with JSON Web Tokens (JWT) provides the flexibility to implement fine-grained access control. Tokens are short-lived, can be easily revoked, and include [capabilities](/docs/auth/capabilities) that define what actions a client can perform.
 
-For a notification center, you typically need two types of tokens:
+For a notification center, you typically need two types of access:
 
-* **Outbox tokens:** Grant publish-only access to the outbox channel(s).
-* **Inbox tokens:** Grant subscribe-only access to a user's specific inbox channel.
+* **Outbox publish:** Grant publish-only access to the outbox channel(s).
+* **Inbox subscribe:** Grant subscribe-only access to a user's specific inbox channel.
 
-### Creating an outbox token
+### Creating a token
 
-The following example shows how to generate a JWT that allows a user to publish to the outbox:
+The following example shows how to generate a JWT that strictly allows publish access to the outbox channel and subscribe access to a specific inbox channel. It also includes the `clientId` to identify the client:
 
 <Code>
 ```javascript
@@ -135,7 +135,8 @@ const claims = {
     "iat": currentTime,
     "exp": currentTime + 3600, // Token expires in 1 hour
     "x-ably-capability": JSON.stringify({
-        "notifications:outbox": ["publish"]
+        "notifications:outbox": ["publish"] // Outbox publish access
+        "inbox:client123": ["subscribe", "history"] // Inbox subscribe + history access
     }),
     "x-ably-clientId": "client123" // Identify the client
 }
@@ -150,44 +151,8 @@ console.log('Outbox JWT:', token);
 ```
 </Code>
 
-### Creating an inbox token
-
-The following example shows how to generate a JWT that allows a client to subscribe to their inbox:
-
-<Code>
-```javascript
-const jwt = require("jsonwebtoken");
-
-const header = {
-    "typ": "JWT",
-    "alg": "HS256",
-    "kid": "{{ API_KEY_NAME }}"
-}
-
-const currentTime = Math.round(Date.now() / 1000);
-
-// Allow subscribe-only access to the client's inbox
-const claims = {
-    "iat": currentTime,
-    "exp": currentTime + 3600, // Token expires in 1 hour
-    "x-ably-capability": JSON.stringify({
-        "inbox:user123": ["subscribe", "history"]
-    }),
-    "x-ably-clientId": "client123"
-}
-
-const token = jwt.sign(
-    claims,
-    "{{ API_KEY_SECRET }}",
-    { header: header }
-);
-
-console.log('Inbox JWT:', token);
-```
-</Code>
-
 **History capability:**
-Inbox tokens can also include `history` capability to allow clients to retrieve notifications they might have missed while offline.
+Inbox tokens can also include the `history` capability to allow clients to retrieve notifications they might have missed while offline.
 Message persistence must be enabled to use history - see [message history documentation](/docs/channels/history) for details.
 
 ### Best practices
@@ -254,7 +219,7 @@ const outbox = ably.channels.get('notifications:outbox');
 // User sends a friend request
 await outbox.publish('friend-request', {
     type: 'friend-request',
-    fromUserId: 'user123',
+    fromUserId: 'client123',
     toUserId: 'user456',
     timestamp: Date.now()
 });
