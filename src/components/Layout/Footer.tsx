@@ -85,10 +85,6 @@ const feedbackButtons: Record<FeedbackMode, FeedbackButton> = {
   },
 };
 
-const customGithubPaths = {
-  '/how-to/pub-sub': 'https://github.com/ably/docs/blob/main/how-tos/pub-sub/how-to.mdx',
-} as Record<string, string>;
-
 const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => {
   const { activePage } = useLayoutContext();
   const { frontmatter } = pageContext;
@@ -165,9 +161,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
     let path = '#';
     const pathName = location.pathname.replace('docs/', '');
 
-    if (customGithubPaths[pathName]) {
-      path = customGithubPaths[pathName];
-    } else if (activePage.template === 'mdx') {
+    if (activePage.template === 'mdx') {
       path =
         'https://github.com/ably/docs/blob/main/src/pages/docs' +
         (activePage.page.index ? `${pathName}/index.mdx` : `${pathName}.mdx`);
