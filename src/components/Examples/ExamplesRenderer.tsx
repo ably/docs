@@ -161,7 +161,7 @@ const ExamplesRenderer = ({
         </div>
         <div
           className={cn(
-            'flex flex-col gap-4 max-w-[calc(100vw-64px)]',
+            'flex flex-col gap-4 max-w-[calc(100vw-64px)] overflow-hidden',
             isVerticalLayout && 'md:flex-row',
             isLargeLayout && 'md:flex-col',
           )}
