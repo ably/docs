@@ -25,12 +25,12 @@ const client = new Realtime({
 const channelName = config.CHANNEL_NAME || 'objects-live-counter';
 const channel = client.channels.get(channelName, { modes: ['object_publish', 'object_subscribe'] });
 
-const colorCountDivs: Record<Color, HTMLElement> = {
-  red: document.getElementById('count-red')!,
-  green: document.getElementById('count-green')!,
-  blue: document.getElementById('count-blue')!,
+const colorCountDivs: Record<Color, HTMLElement | null> = {
+  red: document.getElementById('count-red'),
+  green: document.getElementById('count-green'),
+  blue: document.getElementById('count-blue'),
 };
-const countersReset = document.getElementById('reset')!;
+const countersReset = document.getElementById('reset');
 
 async function main() {
   const countersObject = await channel.object.get<ColorCounters>();
@@ -54,9 +54,13 @@ async function initCounters(counters: PathObject<LiveMap<ColorCounters>>) {
 
 function subscribeToCounterUpdates(color: Color, counter: PathObject<LiveCounter>) {
   counter.subscribe(() => {
-    colorCountDivs[color].innerHTML = counter.value()?.toString() ?? '0';
+    if (colorCountDivs[color]) {
+      colorCountDivs[color].innerHTML = counter.value()?.toString() ?? '0';
+    }
   });
-  colorCountDivs[color].innerHTML = counter.value()?.toString() ?? '0';
+  if (colorCountDivs[color]) {
+    colorCountDivs[color].innerHTML = counter.value()?.toString() ?? '0';
+  }
 }
 
 function addEventListenersToButtons(counters: PathObject<LiveMap<ColorCounters>>) {
@@ -67,7 +71,7 @@ function addEventListenersToButtons(counters: PathObject<LiveMap<ColorCounters>>
     });
   });
 
-  countersReset.addEventListener('click', () => {
+  countersReset?.addEventListener('click', () => {
     // Use batch to reset all counters atomically
     counters.batch((ctx) => {
       Object.values(Color).forEach((color) => ctx.set(color, LiveCounter.create()));
