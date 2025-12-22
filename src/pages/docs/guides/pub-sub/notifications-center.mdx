@@ -413,30 +413,58 @@ It is enabled by default in all Ably SDKs and handled automatically.
 If longer retention is required, you can enable this using a rule to [persist all messages](/docs/storage-history/storage#all-message-persistence) for a particular channel or namespace.
 This defaults to 24 hours, but can be configured up to 1 year for some packages.
 
-When clients come online, they can retrieve missed notifications from their inbox:
+When clients come online, they can retrieve missed notifications from their inbox. To avoid processing duplicate messages, clients should track the last message they've seen using the [`message.id`](/docs/api/realtime-sdk/types#message) field. Optionally, you can also store the [`message.timestamp`](/docs/api/realtime-sdk/types#message) and use it with the [`start`](/docs/api/realtime-sdk/channels#history) parameter to limit how far back you query in history.
+
+#### Avoiding duplicate processing
+
+Each message has a unique [`id`](/docs/api/realtime-sdk/types#message) assigned by Ably. If your client stores the `id` of the last message it successfully processed, you can query history and stop processing when you encounter that message:
 
 <Code>
 ```javascript
 const ably = new Ably.Realtime({ authUrl: '/auth/inbox-token' });
 const inbox = ably.channels.get('inbox:client456');
 
+// Retrieve the last processed message ID and timestamp from local storage
+const lastProcessedId = localStorage.getItem('lastNotificationId');
+const lastProcessedTimestamp = localStorage.getItem('lastNotificationTimestamp');
+
 // Subscribe to new notifications
 inbox.subscribe('notification', (message) => {
     handleNotification(message.data);
+    // Store both the message ID and timestamp after successful processing
+    localStorage.setItem('lastNotificationId', message.id);
+    localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
 });
 
 // Retrieve notifications received while offline
-const historyPage = await inbox.history({ limit: 50, untilAttach:true });
-historyPage.items.forEach(message => {
+// Use start parameter to limit how far back we query (optional but can help limit result set)
+const historyOptions = {
+    limit: 100,
+    untilAttach: true
+};
+
+if (lastProcessedTimestamp) {
+    historyOptions.start = parseInt(lastProcessedTimestamp);
+}
+
+const historyPage = await inbox.history(historyOptions);
+
+// Messages are fetched backwards when using untilAttach
+for (const message of historyPage.items) {
+    // Stop when we find the last message we processed
+    if (message.id === lastProcessedId) {
+        break;
+    }
     handleNotification(message.data);
-});
+    localStorage.setItem('lastNotificationId', message.id);
+    localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
+}
 ```
 </Code>
 
-Message history is particularly useful for notifications that clients need to see when they return,
-but that don't require immediate push notification delivery.
-This is common in internal systems where notifications might inform clients of completed processes,
-status updates, or system alerts that can be reviewed when a client connects.
+The `start` parameter is inclusive and helps limit the query range to messages from that timestamp onwards, but you still need to check `message.id` to detect which specific message you last processed. This approach works because history with `untilAttach: true` returns messages in reverse order, allowing you to paginate backwards and stop when you find the last message you've already seen.
+
+Message history is particularly useful for notifications that clients need to see when they return, but that don't require immediate push notification delivery. This is common in internal systems where notifications might inform clients of completed processes, status updates, or system alerts that can be reviewed when a client connects.
 
 ### Push notifications for critical alerts
 
