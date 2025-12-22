@@ -9,7 +9,7 @@ export const examples: Example[] = [
     description: 'Stream AI responses token-by-token in realtime.',
     products: ['aitransport'],
     layout: 'single-horizontal',
-    visibleFiles: ['src/script.ts', 'src/BackendLLMService.ts'],
+    visibleFiles: ['src/script.ts', 'src/BackendLLMService.ts', 'App.tsx', 'BackendLLMService.ts', 'index.tsx'],
     metaTitle: 'Build AI token streaming with Ably AI Transport',
     metaDescription: `Stream AI-generated tokens in realtime with Ably's AI Transport. Implement message-per-token patterns with low latency and high reliability.`,
   },
