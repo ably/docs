@@ -4,11 +4,21 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
+    id: 'ai-transport-token-streaming',
+    name: 'Token streaming',
+    description: 'Stream AI responses token-by-token in realtime.',
+    products: ['aitransport'],
+    layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'src/BackendLLMService.ts'],
+    metaTitle: 'Build AI token streaming with Ably AI Transport',
+    metaDescription: `Stream AI-generated tokens in realtime with Ably's AI Transport. Implement message-per-token patterns with low latency and high reliability.`,
+  },
+  {
     id: 'chat-presence',
     name: 'Chat presence',
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
-    layout: 'double-horizontal',
+    layout: 'single-large',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
     metaTitle: 'Build use presence and online status with Ably’s Chat SDK',
     metaDescription: `Learn how to build realtime chat features with user presence and online status using Ably’s Chat SDK. Reliable, scalable, and easy to implement.`,
@@ -287,7 +297,7 @@ export const products = {
   spaces: {
     label: 'Spaces',
   },
-  aitransport: {
+  ai_transport: {
     label: 'AI Transport',
   },
 };
