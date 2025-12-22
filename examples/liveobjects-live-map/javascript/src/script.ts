@@ -16,9 +16,13 @@ const channelName = config.CHANNEL_NAME || 'objects-live-map';
 const channel = client.channels.get(channelName, { modes: ['object_publish', 'object_subscribe'] });
 
 const taskInput = document.getElementById('task-input') as HTMLInputElement;
-const addTaskButton = document.getElementById('add-task')!;
-const tasksDiv = document.getElementById('tasks')!;
-const removeAllTasksDiv = document.getElementById('remove-tasks')!;
+const addTaskButton = document.getElementById('add-task');
+const tasksDiv = document.getElementById('tasks');
+const removeAllTasksDiv = document.getElementById('remove-tasks');
+
+if (!addTaskButton || !tasksDiv || !removeAllTasksDiv) {
+  throw new Error('Required DOM elements not found');
+}
 
 async function main() {
   const tasksObject = await channel.object.get<Tasks>();
@@ -34,9 +38,8 @@ async function initTasks(tasks: PathObject<LiveMap<Tasks>>) {
       return;
     }
 
-    const operation = message.operation;
-
     // Handle individual task updates
+    const { operation } = message;
     if (operation.action === 'map.set' && operation.mapOp?.key) {
       tasksOnUpdated(operation.mapOp.key, tasks);
     } else if (operation.action === 'map.remove' && operation.mapOp?.key) {
@@ -49,7 +52,9 @@ async function initTasks(tasks: PathObject<LiveMap<Tasks>>) {
 }
 
 function renderAllTasks(tasks: PathObject<LiveMap<Tasks>>) {
-  tasksDiv.innerHTML = '';
+  if (tasksDiv) {
+    tasksDiv.innerHTML = '';
+  }
   for (const [taskId] of tasks.entries()) {
     const title = tasks.get(taskId).value();
     if (title) {
@@ -85,24 +90,36 @@ function createTaskDiv(id: string, title: string, tasks: PathObject<LiveMap<Task
         <button class="uk-btn uk-btn-sm uk-border-rounded-right remove-task rounded-[1998px] bg-transparent border border-black">Remove</button>
     </div>`,
     'text/html',
-  ).body.firstChild as HTMLElement;
+  ).body.firstChild;
 
-  tasksDiv.appendChild(taskDiv);
+  if (!(taskDiv instanceof HTMLElement)) {
+    throw new Error('Failed to create task element');
+  }
 
-  taskDiv.querySelector('.update-task')!.addEventListener('click', async () => {
-    const newTitle = prompt('New title for a task:');
-    if (!newTitle) {
-      return;
-    }
-    await tasks.set(id, newTitle);
-  });
-  taskDiv.querySelector('.remove-task')!.addEventListener('click', async () => {
-    await tasks.remove(id);
-  });
+  tasksDiv?.appendChild(taskDiv);
+
+  const updateButton = taskDiv.querySelector('.update-task');
+  const removeButton = taskDiv.querySelector('.remove-task');
+
+  if (updateButton) {
+    updateButton.addEventListener('click', async () => {
+      const newTitle = prompt('New title for a task:');
+      if (!newTitle) {
+        return;
+      }
+      await tasks.set(id, newTitle);
+    });
+  }
+
+  if (removeButton) {
+    removeButton.addEventListener('click', async () => {
+      await tasks.remove(id);
+    });
+  }
 }
 
 function addEventListenersToButtons(tasks: PathObject<LiveMap<Tasks>>) {
-  addTaskButton.addEventListener('click', async () => {
+  addTaskButton?.addEventListener('click', async () => {
     const taskTitle = taskInput.value.trim();
     if (!taskTitle) {
       return;
@@ -113,7 +130,7 @@ function addEventListenersToButtons(tasks: PathObject<LiveMap<Tasks>>) {
     await tasks.set(taskId, taskTitle);
   });
 
-  removeAllTasksDiv.addEventListener('click', async () => {
+  removeAllTasksDiv?.addEventListener('click', async () => {
     // Use batch to remove all tasks atomically
     tasks.batch((ctx) => {
       for (const [taskId] of tasks.entries()) {
