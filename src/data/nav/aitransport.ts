@@ -36,7 +36,7 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/ai-transport/features/sessions-identity/overview',
+          link: '/docs/ai-transport/features/sessions-identity',
         },
         {
           name: 'Identifying users and agents',
