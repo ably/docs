@@ -37,15 +37,15 @@ const UserIndicator = ({ user }: { user: string }) => {
 
 const getDependencies = (id: string, products: string[], activeLanguage: LanguageKey) => {
   return {
-    ably: '^2.14.0',
+    ably: '~2.14.0',
     nanoid: '^5.0.7',
     minifaker: '1.34.1',
     'franken-ui': '^2.0.0',
     ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
     ...(products.includes('chat')
-      ? { '@ably/chat': '^1.1.0', '@ably/chat-react-ui-kit': '^0.3.0', clsx: '^2.1.1' }
+      ? { '@ably/chat': '~1.1.0', '@ably/chat-react-ui-kit': '~0.3.0', clsx: '^2.1.1' }
       : {}),
-    ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
+    ...(products.includes('spaces') ? { '@ably/spaces': '~0.4.0' } : {}),
     ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
     ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
       ? {
