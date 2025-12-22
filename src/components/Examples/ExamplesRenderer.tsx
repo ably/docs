@@ -161,22 +161,24 @@ const ExamplesRenderer = ({
         </div>
         <div
           className={cn(
-            'flex flex-col gap-4 max-w-[calc(100vw-64px)]',
+            'flex flex-col gap-4 max-w-[calc(100vw-64px)] overflow-hidden',
             isVerticalLayout && 'md:flex-row',
             isLargeLayout && 'md:flex-col',
           )}
         >
-          <CodeEditor
-            theme="light"
-            editor={{
-              className: '',
-              showLineNumbers: true,
-            }}
-          />
+          <div className={cn('min-w-0 overflow-hidden', isVerticalLayout && 'md:flex-1')}>
+            <CodeEditor
+              theme="light"
+              editor={{
+                className: '',
+                showLineNumbers: true,
+              }}
+            />
+          </div>
           <div
             className={cn(
               'flex gap-4 flex-col sm:flex-row',
-              isVerticalLayout && 'md:flex-col',
+              isVerticalLayout && 'md:flex-col md:w-[21.875rem] md:flex-shrink-0',
               isLargeLayout && 'md:flex-row md:justify-center md:h-fit md:min-h-[700px] h-[400px]',
             )}
           >
