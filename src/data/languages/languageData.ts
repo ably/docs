@@ -3,14 +3,14 @@ import { LanguageData } from './types';
 
 export default {
   platform: {
-    javascript: '2.11',
-    nodejs: '2.11',
+    javascript: '2.16',
+    nodejs: '2.16',
   },
   pubsub: {
-    javascript: '2.11',
-    nodejs: '2.11',
-    typescript: '2.11',
-    react: '2.11',
+    javascript: '2.16',
+    nodejs: '2.16',
+    typescript: '2.16',
+    react: '2.16',
     csharp: '1.2',
     flutter: '1.2',
     java: '1.4',
@@ -34,7 +34,7 @@ export default {
     react: '0.4',
   },
   liveObjects: {
-    javascript: '2.11',
+    javascript: '2.16',
     swift: '0.2',
     java: '1.4',
   },
