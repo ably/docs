@@ -5,7 +5,7 @@ import { DEFAULT_LANGUAGE } from 'src/contexts/layout-context';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
-export type PageTemplate = 'mdx' | 'textile' | null;
+export type PageTemplate = 'mdx' | null;
 
 export type ActivePage = {
   tree: PageTreeNode[];

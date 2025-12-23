@@ -13,7 +13,7 @@ import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
-import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
+import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';

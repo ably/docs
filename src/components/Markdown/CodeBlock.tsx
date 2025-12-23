@@ -6,7 +6,7 @@ import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
 registerDefaultLanguages(languagesRegistry);
 
-import { ButtonWithTooltip } from 'src/components';
+import { ButtonWithTooltip } from 'src/components/ButtonWithTooltip';
 import { safeWindow } from 'src/utilities';
 import { copyCodeBlockContentTracker } from 'src/external-scripts/google-tag-manager/events';
 

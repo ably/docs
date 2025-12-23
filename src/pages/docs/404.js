@@ -11,19 +11,8 @@ const NotFoundPage = () => {
         <br />
         {process.env.NODE_ENV === 'development' ? (
           <>
-            Try creating a new page in:
-            <ul>
-              <li>
-                <code>src/pages/</code>: for specific pages
-              </li>
-              <li>
-                <code>data/textile/nanoc-compatible</code>: for complete textile pages
-              </li>
-              <li>
-                <code>data/textile/partials</code>: for reusable textile sections &endash; ask if there&apos;s a
-                preferred alternative first.
-              </li>
-            </ul>
+            Try creating a new page in <code>src/pages/</code> for specific pages, or using MDX in <code>how-tos/</code>
+            .
           </>
         ) : null}
         <br />
