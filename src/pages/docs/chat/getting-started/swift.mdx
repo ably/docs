@@ -541,42 +541,61 @@ When you tap the "Edit" button next to a message, you can modify the text and it
 
 Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The message subscription provides `historyBeforeSubscribe()` to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
 
-Update the `setupMessages` function in your `ContentView.swift` to retrieve previous messages:
+Add a new state variable `messageIDs` and update the `setupMessages` function in your `ContentView.swift` to retrieve previous messages:
 
 <Code>
 ```swift
-private func setupMessages(room: Room) {
-    let subscription = room.messages.subscribe { event in
-        withAnimation {
-            switch event.type {
-            case .created:
-                // Only add if not already in the list
-                if !messages.contains(where: { $0.id == event.message.id }) {
-                    messages.append(event.message)
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: Room?
+    @State private var messages: [Message] = []
+    @State private var messageIDs: Set<String> = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+
+    // ... initialization code remains the same ...
+
+    private func setupMessages(room: Room) {
+        let subscription = room.messages.subscribe { event in
+            withAnimation {
+                switch event.type {
+                case .created:
+                    // Only add if not already in the list
+                    if !messageIDs.contains(event.message.id) {
+                        messages.append(event.message)
+                        messageIDs.insert(event.message.id)
+                    }
+                case .updated:
+                    if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                        messages[index] = event.message
+                    }
+                case .deleted:
+                    if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                        messages[index] = event.message
+                    }
                 }
-            case .updated:
-                if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
-                    messages[index] = event.message
+            }
+        }
+
+        // Get previous messages after subscribing
+        Task {
+            do {
+                let previousMessages = try await subscription.historyBeforeSubscribe(.init())
+                await MainActor.run {
+                    messages.append(contentsOf: previousMessages.items)
+                    messageIDs.formUnion(previousMessages.items.map(\.id))
                 }
-            case .deleted:
-                if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
-                    messages[index] = event.message
-                }
+            } catch {
+                print("Failed to get previous messages: \(error)")
             }
         }
     }
 
-    // Get previous messages after subscribing
-    Task {
-        do {
-            let previousMessages = try await subscription.historyBeforeSubscribe(.init())
-            await MainActor.run {
-                messages.append(contentsOf: previousMessages.items)
-            }
-        } catch {
-            print("Failed to get previous messages: \(error)")
-        }
-    }
+    // ... rest of the functions remain the same ...
 }
 ```
 </Code>
