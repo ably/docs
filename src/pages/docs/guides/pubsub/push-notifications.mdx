@@ -6,7 +6,7 @@ meta_keywords: "push notifications, APNs, FCM, Web Push, mobile notifications, d
 
 ![Push notifications guide](../../../../images/content/screenshots/push-notifications-guide.png)
 
-Push notifications are an important channel for engaging users outside of your application. Whether you're sending transactional alerts, breaking news, or marketing messages, push notifications need to be reliable, fast, and work seamlessly across iOS, Android, and web platforms.
+Push notifications are an important mechanism for engaging users outside of your application. Whether you're sending transactional alerts, breaking news, or marketing messages, push notifications need to be reliable, fast, and work seamlessly across iOS, Android, and web platforms.
 
 This guide walks through the architectural decisions and practical considerations for implementing push notifications at scale using Ably. You'll learn how to design your notification system, manage devices across platforms, optimize for cost and performance, and handle the complexities of multi-platform delivery.
 
@@ -16,34 +16,29 @@ Push notifications require integration with multiple platform-specific services:
 
 Ably's platform is engineered around the [four pillars of dependability](/four-pillars-of-dependability):
 
-* **[Performance](/docs/platform/architecture/performance):** Ultra-low latency messaging ensures notifications are delivered quickly, even at global scale.
-* **[Integrity](/docs/platform/architecture/message-ordering):** Guaranteed message delivery with no duplicates or lost notifications.
-* **[Reliability](/docs/platform/architecture/fault-tolerance):** 99.999% uptime SLA with automatic failover and seamless recovery.
-* **[Availability](/docs/platform/architecture/edge-network):** Global edge infrastructure ensures reliable connectivity worldwide.
+* **[Performance](/docs/platform/architecture/performance):** Ultra-low latency messaging, even at global scale.
+* **[Integrity](/docs/platform/architecture/message-ordering):** Guaranteed message ordering and delivery, with no duplicates or data loss.
+* **[Reliability](/docs/platform/architecture/fault-tolerance):** 99.999% uptime SLA, with automatic failover and seamless re-connection.
+* **[Availability](/docs/platform/architecture/edge-network):** Global edge infrastructure ensures users connect to the closest point for optimal experience.
+
+<Aside>Push notifications are delivered via the relevant notification networks (APNs, FCM, or Web Push), and Ably cannot control delivery guarantees, ordering, or latency after messages leave the Ably platform.</Aside>
 
 Ably provides a unified API that handles all three platforms, managing:
-
 * **Platform abstraction:** Write once, deliver everywhere. Ably translates your notifications into platform-specific formats.
 * **Credential management:** Store your APNs certificates, FCM service accounts, and VAPID keys securely in one place.
 * **Delivery reliability:** Ably handles retries, tracks delivery status, and provides error reporting through meta channels.
 * **Scale:** From hundreds to millions of devices, Ably's [serverless architecture](/docs/platform/architecture) scales automatically without requiring you to manage connection pools or rate limits. Backed by a [99.999% uptime Service Level Agreement (SLA)](/uptime).
 * **Users and devices:** Ably provides methods to send notifications to the right recipients. Send notifications to channels, users by `clientId`, or devices by `deviceId`.
 
-Building your own push notification system without Ably involves:
-* Maintaining separate integrations with each push service.
-* Handling their platform-specific requirements.
-* Managing credentials across multiple systems.
-* Building your own retry and error handling logic.
-* Mapping between devices and users in your application.
-* Managing subscriptions to topics.
+Building your own push notification system without Ably involves building and maintaining separate integrations with each push service, handling platform-specific requirements, formats, authentication, handling errors and retries, and managing subscriptions to topics as well as the device lifecycle and the mapping of devices to users in your application.
 
 ![Push notifications lifecycle](../../../../images/content/diagrams/push-lifecycle.png)
 
-## High-volume delivery and targeting at scale
+## High-volume delivery at scale
 
 One of the hardest problems with push notifications at scale is managing who gets what. A news app might have millions of users subscribed to hundreds of topic combinations. A collaboration tool needs dynamic subscriptions as users join and leave projects.
 
-Ably handles this complexity server-side. You don't need to maintain subscription databases or fan-out logic - Ably tracks which devices are subscribed to which channels and delivers efficiently.
+Ably handles this complexity server-side. You don't need to maintain subscription databases or fan-out logic - Ably tracks which users or devices are subscribed to which channels and delivers efficiently.
 
 Ably supports two fundamentally different approaches to targeting notifications, each suited to different use cases. The same app can use both approaches for different features.
 
@@ -187,9 +182,7 @@ client.push.admin.publish(
 ```
 </Code>
 
-#### Batch API
-
-The [batch push API](/docs/push/publish#via-batch-push-api) allows you to send up to 10,000 personalized notifications in a single request. This is ideal for scenarios like daily digests, re-engagement campaigns, or any case where each user gets different content. See the [batch push API docs](/docs/push/publish#via-batch-push-api) for implementation details.
+The [batch push API](/docs/push/publish#via-batch-push-api) allows you to send up to 10,000 personalized notifications in a single request. This is ideal for scenarios like daily digests, re-engagement campaigns, or any case where each user gets different content.
 
 ### Channel-based publishing
 
@@ -202,7 +195,7 @@ This approach works well for:
 * Geographic or demographic targeting (if channels are organized that way).
 * Scenarios where users explicitly opt into notification categories.
 
-Using channels here is a form of organizing the notifications into categories or topics. While users (or devices) must subscribe to channels for push notifications using `subscribeDevice()` or `subscribeClient()` to receive channel push notifications, they do not need to be attached to the channels to receive them. The notifications are delivered efficiently via the relevant push service (APNs, FCM, or Web Push). Depending on the target device and permissions, they can be received when the app is closed or in the background.
+Using channels here is a form of organizing the notifications into categories or topics. While users (or devices) must subscribe to channels for push notifications using `subscribeDevice()` or `subscribeClient()` to receive channel push notifications, they do not need to have a websocket connection to Ably to receive them. The notifications are delivered efficiently via the relevant push service (APNs, FCM, or Web Push). Depending on the target device and permissions, they can be received when the app is closed or in the background.
 
 Subscribe a device or clientId to a channel:
 <Code>
@@ -348,7 +341,7 @@ Your channel structure determines how efficiently you can target notifications. 
 * **Geographic channels** (`alerts:uk:london`) enable location-based targeting.
 * **Dynamic channels** (`document:5b2aca2d`) handle user-specific contexts like documents, threads, or game sessions.
 
-### Choosing between the two
+### Choosing the right mechanism
 
 Many applications use both models for different features. For example:
 
@@ -373,7 +366,8 @@ Each platform has unique features:
 
 Ably provides a [unified payload structure](/docs/push/publish#payload) that maps to each platform.
 
-```javascript
+<Code>
+```json
 {
   notification: {
     title: 'Hello from Ably',       // Maps to all platforms
@@ -387,12 +381,14 @@ Ably provides a [unified payload structure](/docs/push/publish#payload) that map
   }
 }
 ```
+</Code>
 
 ### Platform-specific overrides
 
 For platform-specific features, you can override the generic payload:
 
-```javascript
+<Code>
+```json
 {
   notification: {
     title: 'New Message',
@@ -418,12 +414,13 @@ For platform-specific features, you can override the generic payload:
   }
 }
 ```
+</Code>
 
 This lets you use platform-specific features while maintaining a single codebase for notification publishing. Without Ably, you would need to implement a transformation layer for each platform you want to target (such as web, APNs, and FCM).
 
 ### Testing across platforms
 
-When developing, test notifications on all target platforms early. Platform-specific bugs commonly include:
+When developing, test notifications on all target platforms early. Common platform-specific issues to watch out for:
 
 * Images don't show, for example, because the URLs are not accessible from all platforms.
 * Sound files that don't exist or are in the wrong format.
@@ -507,9 +504,9 @@ Client-side activation is preferred when:
 
 ### Server-side activation
 
-Server-side activation gives you more control. The device obtains its platform token (FCM registration token, APNs device token, or Web Push subscription) on the client, and then sends it to your server. Your server registers the device with Ably using the push admin API. This approach can also be used to migrate push notifications to Ably without reactivating push notifications on all devices for all platforms.
+Server-side activation gives you more control. The device obtains its platform token (FCM registration token, APNs device token, or Web Push subscription) on the client, and then sends it to your server. Your server registers the device with Ably using the push admin API. This approach can also be used to migrate push notifications to Ably from another provider or your own system, without reactivating push notifications on all devices for all platforms.
 
-Server-side activation also allows you to use FCM for both Android and iOS devices for unified push messaging.
+Server-side activation also enables you to use FCM for both Android and iOS devices for unified push messaging.
 
 On the client, get the platform token and send it to your server. On your server, use the [Push Notifications Admin API](/docs/api/realtime-sdk/push-admin) to register the device with Ably:
 
