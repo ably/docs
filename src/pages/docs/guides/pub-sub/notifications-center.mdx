@@ -32,7 +32,7 @@ The outbox/inbox pattern is a proven architecture for building scalable notifica
 The architecture consists of three main components:
 
 * **Outbox channel:** Clients publish notification requests to an outbox channel. This could be a friend request, an alert, or any other client-initiated action.
-* **Processing pipeline:** An integration (Lambda function, webhook, or queue consumer) receives the outbox message, validates it, applies business logic, and determines the target recipients.
+* **Processing pipeline:** An integration (Lambda function, webhook, or stream consumer) receives the outbox message, validates it, applies business logic, and determines the target recipients.
 * **Inbox channels:** After processing, notifications are published to client-specific inbox channels (e.g., `inbox:clientId`), where recipients are subscribed.
 
 [/TODO/]: # (Should add some diagram here showing the flow from user -> outbox -> processing -> inbox -> recipient tp break up the text a bit)
@@ -70,8 +70,7 @@ The outbox can be a single channel, or any numbers of channels to distribute loa
 Each Ably account has [channel limits](/docs/platform/pricing/limits#channels) that govern the allowed rate of publish.
 If you have high throughput with many clients publishing to the same outbox simultaneously, you may need to split the outbox into multiple channels to avoid overwhelming a single channel and being rate limited. For example, with 100,000 clinets all publishing notifications, a single outbox could become a bottleneck.
 
-How many outbox channels you need depends on your expected traffic and account limits.
-You can shard outbox channels based on some meaningful dimension, such as:
+How many outbox channels you need depends on your expected traffic and account limits. You can shard outbox channels based on some meaningful dimension, such as:
 
 * **User group:** `notifications:outbox:group1`, `notifications:outbox:group2`, etc.
 
@@ -166,28 +165,45 @@ Ably provides multiple integration options:
 
 * **[Webhooks](/docs/platform/integrations/webhooks):** HTTP endpoints (including AWS Lambda, Azure Functions, Google Cloud Functions)
 * **[Streaming](/docs/platform/integrations/streaming):** Kafka, Kinesis, SQS, AMQP
-* **[Queues](/docs/platform/integrations/queues):** Ably-managed queues for fault-tolerant processing
 
 ### Choosing your integration approach
 
 The right integration depends on your throughput, ordering requirements, and infrastructure:
 
 #### AWS Lambda / Serverless Functions
-Serverless functions offer automatic scaling with no server management and pay-per-execution pricing, making them ideal for low to high throughput scenarios. However, costs can escalate quickly without proper monitoring and limits. Keep in mind that [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not guaranteed.
+Serverless functions offer automatic scaling with no server management and pay-per-execution pricing. However, costs can escalate quickly without proper monitoring and limits. Keep in mind that [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not always guaranteed.
 
 * **Recommended when:** You want simplicity and automatic scaling
 
 #### Webhooks to your own servers
-This approach gives you full control over your processing logic and infrastructure, though you're responsible for managing scaling and reliability yourself. Like Lambda, [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not guaranteed.
+This approach gives you full control over your processing logic and infrastructure, though you're responsible for managing scaling and reliability yourself. Like serverless functions, [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not always guaranteed.
 
-* **Recommended when:** You have existing infrastructure or need specific processing capabilities
+* **Recommended when:** You have existing infrastructure or require custom processing not suited to serverless functions
 
-#### Ably Queues
-Ably Queues provide guaranteed ordering, at-least-once delivery, and fault-tolerant processing, making them the best choice when message ordering is critical. Non-enterprise accounts are limited to 200 msg/s per account, and [concurrency limits](/docs/platform/pricing/limits#integrations) still apply.
+#### Streaming to message brokers
+[Streaming integrations](/docs/platform/integrations/streaming) enable you to stream notification events from Ably to external message brokers like Kafka, Amazon Kinesis, Google Pub/Sub, or RabbitMQ. This approach is designed for high-throughput scenarios and provides the most flexibility for complex processing workflows.
 
-* **Recommended when:** Message ordering is critical and throughput is within limits
+Streaming integrations are particularly well-suited for notification centers because they enable you to handle high message volumes that exceed webhook concurrency limits, implement custom ordering strategies (see [ordering considerations](#ordering-considerations) below), build fault-tolerant processing with at-least-once delivery semantics, and integrate with existing data processing infrastructure.
 
-Enterprise customers can scale Ably Queues to millions of messages per second. Non-enterprise customers with higher throughput needs should consider [outbound streaming](/docs/platform/integrations/streaming) to Kafka, Kinesis, or other external queueing services.
+* **Recommended when:** You need high throughput or complex processing pipelines
+
+### Ordering considerations <a id="ordering-considerations"/>
+
+Message ordering can be important in notification systems. You may want to ensure that notifications from the same client are processed in the order they were sent.
+
+#### Webhooks and Serverless functions
+
+**Batched mode:**
+[Webhooks](/docs/platform/integrations/webhooks) configured in batched mode preserve ordering for messages published to the same channel by the same client. Batched webhooks group messages into batches (up to 1000 messages per batch) and deliver them sequentially to your webhook endpoint. However, if your throughput exceeds the rate at which the webhook can process batches, messages may be dropped.
+
+**Single message mode:**
+Webhooks in single message mode do not guarantee ordering due to concurrent processing and retry behavior. If a webhook request fails and is retried, it may be processed after later messages have already been delivered.
+
+#### Streaming integrations
+Streaming integrations provide reliable ordering control for high-throughput scenarios. When streaming to Kafka, Kinesis, or similar systems, you can [implement ordering strategies](/docs/messages#routing) by using message attributes as topic or partition keys.
+
+For example, when configuring a Kafka reactor rule, you could route to a dynamic topic based on the channel name, and use the `clientId` as the partition key.
+
 ### Example: Friend request processing with Lambda
 
 The following example demonstrates a notification flow for a social media application using AWS Lambda:
@@ -204,9 +220,7 @@ Configure an [AWS Lambda integration](/docs/platform/integrations/webhooks/lambd
 
 <Code>
 ```javascript
-const ably = new Ably.Realtime({ authUrl: '/auth/token' });
 const outbox = ably.channels.get('notifications:outbox');
-
 // User sends a friend request
 await outbox.publish('friend-request', {
     type: 'friend-request',
@@ -277,10 +291,8 @@ exports.handler = async (event) => {
 
 <Code>
 ```javascript
-const ably = new Ably.Realtime({ authUrl: '/auth/token' });
 const inbox = ably.channels.get('inbox:user456');
-
-inbox.subscribe('notification', (message) => {
+await inbox.subscribe('notification', (message) => {
     const notification = message.data;
 
     if (notification.type === 'friend-request') {
@@ -302,20 +314,20 @@ When implementing your processing pipeline, consider:
 * **Idempotency:** Design your pipeline to handle duplicate messages gracefully. Ably provides [idempotent publishing](/docs/platform/architecture/idempotency), which can help prevent duplicate notifications at the publish stage.
 * **Error handling:** Implement proper error handling and monitoring. Use Ably's [`[meta]log` channel](/docs/platform/errors#meta) to track integration errors.
 * **Scalability:**
-  * All integrations have [concurrency limits](/docs/platform/pricing/limits#integrations) based on your account plan. For high throughput, consider streaming to a queue service to handle traffic spikes.
+  * All integrations have [concurrency limits](/docs/platform/pricing/limits#integrations) based on your account plan. For high throughput, consider streaming to a message broker like Kafka or Kinesis to handle traffic spikes.
   * Lambda functions scale automatically, but monitor for rate limits and usage.
-  * Ably Queues provide guaranteed ordering but have throughput limits on non-enterprise accounts (200 msg/s)
+  * Streaming integrations can handle millions of messages per second with appropriate broker infrastructure.
 * **Retry behavior:** Understand your integration's retry behavior:
   * [Lambda retries](/docs/platform/integrations/webhooks/lambda#retry) up to 2 times with delays between attempts
   * [Webhooks retry](/docs/platform/integrations/webhooks#retry) up to 2 times with delays between attempts
-  * [Queues](/docs/platform/integrations/queues) provide at-least-once delivery with message acknowledgment, failed messages are moved to a dead-letter queue after max attempts
-* **Ordering guarantees:** If strong ordering is required, use [Ably Queues](/docs/platform/integrations/queues) which provide reliable ordering of messages by channel.
+  * Streaming integrations provide at-least-once delivery with broker-specific acknowledgment and retry mechanisms
+* **Ordering guarantees:** If ordering is required, run webhooks in batched mode or use [streaming integrations](/docs/platform/integrations/streaming) with partition keys to control message ordering. See [ordering considerations](#ordering-considerations) for details.
 
 ## Cost optimization <a id="cost-optimization"/>
 
 Understanding the cost implications of different architectural decisions helps you build efficiently at scale.
 
-### Individual inboxes vs general channel: A calculation
+### Individual inboxes vs general channel
 
 Ably's pricing includes two main components relevant to notifications:
 
@@ -326,7 +338,7 @@ Ably's pricing includes two main components relevant to notifications:
 
 Assume you want to send a notification to 10,000 clients. Let's compare the costs:
 
-**Option 1: Individual inboxes (using batch publish)**
+**Option 1: Individual inboxes**
 
 * Publish to 10,000 individual inbox channels (using [batch publish](/docs/api/rest-api#batch-publish) to reduce API calls)
 * Each channel publish counts as a separate inbound message
@@ -352,44 +364,60 @@ If clients are connected for an average of 4 hours per day:
 
 Using Ably's pricing (check current [pricing page](/pricing) for exact rates):
 
+We will assume an approximate cost per million messages of $2.50, and a cost per million channel minutes of $1.00.
+
 **Individual inboxes (1 notification/day):**
 * 600,000 messages/month
 * No extra channel costs (inbox channels needed anyway)
+* **Estimated cost:** 600,000 messages × ($2.50 / 1,000,000) = **$1.50/month**
 
 **General channel (1 notification/day):**
 * ~300,000 messages/month (half the message cost)
 * 72 million channel minutes/month (significant channel attachment cost)
+* **Estimated cost:**
+  * Messages: 300,000 × ($2.50 / 1,000,000) = $0.75
+  * Channel minutes: 72,000,000 × ($1.00 / 1,000,000) = $72.00
+  * **Total: $72.75/month**
+
+For this scenario, individual inboxes are significantly more cost-effective.
 
 #### The crossover point
 
 For infrequent broadcasts (daily or less), the general channel's message savings are offset by its channel attachment costs. As notification frequency increases, the message cost differential becomes more significant.
 
-Example with 100 notifications per day:
+Example with just 100 notifications per day:
 
 **Individual inboxes:**
 * Messages: 20,000 × 100 × 30 = **60,000,000 messages/month**
+* **Estimated cost:** 60,000,000 × ($2.50 / 1,000,000) = **$150/month**
 
 **General channel:**
 * Messages: 10,001 × 100 × 30 = **30,003,000 messages/month** (half the messages)
 * Channel minutes: **72,000,000 channel minutes/month** (same channel cost)
+* **Estimated cost:**
+  * Messages: 30,003,000 × ($2.50 / 1,000,000) = $75.01
+  * Channel minutes: 72,000,000 × ($1.00 / 1,000,000) = $72.00
+  * **Total: $147.01/month**
 
-At higher frequencies, the general channel's message cost advantage becomes significant -
-using half the messages compared to individual inboxes, which can justify the channel attachment costs.
-Messages are typically more expensive than channel minutes.
+At 100 notifications per day, the general channel pattern is already cheaper, and the savings grow with frequency:
+
+| Notifications per day | Individual inboxes | General channel | Cost difference |
+|-----------------------|-------------------|-----------------|-----------------|
+| 100 | $150.00 | $147.01 | -$2.99 (2% cheaper) |
+| 200 | $300.00 | $222.02 | -$77.98 (26% cheaper) |
+| 400 | $600.00 | $372.04 | -$227.96 (38% cheaper) |
+| 800 | $1,200.00 | $672.08 | -$527.92 (44% cheaper) |
+
+Individual inbox costs scale linearly with notification frequency (doubling notifications doubles the cost), while the general channel's primary cost (channel minutes at $72/month) remains constant regardless of notification frequency. This makes the general channel increasingly attractive as broadcast frequency grows and message costs dominate.
 
 #### Recommendation
 
-* **Use individual inboxes** for targeted notifications or when broadcast notifications are rare
-* **Use a hybrid approach** with both individual inboxes for targeted notifications and a general channel for high-frequency system-wide broadcasts
-
-<Aside data-type='note'>
-General channels save on message costs (1 inbound vs N inbound) but add channel attachment costs. The right choice depends on your broadcast frequency, number of clients, and how long those clients stay connected.
-</Aside>
+* **Use individual inboxes** for targeted notifications or when broadcast notifications are rare.
+* **Use a hybrid approach** with both individual inboxes for targeted notifications and a general channel for high-frequency system-wide broadcasts.
 
 ### Other cost optimizations
 
 * **Connection management:** Call `close()` on Ably clients when users log out to immediately clean up connections. Adjust [heartbeat intervals](/docs/connect#heartbeat) to detect dropped connections faster.
-* **Message batching:** If publishing to multiple inboxes, use the [batch publish REST endpoint](/docs/api/rest-api#batch-publish) to reduce API calls.
 * **Token lifetime:** Use appropriate token TTLs to balance security and token refresh overhead.
 * **Batch outbound messages:** If inboxes receive multiple notifications per second, consider [batching](/docs/messages/batch#server-side) them with Ably's server-side batching to reduce outbound message counts.
 
@@ -406,9 +434,9 @@ Ably stores messages by default for 2 minutes to support short-term [history](/d
 If longer retention is required, you can enable this using a rule to [persist all messages](/docs/storage-history/storage#all-message-persistence) for a particular channel or namespace.
 This defaults to 24 hours, but can be configured up to 1 year for some packages.
 
-When clients come online, they can retrieve missed notifications from their inbox. To avoid processing duplicate messages, clients should track the last message they've seen using the [`message.id`](/docs/api/realtime-sdk/types#message) field. If client tracking is not possible, [message annotations](/docs/messages/annotations) can be used to mark messages as "read" or "delivered" – which can also be used as a means to accurately track message acknowledgment.
+When clients come online, they can retrieve missed notifications from their inbox. If notfications need to be handled idempotently, messages have a [`message.id`](/docs/api/realtime-sdk/types#message) field that can be tracked client-side to avoid processing duplicates.
 
-Optionally, you can also store the [`message.timestamp`](/docs/api/realtime-sdk/types#message) and use it with the [`start`](/docs/api/realtime-sdk/channels#history) parameter to limit how far back you query in history.
+Server-side tracking is also possible with [message annotations](/docs/messages/annotations), and can be used to mark messages as "read" or "delivered". This same process can also be used as a means to accurately track message acknowledgment from recipient clients.
 
 #### Tracking via message ID
 
@@ -422,18 +450,26 @@ const inbox = ably.channels.get('inbox:client456');
 const lastProcessedId = localStorage.getItem('lastNotificationId');
 const lastProcessedTimestamp = localStorage.getItem('lastNotificationTimestamp');
 
+// Track whether we're still processing history
+let processingHistory = true;
+const queuedMessages = [];
+
 // Subscribe to new notifications
 await inbox.subscribe('notification', (message) => {
-    handleNotification(message.data);
-    // Store both the message ID and timestamp after successful processing
-    localStorage.setItem('lastNotificationId', message.id);
-    localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
+    if (processingHistory) {
+        // Queue messages that arrive while we're processing history
+        queuedMessages.push(message);
+    } else {
+        handleNotification(message.data);
+        localStorage.setItem('lastNotificationId', message.id);
+        localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
+    }
 });
 
 // Retrieve notifications received while offline
 const historyOptions = {
     limit: 100,
-    untilAttach: true // Fetch messages in reverse order from the last attach point
+    untilAttach: true // Fetch messages from before subscription up to the attached point
 };
 
 if (lastProcessedTimestamp) {
@@ -442,13 +478,22 @@ if (lastProcessedTimestamp) {
 
 const historyPage = await inbox.history(historyOptions);
 
-// Messages are fetched backwards when using untilAttach
-for (const message of historyPage.items) {
-    // Stop when we find the last message we processed
-    if (message.id === lastProcessedId) {
+// Process historical messages (they arrive in reverse order with untilAttach)
+for (const message of historyPage.items.reverse()) {
+    if (lastProcessedId && message.id === lastProcessedId) {
         break;
     }
     handleNotification(message.data);
+    localStorage.setItem('lastNotificationId', message.id);
+    localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
+}
+
+// Now process any messages that arrived while we were handling history
+processingHistory = false;
+for (const message of queuedMessages) {
+    handleNotification(message.data);
+    localStorage.setItem('lastNotificationId', message.id);
+    localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
 }
 ```
 </Code>
@@ -465,11 +510,7 @@ Message history is particularly useful for notifications that clients need to se
 
 [Message annotations](/docs/messages/annotations) enable clients to mark messages with metadata such as "read" or "delivered" receipts. Annotating a message will mutate the original, and this change is persisted by Ably – on querying history, clients can see which messages have been marked without needing to track individual message IDs.
 
-The act of annotating a message will result in a new annotation type message being published to the same channel. As such, it can also be used to track if a message has been acknowledged by a client, backed by all the same reliability and delivery guarantees as any other message.
-
-<Aside data-type='note'>
-  Annotating a message creates additional messages on the channel, which count towards your message usage. Consider this when planning your cost optimization strategy.
-</Aside>
+The act of annotating a message will result in a new annotation type message being published to the same channel. As such, it can also be used to track if a message has been acknowledged by a client in realtime, backed by all the same reliability and delivery guarantees as any other message.
 
 ##### Enable annotations
 
@@ -480,41 +521,16 @@ To use annotations, you must first enable them on your inbox channel namespace. 
 Annotations are controlled by specific [capabilities](/docs/auth/capabilities) that must be included in your client JWT tokens:
 
 * **`annotation-publish`:** Required for clients to publish annotations (such as marking messages as "delivered" or "read")
-* **`subscribe`:** Required to receive annotation summaries (aggregated views with a minimum 1-second configurable delay)
+* **`subscribe`:** Required to receive annotation summaries (aggregated views of annotations applied to a message, with a small delay)
 * **`annotation-subscribe`:** Required to subscribe to individual annotation events (no delay, but higher message rates)
 
-For most notification center implementations, the `annotation-publish` and `subscribe` capabilities are sufficient. Use `annotation-subscribe` only if you need immediate annotation delivery and can handle the higher message volume.
+If you only require annotations for client-side tracking of message delivery/read status, you can include the additional `annotation-publish` in your clients' capability set when generating a token.
 
-Update your token generation to include the `annotation-publish` capability:
-
-<Code>
-```javascript
-const jwt = require("jsonwebtoken");
-
-const header = {
-    "typ": "JWT",
-    "alg": "HS256",
-    "kid": "{{ API_KEY_NAME }}"
-}
-
-const currentTime = Math.round(Date.now() / 1000);
-
-const claims = {
-    "iat": currentTime,
-    "exp": currentTime + 3600,
-    "x-ably-capability": JSON.stringify({
-        "inbox:client456": ["subscribe", "history", "annotation-publish"]
-    }),
-    "x-ably-clientId": "client456"
-}
-
-const token = jwt.sign(claims, "{{ API_KEY_SECRET }}", { header: header });
-```
-</Code>
+For message acknowledgment tracking, it is recommended to use annotation summaries (with the `subscribe` capability) rather than subscribing to individual annotation events, as this reduces message volume and cost.
 
 ##### Publishing annotations
 
-Clients can publish annotations to mark notifications as delivered or read:
+Messages delivered to clients on a channel with annotations enabled also include a `serial` field. This unique identifier is used to reference the specific message when annotating it.
 
 <Code>
 ```javascript
@@ -535,7 +551,7 @@ await inbox.subscribe('notification', async (message) => {
 
 ##### Receiving annotation summaries
 
-To track which messages have been acknowledged, subscribe to annotation summaries. Summaries are automatically aggregated by Ably and delivered to the channel with a minimum delay of 1 second (configurable):
+To track which messages have been acknowledged, subscribe to annotation summaries on the inbox channel:
 
 <Code>
 ```javascript
@@ -561,8 +577,6 @@ await inbox.subscribe((message) => {
 ```
 </Code>
 
-If you need immediate notification of annotations (without the 1-second delay), you can subscribe to individual annotation events by including the `annotation-subscribe` capability and using `channel.annotations.subscribe()`. However, this approach generates more messages and should only be used when the delay is unacceptable. See the [subscribe to individual annotation events](/docs/messages/annotations#individual-annotations) documentation for details.
-
 Annotations are automatically included when [querying history](/docs/messages/annotations#annotation-summaries), so you can see which historical messages have been marked as read without additional tracking infrastructure.
 
 <Aside data-type='important'>
@@ -585,6 +599,7 @@ For detailed information on configuring and using push notifications with Ably, 
 * **Set appropriate history retention** based on your use case (2 minutes to 1 year)
 * **Use push notifications for critical alerts** that require immediate user attention
 * **Consider notification priorities** - not all notifications need push delivery
+* **Export notifications** to external systems for auditing or compliance, or if long-term storage is required beyond Ably's retention limits.
 
 ## Production-ready checklist
 
@@ -594,11 +609,10 @@ Before launching your notification center, review these key points:
 * **Capabilities:** Apply the principle of least privilege - clients should only have publish access to an outbox and subscribe access to their own inbox.
 * **Validation:** Validate all notification request data in your processing pipeline, never trust client data.
 * **Monitoring:** Subscribe to [`[meta]log` channels](/docs/platform/errors#meta) to track integration errors and issues.
-* **Error handling:** Implement proper error handling in your processing pipeline and consider dead letter queues for failed notifications.
 * **Rate limiting:** Implement rate limiting in tokens to help prevent abuse.
-* **Testing:** Test your notification flow end-to-end, including error cases and retry behavior.
-* **Scalability:** Ensure your processing pipeline can scale to handle peak loads (consider integration concurrency limits).
+* **Scalability:** Ensure your processing pipeline can scale to handle peak loads.
 * **Cost monitoring:** Set up billing alerts and monitor usage patterns to optimize costs.
+* **Offline handling:** Enable message history on inbox channels and consider push notifications for critical alerts.
 
 ## Next steps
 
