@@ -112,6 +112,32 @@ export default {
           name: 'Message replies',
           link: '/docs/chat/rooms/replies',
         },
+        {
+          name: 'Message extraction',
+          link: '/docs/chat/rooms/message-extraction',
+        },
+      ],
+    },
+    {
+      name: 'External storage and processing',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/chat/external-storage-and-processing',
+          index: true,
+        },
+        {
+          name: 'Data extraction',
+          link: '/docs/chat/external-storage-and-processing/data-extraction',
+        },
+        {
+          name: 'Data processing',
+          link: '/docs/chat/external-storage-and-processing/data-processing',
+        },
+        {
+          name: 'Data storage',
+          link: '/docs/chat/external-storage-and-processing/data-storage',
+        },
       ],
     },
     {
