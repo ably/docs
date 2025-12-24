@@ -406,15 +406,16 @@ Ably stores messages by default for 2 minutes to support short-term [history](/d
 If longer retention is required, you can enable this using a rule to [persist all messages](/docs/storage-history/storage#all-message-persistence) for a particular channel or namespace.
 This defaults to 24 hours, but can be configured up to 1 year for some packages.
 
-When clients come online, they can retrieve missed notifications from their inbox. To avoid processing duplicate messages, clients should track the last message they've seen using the [`message.id`](/docs/api/realtime-sdk/types#message) field. Optionally, you can also store the [`message.timestamp`](/docs/api/realtime-sdk/types#message) and use it with the [`start`](/docs/api/realtime-sdk/channels#history) parameter to limit how far back you query in history.
+When clients come online, they can retrieve missed notifications from their inbox. To avoid processing duplicate messages, clients should track the last message they've seen using the [`message.id`](/docs/api/realtime-sdk/types#message) field. If client tracking is not possible, [message annotations](/docs/messages/annotations) can be used to mark messages as "read" or "delivered" – which can also be used as a means to accurately track message acknowledgment.
 
-#### Avoiding duplicate processing
+Optionally, you can also store the [`message.timestamp`](/docs/api/realtime-sdk/types#message) and use it with the [`start`](/docs/api/realtime-sdk/channels#history) parameter to limit how far back you query in history.
+
+#### Tracking via message ID
 
 Each message has a unique [`id`](/docs/api/realtime-sdk/types#message) assigned by Ably. If your client stores the `id` of the last message it successfully processed, you can query history and stop processing when you encounter that message:
 
 <Code>
 ```javascript
-const ably = new Ably.Realtime({ authUrl: '/auth/token' });
 const inbox = ably.channels.get('inbox:client456');
 
 // Retrieve the last processed message ID and timestamp from local storage
@@ -458,6 +459,116 @@ Message history is particularly useful for notifications that clients need to se
 
 <Aside data-type='note'>
  History returns a paginated list of messages. As such, you may need to paginate through multiple pages to find the last processed message, depending on how many messages were sent while the client was offline.
+</Aside>
+
+#### Tracking via message annotations
+
+[Message annotations](/docs/messages/annotations) enable clients to mark messages with metadata such as "read" or "delivered" receipts. Annotating a message will mutate the original, and this change is persisted by Ably – on querying history, clients can see which messages have been marked without needing to track individual message IDs.
+
+The act of annotating a message will result in a new annotation type message being published to the same channel. As such, it can also be used to track if a message has been acknowledged by a client, backed by all the same reliability and delivery guarantees as any other message.
+
+<Aside data-type='note'>
+  Annotating a message creates additional messages on the channel, which count towards your message usage. Consider this when planning your cost optimization strategy.
+</Aside>
+
+##### Enable annotations
+
+To use annotations, you must first enable them on your inbox channel namespace. Follow the instructions in the [message annotations documentation](/docs/messages/annotations#enable) to configure the *Message annotations, updates, and deletes* rule for your inbox namespace.
+
+##### Configure capabilities
+
+Annotations are controlled by specific [capabilities](/docs/auth/capabilities) that must be included in your client JWT tokens:
+
+* **`annotation-publish`:** Required for clients to publish annotations (such as marking messages as "delivered" or "read")
+* **`subscribe`:** Required to receive annotation summaries (aggregated views with a minimum 1-second configurable delay)
+* **`annotation-subscribe`:** Required to subscribe to individual annotation events (no delay, but higher message rates)
+
+For most notification center implementations, the `annotation-publish` and `subscribe` capabilities are sufficient. Use `annotation-subscribe` only if you need immediate annotation delivery and can handle the higher message volume.
+
+Update your token generation to include the `annotation-publish` capability:
+
+<Code>
+```javascript
+const jwt = require("jsonwebtoken");
+
+const header = {
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": "{{ API_KEY_NAME }}"
+}
+
+const currentTime = Math.round(Date.now() / 1000);
+
+const claims = {
+    "iat": currentTime,
+    "exp": currentTime + 3600,
+    "x-ably-capability": JSON.stringify({
+        "inbox:client456": ["subscribe", "history", "annotation-publish"]
+    }),
+    "x-ably-clientId": "client456"
+}
+
+const token = jwt.sign(claims, "{{ API_KEY_SECRET }}", { header: header });
+```
+</Code>
+
+##### Publishing annotations
+
+Clients can publish annotations to mark notifications as delivered or read:
+
+<Code>
+```javascript
+const inbox = ably.channels.get('inbox:client456');
+// Mark a notification as delivered when received
+await inbox.subscribe('notification', async (message) => {
+    // Display the notification
+    handleNotification(message.data);
+
+    // Publish a "delivered" annotation
+    await inbox.annotations.publish(message.serial, {
+        type: 'receipts:flag.v1',
+        name: 'delivered'
+    });
+});
+```
+</Code>
+
+##### Receiving annotation summaries
+
+To track which messages have been acknowledged, subscribe to annotation summaries. Summaries are automatically aggregated by Ably and delivered to the channel with a minimum delay of 1 second (configurable):
+
+<Code>
+```javascript
+const inbox = ably.channels.get('inbox:client456');
+
+// Subscribe to annotation summaries
+await inbox.subscribe((message) => {
+    if (message.action === 'message.summary') {
+        const summary = message.annotations.summary;
+
+        if (summary['receipts:flag.v1']) {
+            const { delivered, read } = summary['receipts:flag.v1'];
+            console.log(`Message ${message.serial}: ${delivered?.total || 0} delivered, ${read?.total || 0} read`);
+
+            // Update your tracking system
+            updateDeliveryStatus(message.serial, {
+                delivered: delivered?.clientIds || [],
+                read: read?.clientIds || []
+            });
+        }
+    }
+});
+```
+</Code>
+
+If you need immediate notification of annotations (without the 1-second delay), you can subscribe to individual annotation events by including the `annotation-subscribe` capability and using `channel.annotations.subscribe()`. However, this approach generates more messages and should only be used when the delay is unacceptable. See the [subscribe to individual annotation events](/docs/messages/annotations#individual-annotations) documentation for details.
+
+Annotations are automatically included when [querying history](/docs/messages/annotations#annotation-summaries), so you can see which historical messages have been marked as read without additional tracking infrastructure.
+
+<Aside data-type='important'>
+Message annotations are not suitable for general broadcast channels or scenarios with high fanout. When many clients annotate the same message simultaneously (for example, thousands of clients marking a broadcast notification as "delivered"), the volume of annotation messages can exceed [channel rate limits](/docs/platform/pricing/limits#channels), causing many annotations to be rejected.
+
+For this reason, annotations work best with individual inbox channels where each client annotates only their own messages.
 </Aside>
 
 ### Push notifications for critical alerts
