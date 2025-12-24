@@ -238,8 +238,45 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/account',
+          link: '/docs/platform/account',
           index: true,
+        },
+        {
+          name: 'Dashboard',
+          pages: [
+            {
+              name: 'Dashboard overview',
+              link: '/docs/platform/account/dashboard',
+            },
+            {
+              name: 'Dashboard guide',
+              link: '/docs/platform/account/dashboard-guide',
+            },
+            {
+              name: 'Your account',
+              link: '/docs/platform/account/your-account',
+            },
+            {
+              name: 'Account settings',
+              link: '/docs/platform/account/account-settings',
+            },
+            {
+              name: 'Limits',
+              link: '/docs/platform/account/limits',
+            },
+            {
+              name: 'Usage',
+              link: '/docs/platform/account/usage',
+            },
+            {
+              name: 'My Settings',
+              link: '/docs/platform/account/my-settings',
+            },
+            {
+              name: 'My Access Tokens',
+              link: '/docs/platform/account/my-access-tokens',
+            },
+          ],
         },
         {
           name: 'User management',
@@ -278,20 +315,28 @@ export default {
               link: '/docs/platform/account/app/api',
             },
             {
+              name: 'Integrations',
+              link: '/docs/platform/account/app/integrations',
+            },
+            {
               name: 'Queues',
-              link: '/docs/platform/account/app/queues',
+              link: '/docs/platform/account/app/app-queues',
             },
             {
               name: 'Notifications',
-              link: '/docs/platform/account/app/notifications',
+              link: '/docs/platform/account/app/app-notifications',
             },
             {
               name: 'Dev console',
-              link: '/docs/platform/account/app/console',
+              link: '/docs/platform/account/app/dev-console',
+            },
+            {
+              name: 'CLI testing',
+              link: '/docs/platform/account/app/cli-testing',
             },
             {
               name: 'Settings',
-              link: '/docs/platform/account/app/settings',
+              link: '/docs/platform/account/app/app-settings',
             },
           ],
         },
