@@ -287,6 +287,9 @@ export const products = {
   spaces: {
     label: 'Spaces',
   },
+  aitransport: {
+    label: 'AI Transport',
+  },
 };
 
 const useCasesList = [
