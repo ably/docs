@@ -313,6 +313,53 @@ export default {
               ],
             },
             {
+              name: 'Platform',
+              pages: [
+                {
+                  name: 'Connections',
+                  link: '/docs/platform/account/app/platform/connections',
+                },
+                {
+                  name: 'Queues',
+                  link: '/docs/platform/account/app/platform/queues',
+                },
+              ],
+            },
+            {
+              name: 'Monitoring',
+              pages: [
+                {
+                  name: 'Logs',
+                  link: '/docs/platform/account/app/monitoring/logs',
+                },
+                {
+                  name: 'Reports',
+                  link: '/docs/platform/account/app/monitoring/reports',
+                },
+              ],
+            },
+            {
+              name: 'Configuration',
+              pages: [
+                {
+                  name: 'Rules',
+                  link: '/docs/platform/account/app/configuration/rules',
+                },
+                {
+                  name: 'Integrations',
+                  link: '/docs/platform/account/app/configuration/integrations',
+                },
+                {
+                  name: 'API keys',
+                  link: '/docs/platform/account/app/configuration/api-keys',
+                },
+                {
+                  name: 'Settings',
+                  link: '/docs/platform/account/app/configuration/settings',
+                },
+              ],
+            },
+            {
               name: 'Stats',
               link: '/docs/platform/account/app/stats',
             },
