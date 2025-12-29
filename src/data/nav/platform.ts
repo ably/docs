@@ -329,8 +329,8 @@ export default {
               link: '/docs/platform/account/app/notifications',
             },
             {
-              name: 'Dev console',
-              link: '/docs/platform/account/app/console',
+              name: 'Web client',
+              link: '/docs/platform/account/app/client',
             },
             {
               name: 'Settings',
