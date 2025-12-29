@@ -307,7 +307,7 @@ export default {
                   link: '/docs/platform/account/app/products/livesync',
                 },
                 {
-                  name: 'Push Notifications',
+                  name: 'Push notifications',
                   link: '/docs/platform/account/app/products/push-notifications',
                 },
               ],
