@@ -284,6 +284,35 @@ export default {
               index: true,
             },
             {
+              name: 'Products',
+              pages: [
+                {
+                  name: 'Pub/Sub',
+                  link: '/docs/platform/account/app/products/pubsub',
+                },
+                {
+                  name: 'Chat',
+                  link: '/docs/platform/account/app/products/chat',
+                },
+                {
+                  name: 'Spaces',
+                  link: '/docs/platform/account/app/products/spaces',
+                },
+                {
+                  name: 'LiveObjects',
+                  link: '/docs/platform/account/app/products/liveobjects',
+                },
+                {
+                  name: 'LiveSync',
+                  link: '/docs/platform/account/app/products/livesync',
+                },
+                {
+                  name: 'Push Notifications',
+                  link: '/docs/platform/account/app/products/push-notifications',
+                },
+              ],
+            },
+            {
               name: 'Stats',
               link: '/docs/platform/account/app/stats',
             },
