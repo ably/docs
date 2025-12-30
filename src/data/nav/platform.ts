@@ -276,118 +276,98 @@ export default {
           link: '/docs/platform/account/enterprise-customization',
         },
         {
-          name: 'App management',
+          name: 'Programmatic management using Control API',
+          link: '/docs/platform/account/control-api',
+        },
+      ],
+    },
+    {
+      name: 'App management',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/platform/account/app',
+          index: true,
+        },
+        {
+          name: 'Products',
           pages: [
             {
-              name: 'Overview',
-              link: '/docs/platform/account/app',
-              index: true,
+              name: 'Pub/Sub',
+              link: '/docs/platform/account/app/products/pubsub',
             },
             {
-              name: 'Products',
-              pages: [
-                {
-                  name: 'Pub/Sub',
-                  link: '/docs/platform/account/app/products/pubsub',
-                },
-                {
-                  name: 'Chat',
-                  link: '/docs/platform/account/app/products/chat',
-                },
-                {
-                  name: 'Spaces',
-                  link: '/docs/platform/account/app/products/spaces',
-                },
-                {
-                  name: 'LiveObjects',
-                  link: '/docs/platform/account/app/products/liveobjects',
-                },
-                {
-                  name: 'LiveSync',
-                  link: '/docs/platform/account/app/products/livesync',
-                },
-                {
-                  name: 'Push notifications',
-                  link: '/docs/platform/account/app/products/push-notifications',
-                },
-              ],
+              name: 'Chat',
+              link: '/docs/platform/account/app/products/chat',
             },
             {
-              name: 'Platform',
-              pages: [
-                {
-                  name: 'Connections',
-                  link: '/docs/platform/account/app/platform/connections',
-                },
-                {
-                  name: 'Queues',
-                  link: '/docs/platform/account/app/platform/queues',
-                },
-              ],
+              name: 'Spaces',
+              link: '/docs/platform/account/app/products/spaces',
             },
             {
-              name: 'Monitoring',
-              pages: [
-                {
-                  name: 'Logs',
-                  link: '/docs/platform/account/app/monitoring/logs',
-                },
-                {
-                  name: 'Reports',
-                  link: '/docs/platform/account/app/monitoring/reports',
-                },
-              ],
+              name: 'LiveObjects',
+              link: '/docs/platform/account/app/products/liveobjects',
             },
             {
-              name: 'Configuration',
-              pages: [
-                {
-                  name: 'Rules',
-                  link: '/docs/platform/account/app/configuration/rules',
-                },
-                {
-                  name: 'Integrations',
-                  link: '/docs/platform/account/app/configuration/integrations',
-                },
-                {
-                  name: 'API keys',
-                  link: '/docs/platform/account/app/configuration/api-keys',
-                },
-                {
-                  name: 'Settings',
-                  link: '/docs/platform/account/app/configuration/settings',
-                },
-              ],
+              name: 'LiveSync',
+              link: '/docs/platform/account/app/products/livesync',
             },
             {
-              name: 'Stats',
-              link: '/docs/platform/account/app/stats',
-            },
-            {
-              name: 'API keys',
-              link: '/docs/platform/account/app/api',
-            },
-            {
-              name: 'Queues',
-              link: '/docs/platform/account/app/queues',
-            },
-            {
-              name: 'Notifications',
-              link: '/docs/platform/account/app/notifications',
-            },
-            {
-              name: 'Web client',
-              link: '/docs/platform/account/app/client',
-            },
-            {
-              name: 'Settings',
-              link: '/docs/platform/account/app/settings',
+              name: 'Push notifications',
+              link: '/docs/platform/account/app/products/push-notifications',
             },
           ],
         },
         {
-          name: 'Programmatic management using Control API',
-          link: '/docs/platform/account/control-api',
+          name: 'Platform',
+          pages: [
+            {
+              name: 'Connections',
+              link: '/docs/platform/account/app/platform/connections',
+            },
+            {
+              name: 'Queues',
+              link: '/docs/platform/account/app/platform/queues',
+            },
+          ],
+        },
+        {
+          name: 'Monitoring',
+          pages: [
+            {
+              name: 'Logs',
+              link: '/docs/platform/account/app/monitoring/logs',
+            },
+            {
+              name: 'Reports',
+              link: '/docs/platform/account/app/monitoring/reports',
+            },
+          ],
+        },
+        {
+          name: 'Configuration',
+          pages: [
+            {
+              name: 'Rules',
+              link: '/docs/platform/account/app/configuration/rules',
+            },
+            {
+              name: 'Integrations',
+              link: '/docs/platform/account/app/configuration/integrations',
+            },
+            {
+              name: 'API keys',
+              link: '/docs/platform/account/app/configuration/api-keys',
+            },
+            {
+              name: 'Settings',
+              link: '/docs/platform/account/app/configuration/settings',
+            },
+          ],
+        },
+        {
+          name: 'Web client',
+          link: '/docs/platform/account/app/client',
         },
       ],
     },
