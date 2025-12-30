@@ -1,5 +1,5 @@
 ---
-title: "Store messages"
+title: "Data storage"
 meta_description: "Store chat messages from Ably Chat in your own data storage for long-term retention, compliance, and analytics."
 meta_keywords: "chat storage, data storage, data retention, compliance, analytics, message history, chat export"
 ---
@@ -8,7 +8,17 @@ Store chat messages from Ably Chat in your own data storage for long-term retent
 
 While Ably Chat provides flexible data retention for messages (30 days by default, up to a year on request), this page discusses options for longer-term storage and additional control over your chat data.
 
-## Why store chat data? <a id="why"/>
+## What Ably Chat history gives you <a id="history-endpoint"/>
+
+You can fetch the message history of a chat room using the [Chat History endpoint](/docs/api/chat-rest#tag/rooms/paths/~1chat~1%7Bversion%7D~1rooms~1%7BroomName%7D~1messages/get) or the [Chat SDK](/docs/chat/rooms/history). The chat room history endpoint is a paginated HTTP endpoint that allows you to retrieve messages from a chat room. The Chat SDK provides a convenient way to fetch the history of a chat room.
+
+The intended use of the chat history endpoint is to retrieve messages for pre-filling a chat window, not for continuous ingestion into other systems. As a result, there are some important things to consider:
+- The history endpoint is not a changelog, it is a snapshot of the messages in the room at the time the request is made. It returns only the latest version of each message.
+- The history API returns messages in their canonical global order (sorted by `serial`).
+- During some offline period, to capture all updates and deletes that may have occurred, you will need to re-fetch all messages each time, which can be impractical for long-running chats with large message histories.
+- The maximum retention period for chat messages is 365 days (on request). Messages older than this will not be available via the history endpoint.
+
+## Why store chat data externally? <a id="why"/>
 
 Storing chat data in your own data storage enables many use cases. You can meet compliance and legal requirements by maintaining data retention policies, audit trails for support conversations, and fulfilling regulatory requirements. It enables analytics and business intelligence through building dashboards, training ML models, analyzing customer sentiment, and tracking support quality metrics. You can implement enhanced functionality that needs chat history, such as full-text search across all messages, maintain your data storage as the canonical source of truth, and store chat data for longer than Ably Chat's retention period.
 
@@ -93,6 +103,8 @@ This approach provides a simple, reliable solution for archival with no integrat
 - Returns messages sorted by `serial` (canonical global order)
 - Must decide when to trigger export (closed ticket, ended session, etc.)
 - Impractical for long-running chats if you need all updates/deletes (must fetch from start each time)
+- You will need to decide when and which rooms to import messages from. The metachannel [`[meta]channel.lifecycle`](/docs/metadata-stats/metadata/subscribe#channel-lifecycle) provides events when channels are opened and closed, but your business logic might provide a better solution. For example, import when a support ticket is closed or game session ends.
+- You can import the same room multiple times (deduplicate by `serial` and `version.serial`). However, to capture all updates and deletes, you will need to fetch from the first message each time, which can be impractical for long-running chats with large message histories.
 
 Use this approach when archiving completed chats (closed support tickets, ended game sessions), there are clear start and end boundaries for chats, and you don't need continuous ingestion or full version history.
 
@@ -190,17 +202,3 @@ You need to consider:
 - Your own servers are in the middle of the message publish path, so they can become a bottleneck in availability and will add latency in the publish path.
 - Your own servers will need to handle the scale you operate at for realtime publishes.
 - Keeping both systems in sync can be a difficult problem to solve in all edge cases. Inconsistencies can happen if either publishing to Ably or saving to your own data storage fails. You will need mitigation strategies to handle all failure scenarios to ensure eventual consistency.
-
-## Using the Chat History endpoint <a id="history-endpoint"/>
-
-You can fetch the message history of a chat room using the [Chat History endpoint](/docs/api/chat-rest#tag/rooms/paths/~1chat~1%7Bversion%7D~1rooms~1%7BroomName%7D~1messages/get) or the [Chat SDK](/docs/chat/rooms/history). The chat room history endpoint is a paginated HTTP endpoint that allows you to retrieve messages from a chat room. The Chat SDK provides a convenient way to fetch the history of a chat room.
-
-If your use case is to archive chats that have ended, such as to export the chat history of a support ticket that is closed, you can use the chat history endpoint to export the messages to your own system. Read the docs on [chat history](/docs/chat/rooms/history) for more details.
-
-The intended use of the chat history endpoint is to retrieve messages for pre-filling a chat window, not for continuous ingestion into other systems. As a result, there are some important things to consider:
-- The history endpoint is not a changelog, it is a snapshot of the messages in the room at the time the request is made. It returns only the latest version of each message.
-- The history API returns messages in their canonical global order (sorted by `serial`).
-- You will need to decide when and which rooms to import messages from. The metachannel [`[meta]channel.lifecycle`](/docs/metadata-stats/metadata/subscribe#channel-lifecycle) provides events when channels are opened and closed, but your business logic might provide a better solution, for example import when a support ticket is closed or game session ends.
-- You can import the same room multiple times (deduplicate by `serial` and `version.serial`). However, to capture all updates and deletes, you will need to fetch from the first message each time, which can be impractical for long-running chats with large message histories.
-
-For use cases where there is a clear start and end of the chat, exporting the chat via history requests is a simple, reliable solution. If there is no clear start and end for chats, if you require continuous ingestion, or if you need the full message version history, please consider using one of the other methods mentioned in this guide.
