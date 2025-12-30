@@ -81,7 +81,7 @@ export default {
           link: '/docs/chat/rooms/messages',
         },
         {
-          name: 'Message storage and history',
+          name: 'Message history',
           link: '/docs/chat/rooms/history',
         },
         {
