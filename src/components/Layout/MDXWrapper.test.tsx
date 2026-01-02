@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { WindowLocation } from '@reach/router';
 import { render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
 import { Helmet } from 'react-helmet';
 import If from './mdx/If';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
