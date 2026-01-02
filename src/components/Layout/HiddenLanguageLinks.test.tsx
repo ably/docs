@@ -1,6 +1,5 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
 import { useLocation } from '@reach/router';
 import HiddenLanguageLinks from './HiddenLanguageLinks';
 import { useLayoutContext } from 'src/contexts/layout-context';

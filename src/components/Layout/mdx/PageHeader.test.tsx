@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
 import { PageHeader } from './PageHeader';
 
 const mockUseLayoutContext = jest.fn(() => ({

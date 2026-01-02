@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
 import { useStaticQuery } from 'gatsby';
 import Header from './Header';
 import UserContext from 'src/contexts/user-context';
