@@ -112,10 +112,6 @@ export default {
           name: 'Message replies',
           link: '/docs/chat/rooms/replies',
         },
-        {
-          name: 'Message extraction',
-          link: '/docs/chat/rooms/message-extraction',
-        },
       ],
     },
     {
