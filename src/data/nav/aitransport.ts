@@ -52,6 +52,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Threading',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/features/threading',
+        },
+      ],
+    },
   ],
   api: [],
 } satisfies NavProduct;

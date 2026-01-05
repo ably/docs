@@ -1,0 +1,273 @@
+---
+title: "Threading overview"
+meta_description: "Stream chain-of-thought reasoning from thinking models in AI applications"
+meta_keywords: "chain of thought, thinking models, extended thinking, reasoning transparency, reasoning streams, thought process, AI transparency, separate channels, model reasoning"
+---
+
+Ably AI Transport's threading feature enables you to stream chain-of-thought reasoning from thinking models alongside their final responses. This capability provides transparency into how AI models arrive at their conclusions, enabling richer user experiences and deeper insights into model behavior.
+
+## What is threading? <a id="what"/>
+
+Threading allows AI agents to publish their internal reasoning process to a separate channel while simultaneously delivering the final response to the main channel. This is useful for thinking models, which generate extended internal reasoning before producing their final output.
+
+Modern thinking models perform deliberate reasoning through chain-of-thought processing. Rather than immediately generating a response, they work through problems step-by-step, considering multiple approaches and refining their thinking. Threading makes this internal process visible to your application, enabling you to:
+
+- **Show reasoning to users**: Display the model's thought process in real-time, helping users understand how conclusions were reached
+- **Build transparency features**: Create UI elements that reveal AI decision-making, increasing user trust and engagement
+- **Debug agent behavior**: Observe the reasoning steps to identify where agents might be going wrong or making incorrect assumptions
+
+## How threading works <a id="how"/>
+
+Threading uses Ably's channel system to separate reasoning streams from final responses. When an agent begins thinking, it publishes a signal message to the main channel with a `threadChannel` header indicating where reasoning will be published. Clients can then subscribe to the thread channel to receive the reasoning process.
+
+Here's the basic flow:
+
+1. Agent receives a user prompt on the main session channel
+2. Agent publishes a signal message (such as "thinking started") to the main channel with a `threadChannel` header specifying where reasoning will be published
+3. Agent begins processing with a thinking model and publishes chain-of-thought messages to the thread channel as the model generates them
+4. Client receives the signal and subscribes to the thread channel to see thinking messages
+5. Agent publishes a completion signal to the thread channel when thinking is done
+6. Agent publishes the final response to the main channel
+
+This architecture keeps the main conversation channel clean while allowing clients to opt into receiving detailed reasoning. Clients can subscribe to thread channels at any time and use [channel history](/docs/storage-history/history) to catch up on messages they may have missed.
+
+## Publishing with thread channels <a id="publishing"/>
+
+Agents specify the thread channel in `extras.headers` when publishing a signal message at the start of thinking. This tells clients where to find the chain-of-thought messages.
+
+### Specifying the thread channel <a id="specifying"/>
+
+Publish a signal message with a `threadChannel` header when starting to think. This informs clients where thinking messages will be published:
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}",
+  clientId: "thinking-agent"
+});
+
+// Subscribe to user prompts on the main session channel
+const sessionChannel = ably.channels.get("session:{{RANDOM_CHANNEL_NAME}}");
+
+await sessionChannel.subscribe("prompt", async (message) => {
+  const userPrompt = message.data;
+  const userId = message.clientId;
+
+  // Generate a unique thread channel name for this interaction
+  const threadChannelName = `thread:${userId}:${Date.now()}`;
+
+  // Publish a signal message to notify client that thinking is starting
+  await sessionChannel.publish({
+    name: "thinking_started",
+    data: null,
+    extras: {
+      headers: {
+        threadChannel: threadChannelName
+      }
+    }
+  });
+
+  // Get the thread channel for publishing reasoning
+  const threadChannel = ably.channels.get(threadChannelName);
+
+  // Call your LLM with thinking/reasoning enabled
+  // As the model generates thinking content, publish it to the thread channel
+  // (Implementation depends on your chosen LLM provider)
+
+  // Example: Publishing thinking messages as they're generated
+  await threadChannel.publish({
+    name: "thinking",
+    data: "Analyzing the user's question..."
+  });
+
+  await threadChannel.publish({
+    name: "thinking",
+    data: "Considering multiple approaches to solve this problem..."
+  });
+
+  await threadChannel.publish({
+    name: "thinking",
+    data: "Evaluating the best solution based on the requirements..."
+  });
+
+  // Signal that thinking is complete
+  await threadChannel.publish({
+    name: "thinking_complete",
+    data: null
+  });
+
+  // Publish the final response to the session channel
+  const finalResponse = "Based on my analysis, here is the answer...";
+  await sessionChannel.publish({
+    name: "response",
+    data: finalResponse
+  });
+});
+```
+</Code>
+
+<Aside data-type="note">
+The thread channel name should be unique for each interaction. This example uses a combination of user ID and timestamp, but you can use any naming convention that ensures uniqueness within your application. When integrating with your LLM provider, publish thinking messages to the thread channel as they're generated by the model.
+</Aside>
+
+### Thread channel naming conventions <a id="naming"/>
+
+Choose thread channel names that make it easy to associate threads with their parent sessions:
+
+- **User-scoped threads**: `thread:{userId}:{timestamp}` - Associates threads with specific users
+- **Session-scoped threads**: `thread:{sessionId}:{interactionId}` - Links threads to specific conversations
+- **Request-scoped threads**: `thread:{requestId}` - Uses unique request identifiers
+
+Ensure thread channel names don't conflict with your existing channel naming scheme and consider including namespace prefixes to organize channels by organization or application.
+
+## Subscribing to thread channels <a id="subscribing"/>
+
+Clients subscribe to both the main session channel and the thread channel to receive the final response and reasoning separately.
+
+### Basic subscription <a id="basic-subscription"/>
+
+When a client receives a `thinking_started` signal with a `threadChannel` header, it can subscribe to that channel to receive the reasoning. Clients can subscribe at any point and use [channel history](/docs/storage-history/history) to retrieve any thinking messages published before they subscribed:
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch("/api/auth/token");
+      const token = await response.text();
+      callback(null, token);
+    } catch (error) {
+      callback(error, null);
+    }
+  }
+});
+
+// Subscribe to the main session channel
+const sessionChannel = ably.channels.get("session:{{RANDOM_CHANNEL_NAME}}");
+
+// Track active thread subscriptions
+const activeThreads = new Map();
+
+// Subscribe to thinking_started signals to learn about thread channels
+await sessionChannel.subscribe("thinking_started", async (message) => {
+  const threadChannelName = message.extras?.headers?.threadChannel;
+
+  if (threadChannelName && !activeThreads.has(threadChannelName)) {
+    // Subscribe to the thread channel for reasoning
+    const threadChannel = ably.channels.get(threadChannelName);
+
+    await threadChannel.subscribe("thinking", (thinkingMessage) => {
+      // Display the thinking content to the user in real-time
+      console.log("Model reasoning:", thinkingMessage.data);
+      updateThinkingUI(thinkingMessage.data);
+    });
+
+    await threadChannel.subscribe("thinking_complete", () => {
+      console.log("Reasoning complete");
+      finalizeThinkingUI();
+
+      // Clean up: detach from thread channel
+      threadChannel.detach();
+      activeThreads.delete(threadChannelName);
+    });
+
+    activeThreads.set(threadChannelName, threadChannel);
+  }
+});
+
+// Subscribe to final responses separately
+await sessionChannel.subscribe("response", async (message) => {
+  const response = message.data;
+  // Display the final response
+  console.log("Agent response:", response);
+  updateResponseUI(response);
+});
+```
+</Code>
+
+<Aside data-type="important">
+Remember to detach from thread channels when they're no longer needed to avoid accumulating subscriptions and unnecessarily consuming connection resources.
+</Aside>
+
+### User-controlled threading <a id="user-controlled"/>
+
+You can give users control over whether they want to see reasoning by allowing them to toggle thread visibility:
+
+<Code>
+```javascript
+// Client code
+let showThinking = false; // User preference
+
+// Toggle function
+function toggleThinking(enabled) {
+  showThinking = enabled;
+  console.log(`Thinking display ${enabled ? 'enabled' : 'disabled'}`);
+}
+
+// Subscribe to thinking_started signals
+await sessionChannel.subscribe("thinking_started", async (message) => {
+  const threadChannelName = message.extras?.headers?.threadChannel;
+
+  // Only subscribe to thread if user wants to see thinking
+  if (showThinking && threadChannelName && !activeThreads.has(threadChannelName)) {
+    const threadChannel = ably.channels.get(threadChannelName);
+
+    await threadChannel.subscribe("thinking", (thinkingMessage) => {
+      updateThinkingUI(thinkingMessage.data);
+    });
+
+    await threadChannel.subscribe("thinking_complete", () => {
+      finalizeThinkingUI();
+      threadChannel.detach();
+      activeThreads.delete(threadChannelName);
+    });
+
+    activeThreads.set(threadChannelName, threadChannel);
+  }
+});
+
+// Subscribe to final responses
+await sessionChannel.subscribe("response", async (message) => {
+  updateResponseUI(message.data);
+});
+```
+</Code>
+
+## Authorization for thread channels <a id="authorization"/>
+
+Use [capabilities](/docs/auth/capabilities) to control which clients can access thread channels. This is important if threads contain sensitive reasoning that should only be visible to specific users or roles.
+
+### Restricting thread access <a id="restricting"/>
+
+Configure user tokens to grant access only to thread channels scoped to that user:
+
+<Code>
+```javascript
+// Server code - token generation
+function getJWTClaims(userId) {
+  const capabilities = {
+    // User can interact with their session channels
+    [`session:${userId}:*`]: ["publish", "subscribe"],
+    // User can only subscribe to their own thread channels
+    [`thread:${userId}:*`]: ["subscribe"],
+  };
+
+  return {
+    "x-ably-clientId": userId,
+    "x-ably-capability": JSON.stringify(capabilities),
+  };
+}
+```
+</Code>
+
+This ensures users can only access reasoning for their own interactions and prevents unauthorized access to other users' thread channels.
+
+<Aside data-type="note">
+Agents typically need broader capabilities to publish to any thread channel they create. Provision agent API keys with appropriate capabilities for the thread channel namespace you're using.
+</Aside>
