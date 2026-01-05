@@ -21,7 +21,6 @@ const pageLayoutOptions: Record<string, LayoutOptions> = {
   },
   '/docs/sdks': { leftSidebar: false, rightSidebar: false, template: 'sdk', mdx: false },
   '/examples': { leftSidebar: false, rightSidebar: false, template: 'examples', mdx: false },
-  '/docs/how-to/pub-sub': { leftSidebar: true, rightSidebar: true, template: 'how-to', mdx: true },
   '/docs/404': { leftSidebar: false, rightSidebar: false, template: '404', mdx: false },
 };
 
