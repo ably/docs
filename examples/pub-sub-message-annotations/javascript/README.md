@@ -67,7 +67,7 @@ This example demonstrates:
   yarn install
   ```
 
-6. Enable the "Annotations, updates and deletes" channel rule that matches the channel name you'll be using (by default we use a channel name of `annotation:pub-sub-message-annotations`, so if using this, [create this rule](https://ably.com/docs/channels#rules) for the "annotation" channel namespace).
+6. Enable the "Annotations, updates, deletes, and appends" channel rule that matches the channel name you'll be using (by default we use a channel name of `annotation:pub-sub-message-annotations`, so if using this, [create this rule](https://ably.com/docs/channels#rules) for the "annotation" channel namespace).
 
 7. Run the server:
 
