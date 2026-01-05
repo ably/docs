@@ -53,6 +53,15 @@ export default {
       ],
     },
     {
+      name: 'Messaging',
+      pages: [
+        {
+          name: 'Chain of thought',
+          link: '/docs/ai-transport/features/messaging/chain-of-thought',
+        },
+      ],
+    },
+    {
       name: 'Guides',
       pages: [
         {
