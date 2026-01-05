@@ -206,6 +206,21 @@ There are some exceptions: for example, the names of products, the titles of sta
 
 So, unless there is a good reason not to, use sentence case (first letter is capitalized).
 
+## Heading forms
+
+Use imperative form for headings.
+
+The imperative form is direct and action-oriented, making it clear what the developer needs to do.
+
+Examples:
+
+* *Imperative (preferred):* Configure the API client
+* *Gerund (avoid):* Configuring the API client
+* *Imperative (preferred):* Install the SDK
+* *Gerund (avoid):* Installing the SDK
+
+The only exception is FAQ-style content where the heading is phrased as a question. In all other cases, use the imperative form.
+
 ## Bulleted lists
 
 This is an example of a bulleted list:
