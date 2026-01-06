@@ -52,35 +52,225 @@ export OPENAI_API_KEY="your_api_key_here"
 ```
 </Code>
 
-## Initialize the clients <a id="setup"/>
+## Step 1: Get a streamed response from OpenAI <a id="step-1"/>
 
-Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
-
-### Publisher: Initialize the Ably and OpenAI clients <a id="publisher-setup"/>
-
-Initialize both the Ably and OpenAI clients. The Ably Realtime client maintains a persistent connection to the Ably service, allowing you to publish tokens at high message rates with low latency. The OpenAI client provides access to the Responses API.
+Initialize an OpenAI client and use the [Responses API](https://platform.openai.com/docs/api-reference/responses) to stream model output as a series of events.
 
 Create a new file `publisher.mjs` with the following contents:
+
+<Code>
+```javascript
+import OpenAI from 'openai';
+
+// Initialize OpenAI client
+const openai = new OpenAI();
+
+// Process each streaming event
+function processEvent(event) {
+  console.log(JSON.stringify(event));
+  // We'll update this function in the next sections
+}
+
+// Create streaming response from OpenAI
+async function streamOpenAIResponse(prompt) {
+  const stream = await openai.responses.create({
+    model: "gpt-5",
+    input: prompt,
+    stream: true,
+  });
+
+  // Iterate through streaming events
+  for await (const event of stream) {
+    processEvent(event);
+  }
+}
+
+// Usage example
+streamOpenAIResponse("Tell me a short joke");
+```
+</Code>
+
+### Understand OpenAI streaming events <a id="understand-streaming-events"/>
+
+OpenAI's Responses API [streams](https://platform.openai.com/docs/guides/streaming-responses) model output as a series of events when you set `stream: true`. Each streamed event includes a `type` property which describes the [event type](https://platform.openai.com/docs/api-reference/responses-streaming). A complete text response can be constructed from the following event types:
+
+- [`response.created`](https://platform.openai.com/docs/api-reference/responses-streaming/response/created): Signals the start of a response. Contains `response.id` to correlate subsequent events.
+
+- [`response.output_item.added`](https://platform.openai.com/docs/api-reference/responses-streaming/response/output_item/added): Indicates a new output item. If `item.type === "message"` the item contains model response text; other types may be specified, such as `"reasoning"` for internal reasoning tokens. The `item.id` can be used to filter which tokens to stream. The `output_index` indicates the position of this item in the response's output array.
+
+- [`response.content_part.added`](https://platform.openai.com/docs/api-reference/responses-streaming/response/content_part/added): Indicates a new content part within an output item. Use `item_id`, `output_index`, and `content_index` to correlate tokens.
+
+- [`response.output_text.delta`](https://platform.openai.com/docs/api-reference/responses-streaming/response/output_text/delta): Contains a single token in the `delta` field. The `item_id` identifies which output item this token belongs to. The `output_index` and `content_index` identify the specific content part.
+
+- [`response.content_part.done`](https://platform.openai.com/docs/api-reference/responses-streaming/response/content_part/done): Signals completion of a content part. Contains the complete `part` object with full text, along with `item_id`, `output_index`, and `content_index`.
+
+- [`response.output_item.done`](https://platform.openai.com/docs/api-reference/responses-streaming/response/output_item/done): Signals completion of an output item. Contains the complete `item` object and `output_index`.
+
+- [`response.completed`](https://platform.openai.com/docs/api-reference/responses-streaming/response/completed): Signals the end of the response.
+
+Here's an example of the event sequence you'll receive when streaming a response:
+
+<Code>
+```json
+// 1. Response starts
+{"type":"response.created","response":{"id":"resp_abc123","status":"in_progress"}}
+
+// 2. First output item (reasoning) is added
+{"type":"response.output_item.added","output_index":0,"item":{"id":"rs_456","type":"reasoning"}}
+{"type":"response.output_item.done","output_index":0,"item":{"id":"rs_456","type":"reasoning"}}
+
+// 3. Second output item (message) is added
+{"type":"response.output_item.added","output_index":1,"item":{"id":"msg_789","type":"message"}}
+{"type":"response.content_part.added","item_id":"msg_789","output_index":1,"content_index":0}
+
+// 4. Text tokens stream in as delta events
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":"Why"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" don"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":"'t"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" scientists"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" trust"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" atoms"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":"?"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" Because"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" they"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" make"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" up"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":" everything"}
+{"type":"response.output_text.delta","item_id":"msg_789","output_index":1,"content_index":0,"delta":"."}
+
+// 5. Content part and output item complete
+{"type":"response.content_part.done","item_id":"msg_789","output_index":1,"content_index":0,"part":{"type":"output_text","text":"Why don't scientists trust atoms? Because they make up everything."}}
+{"type":"response.output_item.done","output_index":1,"item":{"id":"msg_789","type":"message","status":"completed","content":[{"type":"output_text","text":"Why don't scientists trust atoms? Because they make up everything."}],"role":"assistant"}}
+
+// 6. Response completes
+{"type":"response.completed","response":{"id":"resp_abc123","status":"completed"}}
+```
+</Code>
+
+<Aside data-type="note">
+This is only a representative example for a simple "text in, text out" use case and may not reflect the exact sequence of events that you'll observe from the OpenAI API. It also does not describe response generation errors or refusals. For complete details on all event types and their properties, see [OpenAI Streaming events](https://platform.openai.com/docs/api-reference/responses-streaming/response).
+</Aside>
+
+## Step 2: Publish streaming events to Ably <a id="step-2"/>
+
+Publish OpenAI streaming events to Ably to reliably and scalably distribute them to subscribers.
+
+This implementation follows the [explicit start/stop events pattern](/docs/ai-transport/features/token-streaming/message-per-token#explicit-events), which provides clear response boundaries.
+
+### Initialize the Ably client <a id="initialize-ably"/>
+
+Add the Ably client initialization to your `publisher.mjs` file:
 
 <Code>
 ```javascript
 import Ably from 'ably';
 import OpenAI from 'openai';
 
-// Initialize Ably Realtime client
-const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
-
 // Initialize OpenAI client
 const openai = new OpenAI();
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
 
 // Create a channel for publishing streamed AI responses
 const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
 ```
 </Code>
 
-### Subscriber: Initialize the Ably client <a id="subscriber-setup"/>
+The Ably Realtime client maintains a persistent connection to the Ably service, which allows you to publish tokens at high message rates with low latency.
 
-Initialize the Ably client, in the same way as you did for the publisher. The Ably subscriber will receive streamed AI response events in realtime.
+### Map OpenAI streaming events to Ably messages <a id="map-events"/>
+
+Choose how to map [OpenAI streaming events](#understand-streaming-events) to Ably messages. You can choose any mapping strategy that suits your application's needs. This guide uses the following pattern as an example:
+
+- `start`: Signals the beginning of a response
+- `token`: Contains the incremental text content for each delta
+- `stop`: Signals the completion of a response
+
+<Aside data-type="note">
+This implementation assumes each response contains a single `message` type output item. It filters out reasoning tokens and other non-`message` output items, and processes responses sequentially. For production use cases with concurrent responses or multiple output items or content parts, consider tracking state per response ID.
+</Aside>
+
+Update your `publisher.mjs` file to initialize the Ably client and update the `processEvent()` function to publish events to Ably:
+
+<Code>
+```javascript
+// Track state across events
+let responseId = null;
+let messageItemId = null;
+
+// Process each streaming event and publish to Ably
+function processEvent(event) {
+  switch (event.type) {
+    case 'response.created':
+      // Capture response ID when response starts
+      responseId = event.response.id;
+
+      // Publish start event
+      channel.publish({
+        name: 'start',
+        extras: {
+          headers: { responseId }
+        }
+      });
+      break;
+
+    case 'response.output_item.added':
+      // Capture message item ID when a message output item is added
+      if (event.item.type === 'message') {
+        messageItemId = event.item.id;
+      }
+      break;
+
+    case 'response.output_text.delta':
+      // Publish tokens from message output items only
+      if (event.item_id === messageItemId) {
+        channel.publish({
+          name: 'token',
+          data: event.delta,
+          extras: {
+            headers: { responseId }
+          }
+        });
+      }
+      break;
+
+    case 'response.completed':
+      // Publish stop event when response completes
+      channel.publish({
+        name: 'stop',
+        extras: {
+          headers: { responseId }
+        }
+      });
+      break;
+  }
+}
+```
+</Code>
+
+This implementation:
+
+- Publishes a `start` event when the response begins, including the `responseId` in message extras
+- Filters for `response.output_text.delta` events from `message` type output items
+- Publishes each token with the message name `token` and includes the `responseId` in message extras
+- Publishes a `stop` event when the response completes
+
+<Aside data-type="note">
+Ably messages are published without `await` to maximize throughput. Ably maintains message ordering even without awaiting each publish. For more information, see [Publishing tokens](/docs/ai-transport/features/token-streaming/message-per-token#publishing).
+</Aside>
+
+Run the publisher to see tokens streaming to Ably:
+
+<Code>
+```shell
+node publisher.mjs
+```
+</Code>
+
+## Step 3: Subscribe to streaming tokens <a id="step-3"/>
+
+Create a subscriber that receives the streaming tokens from Ably and reconstructs the response.
 
 Create a new file `subscriber.mjs` with the following contents:
 
@@ -91,337 +281,44 @@ import Ably from 'ably';
 // Initialize Ably Realtime client
 const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
 
-// Create a channel for subscribing to streamed AI responses
+// Get the same channel used by the publisher
 const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
-```
-</Code>
 
-## Understand Responses API events <a id="understanding-events"/>
-
-OpenAI's Responses API [streams](https://platform.openai.com/docs/guides/streaming-responses) model output as a series of events when you set `stream: true`. Each streamed event includes a `type` property which describes the event type. A complete response can be constructed from the following event types:
-
-1. `response.created`: Signals the start of the stream.
-2. `response.output_item.added`: Signals the start of an output item. The response will be sent in one or more output item blocks.
-3. `response.content_part.start`: Signals the start of a piece of content within the output item.
-4. `response.output_text.delta`: Contains the incremental text (tokens) to append to the response.
-5. `response.output_text.done`, `response.content_part.done`, `response.output_item.done`: Signal the end of each block in the response.
-6. `response.completed`: Signals that the stream is complete.
-
-<Aside data-type="note">
-This is only a representative example for a simple "text in, text out" use case, and may not reflect the exact sequence of events that you'll observe from the OpenAI API. It also does not handle response generation errors or refusals.
-</Aside>
-
-For more details on streaming events, see the [OpenAI Responses API streaming documentation](https://platform.openai.com/docs/api-reference/responses-streaming/response).
-
-## Publish tokens to Ably <a id="publishing"/>
-
-To stream OpenAI responses over Ably, your publisher iterates through the streaming events received from OpenAI and publishes each token to an Ably channel. This implementation follows the [explicit start/stop events pattern](/docs/ai-transport/features/token-streaming/message-per-token#explicit-events), which provides clear response boundaries.
-
-The pattern works as follows:
-- First event: Publish a `start` message to signal response beginning
-- Each delta: Publish a `token` message with the incremental text content
-- Stream end: Publish a `stop` message to signal response completion
-
-### Map OpenAI events to Ably messages <a id="mapping"/>
-
-The publisher will map the events from the OpenAI Responses API to Ably events, using the response ID from OpenAI events in the Ably message extras to correlate tokens belonging to the same response.
-
-1. `response.created`: This gives us the response ID, which we'll include in all messages that we publish to Ably for this response. When we receive this event, we'll publish an Ably message named `start`.
-<Code>
-```json
-{
-  type: 'response.created',
-  response: {
-    id: 'resp_abc123',
-    …
-  },
-  …
-}
-```
-</Code>
-2. `response.output_item.added`: This indicates the start of the output message. We'll extract its `output_index` and only publish `token` events to Ably for matching output items.
-<Code>
-```json
-{
-  type: 'response.output_item.added',
-  output_index: 1,
-  item: {
-    type: 'message',
-    …
-  },
-  …
-}
-```
-</Code>
-3. `response.content_part.added`: This indicates the start of the output text. We'll extract its `content_index` and only publish `token` events to Ably for matching content parts.
-<Code>
-```json
-{
-  type: 'response.content_part.added',
-  output_index: 1,
-  content_index: 0,
-  part: {
-    type: 'output_text',
-    …
-  },
-  …
-}
-```
-</Code>
-4. `response.output_text.delta`: This indicates that some tokens have been generated. When we receive such an event, we'll publish an Ably message named `token`, containing the text delta.
-<Code>
-```json
-{
-  type: 'response.output_text.delta',
-  output_index: 1,
-  content_index: 0,
-  delta: 'a bit of text that',
-  …
-}
-```
-</Code>
-5. `response.completed`: This indicates that the response is complete and will not emit any further events. When we receive this event, we'll publish an Ably message named `stop`.
-<Code>
-```json
-{
-  type: 'response.completed',
-  response: {
-    id: 'resp_abc123',
-    …
-  },
-  …
-}
-```
-</Code>
-
-### Publisher code
-
-On the publisher side, send a user prompt to OpenAI Responses API and map the stream of response events into messages on the Ably channel using the pattern described above.
-
-Add the following code to `publisher.mjs`:
-
-<Code>
-```javascript
-import { randomUUID } from "crypto";
-
-async function streamOpenAIResponse(userInput) {
-  // Create streaming response from OpenAI
-  const stream = await openai.responses.create({
-    model: "gpt-5",
-    input: userInput,
-    stream: true,
-  });
-
-  // Create a random request ID for correlating log messages when there are concurrent requests
-  const requestId = randomUUID().slice(0, 7);
-  console.log(`${requestId}: Created stream`);
-
-  // In this simple example, we'll only stream tokens for a single
-  // content_part of a single output_item (specifically, the first
-  // content_part of type "output_text" of the first output_item of type
-  // "message"). These variables contain the output_index and content_index
-  // event properties that correspond to these entities.
-  let outputIndex = null;
-  let contentIndex = null;
-
-  // Populated from the "response.created" OpenAI event and then included in
-  // all messages published to Ably for this response.
-  let responseId = null;
-
-  // Iterate through streaming events
-  for await (const event of stream) {
-    console.log(`${requestId}: Got event ${event.type}`);
-
-    if (event.type === "response.created") {
-      responseId = event.response.id;
-
-      console.log(
-        `${requestId}: Publishing 'start' event for response ${responseId}`,
-      );
-      channel.publish({
-        name: "start",
-        extras: {
-          headers: {
-            responseId: responseId,
-          },
-        },
-      });
-    } else {
-      if (responseId === null) {
-        throw new Error(
-          "OpenAI SDK behavior not as expected (initial response.created event not received)",
-        );
-      }
-
-      if (
-        event.type === "response.output_item.added" &&
-        event.item.type === "message" &&
-        outputIndex === null
-      ) {
-        outputIndex = event.output_index;
-      } else if (
-        event.type === "response.content_part.added" &&
-        event.part.type === "output_text" &&
-        event.output_index === outputIndex &&
-        contentIndex === null
-      ) {
-        contentIndex = event.content_index;
-      } else if (
-        event.type === "response.output_text.delta" &&
-        event.output_index === outputIndex &&
-        event.content_index === contentIndex
-      ) {
-        const delta = event.delta;
-
-        console.log(
-          `${requestId}: Publishing 'token' event with delta "${delta}" for response ${responseId}`,
-        );
-
-        channel.publish({
-          name: "token",
-          data: delta,
-          extras: {
-            headers: {
-              responseId: responseId,
-            },
-          },
-        });
-      } else if (event.type === "response.completed") {
-        console.log(
-          `${requestId}: Publishing 'stop' event for response ${responseId}`,
-        );
-
-        channel.publish({
-          name: "stop",
-          extras: {
-            headers: {
-              responseId: responseId,
-            },
-          },
-        });
-      } else {
-        console.log(
-          `${requestId}: Ignoring OpenAI SDK event ${event.type} for response ${responseId}`,
-        );
-      }
-    }
-  }
-}
-
-// Usage example: Multiple concurrent responses
-streamOpenAIResponse("Tell me a short joke");
-streamOpenAIResponse("Give me one interesting fact about Spain");
-streamOpenAIResponse("Write a one-line poem about carrot cake");
-```
-</Code>
-
-Important implementation notes:
-
-- Don't await publish calls: As shown in the code above, `channel.publish()` is called without `await`. This maximizes throughput by allowing Ably to batch acknowledgments. Messages are still published in order. For more details, see [publishing tokens](/docs/ai-transport/features/token-streaming/message-per-token#publishing) in the message-per-token guide.
-- Response ID correlation: The `response_id` from OpenAI uniquely identifies each response, allowing subscribers to correctly handle multiple concurrent responses.
-- Event filtering: Only publish when `event.delta` is present, as some events may not contain content.
-
-For more information about channels and publishing, see the [channels documentation](/docs/channels) and [message properties](/docs/messages#properties).
-
-## Subscribe to tokens <a id="subscribing"/>
-
-On the client side, subscribe to all three event types (`start`, `token`, and `stop`) to handle the complete response lifecycle. Use a `Map` to track multiple concurrent responses by their `responseId`.
-
-Add the following code to `subscriber.mjs`:
-
-<Code>
-```javascript
 // Track responses by ID
 const responses = new Map();
 
-// Subscribe to response start events
-await channel.subscribe("start", (message) => {
+// Handle response start
+await channel.subscribe('start', (message) => {
   const responseId = message.extras?.headers?.responseId;
-
-  if (!responseId) {
-    console.warn("Start event missing responseId");
-    return;
-  }
-
-  console.log(`${responseId}: Response started`);
-
-  // Initialize empty response
-  responses.set(responseId, {
-    text: "",
-    startTime: Date.now(),
-  });
+  console.log('\n[Response started]', responseId);
+  responses.set(responseId, '');
 });
 
-// Subscribe to token events
-await channel.subscribe("token", (message) => {
+// Handle tokens
+await channel.subscribe('token', (message) => {
   const responseId = message.extras?.headers?.responseId;
   const token = message.data;
 
-  if (!responseId) {
-    console.warn("Token event missing responseId");
-    return;
-  }
-
-  if (!responses.has(responseId)) {
-    console.warn(`${responseId}: Received token for unknown response`);
-    return;
-  }
-
   // Append token to response
-  const response = responses.get(responseId);
-  response.text += token;
-  responses.set(responseId, response);
+  const currentText = responses.get(responseId) || '';
+  responses.set(responseId, currentText + token);
 
-  // Update UI or process token as it arrives
-  console.log(`${responseId}: Received token: "${token}"`);
+  // Display token as it arrives
+  process.stdout.write(token);
 });
 
-// Subscribe to response stop events
-await channel.subscribe("stop", (message) => {
+// Handle response stop
+await channel.subscribe('stop', (message) => {
   const responseId = message.extras?.headers?.responseId;
-
-  if (!responseId) {
-    console.warn("Stop event missing responseId");
-    return;
-  }
-
-  const response = responses.get(responseId);
-
-  if (response) {
-    const duration = Date.now() - response.startTime;
-    console.log(
-      `${responseId} Response completed in ${duration}ms. Full text: ${response.text}`,
-    );
-
-    // Clean up completed response
-    responses.delete(responseId);
-  }
+  const finalText = responses.get(responseId);
+  console.log('\n[Response completed]', responseId);
 });
 
-console.log("Waiting to receive events from Ably");
+console.log('Subscriber ready, waiting for tokens...');
 ```
 </Code>
 
-Key implementation points:
-
-- Handle all event types: Subscribe to `start`, `token`, and `stop` to manage the complete response lifecycle
-- Track concurrent responses: Use a `Map` to handle multiple responses streaming simultaneously
-- Progressive updates: Update your UI or process tokens as they arrive in the `token` handler
-
-For more information about subscribing to channels, see the [channel subscription documentation](/docs/channels/subscribe).
-
-<Aside data-type="note">
-If clients join mid-stream or need to catch up after reconnecting, you'll need to handle client hydration. For patterns on handling late joiners and page refreshes, see the [client hydration section](/docs/ai-transport/features/token-streaming/message-per-token#hydration) in the message-per-token guide.
-</Aside>
-
-## Run the subscriber and publisher <a id="run"/>
-
-We're going to run the publisher and two subscribers. This will allow us to see that:
-
-- messages published by a single publisher are successfully delivered simultaneously to multiple subscribers
-- subscribers are able to handle multiple AI responses being received simultaneously
-
-Open two new terminal tabs and run the subscriber in each of them:
+Run the subscriber in a separate terminal:
 
 <Code>
 ```shell
@@ -429,100 +326,56 @@ node subscriber.mjs
 ```
 </Code>
 
-Now, in the original terminal tab (the one in which you exported `OPENAI_API_KEY`), run the publisher:
+With the subscriber running, run the publisher in another terminal. You'll see the tokens stream in realtime as they're generated by the OpenAI model.
+
+## Step 4: Stream with multiple publishers and subscribers <a id="step-4"/>
+
+Ably's [channel-oriented sessions](/docs/ai-transport/features/sessions-identity#connection-oriented-vs-channel-oriented-sessions) enables multiple AI agents to publish responses and multiple users to receive them on a single channel simultaneously. Ably handles message delivery to all participants, eliminating the need to implement routing logic or manage state synchronization across connections.
+
+### Broadcasting to multiple subscribers <a id="broadcasting"/>
+
+Each subscriber receives the complete stream of tokens independently, enabling you to build collaborative experiences or multi-device applications.
+
+Run a subscriber in multiple separate terminals:
 
 <Code>
 ```shell
+# Terminal 1
+node subscriber.mjs
+
+# Terminal 2
+node subscriber.mjs
+
+# Terminal 3
+node subscriber.mjs
+```
+</Code>
+
+All subscribers will receive the same stream of tokens in realtime.
+
+### Publishing concurrent responses <a id="multiple-publishers"/>
+
+The implementation uses `responseId` in message extras to correlate tokens with their originating response. This enables multiple publishers to stream different responses concurrently on the same channel, with each subscriber correctly tracking all responses independently.
+
+To demonstrate this, run a publisher in multiple separate terminals:
+
+<Code>
+```shell
+# Terminal 1
+node publisher.mjs
+
+# Terminal 2
+node publisher.mjs
+
+# Terminal 3
 node publisher.mjs
 ```
 </Code>
 
-You should see publisher output similar to the following:
-
-```text
-f03945a: Created stream
-f03945a: Got event response.created
-f03945a: Publishing 'start' event for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
-f03945a: Got event response.in_progress
-f03945a: Ignoring OpenAI SDK event response.in_progress for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
-de6fbd3: Created stream
-de6fbd3: Got event response.created
-de6fbd3: Publishing 'start' event for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
-de6fbd3: Got event response.in_progress
-de6fbd3: Ignoring OpenAI SDK event response.in_progress for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
-38b6c91: Created stream
-38b6c91: Got event response.created
-38b6c91: Publishing 'start' event for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
-
-...
-
-de6fbd3: Got event response.output_text.delta
-de6fbd3: Publishing 'token' event with delta "I" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
-de6fbd3: Got event response.output_text.delta
-de6fbd3: Publishing 'token' event with delta " told" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
-de6fbd3: Got event response.output_text.delta
-de6fbd3: Publishing 'token' event with delta " my" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
-38b6c91: Got event response.output_item.done
-38b6c91: Publishing 'token' event with delta "Spain" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
-38b6c91: Got event response.output_text.delta
-38b6c91: Publishing 'token' event with delta "’s" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
-38b6c91: Got event response.output_text.delta
-38b6c91: Publishing 'token' event with delta " national" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
-38b6c91: Got event response.output_text.delta
-
-...
-
-38b6c91: Got event response.completed
-38b6c91: Publishing 'stop' event for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
-de6fbd3: Got event response.completed
-de6fbd3: Publishing 'stop' event for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
-f03945a: Got event response.completed
-f03945a: Publishing 'stop' event for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
-```
-
-And you should see subscriber output similar to the following, in both of your subscriber terminal tabs:
-
-```text
-Waiting to receive events from Ably
-resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Response started
-resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Response started
-resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Response started
-resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: "I"
-resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " told"
-resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " my"
-resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: "Spain"
-resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: "’s"
-resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " national"
-resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " anthem"
-resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: ","
-resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: "Car"
-resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: "rot"
-
-...
-
-resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c Response completed in 1555ms. Full text: Spain’s national anthem, the “Marcha Real,” is one of the few in the world with no official lyrics.
-resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5 Response completed in 1651ms. Full text: I told my suitcase we’re not going on vacation this year. Now I’m dealing with emotional baggage.
-resp_097628d5ede953e800693c497c30148194adc300e4ee412171 Response completed in 3253ms. Full text: Carrot cake: garden gold grated into spice, dreaming beneath cream-cheese snow.
-```
-
-Key points:
-
-- Multiple concurrent responses are handled correctly: The subscriber receives interleaved tokens for three concurrent AI responses, and correctly pieces together the three separate messages:
-  - "Spain’s national anthem, the “Marcha Real,” is one of the few in the world with no official lyrics."
-  - "I told my suitcase we’re not going on vacation this year. Now I’m dealing with emotional baggage."
-  - "Carrot cake: garden gold grated into spice, dreaming beneath cream-cheese snow."
-- Multiple subscribers receive the same token stream: Both subscribers receive exactly the same token stream that was generated by a single publisher.
+All running subscribers will receive tokens from all responses concurrently. Each subscriber correctly reconstructs each response separately using the `responseId` to correlate tokens.
 
 ## Next steps
 
-You now have a working implementation of token streaming from OpenAI's Responses API over Ably. Here are some suggestions for taking this further:
-
-Explore advanced patterns:
 - Learn about [client hydration strategies](/docs/ai-transport/features/token-streaming/message-per-token#hydration) for handling late joiners and reconnections
-
-Production readiness:
-- Implement [token authentication](/docs/auth/token) for secure client connections
-- Add error handling for OpenAI API failures and rate limits
-
-Learn more:
-- [Token streaming](/docs/ai-transport/features/token-streaming) - Complete guide to token streaming patterns
+- Understand [sessions and identity](/docs/ai-transport/features/sessions-identity) in AI enabled applications
+- Explore the [message-per-response pattern](/docs/ai-transport/features/token-streaming/message-per-response) for storing complete AI responses as single messages in history
