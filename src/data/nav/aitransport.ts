@@ -61,6 +61,10 @@ export default {
       name: 'Messaging',
       pages: [
         {
+          name: 'Human-in-the-loop',
+          link: '/docs/ai-transport/features/messaging/human-in-the-loop',
+        },
+        {
           name: 'Chain of thought',
           link: '/docs/ai-transport/features/messaging/chain-of-thought',
         },
