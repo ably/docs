@@ -1,0 +1,578 @@
+---
+title: "Human in the loop"
+meta_description: "Implement human-in-the-loop workflows for AI agents using Ably capabilities and claims to ensure authorized users approve sensitive tool calls."
+meta_keywords: "human in the loop, HITL, AI agent authorization, tool call approval, JWT claims, capabilities, admin approval, agentic workflows, AI safety, human oversight"
+---
+
+Human-in-the-loop (HITL) enables human oversight of AI agent actions. When an agent needs to perform sensitive operations, such as modifying data, making purchases, or accessing restricted resources, the action is paused and routed to an authorized human for approval before execution.
+
+This pattern ensures humans remain in control of high-stakes AI operations, providing safety, compliance, and trust in agentic workflows.
+
+## Why human-in-the-loop matters <a id="why-hitl"/>
+
+AI agents are increasingly capable of taking autonomous actions, but certain operations require human judgment:
+
+- **Safety**: Prevent unintended consequences from AI decisions.
+- **Compliance**: Meet regulatory requirements for human oversight in sensitive domains.
+- **Trust**: Build user confidence by keeping humans in control of critical actions.
+- **Accountability**: Create clear audit trails of who approved what actions.
+
+HITL doesn't slow down AI — it ensures the right actions happen at the right time with appropriate oversight.
+
+## How it works <a id="how-it-works"/>
+
+Human-in-the-loop authorization follows a request-approval pattern over Ably channels:
+
+1. The AI agent determines a tool call requires human approval.
+2. The agent publishes an authorization request to a dedicated channel.
+3. An authorized user (admin or verified role) receives and reviews the request.
+4. The human approves or rejects the request.
+5. The agent receives the decision and proceeds accordingly.
+
+```
+┌─────────────┐                                    ┌─────────────┐
+│  AI Agent   │                                    │    Admin    │
+└──────┬──────┘                                    └──────┬──────┘
+       │                                                  │
+       │  publish: approval-request                       │  subscribe: approval-request
+       │ ─────────────────────────┐  ┌────────────────────│
+       │                          ▼  ▼                    │
+       │                   ┌────────────────┐             │
+       │                   │  HITL Channel  │             │
+       │                   └────────────────┘             │
+       │                          ▲  ▲                    │
+       │ ─────────────────────────┘  └────────────────────│
+       │  subscribe: approval-response                    │  publish: approval-response
+       │                                                  │
+       ▼                                                  ▼
+```
+
+## Control access with capabilities <a id="capabilities"/>
+
+Use [Ably capabilities](/docs/auth/capabilities) to control which users can participate in HITL workflows. Capabilities define what operations a client can perform on specific channels, ensuring only authorized users can approve agent actions.
+
+The following example creates JWTs with different capabilities for regular users and admins:
+
+<Code>
+```javascript
+import jwt from 'jsonwebtoken';
+
+// Server-side auth endpoint
+app.get('/api/ably-auth', async (req, res) => {
+  const userId = req.session.userId;
+  const userRole = req.session.role; // 'user', 'admin', 'moderator', etc.
+
+  const apiKey = process.env.ABLY_API_KEY;
+  const [keyId, keySecret] = apiKey.split(':');
+
+  let capabilities;
+
+  if (userRole === 'admin') {
+    // Admins can publish approvals to HITL channels
+    capabilities = {
+      'conversation:*': ['publish', 'subscribe', 'presence'],
+      'hitl:*': ['publish', 'subscribe']
+    };
+  } else {
+    // Regular users cannot approve tool calls
+    capabilities = {
+      'conversation:*': ['publish', 'subscribe', 'presence']
+    };
+  }
+
+  const token = jwt.sign(
+    {
+      'x-ably-clientId': userId,
+      'x-ably-capability': JSON.stringify(capabilities)
+    },
+    keySecret,
+    {
+      expiresIn: '1h',
+      keyid: keyId
+    }
+  );
+
+  res.json(token);
+});
+```
+</Code>
+
+## Verify roles with claims <a id="claims"/>
+
+Include custom claims in JWTs to provide verified context about a user's authorization level. Ably can copy these claims into messages, allowing agents to verify that approvers have the appropriate permissions.
+
+Use the `ably.channel.*` claim to attach trusted metadata to messages. This metadata is signed and cannot be forged by clients.
+
+<Code>
+```javascript
+import jwt from 'jsonwebtoken';
+
+// Server-side: Issue JWT with role claims
+app.get('/api/ably-auth', async (req, res) => {
+  const userId = req.session.userId;
+  const userRole = req.session.role;
+  const permissions = req.session.permissions; // e.g., ['approve_payments', 'delete_records']
+
+  const apiKey = process.env.ABLY_API_KEY;
+  const [keyId, keySecret] = apiKey.split(':');
+
+  const token = jwt.sign(
+    {
+      'x-ably-clientId': userId,
+      'x-ably-capability': JSON.stringify(buildCapabilities(userRole)),
+      // Custom claim that gets copied to messages on hitl:* channels
+      'ably.channel.hitl:*': JSON.stringify({
+        role: userRole,
+        permissions: permissions
+      })
+    },
+    keySecret,
+    {
+      expiresIn: '1h',
+      keyid: keyId
+    }
+  );
+
+  res.json(token);
+});
+```
+</Code>
+
+When an admin publishes an approval, the claim is automatically attached to the message:
+
+<Code>
+```javascript
+// Agent receiving approval can access the trusted claim
+await hitlChannel.subscribe('approval-response', async (message) => {
+  const response = message.data;
+
+  // Access the trusted user claim from the message extras
+  const userClaim = message.extras?.userClaim;
+
+  if (userClaim) {
+    const { role, permissions } = JSON.parse(userClaim);
+    console.log(`Approved by ${message.clientId} with role: ${role}`);
+  }
+});
+```
+</Code>
+
+## Define what requires approval <a id="policies"/>
+
+Create policies that determine which agent actions require human approval. Policies can be simple boolean flags for actions that always require oversight, or functions that evaluate parameters to determine if approval is needed based on thresholds or other criteria.
+
+Consider factors such as financial impact, data sensitivity, reversibility of the action, and regulatory requirements when defining your policies.
+
+<Code>
+```javascript
+const hitlPolicies = {
+  // Always require human approval
+  'delete_account': { requiresApproval: true, minRole: 'admin' },
+  'process_payment': { requiresApproval: true, minRole: 'admin' },
+  'modify_permissions': { requiresApproval: true, minRole: 'super_admin' },
+
+  // Require approval above thresholds
+  'transfer_funds': {
+    requiresApproval: (params) => params.amount > 1000,
+    minRole: 'admin'
+  },
+
+  // Require approval for high-impact actions
+  'send_email': {
+    requiresApproval: (params) => params.recipients.length > 100,
+    minRole: 'moderator'
+  }
+};
+
+function requiresHumanApproval(toolCall) {
+  const policy = hitlPolicies[toolCall.name];
+
+  if (!policy) return false;
+
+  if (typeof policy.requiresApproval === 'function') {
+    return policy.requiresApproval(toolCall.parameters);
+  }
+
+  return policy.requiresApproval;
+}
+```
+</Code>
+
+## Request human approval <a id="request"/>
+
+When an agent identifies an action requiring human oversight, it publishes a request to a HITL channel. The request should include sufficient context for the approver to make an informed decision, including the action name, parameters, a human-readable reason, and the risk level.
+
+Include an expiry time to prevent stale requests from being approved after circumstances have changed. The `requestId` enables correlation between requests and responses when handling multiple concurrent approval flows.
+
+<Code>
+```javascript
+const hitlChannel = ably.channels.get('hitl:session-123');
+
+async function requestHumanApproval(toolCall) {
+  const requestId = crypto.randomUUID();
+
+  await hitlChannel.publish('approval-request', {
+    requestId: requestId,
+    action: toolCall.name,
+    parameters: toolCall.parameters,
+    reason: toolCall.reason,
+    riskLevel: toolCall.riskLevel, // 'low', 'medium', 'high', 'critical'
+    expiresAt: Date.now() + 300000, // 5 minute timeout
+    context: {
+      conversationId: toolCall.conversationId,
+      userId: toolCall.userId,
+      summary: toolCall.summary
+    }
+  });
+
+  return requestId;
+}
+```
+</Code>
+
+## Review and decide <a id="review"/>
+
+Authorized humans subscribe to receive pending approval requests and publish their decisions. The admin interface should display all relevant context to enable quick, informed decisions. Consider showing the user who triggered the action, the conversation history, and any related previous approvals.
+
+When publishing a decision, include the original `requestId` to correlate the response with the pending request. Adding timestamps and notes creates an audit trail for compliance and debugging purposes.
+
+<Code>
+```javascript
+// Admin client subscribes to HITL requests
+const hitlChannel = ably.channels.get('hitl:session-123');
+
+await hitlChannel.subscribe('approval-request', (message) => {
+  const request = message.data;
+
+  // Display request for human review
+  displayApprovalUI({
+    requestId: request.requestId,
+    action: request.action,
+    parameters: request.parameters,
+    reason: request.reason,
+    riskLevel: request.riskLevel,
+    context: request.context
+  });
+});
+
+// Human approves the action
+async function approve(requestId, notes) {
+  await hitlChannel.publish('approval-response', {
+    requestId: requestId,
+    decision: 'approved',
+    approvedAt: Date.now(),
+    notes: notes
+  });
+}
+
+// Human rejects the action
+async function reject(requestId, reason) {
+  await hitlChannel.publish('approval-response', {
+    requestId: requestId,
+    decision: 'rejected',
+    rejectedAt: Date.now(),
+    reason: reason
+  });
+}
+```
+</Code>
+
+## Process the decision <a id="process"/>
+
+The agent listens for human decisions and acts accordingly. When a response arrives, the agent retrieves the pending request using the `requestId`, verifies the approver's identity and role from the trusted JWT claims, and either executes the action or notifies the user of the rejection.
+
+Logging all decisions with the approver's identity and role creates an audit trail. This is essential for compliance, debugging, and understanding how the system is being used over time.
+
+<Code>
+```javascript
+const pendingApprovals = new Map();
+
+await hitlChannel.subscribe('approval-response', async (message) => {
+  const response = message.data;
+  const pending = pendingApprovals.get(response.requestId);
+
+  if (!pending) return;
+
+  // The clientId is verified by Ably - this is the trusted approver identity
+  const approverId = message.clientId;
+
+  // Access the trusted role from the JWT claim
+  const userClaim = message.extras?.userClaim;
+  const approverRole = userClaim ? JSON.parse(userClaim).role : 'unknown';
+
+  if (response.decision === 'approved') {
+    console.log(`Action approved by ${approverId} (${approverRole})`);
+
+    // Execute the approved action
+    const result = await executeToolCall(pending.toolCall);
+
+    // Log for audit trail
+    await logApproval(pending.toolCall, approverId, approverRole, response.notes);
+
+    // Notify user
+    await notifyUser(pending.toolCall, result);
+  } else {
+    console.log(`Action rejected by ${approverId} (${approverRole}): ${response.reason}`);
+
+    // Log rejection
+    await logRejection(pending.toolCall, approverId, approverRole, response.reason);
+
+    // Notify user of rejection
+    await notifyUserOfRejection(pending.toolCall, response.reason);
+  }
+
+  pendingApprovals.delete(response.requestId);
+});
+```
+</Code>
+
+## Handle timeouts <a id="timeout"/>
+
+Set timeouts to prevent indefinite waiting when no human is available. Without timeouts, requests could remain pending forever if approvers are offline or miss the notification.
+
+When a timeout occurs, decide on appropriate fallback behavior: notify the user that approval wasn't received, escalate to a different channel, or in some cases, apply a default decision based on risk level. Always log timeouts for monitoring and alerting purposes.
+
+<Code>
+```javascript
+async function requestApprovalWithTimeout(toolCall, timeoutMs = 300000) {
+  const requestId = await requestHumanApproval(toolCall);
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingApprovals.delete(requestId);
+
+      // Handle timeout - notify user, log, or use fallback behavior
+      handleApprovalTimeout(toolCall);
+
+      reject(new Error('Human approval timed out'));
+    }, timeoutMs);
+
+    pendingApprovals.set(requestId, {
+      toolCall,
+      resolve: (result) => {
+        clearTimeout(timeout);
+        resolve(result);
+      }
+    });
+  });
+}
+```
+</Code>
+
+<Aside>
+Use [presence](/docs/presence-occupancy/presence) to check if authorized approvers are online before routing requests, or to alert users when no approvers are currently available.
+</Aside>
+
+## Verify approver permissions <a id="verify"/>
+
+Use the trusted `userClaim` from the JWT to verify the approver has sufficient permissions for the specific action. Different actions may require different authorization levels — a moderator might approve content-related actions while financial operations require an admin.
+
+The role hierarchy defines the permission levels in your system. When an approval arrives, compare the approver's role against the minimum required role for that action type. Reject approvals from users who lack the necessary permissions, even if they have access to the HITL channel.
+
+<Code>
+```javascript
+const roleHierarchy = ['user', 'moderator', 'admin', 'super_admin'];
+
+function canApprove(approverRole, requiredRole) {
+  const approverLevel = roleHierarchy.indexOf(approverRole);
+  const requiredLevel = roleHierarchy.indexOf(requiredRole);
+
+  return approverLevel >= requiredLevel;
+}
+
+// When processing approval response
+await hitlChannel.subscribe('approval-response', async (message) => {
+  const response = message.data;
+  const pending = pendingApprovals.get(response.requestId);
+  const policy = hitlPolicies[pending.toolCall.name];
+
+  // Get the trusted role from the JWT claim
+  const userClaim = message.extras?.userClaim;
+
+  if (!userClaim) {
+    console.log('No user claim present - cannot verify role');
+    return;
+  }
+
+  const { role: approverRole } = JSON.parse(userClaim);
+
+  if (!canApprove(approverRole, policy.minRole)) {
+    console.log(`Approver role '${approverRole}' insufficient for required '${policy.minRole}'`);
+    return;
+  }
+
+  // Process valid approval...
+});
+```
+</Code>
+
+## Complete example <a id="example"/>
+
+The following example shows a complete human-in-the-loop flow, including the server-side JWT authentication endpoint, the agent-side request and response handling, and the admin-side approval interface.
+
+The server issues JWTs with appropriate capabilities and claims based on the user's role. The agent publishes approval requests and listens for responses. The admin subscribes to requests, reviews them, and publishes decisions.
+
+<Code>
+```javascript
+// === Server-side: JWT Auth Endpoint ===
+import jwt from 'jsonwebtoken';
+import express from 'express';
+
+const app = express();
+
+app.get('/api/ably-auth', async (req, res) => {
+  const userId = req.session.userId;
+  const userRole = req.session.role;
+
+  const apiKey = process.env.ABLY_API_KEY;
+  const [keyId, keySecret] = apiKey.split(':');
+
+  let capabilities;
+  if (userRole === 'admin') {
+    capabilities = {
+      'conversation:*': ['publish', 'subscribe', 'presence'],
+      'hitl:*': ['publish', 'subscribe']
+    };
+  } else {
+    capabilities = {
+      'conversation:*': ['publish', 'subscribe', 'presence']
+    };
+  }
+
+  const token = jwt.sign(
+    {
+      'x-ably-clientId': userId,
+      'x-ably-capability': JSON.stringify(capabilities),
+      'ably.channel.hitl:*': JSON.stringify({ role: userRole })
+    },
+    keySecret,
+    { expiresIn: '1h', keyid: keyId }
+  );
+
+  res.send(token);
+});
+
+
+// === Agent Side ===
+const Ably = require('ably');
+
+const agentAbly = new Ably.Realtime({ key: 'your-agent-api-key' });
+const conversationChannel = agentAbly.channels.get('conversation:user-123');
+const hitlChannel = agentAbly.channels.get('hitl:session-123');
+
+const pendingApprovals = new Map();
+
+// Listen for human decisions
+await hitlChannel.subscribe('approval-response', async (message) => {
+  const response = message.data;
+  const pending = pendingApprovals.get(response.requestId);
+
+  if (!pending) return;
+
+  // Access the trusted user claim to verify role
+  const userClaim = message.extras?.userClaim;
+  if (userClaim) {
+    const { role } = JSON.parse(userClaim);
+    console.log(`Decision from ${message.clientId} with role: ${role}`);
+  }
+
+  if (response.decision === 'approved') {
+    const result = await executeToolCall(pending.toolCall);
+
+    await conversationChannel.publish('agent-response', {
+      type: 'action_completed',
+      action: pending.toolCall.name,
+      result: result,
+      approvedBy: message.clientId
+    });
+  } else {
+    await conversationChannel.publish('agent-response', {
+      type: 'action_rejected',
+      action: pending.toolCall.name,
+      reason: response.reason
+    });
+  }
+
+  pending.resolve(response);
+  pendingApprovals.delete(response.requestId);
+});
+
+// Process user requests
+await conversationChannel.subscribe('user-input', async (message) => {
+  const toolCall = determineToolCall(message.data.prompt);
+
+  if (requiresHumanApproval(toolCall)) {
+    // Notify user that human approval is needed
+    await conversationChannel.publish('agent-response', {
+      type: 'awaiting_approval',
+      action: toolCall.name,
+      message: 'This action requires human approval. Please wait...'
+    });
+
+    // Request human approval
+    const requestId = crypto.randomUUID();
+
+    await hitlChannel.publish('approval-request', {
+      requestId: requestId,
+      action: toolCall.name,
+      parameters: toolCall.parameters,
+      reason: `User requested: ${message.data.prompt}`,
+      riskLevel: toolCall.riskLevel,
+      userId: message.clientId,
+      expiresAt: Date.now() + 300000
+    });
+
+    pendingApprovals.set(requestId, {
+      toolCall,
+      resolve: () => {}
+    });
+  } else {
+    // No approval needed - execute directly
+    const result = await executeToolCall(toolCall);
+
+    await conversationChannel.publish('agent-response', {
+      type: 'action_completed',
+      action: toolCall.name,
+      result: result
+    });
+  }
+});
+
+
+// === Admin Side ===
+const adminAbly = new Ably.Realtime({
+  authUrl: '/api/ably-auth' // Returns JWT with admin capabilities and claims
+});
+
+const adminHitlChannel = adminAbly.channels.get('hitl:session-123');
+
+// Subscribe to approval requests
+await adminHitlChannel.subscribe('approval-request', (message) => {
+  const request = message.data;
+
+  // Display for human review
+  showApprovalUI({
+    requestId: request.requestId,
+    action: request.action,
+    parameters: request.parameters,
+    reason: request.reason,
+    riskLevel: request.riskLevel,
+    context: request.context,
+    onApprove: async (notes) => {
+      await adminHitlChannel.publish('approval-response', {
+        requestId: request.requestId,
+        decision: 'approved',
+        notes: notes
+      });
+    },
+    onReject: async (reason) => {
+      await adminHitlChannel.publish('approval-response', {
+        requestId: request.requestId,
+        decision: 'rejected',
+        reason: reason
+      });
+    }
+  });
+});
+```
+</Code>
