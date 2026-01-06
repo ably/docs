@@ -311,6 +311,20 @@ export default {
       ],
     },
     {
+      name: 'AI and LLMs',
+      pages: [
+        {
+          name: 'Building with LLMs',
+          link: '/docs/platform/ai-llms',
+          index: true,
+        },
+        {
+          name: 'llms.txt',
+          link: '/docs/platform/ai-llms/llms-txt',
+        },
+      ],
+    },
+    {
       name: 'Debugging and errors',
       pages: [
         {
