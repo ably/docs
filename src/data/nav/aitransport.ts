@@ -56,8 +56,8 @@ export default {
       name: 'Guides',
       pages: [
         {
-          name: 'Using the OpenAI SDK',
-          link: '/docs/guides/ai-transport/openai-sdk',
+          name: 'OpenAI token streaming - message per token',
+          link: '/docs/guides/ai-transport/openai-message-per-token',
         },
       ],
     },
