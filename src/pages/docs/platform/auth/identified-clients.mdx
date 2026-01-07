@@ -1,0 +1,163 @@
+---
+title: Identified clients
+meta_description: "Clients can be allocated a client ID to help control their operations and interactions with Ably channels."
+redirect_from:
+  - /docs/auth/identified-clients
+---
+
+When a client is authenticated and connected to Ably, it is considered to be an authenticated client. While an authenticated client has a means to authenticate with Ably, they do not necessarily have an identity.
+
+When a client is assigned a trusted identity, that is, a `clientId`, then they are considered to be an identified client. For all operations that client performs with the Ably service, their `clientId` field will be automatically populated and can be trusted by other clients.
+
+For example, assume you are building a chat application and want to allow clients to publish messages and be present on a channel. If each client is assigned a trusted identity by your server, such as a unique email address or UUID, then all other subscribed clients can trust any messages or presence events they receive in the channel as being from that client. No other clients are permitted to assume a `clientId` that they are not assigned in their Ably-compatible token. They are unable to masquerade as another `clientId`.
+
+## ClientId immutability <a id="immutability"/>
+
+A connection's `clientId`, once set, is immutable. You cannot change a `clientId` after it has been established for a connection.
+
+### Late initialization
+
+It is possible to have late initialization of `clientId` in certain scenarios:
+
+* AuthCallback discovery: When using `authCallback`, the `clientId` may only become known when the first authCallback completes and returns a token with a `clientId`.
+* Opaque token processing: When the library receives an opaque token string, it only learns the `clientId` when it receives a response from the server that has processed the token.
+
+In both cases, the immutability requirement is satisfied because the `clientId` gets set as part of the client's first interaction with the server. Once this initial authentication is complete, the `clientId` cannot be changed for that connection.
+
+## Assign a clientId <a id="assign"/>
+
+There are three different ways a client can be identified with using a `clientId`:
+
+* A client claims a `clientId` when authenticating with an API key.
+* A client is authenticating with a token issued for a specific `clientId`.
+* A client claims a `clientId` when authenticating with a token that is issued for a wildcard `clientId`.
+
+When a client sets their own ID there is the possibility that they can pretend to be someone else. To prevent this, it is recommended that you embed a `clientId` in the token issued to your clients from your auth server. This ensures that the `clientId` is set by your auth server, and eliminates the chance of a client pretending to be someone else.
+
+<Aside data-type='note'>
+Identifying a client varies depending on whether they are authenticating with basic authentication or token authentication. Token authentication is [recommended](/docs/platform/auth#selecting-auth) in most instances so that clients authenticate using short-lived tokens and do not have access to API keys.
+
+Since you then control the `clientId`, all other clients can rely on the validity of the `clientId` in published messages and of members present in presence channels. This eliminates the possibility of a client pretending to be someone else, as they cannot claim a `clientId` in their own.
+</Aside>
+
+### Basic auth <a id="basic"/>
+
+You can use [basic authentication](/docs/platform/auth/basic) to allow a client to claim any `clientId` when they authenticate with Ably. As the assignation of the `clientId` is not handled by a server, it cannot be trusted to represent the genuine identity of the client.
+
+### Token auth <a id="token"/>
+
+You can use [token authentication](/docs/platform/auth/token) to set an explicit `clientId` when creating or issuing a token. Clients using that token are restricted to operations for only that `clientId`, and all operations will implicitly contain that `clientId`.
+
+For example, when publishing a message, the `clientId` attribute of the message will be pre-populated with that `clientId`. Entering presence will also implicitly use that `clientId`.
+
+#### Using JWT (recommended) <a id="jwt-clientid"/>
+
+The recommended approach is to create a JWT with the `x-ably-clientId` claim. This requires no Ably SDK on your server—any JWT library will work:
+
+<Code>
+```javascript
+// Server-side: Create JWT with clientId using any JWT library
+import jwt from 'jsonwebtoken';
+
+const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
+
+app.get('/api/ably-token', (req, res) => {
+  // Get authenticated user from your auth system
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const ablyJwt = jwt.sign(
+    {
+      'x-ably-capability': JSON.stringify({ '*': ['publish', 'subscribe', 'presence'] }),
+      'x-ably-clientId': userId, // Set the trusted clientId
+    },
+    keySecret,
+    { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
+  );
+
+  res.send(ablyJwt);
+});
+```
+
+```python
+# Server-side: Create JWT with clientId using any JWT library
+import jwt
+import os
+import json
+import time
+
+api_key = os.environ['ABLY_API_KEY']
+key_name, key_secret = api_key.split(':')
+
+@app.route('/api/ably-token')
+def get_ably_token():
+    # Get authenticated user from your auth system
+    user_id = request.user.get('id') if hasattr(request, 'user') else None
+    if not user_id:
+        return {'error': 'Not authenticated'}, 401
+
+    now = int(time.time())
+    ably_jwt = jwt.encode(
+        {
+            'iat': now,
+            'exp': now + 3600,
+            'x-ably-capability': json.dumps({'*': ['publish', 'subscribe', 'presence']}),
+            'x-ably-clientId': user_id,  # Set the trusted clientId
+        },
+        key_secret,
+        algorithm='HS256',
+        headers={'kid': key_name}
+    )
+
+    return ably_jwt
+```
+</Code>
+
+**Client-side:** Use `authCallback` to fetch the JWT:
+
+<Code>
+```javascript
+const realtime = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token');
+      const jwt = await response.text();
+      callback(null, jwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+// The clientId is now set from the JWT - no need to specify it here
+```
+</Code>
+
+#### Using TokenRequest (alternative) <a id="tokenrequest-clientid"/>
+
+If JWT is not suitable for your use case, you can use the Ably SDK to create a TokenRequest with an explicit `clientId`:
+
+<Code>
+```javascript
+// Server-side with Ably SDK
+const ably = new Ably.Rest(process.env.ABLY_API_KEY);
+const tokenRequest = await ably.auth.createTokenRequest({ clientId: 'user-123' });
+// Return tokenRequest to client
+```
+
+```python
+# Server-side with Ably SDK
+ably = AblyRest(os.environ['ABLY_API_KEY'])
+token_request = await ably.auth.create_token_request({'client_id': 'user-123'})
+# Return token_request to client
+```
+</Code>
+
+See [token authentication](/docs/platform/auth/token#token-request) for complete TokenRequest examples in all languages.
+
+### Wildcard token auth <a id="wildcard"/>
+
+You can use [token authentication](/docs/platform/auth/token) to set a wildcard `clientId` using a value of `*` when creating a token. Clients are then able to assume any identity in their operations, such as when publishing a message or entering presence.
+
+## Unidentified clients <a id="unidentified"/>
+
+If no `clientId` is provided when using [token authentication](/docs/platform/auth/token) then clients are not permitted to assume an identity and will be considered an unidentified client in all operations. Messages published will contain no `clientId` and those clients will not be permitted to enter the [presence](/docs/presence-occupancy/presence) set.

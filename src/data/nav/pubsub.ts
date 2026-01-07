@@ -84,36 +84,6 @@ export default {
       ],
     },
     {
-      name: 'Authentication',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/docs/auth',
-          index: true,
-        },
-        {
-          name: 'Basic auth',
-          link: '/docs/auth/basic',
-        },
-        {
-          name: 'Token auth',
-          link: '/docs/auth/token',
-        },
-        {
-          name: 'Token revocation',
-          link: '/docs/auth/revocation',
-        },
-        {
-          name: 'Identified clients',
-          link: '/docs/auth/identified-clients',
-        },
-        {
-          name: 'Capabilities',
-          link: '/docs/auth/capabilities',
-        },
-      ],
-    },
-    {
       name: 'Connections',
       pages: [
         {

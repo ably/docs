@@ -1,0 +1,90 @@
+---
+title: "JWT integration"
+meta_description: "Integrate Ably with existing JWT authentication systems."
+redirect_from:
+  - /docs/auth/jwt-integration
+---
+
+If your application already uses JWT for authentication, you can embed Ably tokens within your existing JWT structure. This approach lets you maintain a single token for both your application and Ably authentication.
+
+For general JWT authentication patterns, see [token authentication](/docs/platform/auth/token#scenarios).
+
+## Embedded Ably Token <a id="embedded-token"/>
+
+If you want a single JWT for everything, embed an Ably token in your existing JWT:
+
+**Server:**
+
+<Code>
+```javascript
+import Ably from 'ably';
+import jwt from 'jsonwebtoken';
+
+const ably = new Ably.Rest(process.env.ABLY_API_KEY);
+
+app.post('/auth/login', async (req, res) => {
+  const user = await authenticateUser(req.body.email, req.body.password);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  // Get Ably token
+  const ablyToken = await ably.auth.requestToken({
+    clientId: user.id,
+    capability: getAblyCapabilities(user),
+  });
+
+  // Create your app JWT with embedded Ably token
+  const appJwt = jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      // Embed Ably token
+      'x-ably-token': ablyToken.token,
+    },
+    process.env.APP_JWT_SECRET,
+    { expiresIn: '1h' } // Must not exceed Ably token expiry
+  );
+
+  res.json({ token: appJwt });
+});
+```
+</Code>
+
+<Aside data-type='important'>
+The outer JWT's expiry must not exceed the embedded Ably token's expiry.
+</Aside>
+
+## Token refresh strategy <a id="refresh"/>
+
+When using Ably JWTs, the Ably SDK automatically handles token refresh. Simply implement an `authCallback` that fetches a new token from your server:
+
+<Code>
+```javascript
+const realtime = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      // This callback is automatically called when:
+      // 1. Initial connection
+      // 2. Token is about to expire
+      // 3. After a disconnection that requires re-auth
+      const response = await fetch('/api/ably-jwt', {
+        credentials: 'include', // Include cookies for session auth
+      });
+
+      if (!response.ok) {
+        // Handle auth errors - user may need to re-login
+        throw new Error('Authentication failed');
+      }
+
+      const ablyJwt = await response.text();
+      callback(null, ablyJwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+```
+</Code>
+
+The Ably SDK automatically calls your `authCallback` before the current token expires, ensuring seamless token rotation.

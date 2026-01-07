@@ -1,0 +1,114 @@
+---
+title: Chat authentication
+meta_description: "Configure authentication for Chat applications with the required capabilities."
+---
+
+For comprehensive authentication guidance including server implementation, client patterns, and token lifecycle, see [Platform Authentication](/docs/platform/auth/token).
+
+This page covers Chat-specific capabilities and room scoping.
+
+## Chat capabilities
+
+Your tokens need specific capabilities depending on which Chat features you use:
+
+| Feature | Required Capabilities |
+|---------|----------------------|
+| Send messages | `publish` |
+| Receive messages | `subscribe` |
+| Update messages | `message-update-any` or `message-update-own` |
+| Delete messages | `message-delete-any` or `message-delete-own` |
+| Message history | `subscribe`, `history` |
+| Message reactions | `annotation-publish`, optionally `annotation-subscribe` |
+| Presence | `subscribe`, `presence` |
+| Typing indicators | `publish`, `subscribe` |
+| Room reactions | `publish`, `subscribe` |
+| Occupancy | `subscribe`, `channel-metadata` |
+| **All Chat features** | `publish`, `subscribe`, `presence`, `history`, `channel-metadata`, `annotation-publish`, `annotation-subscribe`, `message-update-own`, `message-delete-own` |
+
+## Room-scoped capabilities
+
+You can restrict tokens to specific chat rooms. Chat rooms use a channel naming format of `your-room::$chat`:
+
+<Code>
+```javascript
+// Server-side JWT with room-scoped capabilities
+import jwt from 'jsonwebtoken';
+
+const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
+
+const ablyJwt = jwt.sign(
+  {
+    'x-ably-capability': JSON.stringify({
+      // Only allow access to a specific room
+      'your-room::$chat': ['publish', 'subscribe', 'presence', 'history'],
+    }),
+    'x-ably-clientId': userId,
+  },
+  keySecret,
+  { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
+);
+```
+
+```python
+# Server-side JWT with room-scoped capabilities
+import jwt
+import json
+import time
+import os
+
+key_name, key_secret = os.environ['ABLY_API_KEY'].split(':')
+
+now = int(time.time())
+ably_jwt = jwt.encode(
+    {
+        'iat': now,
+        'exp': now + 3600,
+        'x-ably-capability': json.dumps({
+            # Only allow access to a specific room
+            'your-room::$chat': ['publish', 'subscribe', 'presence', 'history'],
+        }),
+        'x-ably-clientId': user_id,
+    },
+    key_secret,
+    algorithm='HS256',
+    headers={'kid': key_name}
+)
+```
+</Code>
+
+<Aside data-type='important'>
+If you use API key authentication on the client, any user can claim any `clientId`, enabling impersonation. Always use [token authentication](/docs/platform/auth/token) in production.
+</Aside>
+
+## Client setup
+
+Use `authCallback` to fetch JWTs from your auth server:
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { ChatClient } from '@ably/chat';
+
+const realtimeClient = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token');
+      const jwt = await response.text();
+      callback(null, jwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+
+const chatClient = new ChatClient(realtimeClient);
+```
+</Code>
+
+See [token authentication](/docs/platform/auth/token#auth-callback) for complete examples in all languages.
+
+## Further reading
+
+- [Token authentication](/docs/platform/auth/token) - Complete token authentication guide
+- [Capabilities](/docs/platform/auth/capabilities) - Fine-grained permission control
+- [Identified clients](/docs/platform/auth/identified-clients) - Assigning trusted client identities
