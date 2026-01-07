@@ -302,40 +302,6 @@ export default {
       ],
     },
     {
-      name: 'Authentication',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/docs/platform/auth',
-          index: true,
-        },
-        {
-          name: 'Basic auth',
-          link: '/docs/platform/auth/basic',
-        },
-        {
-          name: 'Token auth',
-          link: '/docs/platform/auth/token',
-        },
-        {
-          name: 'JWT integration',
-          link: '/docs/platform/auth/jwt-integration',
-        },
-        {
-          name: 'Token revocation',
-          link: '/docs/platform/auth/revocation',
-        },
-        {
-          name: 'Identified clients',
-          link: '/docs/platform/auth/identified-clients',
-        },
-        {
-          name: 'Capabilities',
-          link: '/docs/platform/auth/capabilities',
-        },
-      ],
-    },
-    {
       name: 'Tools',
       pages: [
         {
@@ -359,10 +325,15 @@ export default {
       ],
     },
     {
-      name: 'Debugging and errors',
+      name: 'Support and debugging',
       pages: [
         {
-          name: 'Overview',
+          name: 'Support tickets',
+          link: '/docs/platform/support',
+          index: true,
+        },
+        {
+          name: 'Debugging',
           link: '/docs/platform/errors',
           index: true,
         },

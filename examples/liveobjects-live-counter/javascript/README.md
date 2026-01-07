@@ -1,25 +1,27 @@
 # Synchronize numeric values with LiveCounter
 
-Enable clients to update and synchronize numerical values in an application in realtime.
+Enable clients to update and synchronize numeric values in an application in realtime.
 
-LiveCounter is a synchronized numerical counter that supports increment and decrement operations. It ensures that all updates are correctly applied and synchronized across users in realtime, preventing inconsistencies when multiple users modify the counter value simultaneously.
+[`LiveCounter`](/docs/liveobjects/counter) is a synchronized numeric counter that supports increment and decrement operations. It ensures that all updates are correctly applied and synchronized across users in realtime, preventing inconsistencies when multiple users modify the counter value simultaneously.
 
-LiveCounter is useful for tracking values that need to be updated dynamically, such as votes, reaction counts, live leaderboards, game stats, or other numeric data points.
+`LiveCounter` is useful for tracking values that need to be updated dynamically, such as votes, reaction counts, live leaderboards, game stats, or other numeric data points.
 
-LiveCounter is implemented using [Ably LiveObjects](/docs/liveobjects). LiveObjects, as a feature of [Ably Pub/Sub](/docs/channels), contains a set of purpose-built APIs that abstract away the complexities of managing shared state between clients in an application. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
+`LiveCounter` is a feature of [LiveObjects](/docs/liveobjects), which provides a serverless, durable, and scalable way to create, update, and subscribe to shared state across large numbers of connected clients at any scale. LiveObjects is built on [channels](/docs/channels) and provides the same [performance guarantees and scaling potential](/docs/platform/architecture).
 
 ## Resources
 
-Use the following methods to interact with a LiveCounter in your application:
+Use the following methods to interact with a `LiveCounter` in your application:
 
-- [`objects.getRoot()`](/docs/liveobjects/concepts/objects#root-object): retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
-- [`objects.createCounter()`](/docs/liveobjects/counter#create): creates a new LiveCounter instance.
-- [`liveCounter.value()`](/docs/liveobjects/counter#value): returns the current value of a counter.
-- [`liveCounter.increment()`](/docs/liveobjects/counter#update): sends the operation message to the Ably system to increase the counter value.
-- [`liveCounter.decrement()`](/docs/liveobjects/counter#update): sends the operation message to the Ably system to decrease the counter value.
-- [`liveCounter.subscribe()`](/docs/liveobjects/counter#subscribe-data): subscribes to LiveCounter updates by registering a listener.
+- [`channel.object.get()`](/docs/liveobjects/concepts/path-object): retrieve a [`PathObject`](/docs/liveobjects/concepts/path-object) reference to the [channel object](/docs/liveobjects/concepts/objects#channel-object). Use this `PathObject` to update and subscribe to data via:
+  - [`get(key)`](/docs/liveobjects/concepts/path-object#navigate): navigate to child paths within the `PathObject`, such as entries in a [`LiveMap`](/docs/liveobjects/map).
+  - [`set(key, value)`](/docs/liveobjects/concepts/path-object#update): assign data, such as a `LiveCounter` instance, to the specified key on a `LiveMap`.
+  - [`value()`](/docs/liveobjects/concepts/path-object#read-values): read the current value of the `LiveCounter` instance at the specified path.
+  - [`increment()`](/docs/liveobjects/counter#increment): send an [operation](/docs/liveobjects/concepts/operations) to increment the `LiveCounter` at the specified path.
+  - [`subscribe()`](/docs/liveobjects/concepts/path-object#subscribe): subscribe to updates at the specified path by registering a listener.
+  - [`batch()`](/docs/liveobjects/concepts/path-object#batch-multiple-updates): group multiple operations into a single message for atomic updates.
+- [`LiveCounter.create()`](/docs/liveobjects/counter#create): create a new `LiveCounter` instance.
 
-Find out more about [LiveCounter](/docs/liveobjects/counter).
+Find out more about [PathObject](/docs/liveobjects/concepts/path-object) and [LiveCounter](/docs/liveobjects/counter).
 
 ## Getting started
 

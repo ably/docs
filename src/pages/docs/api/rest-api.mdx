@@ -295,7 +295,7 @@ Envelope responses always are always made with a 200 status code; the status of 
 
 ## Authentication <a id="authentication" />
 
-To understand the REST API it is easiest first to understand the various authentication methods that Ably supports. For a detailed explanation, view the [Authentication documentation](/docs/platform/auth).
+To understand the REST API it is easiest first to understand the various authentication methods that Ably supports. For a detailed explanation, view the [Authentication documentation](/docs/auth).
 
 Clients can access Ably, whether using REST or the Realtime service, by two methods:
 
@@ -343,7 +343,7 @@ curl https://main.realtime.ably.net/channels/rest-example/messages \
 
 ### Token Authentication <a id="token-authentication" />
 
-**Token Authentication** uses an Ably-compatible token to authenticate with Ably without sharing a private API key. This can be an [Ably Token](/docs/api/rest-sdk/authentication#tokens) obtained via the REST API [`requestToken`](#request-token) endpoint, an [Ably JWT](/docs/api/rest-sdk/authentication#ably-jwt) signed by your API key, or an [External JWT](https://jwt.io) object [with an embedded Ably-compatible token](/docs/platform/auth/token#embedded). Tokens are authentication credentials that are short-lived, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of [access rights or capabilities](/docs/platform/auth/capabilities) or being limited to use by a specific [`clientId` identity](#identified-clients) - and therefore token-based authentication provides the flexibility to implement access and identity control policies in the application. See the [Token Authentication documentation](/docs/platform/auth/token) for more details.
+**Token Authentication** uses an Ably-compatible token to authenticate with Ably without sharing a private API key. This can be an [Ably Token](/docs/api/rest-sdk/authentication#tokens) obtained via the REST API [`requestToken`](#request-token) endpoint, an [Ably JWT](/docs/api/rest-sdk/authentication#ably-jwt) signed by your API key, or an [External JWT](https://jwt.io) object [with an embedded Ably-compatible token](/docs/auth/token#embedded). Tokens are authentication credentials that are short-lived, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of [access rights or capabilities](/docs/auth/capabilities) or being limited to use by a specific [`clientId` identity](#identified-clients) - and therefore token-based authentication provides the flexibility to implement access and identity control policies in the application. See the [Token Authentication documentation](/docs/auth/token) for more details.
 
 The construction of an Ably [`TokenRequest`](/docs/api/token-request-spec) is described in the [Authentication Ably TokenRequest spec documentation](/docs/api/token-request-spec). The resulting `token response` object contains the token properties as defined in [Ably TokenRequest spec](/docs/api/token-request-spec).
 
@@ -683,24 +683,27 @@ See [MessageAction](/docs/api/realtime-sdk/types#message-action) for the possibl
 
 An unsuccessful request returns an error. A 404 error is returned if a message with that serial does not exist.
 
-### Update a message <a id="update-message" />
+### Update, delete, or append to a message <a id="update-message" />
 
 #### PATCH main.realtime.ably.net/channels/\<channelId\>/messages/\<serial\>
 
-Update an existing message on a channel, the message with the specified serial. This endpoint requires that the channel is configured with the "Message annotations, updates, and deletes" channel rule.
+Update, delete, or append to an existing message on a channel, identified by its serial. This endpoint requires that the channel is configured with the "Message annotations, updates, and deletes" channel rule.
 
-See [Updating and deleting messages](/docs/messages/updates-deletes#update) for more information about message updates and field semantics.
+See [Updating and deleting messages](/docs/messages/updates-deletes) for more information about this feature.
 
-The request body contains the message fields to update, along with optional operation metadata. Any fields not specified will be left as their original values.
+The request body contains a Message object with an `action` field specifying the operation, the fields to update, and optional operation metadata in `version`. Any fields not specified will be left as their original values (shallow mixin semantics). For appends, the `data` field is concatenated to the existing message's data rather than replacing it.
+
+The `action` should be set to a [MessageAction](/docs/api/realtime-sdk/types#message-action) int enum: `MESSAGE_UPDATE` (1), `MESSAGE_DELETE` (2), or `MESSAGE_APPEND` (5).
 
 <Code>
 ```json
 {
+  action: <MessageAction int enum, 1|2|5>,
   name: <optional new event name>,
   data: <optional new message payload>,
   encoding: <optional encoding if data was encoded>,
   extras: <optional new extras field>,
-  operation: {
+  version: {
     clientId: <optional, client id performing the update>,
     description: <optional description of why the update was made>,
     metadata: <optional metadata object>
@@ -718,8 +721,9 @@ curl -X PATCH https://main.realtime.ably.net/channels/rest-example/messages/0182
  -H "Content-Type: application/json" \
  --data \
  '{
+   "action": 1,
    "data": "updated message content",
-   "operation": {
+   "version": {
      "description": "Fixed typo"
    }
  }'
@@ -736,116 +740,19 @@ curl -X PATCH https://main.realtime.ably.net/channels/rest-example/messages/0182
 
 ##### Capabilities
 
-- `message-update-own` := Can update your own messages (messages where the original publisher's `clientId` matches the updater's `clientId`, where both are [identified](/docs/platform/auth/identified-clients))
-- `message-update-any` := Can update any message on the channel
+- `message-update-own` := Can update or append to your own messages (messages where the original publisher's `clientId` matches the updater's `clientId`, where both are [identified](/docs/auth/identified-clients))
+- `message-update-any` := Can update or append to any message on the channel
+- `message-delete-own` := Can delete your own messages
+- `message-delete-any` := Can delete any message on the channel
 
 ##### Returns
 
-A successful request returns the updated @Message@ object with the new version information.
-
-See [MessageAction](/docs/api/realtime-sdk/types#message-action) for the possible values of the `action` enum.
+Returns an [`UpdateDeleteResult`](/docs/api/realtime-sdk/types#update-delete-result) object with a single `versionSerial` field: the serial of the version of the updated, deleted, or appended message, or `null` if the message was superseded by a subsequent update before it could be published.
 
 <Code>
 ```json
 {
-  serial: <permanent message serial identifier>,
-  name: <event name>,
-  data: <updated message payload>,
-  timestamp: <original message timestamp in ms since epoch>,
-  clientId: <client id of original publisher>,
-  action: <MessageAction int enum>,
-  version: {
-    serial: <new version serial identifier>,
-    clientId: <client id of user who made the update>,
-    timestamp: <update timestamp in ms since epoch>,
-    description: <description of the operation if provided>,
-    metadata: <metadata object if provided>
-  }
-}
-```
-</Code>
-
-An unsuccessful request returns an error.
-
-### Delete a message <a id="delete-message" />
-
-#### POST main.realtime.ably.net/channels/\<channelId\>/messages/\<serial\>/delete
-
-Delete a message on a channel, the message with the specified serial. This is a 'soft' delete that publishes a new version of the message with an action of `message.delete`. The full message history remains accessible through the [message versions](message-versions) endpoint. This endpoint requires that the channel is configured with the "Message annotations, updates, and deletes" channel rule.
-
-See [Updating and deleting messages](/docs/messages/updates-deletes#update) for more information about message updates and field semantics.
-
-The request body contains the message fields to update, along with optional operation metadata. Any fields not specified will be left as their original values.
-
-<Code>
-```json
-{
-  name: <optional new event name for the deleted version>,
-  data: <optional new data for the deleted version>,
-  encoding: <optional encoding if data was encoded>,
-  extras: <optional new extras field>,
-  operation: {
-    clientId: <optional, client id performing the delete>,
-    description: <optional description of why the delete was made>,
-    metadata: <optional metadata object>
-  }
-}
-```
-</Code>
-
-Example request:
-
-<Code>
-```shell
-curl -X POST https://main.realtime.ably.net/channels/rest-example/messages/01826232498871-001@abcdefghij:001/delete \
- -u "{{API_KEY}}" \
- -H "Content-Type: application/json" \
- --data \
- '{
-   "operation": {
-     "description": "Content violation"
-   }
- }'
-```
-</Code>
-
-##### Options
-
-| Property | Value |
-|----------|-------|
-| Content-Type | `application/json`, `application/x-msgpack` or `application/x-www-form-urlencoded` |
-| Accept | `application/json` by default, or `application/x-msgpack`, `text/html` |
-| Auth required | yes ([basic](basic-authentication) or [token](token-authentication) with `message-delete-own` or `message-delete-any` capability) |
-
-##### Capabilities
-
-| Capability | Description |
-|------------|-------------|
-| `message-delete-own` | Can delete your own messages (messages where the original publisher's `clientId` matches the deleter's `clientId`, where both are [identified](/docs/platform/auth/identified-clients)) |
-| `message-delete-any` | Can delete any message on the channel |
-
-##### Returns
-
-A successful request returns the updated `Message` object with `action` set to `message.delete`.
-
-See [MessageAction](/docs/api/realtime-sdk/types#message-action) for the possible values of the `action` enum.
-
-<Code>
-```shell
-{
-  serial: <permanent message serial identifier>,
-  name: <event name if provided>,
-  data: <data if provided>,
-  timestamp: <original message timestamp in ms since epoch>,
-  clientId: <client id of original publisher>,
-  action: <MessageAction int enum>,
-  version: {
-    serial: <new version serial identifier>,
-    clientId: <client id of user who made the delete>,
-    timestamp: <delete timestamp in ms since epoch>,
-    description: <description of the operation if provided>,
-    metadata: <metadata object if provided>
-  }
+  "versionSerial": "01826232512345-002@abcdefghij:002"
 }
 ```
 </Code>
@@ -1774,7 +1681,7 @@ A successful request returns a [paginated response](#pagination) of:
 
 ### Publish directly to specific recipients <a id="push-publish" />
 
-Convenience endpoint to deliver a push notification payload to a single device or set of devices identified by their [client identifier](/docs/platform/auth/identified-clients).
+Convenience endpoint to deliver a push notification payload to a single device or set of devices identified by their [client identifier](/docs/auth/identified-clients).
 
 If you want to send a push notification to subscribed clients without knowing about recipient devices' details, we recommend you look at [registering devices for push](#post-device-registration), then [subscribe them to channels](#post-channel-subscription), and then [send messages to the channels with push payloads](#message-extras-push).
 
@@ -2036,7 +1943,7 @@ The request body has the following properties:
 
 | Property | Description |
 |----------|-------------|
-| targets | An array of [target specifier](/docs/platform/auth/revocation#target-specifiers) strings. |
+| targets | An array of [target specifier](/docs/auth/revocation#target-specifiers) strings. |
 | issuedBefore | Optional number (Unix timestamp in milliseconds); if not specified it is set to the current time. The token revocation only applies to tokens issued before this timestamp. A request with an `issuedBefore` in the future, or more than an hour in the past will be rejected. |
 | allowReauthMargin | The `allowReauthMargin` bool permits a token renewal cycle to take place without needing established connections to be dropped, by postponing enforcement to 30 seconds in the future, and sending any existing connections a hint to obtain (and upgrade the connection to use) a new token. It defaults to `false`, meaning that the effect is near-immediate. |
 
@@ -2067,7 +1974,7 @@ The response is comparable to that of [Batch publish](#batch). If some tokens ca
 
 ##### See also
 
-See the [token revocation documentation](/docs/platform/auth/revocation) for further details.
+See the [token revocation documentation](/docs/auth/revocation) for further details.
 
 ## Application routes <a id="application" />
 
@@ -2120,7 +2027,7 @@ Stats records contain a hierarchy of elements relating to messages, connections 
 
 Ably's message statistics categorize unsuccessful message delivery into two distinct types: refused and failed messages.
 
-**Refused messages** are actively rejected by Ably's system. The most common cause is breaching a [rate limit](/docs/platform/pricing/limits), though refusals can also occur due to malformed message structure, insufficient [channel permissions](/docs/platform/auth/capabilities), or other request defects.
+**Refused messages** are actively rejected by Ably's system. The most common cause is breaching a [rate limit](/docs/platform/pricing/limits), though refusals can also occur due to malformed message structure, insufficient [channel permissions](/docs/auth/capabilities), or other request defects.
 
 **Failed messages** represent delivery attempts that were unsuccessful for reasons other than active rejection by Ably. This category includes internal service issues and rejections from external systems. In the case of [Integrations](/docs/platform/integrations) or [Push Notifications](/docs/push), when an external target rejects a message, it appears in statistics as a failed message.
 
