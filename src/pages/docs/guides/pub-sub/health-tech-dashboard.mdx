@@ -1,0 +1,1092 @@
+---
+title: "Guide: Building real-time patient monitoring dashboards with Ably"
+meta_description: "Build HIPAA-compliant patient monitoring dashboards at scale with Ably: continuous telemetry streaming, delta compression, multi-device sync, and exactly-once delivery for life-critical applications."
+meta_keywords: "patient monitoring, healthcare dashboards, medical telemetry, vital signs streaming, HIPAA compliance, delta compression, healthcare IoT, real-time monitoring, ICU dashboards, medical device integration"
+---
+
+In an ICU, a patient's heart rate spikes from 72 to 140 bpm. The bedside monitor, nurse station display, and doctor's mobile app must all show this change instantly and identically. Any delay, data loss, or desynchronization could have life-threatening consequences.
+
+Traditional approaches fall short: polling-based dashboards deliver stale data, basic WebSocket implementations lack ordering guarantees and fail during network disruptions, and proprietary hospital systems create vendor lock-in with poor integration capabilities. Healthcare demands better.
+
+Ably is purpose-built for life-critical realtime applications. It provides continuous telemetry streaming without delay, HIPAA-compliant infrastructure with encryption and audit trails, exactly-once delivery to prevent duplicate vital readings, guaranteed message ordering for temporal accuracy, 99.999% uptime with automatic failover, and a global edge network ensuring low latency regardless of hospital location.
+
+## Common health tech dashboard applications
+
+While this guide focuses on patient monitoring, Ably's capabilities apply across healthcare realtime applications:
+
+- **ICU/Critical Care Monitoring:** Continuous multi-parameter vital signs with high-frequency waveforms streamed to multiple displays simultaneously.
+- **Remote Patient Monitoring (RPM):** Home health devices streaming to care team dashboards, enabling virtual care at scale.
+- **Operating Room Displays:** Multi-device synchronization ensures surgical teams see identical patient state across monitors.
+- **Emergency Department Triage:** Realtime bed status and patient acuity tracking across emergency departments.
+- **Neonatal Monitoring:** Ultra-sensitive infant vital signs with immediate alerting for critical changes.
+- **Telemetry Units:** Wireless cardiac monitoring streamed across hospital floors to centralized monitoring stations.
+
+## Why Ably for healthcare dashboards?
+
+Ably is engineered around the four pillars of dependability, proven at scale by delivering over 500 billion messages per month:
+
+* **[Performance](/docs/platform/architecture/performance):** Sub-50ms latency globally ensures time-sensitive medical data arrives instantly.
+* **[Integrity](/docs/platform/architecture/message-ordering):** Guaranteed message ordering and exactly-once delivery prevent duplicate vital readings and ensure temporal accuracy.
+* **[Reliability](/docs/platform/architecture/fault-tolerance):** 99.999% uptime SLA (maximum 5.26 minutes downtime per year) with automatic failover undetectable to clients.
+* **[Availability](/docs/platform/architecture/edge-network):** Global edge infrastructure provides low latency from any hospital location worldwide.
+
+### Healthcare-specific capabilities
+
+**HIPAA Compliance:**
+- Transport encryption via TLS 1.2+ automatically enforced on all connections
+- Message history encrypted at rest with AES-256 and regular key rotation
+- Audit logging captures all channel access for compliance reporting
+- Business Associate Agreement (BAA) available for enterprise customers
+- No Protected Health Information (PHI) stored in message routing metadata
+
+**Data Integrity for Medical Applications:**
+- Exactly-once delivery prevents duplicate vital sign readings that could mislead clinical decisions
+- Guaranteed message ordering ensures temporal accuracy critical for medical data interpretation
+- Automatic connection recovery maintains message continuity during network disruptions
+- [Delta compression](/docs/channels/options/deltas) reduces bandwidth while preserving complete state history
+
+**Life-Critical Reliability:**
+- Automatic multi-region failover occurs transparently without client awareness
+- No single point of failure across Ably's distributed infrastructure
+- Graceful degradation under load maintains service during traffic spikes
+- Proven scalability supporting millions of concurrent connections per channel
+
+Ably's [serverless architecture](/docs/platform/architecture) eliminates infrastructure management, automatically scaling to handle any load without provisioning or maintenance.
+
+## Architecting your patient monitoring dashboard
+
+Effective dashboard architecture begins with channel design, data modeling, and optimization strategies tailored to healthcare requirements.
+
+### Channel architecture patterns
+
+**Recommended: Patient-centric channels**
+
+Structure channels around individual patients for natural access control and scalability:
+
+```
+Channel naming: patient:{patient_id}:vitals
+
+Benefits:
+- Natural access control (subscribe only to authorized patients)
+- Isolated streams (one patient's data spike doesn't affect others)
+- Horizontal scalability via consistent hashing distributes load
+- HIPAA-friendly (patient ID can be de-identified/hashed)
+```
+
+**Alternative: Device-centric channels**
+
+Use when one device monitors multiple parameters across patients:
+
+```
+Channel naming: device:{device_id}:telemetry
+
+Trade-offs:
+- Requires client-side filtering for specific patients
+- More complex access control implementation
+- Useful for device management and diagnostics
+```
+
+**Multi-device synchronization**
+
+Multiple displays monitoring the same patient (bedside monitor, nurse station, mobile app, family display) all subscribe to the same channel. Ably automatically handles message fanout, guaranteeing identical state across all devices. Connection recovery ensures no device falls behind during network disruptions.
+
+### Publisher implementation
+
+Medical device gateways typically run on hospital infrastructure, collecting data from monitoring equipment and publishing to Ably:
+
+<Code>
+```javascript
+// Medical device gateway (Node.js)
+const Ably = require('ably');
+const realtime = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+const patientChannel = realtime.channels.get('patient:7f3a9b2e:vitals');
+
+// Publish vital signs update
+function publishVitals(vitals) {
+  patientChannel.publish('vitals-update', {
+    timestamp: Date.now(),
+    patientId: '7f3a9b2e', // De-identified hash
+    heartRate: vitals.heartRate,
+    bloodPressure: { 
+      systolic: vitals.bloodPressure.systolic, 
+      diastolic: vitals.bloodPressure.diastolic 
+    },
+    spO2: vitals.spO2,
+    temperature: vitals.temperature,
+    respiratoryRate: vitals.respiratoryRate
+  });
+}
+
+// Collect vitals from medical device at 1Hz
+setInterval(() => {
+  const vitals = collectFromDevice();
+  publishVitals(vitals);
+}, 1000);
+```
+
+```go
+// Medical device gateway (Go)
+package main
+
+import (
+    "context"
+    "time"
+    "github.com/ably/ably-go/ably"
+)
+
+func main() {
+    client, _ := ably.NewRealtime(ably.WithKey(apiKey))
+    channel := client.Channels.Get("patient:7f3a9b2e:vitals")
+    
+    ticker := time.NewTicker(1 * time.Second)
+    defer ticker.Stop()
+    
+    for range ticker.C {
+        vitals := collectFromDevice()
+        
+        vitalSigns := map[string]interface{}{
+            "timestamp":       time.Now().UnixMilli(),
+            "patientId":       "7f3a9b2e",
+            "heartRate":       vitals.HeartRate,
+            "bloodPressure":   map[string]int{
+                "systolic": vitals.BPSystolic, 
+                "diastolic": vitals.BPDiastolic,
+            },
+            "spO2":           vitals.SpO2,
+            "temperature":     vitals.Temperature,
+            "respiratoryRate": vitals.RespiratoryRate,
+        }
+        
+        err := channel.Publish(ctx, "vitals-update", vitalSigns)
+        if err != nil {
+            // Handle critical error - vitals not transmitted
+            log.Printf("Failed to publish vital signs: %v", err)
+        }
+    }
+}
+```
+</Code>
+
+### Data modeling for medical telemetry
+
+Structure vital signs payloads to support delta compression, temporal ordering, and quality monitoring:
+
+```javascript
+{
+  "timestamp": 1704563280000,  // Unix epoch ms (critical for temporal accuracy)
+  "patientId": "7f3a9b2e",     // De-identified hash
+  "deviceId": "monitor-icu-3", // Source device tracking
+  "vitals": {
+    "heartRate": {
+      "value": 78,
+      "unit": "bpm",
+      "quality": "good"  // Signal quality indicator
+    },
+    "bloodPressure": {
+      "systolic": 120,
+      "diastolic": 80,
+      "unit": "mmHg",
+      "quality": "good"
+    },
+    "spO2": {
+      "value": 98,
+      "unit": "%",
+      "quality": "good"
+    },
+    "temperature": {
+      "value": 37.2,
+      "unit": "celsius",
+      "quality": "good"
+    },
+    "respiratoryRate": {
+      "value": 16,
+      "unit": "breaths/min",
+      "quality": "good"
+    }
+  },
+  "alarms": [
+    {
+      "type": "high_heart_rate",
+      "severity": "warning",
+      "threshold": 100,
+      "triggered_at": 1704563280000
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "checksum": "abc123"  // Data integrity verification
+  }
+}
+```
+
+**Design principles:**
+- Always include timestamps for temporal ordering
+- Include signal quality indicators to detect sensor detachment
+- Use structured nested objects (delta compression works best with similar structure between messages)
+- Include metadata for versioning and integrity verification
+- For high-frequency waveforms, use sequence numbers to detect dropped messages
+
+### High-frequency data and channel limits
+
+Ably limits inbound messages to 50 msg/s per channel to ensure platform stability. For higher-frequency data sources like ECG waveforms at 250Hz, batch multiple samples into single publishes:
+
+<Code>
+```javascript
+// Batch high-frequency samples into single publishes
+const sampleBuffer = [];
+const BATCH_SIZE = 25; // 25 samples per publish = 10 publishes/sec at 250Hz
+
+function collectSample(sample) {
+  sampleBuffer.push(sample);
+  
+  if (sampleBuffer.length >= BATCH_SIZE) {
+    channel.publish('waveform-batch', {
+      timestamp: Date.now(),
+      patientId: '7f3a9b2e',
+      waveformType: 'ecg_lead_ii',
+      sampleRate: 250,
+      samples: sampleBuffer.splice(0, BATCH_SIZE),
+      sequenceNumber: currentSequence++
+    });
+  }
+}
+
+// Collect ECG samples at 250Hz
+setInterval(() => {
+  collectSample(readECGSample());
+}, 4); // 4ms interval = 250Hz
+```
+</Code>
+
+**Important:** When publishing batched messages via REST API from ephemeral connections, consider [message ordering](/docs/pub-sub/advanced#message-ordering) and [idempotency](/docs/pub-sub/advanced#idempotency) requirements. Realtime connections provide serial ordering guarantees; REST does not unless you explicitly set message IDs.
+
+### Optimization: Delta compression for vital signs
+
+Vital signs messages often grow over time as cumulative patient data accumulates. Repeatedly sending 3-5KB payloads every second wastes bandwidth, especially for mobile and tablet displays.
+
+[Delta compression](/docs/channels/options/deltas) solves this by transmitting only changes between successive messages. Publishers continue sending complete state (maintaining simplicity), while Ably computes deltas server-side and transmits only changes. Subscriber SDKs automatically reconstruct full state from deltas.
+
+**When to use delta compression:**
+- ✅ Vital signs with incremental changes (most parameters remain stable between updates)
+- ✅ Multi-parameter monitoring where only 1-2 vitals change per update
+- ✅ Mobile or bandwidth-constrained displays
+- ✅ Payloads > 1KB with high similarity between successive messages
+
+**When NOT to use delta compression:**
+- ❌ High-frequency waveforms where most data changes between messages
+- ❌ Small alert messages (< 1KB where overhead exceeds savings)
+- ❌ Scenarios requiring channel-level encryption (deltas are incompatible; use TLS transport encryption instead)
+
+**Implementation:**
+
+<Code>
+```javascript
+// Dashboard: Subscribe with delta compression enabled
+const vcdiffPlugin = require('@ably/vcdiff-decoder');
+
+const realtime = new Ably.Realtime({
+  key: 'your-api-key',
+  plugins: { vcdiff: vcdiffPlugin }
+});
+
+const channel = realtime.channels.get('patient:7f3a9b2e:vitals', {
+  params: { delta: 'vcdiff' }
+});
+
+channel.subscribe('vitals-update', (msg) => {
+  // SDK automatically reconstructs full state from delta
+  // New joiners receive full state on first message
+  updateVitalsDisplay(msg.data);
+});
+```
+</Code>
+
+See the [delta compression documentation](/docs/channels/options/deltas#subscribe) for plugin installation details and browser compatibility.
+
+**Bandwidth savings example:**
+- Full payload: ~3KB (comprehensive vital signs with history)
+- Delta payload: ~300-500 bytes (typical 80-85% compression)
+- 1Hz updates × 10 subscribed devices = 30KB/s → 3-5KB/s
+- **Result: 80-85% bandwidth reduction**
+
+**Key considerations:**
+- First message after connection is always full state
+- Connection recovery sends full state, then resumes delta mode
+- Monitor compression ratios via [application statistics](/docs/metadata-stats/stats)
+- For cost optimization, use the [persist last message](/docs/storage-history/storage#persist-last-message) rule to store only the final complete state rather than every delta
+
+## Ensuring data freshness with message conflation
+
+Medical devices often publish vital signs faster than dashboards can render them. A device publishing at 10Hz (10 updates/second) overwhelms a dashboard UI that refreshes at 1-2 FPS due to complex chart rendering. Without optimization, 8-9 stale updates accumulate per second in the browser queue.
+
+### The staleness problem
+
+This creates three issues:
+- Clinicians see delayed vital signs (dangerous in critical care)
+- Dashboard becomes unresponsive (unusable during emergencies)
+- Bandwidth wasted on data that's never displayed
+
+### Solution: Message conflation
+
+[Message conflation](/docs/messages#conflation) aggregates messages on the server over a configured time window (e.g., 100ms), discards intermediate values, and delivers only the most current state to subscribers.
+
+Configure conflation through [channel rules](/docs/channels#rules) in your Ably dashboard:
+
+1. Navigate to app settings → Channel Rules
+2. Create rule for channel pattern: `patient:*:vitals`
+3. Enable conflation with interval (e.g., 100ms)
+4. Set conflation key pattern: `#{message.name}`
+
+**When to use conflation:**
+- ✅ Display refresh rate < data publish rate
+- ✅ Only current value matters (e.g., current heart rate, not historical sequence)
+- ✅ Preventing UI performance degradation
+- ✅ Cost-sensitive deployments where intermediate values aren't critical
+
+**When NOT to use conflation:**
+- ❌ Every update must be processed (e.g., waveform displays)
+- ❌ Audit trail or compliance requirements (conflation permanently discards intermediate messages)
+- ❌ Alert messages (small, infrequent, every alert matters)
+
+**Critical warning:**
+
+<Aside data-type='important'>
+  **Message conflation discards intermediate messages permanently.** Even messages streamed to external storage via Ably integrations will only contain conflated data. If every datapoint is important for audit, compliance, or retrospective analysis, do NOT use conflation. Instead, use delta compression (which preserves all messages) or implement batching on the publisher side before sending to Ably.
+</Aside>
+
+**Performance example:**
+- Device publishes at 10Hz = 10 msg/sec
+- With 100ms conflation = 10 msg/sec → ~10 msg/sec delivered (one per 100ms window)
+- For 10 subscribed dashboards: 100 msg/sec → 100 msg/sec outbound
+- **Result: Prevents dashboard overload while maintaining current state visibility**
+
+## Multi-device synchronization and connection recovery
+
+A single ICU patient may be monitored simultaneously by a bedside display, nurse station dashboard showing 10 patients, doctor's mobile app, and family viewing screen. All must show identical, current vital signs. Any desynchronization could lead to clinical errors.
+
+### Ably's synchronization guarantee
+
+All devices subscribe to the same channel (`patient:7f3a9b2e:vitals`). Ably guarantees:
+- **Message ordering** ensures all devices see updates in the same sequence
+- **Exactly-once delivery** prevents any device from receiving duplicate readings
+- **Automatic fanout** to all subscribers without application logic
+- **Connection-independent state** allows devices to join/leave independently
+
+<Code>
+```javascript
+// Bedside monitor
+const channel = realtime.channels.get('patient:7f3a9b2e:vitals');
+channel.subscribe('vitals-update', (msg) => {
+  updateBedsideMonitor(msg.data);
+});
+
+// Nurse station (same subscription, different UI)
+channel.subscribe('vitals-update', (msg) => {
+  updatePatientTile('7f3a9b2e', msg.data);
+});
+
+// Mobile app (same subscription, optimized for mobile)
+channel.subscribe('vitals-update', (msg) => {
+  updateMobileVitals(msg.data);
+});
+```
+</Code>
+
+### Handling network disruptions
+
+Network disruptions occur frequently in hospitals: Wi-Fi dead zones in elevators and stairwells, cellular connectivity drops for mobile clinicians, network maintenance windows, and infrastructure failures. Dashboards must automatically reconnect and recover missed data without clinician intervention.
+
+**Ably's automatic recovery:**
+
+<Code>
+```javascript
+realtime.connection.on('disconnected', () => {
+  // Ably SDK automatically attempts reconnection
+  showReconnectingIndicator();
+});
+
+realtime.connection.on('connected', () => {
+  // Connection restored, channel state recovered automatically
+  hideReconnectingIndicator();
+  // Ably SDK has already backfilled missed messages
+});
+```
+</Code>
+
+The SDK tracks the last received message ID. On reconnection, it requests missed messages from Ably and seamlessly backfills to current state. No application logic required.
+
+If the primary region becomes unreachable, the SDK automatically tries fallback regions until connection is restored. This multi-region failover is transparent to your application.
+
+**History backfill for extended disconnections:**
+
+Ably stores message history for 2 minutes by default (sufficient for connection recovery and providing context when joining mid-stream). This can be extended up to 1 year if needed. For disconnections exceeding the history retention period, explicitly request history:
+
+<Code>
+```javascript
+channel.subscribe('vitals-update', (msg) => {
+  updateDisplay(msg.data);
+});
+
+// After extended disconnection, backfill missed data
+channel.history({ limit: 100 }, (err, resultPage) => {
+  if (err) {
+    console.error('Failed to retrieve history:', err);
+    return;
+  }
+  
+  // Display gap-fill indicator to user
+  resultPage.items.forEach((msg) => {
+    updateDisplayWithHistoricalData(msg.data);
+  });
+});
+```
+</Code>
+
+**Best practices:**
+- Display connection state indicator in UI (connected/reconnecting/disconnected)
+- Use history API for disconnections exceeding retention period
+- Test recovery scenarios in realistic hospital network conditions
+- Configure [connection timeout](/docs/connect/states#connection-state-recovery) based on application criticality
+
+See the [fault tolerance documentation](/docs/platform/architecture/fault-tolerance) for details on Ably's infrastructure resilience.
+
+## HIPAA compliance and security
+
+Healthcare applications handling Protected Health Information (PHI) must comply with HIPAA's Security Rule. Ably provides the infrastructure and capabilities needed to build HIPAA-compliant applications.
+
+### HIPAA requirements overview
+
+- **Encryption:** Data encrypted at rest and in transit (§164.312(a)(2)(iv))
+- **Access Control:** Only authorized users access patient data (§164.312(a)(1))
+- **Audit Trails:** All data access must be logged (§164.312(b))
+- **Data Integrity:** Prevent unauthorized modification (§164.312(c)(1))
+- **Business Associate Agreement (BAA):** Required for vendors handling PHI
+
+### How Ably supports HIPAA compliance
+
+**Encryption:**
+- Transport encryption via TLS 1.2+ automatically enforced on all connections
+- Perfect Forward Secrecy (PFS) enabled
+- Message history encrypted at rest with AES-256
+- Encryption keys rotated regularly
+- Certificate pinning available for mobile apps
+
+**Access Control:**
+
+Implement token-based authentication with capability constraints:
+
+<Code>
+```javascript
+// Generate token on secure backend (never in client code)
+const Ably = require('ably');
+const rest = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+async function generatePatientToken(nurseId, assignedPatientIds) {
+  const capability = {};
+  
+  // Grant access only to assigned patients
+  assignedPatientIds.forEach(patientId => {
+    capability[`patient:${patientId}:vitals`] = ['subscribe'];
+    capability[`patient:${patientId}:alerts`] = ['subscribe', 'publish']; // Can acknowledge alerts
+  });
+  
+  const tokenRequest = await rest.auth.createTokenRequest({
+    clientId: nurseId,
+    capability: capability,
+    ttl: 3600000 // 1 hour expiration (short-lived tokens)
+  });
+  
+  return tokenRequest;
+}
+
+// Client uses token
+const realtime = new Ably.Realtime({ 
+  authCallback: async (tokenParams, callback) => {
+    // Fetch token from your secure backend
+    const tokenRequest = await fetch('/api/ably-token').then(r => r.json());
+    callback(null, tokenRequest);
+  }
+});
+```
+</Code>
+
+**Audit Logging:**
+
+Ably provides audit-ready logs via integrations. Export logs to your SIEM:
+- Who accessed which channel (client ID)
+- When access occurred (timestamp)
+- What actions were performed (publish/subscribe)
+- Connection source (IP address, user agent)
+
+Common integration patterns:
+- Kafka integration → Elasticsearch → Kibana
+- AWS Lambda → CloudWatch Logs
+- Azure Functions → Azure Monitor
+
+See [Ably integrations](/docs/platform/integrations) for configuration details.
+
+**Data Integrity:**
+
+Ably guarantees:
+- Message ordering (temporal accuracy for medical data)
+- Exactly-once delivery (no duplicate vital readings)
+- Checksum verification (detect data corruption)
+- Immutable message history (tamper-proof audit trail)
+
+**Business Associate Agreement (BAA):**
+
+Ably provides HIPAA BAA to enterprise customers, covering PHI transmission through Ably's infrastructure and committing to HIPAA security and privacy requirements. Contact [Ably sales](https://ably.com/contact) for BAA execution.
+
+### De-identification best practices
+
+Use de-identified patient IDs in channel names and message payloads to reduce PHI exposure:
+
+<Code>
+```javascript
+// ❌ Don't use PHI directly
+const channelName = 'patient:John-Doe-DOB-1985-03-15:vitals';
+
+// ✅ Use de-identified hash
+const crypto = require('crypto');
+const patientHash = crypto
+  .createHash('sha256')
+  .update('internal-patient-id-12345')
+  .digest('hex')
+  .substring(0, 12);
+
+const channelName = `patient:${patientHash}:vitals`;
+
+// Store mapping in your secure database:
+// internal-patient-id-12345 → 7f3a9b2e8c1d (hash)
+```
+</Code>
+
+**Benefits:**
+- Reduces PHI exposure in Ably infrastructure
+- Simplifies compliance audit (less PHI to track)
+- Channel names can be safely logged and monitored
+
+**Important:** De-identification does NOT eliminate HIPAA requirements. You still need BAA, encryption, access controls, and audit trails.
+
+## External storage and long-term data retention
+
+Ably's message history (2 minutes by default, extendable to 1 year) enables connection recovery and context on join but is not designed for long-term medical records. Healthcare organizations require years of retention for compliance, complex querying for trend analysis, and data warehouse integration for business intelligence.
+
+### Architecture pattern: Real-time + archival
+
+Stream data through Ably for real-time delivery to dashboards while simultaneously archiving to your own storage infrastructure:
+
+```
+Medical Device → Ably Pub/Sub → [1] Real-time Dashboard (immediate display)
+                              → [2] Ably Integration → Kafka → Time-series DB
+                                                            → Data Lake (S3)
+                                                            → Analytics Pipeline
+```
+
+**Why this pattern:**
+- Real-time path: Ably handles immediate delivery to dashboards
+- Archival path: Ably integration forwards all messages to your storage
+- Decoupled: Storage issues don't affect real-time monitoring
+- Compliant: Meet your specific retention requirements without impacting live systems
+
+**Cost optimization:** If using delta compression, configure the [persist last message](/docs/storage-history/storage#persist-last-message) rule to store only the final complete state rather than every delta. This provides the latest state for reconnections while reducing storage costs, with full historical data captured in your external archive.
+
+### Implementation: Ably integration to Kafka
+
+Configure Ably integration via your dashboard:
+
+1. Navigate to app settings → Integrations
+2. Create Kafka integration
+3. Configure rule: Trigger on all messages to `patient:*:vitals`
+4. Kafka broker: `your-kafka-cluster.hospital.internal:9092`
+5. Topic: `patient-vitals-archive`
+6. Format: JSON (or Confluent Avro for schema registry)
+
+**Kafka consumer to time-series database:**
+
+<Code>
+```go
+// Kafka consumer to persist vitals to time-series database
+package main
+
+import (
+    "context"
+    "encoding/json"
+    "log"
+    "time"
+    "github.com/segmentio/kafka-go"
+)
+
+type VitalsMessage struct {
+    Timestamp  int64  `json:"timestamp"`
+    PatientID  string `json:"patientId"`
+    DeviceID   string `json:"deviceId"`
+    Vitals     struct {
+        HeartRate struct {
+            Value   int    `json:"value"`
+            Quality string `json:"quality"`
+        } `json:"heartRate"`
+        BloodPressure struct {
+            Systolic  int    `json:"systolic"`
+            Diastolic int    `json:"diastolic"`
+            Quality   string `json:"quality"`
+        } `json:"bloodPressure"`
+        SpO2 struct {
+            Value   int    `json:"value"`
+            Quality string `json:"quality"`
+        } `json:"spO2"`
+        Temperature struct {
+            Value   float64 `json:"value"`
+            Quality string  `json:"quality"`
+        } `json:"temperature"`
+        RespiratoryRate struct {
+            Value   int    `json:"value"`
+            Quality string `json:"quality"`
+        } `json:"respiratoryRate"`
+    } `json:"vitals"`
+}
+
+func consumeVitals(db *sql.DB) {
+    reader := kafka.NewReader(kafka.ReaderConfig{
+        Brokers: []string{"kafka.hospital.internal:9092"},
+        Topic:   "patient-vitals-archive",
+        GroupID: "vitals-archiver",
+    })
+    defer reader.Close()
+
+    for {
+        msg, err := reader.ReadMessage(context.Background())
+        if err != nil {
+            log.Println("Error reading from Kafka:", err)
+            continue
+        }
+
+        var vitals VitalsMessage
+        if err := json.Unmarshal(msg.Value, &vitals); err != nil {
+            log.Println("Error parsing vitals:", err)
+            continue
+        }
+
+        storeVitals(db, vitals)
+    }
+}
+
+func storeVitals(db *sql.DB, vitals VitalsMessage) {
+    // Insert into TimescaleDB (PostgreSQL-based time-series DB)
+    query := `
+        INSERT INTO patient_vitals 
+        (patient_id, timestamp, heart_rate, blood_pressure_systolic, 
+         blood_pressure_diastolic, spo2, temperature, respiratory_rate,
+         device_id, heart_rate_quality)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `
+    
+    _, err := db.Exec(
+        query,
+        vitals.PatientID,
+        time.UnixMilli(vitals.Timestamp),
+        vitals.Vitals.HeartRate.Value,
+        vitals.Vitals.BloodPressure.Systolic,
+        vitals.Vitals.BloodPressure.Diastolic,
+        vitals.Vitals.SpO2.Value,
+        vitals.Vitals.Temperature.Value,
+        vitals.Vitals.RespiratoryRate.Value,
+        vitals.DeviceID,
+        vitals.Vitals.HeartRate.Quality,
+    )
+    
+    if err != nil {
+        log.Println("Error storing vitals:", err)
+        // Consider dead letter queue for failed writes
+    }
+}
+```
+</Code>
+
+**Key decisions:**
+- Storage technology: Time-series DB (TimescaleDB, InfluxDB) vs Data Lake (S3 + Parquet)
+- Retention policy: Automated deletion based on your legal/business requirements
+- Schema management: Avro or Protobuf for forward compatibility
+- Failure handling: Dead letter queue for failed writes
+
+Your retention period should be determined by your specific legal and business requirements, which vary by jurisdiction and use case.
+
+## Alerting and threshold monitoring
+
+Real-time clinical alerts ensure care teams respond immediately to critical changes in patient condition.
+
+### Alert architecture patterns
+
+**Option 1: Client-side alerting (simple, low latency)**
+
+Each dashboard implements threshold checks locally:
+
+<Code>
+```javascript
+channel.subscribe('vitals-update', (msg) => {
+  const vitals = msg.data;
+  
+  if (vitals.heartRate.value > 120) {
+    triggerAlert('HIGH_HEART_RATE', vitals);
+  }
+  
+  if (vitals.spO2.value < 90) {
+    triggerAlert('LOW_SPO2', vitals);
+  }
+  
+  updateDisplay(vitals);
+});
+```
+</Code>
+
+**Option 2: Server-side alerting (centralized, auditable)**
+
+A dedicated alert service monitors thresholds and publishes alerts to a separate channel:
+
+```
+Medical Device → Ably → Alert Service (monitors thresholds)
+                                ↓
+                    Alerts Channel → All Dashboards
+```
+
+**Recommendation:** Use server-side alerting for:
+- Centralized alert logic (single source of truth)
+- Alert deduplication (prevent alert fatigue)
+- Audit trail (regulatory requirement)
+- Multi-user coordination (alert acknowledgment tracking)
+
+### Implementation: Alert service with acknowledgment
+
+Medical alerts often require acknowledgment to ensure clinical staff have seen critical notifications. Ably's [message annotations](/docs/messages/annotations) feature provides a reliable mechanism for alert acknowledgment.
+
+**How it works:**
+1. Alert service publishes alert messages to `patient:{id}:alerts` channel
+2. Clinicians receive alerts on their dashboards
+3. When acknowledged, dashboard publishes a `flag.v1` annotation with `name: 'acknowledged'`
+4. Alert service monitors annotation summaries to track acknowledgment status
+5. If not acknowledged within threshold, escalate to supervisor
+
+**Dashboard implementation:**
+
+<Code>
+```javascript
+// Dashboard: Subscribe to alerts and handle acknowledgment
+const alertChannel = realtime.channels.get('patient:7f3a9b2e:alerts', {
+  modes: ['MESSAGE_SUBSCRIBE', 'ANNOTATION_PUBLISH']
+});
+
+alertChannel.subscribe((message) => {
+  if (message.action === 'message.create') {
+    const alert = message.data;
+    
+    // Display alert banner with audio notification
+    displayAlertBanner(alert);
+    playAlertSound(alert.severity);
+    
+    // Clinician clicks "Acknowledge" button
+    document.getElementById('ack-btn').onclick = async () => {
+      await alertChannel.annotations.publish(message, {
+        type: 'acknowledgment:flag.v1',
+        name: 'acknowledged'
+      });
+      hideAlertBanner();
+    };
+  }
+  
+  // Track annotation summaries to show who acknowledged
+  if (message.action === 'message.summary') {
+    const ackSummary = message.annotations?.summary?.['acknowledgment:flag.v1'];
+    if (ackSummary) {
+      console.log(`Alert acknowledged by: ${ackSummary.clientIds.join(', ')}`);
+    }
+  }
+});
+```
+</Code>
+
+**Alert service implementation:**
+
+<Code>
+```go
+// Alert service monitoring thresholds and acknowledgments
+package main
+
+import (
+    "context"
+    "log"
+    "time"
+    "github.com/ably/ably-go/ably"
+)
+
+type AlertService struct {
+    realtime   *ably.Realtime
+    thresholds map[string]VitalThresholds
+}
+
+type VitalThresholds struct {
+    HeartRateMax int
+    HeartRateMin int
+    SpO2Min      int
+}
+
+type Alert struct {
+    Type      string `json:"type"`
+    Severity  string `json:"severity"`
+    PatientID string `json:"patientId"`
+    Value     int    `json:"value"`
+    Threshold int    `json:"threshold"`
+    Timestamp int64  `json:"timestamp"`
+}
+
+func (s *AlertService) MonitorPatient(ctx context.Context, patientID string) {
+    vitalsChannel := s.realtime.Channels.Get("patient:" + patientID + ":vitals")
+    alertChannel := s.realtime.Channels.Get("patient:" + patientID + ":alerts")
+    
+    // Subscribe to vitals and check thresholds
+    _, err := vitalsChannel.Subscribe(ctx, "vitals-update", func(msg *ably.Message) {
+        vitals := msg.Data.(map[string]interface{})
+        
+        // Check heart rate threshold
+        if hr, ok := getHeartRate(vitals); ok {
+            if hr > s.thresholds[patientID].HeartRateMax {
+                s.publishAlert(ctx, alertChannel, Alert{
+                    Type:      "HIGH_HEART_RATE",
+                    Severity:  "WARNING",
+                    PatientID: patientID,
+                    Value:     hr,
+                    Threshold: s.thresholds[patientID].HeartRateMax,
+                    Timestamp: time.Now().UnixMilli(),
+                })
+            }
+        }
+        
+        // Check SpO2 threshold
+        if spO2, ok := getSpO2(vitals); ok {
+            if spO2 < s.thresholds[patientID].SpO2Min {
+                s.publishAlert(ctx, alertChannel, Alert{
+                    Type:      "LOW_SPO2",
+                    Severity:  "CRITICAL", // SpO2 < 90% is critical
+                    PatientID: patientID,
+                    Value:     spO2,
+                    Threshold: s.thresholds[patientID].SpO2Min,
+                    Timestamp: time.Now().UnixMilli(),
+                })
+            }
+        }
+    })
+    
+    if err != nil {
+        log.Fatal("Failed to subscribe to vitals:", err)
+    }
+    
+    // Monitor alert acknowledgments via annotation summaries
+    _, err = alertChannel.Subscribe(ctx, func(msg *ably.Message) {
+        if msg.Action == ably.MessageActionSummary {
+            ackSummary := msg.Annotations.Summary["acknowledgment:flag.v1"]
+            if ackSummary != nil {
+                log.Printf("Alert %s acknowledged by %v", msg.Serial, ackSummary.ClientIDs)
+                // Cancel escalation timer for this alert
+                cancelEscalation(msg.Serial)
+            }
+        }
+    })
+    
+    if err != nil {
+        log.Fatal("Failed to subscribe to alert acknowledgments:", err)
+    }
+}
+
+func (s *AlertService) publishAlert(ctx context.Context, channel *ably.RealtimeChannel, alert Alert) {
+    err := channel.Publish(ctx, "clinical-alert", alert)
+    if err != nil {
+        log.Println("Failed to publish alert:", err)
+        // Critical: alerts must be delivered. Consider fallback mechanism
+    }
+}
+```
+</Code>
+
+**Best practices:**
+- Use separate alert channel (don't mix with vitals)
+- Include severity levels (INFO, WARNING, CRITICAL)
+- Implement alert acknowledgment via annotations (`flag.v1` type)
+- Debounce alerts (prevent flooding during sustained abnormal readings)
+- Escalation logic (if not acknowledged within threshold, page supervisor)
+- Monitor annotation summaries to track who acknowledged which alerts
+
+See the [message annotations documentation](/docs/messages/annotations) for complete details.
+
+## Cost optimization strategies
+
+Understanding costs and implementing optimization techniques ensures sustainable economics as you scale.
+
+### Healthcare dashboard cost profile
+
+**Ably pricing components:**
+- Messages: Inbound (from devices) + Outbound (to dashboards)
+- Connections: Each device and dashboard connection
+- Channels: Active channels with subscribers
+- Storage: Message history retention
+
+**Single ICU patient scenario:**
+- 1 medical device publishing vitals at 1Hz = 86,400 inbound messages/day
+- 4 subscribed dashboards = 345,600 outbound messages/day
+- 5 concurrent connections = negligible cost
+- 1 active channel = negligible cost
+
+**Daily cost (standard rates):** ~$0.86/patient/day or ~$26/patient/month
+
+**Cost scales with:**
+- Number of monitored patients
+- Number of subscribed displays per patient
+- Publishing frequency (1Hz vs 10Hz)
+- Payload size (basic vitals vs waveforms)
+
+### Optimization techniques
+
+**1. Delta compression (80-85% bandwidth reduction)**
+
+```
+Before: 3KB payload × 1Hz × 4 displays = 43.2KB/s = ~3.7GB/day
+After: 500B payload × 1Hz × 4 displays = 7.2KB/s = ~0.6GB/day
+Savings: ~85% reduction in data transfer
+```
+
+**2. Message conflation (alternative cost optimization)**
+
+For cost-sensitive deployments where intermediate values aren't critical:
+
+```
+10 patients, 1Hz updates, 10 displays each:
+Without conflation: 10 × 86,400 inbound + 10 × 864,000 outbound = ~$260/month
+With 500ms conflation (2Hz effective): ~$105/month (80% outbound reduction)
+```
+
+**Trade-off:** Conflation permanently discards intermediate messages. Even external storage integrations receive only conflated data. Use conflation only if losing intermediate vital readings is acceptable. For audit compliance, use delta compression instead.
+
+**Cost comparison (10 patients, 30 days):**
+- No optimization: ~$260/month
+- With deltas (85% bandwidth savings): ~$120/month (preserves all data)
+- With conflation (80% outbound reduction): ~$105/month (discards intermediate data)
+
+**3. Connection management**
+
+<Code>
+```javascript
+// Close connections when dashboard not in use
+window.addEventListener('beforeunload', () => {
+  realtime.close(); // Graceful disconnect
+});
+
+// For mobile apps, disconnect in background
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    realtime.connection.close();
+  } else {
+    realtime.connection.connect();
+  }
+});
+```
+</Code>
+
+**4. Selective subscriptions**
+
+Nurse station dashboards showing multiple patients should subscribe only to visible patients:
+
+<Code>
+```javascript
+// Subscribe only to currently visible patients
+function updateVisiblePatients(visiblePatientIds) {
+  // Unsubscribe from off-screen patients
+  currentSubscriptions.forEach((sub, patientId) => {
+    if (!visiblePatientIds.includes(patientId)) {
+      sub.channel.detach();
+    }
+  });
+  
+  // Subscribe to newly visible patients
+  visiblePatientIds.forEach((patientId) => {
+    if (!currentSubscriptions.has(patientId)) {
+      subscribeToPatient(patientId);
+    }
+  });
+}
+```
+</Code>
+
+**5. REST API for infrequent publishing**
+
+If a device publishes less than once per minute, use REST API instead of maintaining persistent connection:
+
+<Code>
+```javascript
+// One-off publish (no persistent connection)
+const rest = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+rest.channels.get('patient:7f3a9b2e:vitals').publish('vitals-update', data);
+```
+</Code>
+
+**Cost optimization checklist:**
+- [ ] Enable delta compression on vital signs channels (preserves all data)
+- [ ] Consider conflation only if intermediate values aren't needed (discards data)
+- [ ] Close connections when displays inactive
+- [ ] Subscribe only to visible patients (nurse stations)
+- [ ] Use REST for infrequent device updates (less than 1/min)
+- [ ] Batch high-frequency samples to respect 50 msg/s channel limit
+- [ ] Monitor costs via Ably dashboard and validate compression ratios
+
+## Production readiness checklist
+
+Before deploying to production:
+
+**Security & Compliance:**
+- [ ] BAA executed with Ably
+- [ ] Token-based authentication implemented (no API keys in clients)
+- [ ] Capability-based access control configured
+- [ ] Audit logging enabled and exporting to SIEM
+- [ ] De-identified patient IDs used in channel names
+- [ ] Encryption verified (TLS 1.2+)
+
+**Reliability & Performance:**
+- [ ] Connection recovery tested (simulate network failures)
+- [ ] Multi-device synchronization verified
+- [ ] Load tested at expected scale (update frequency × patients × displays)
+- [ ] Latency measured (p50, p95, p99)
+- [ ] Alerting service deployed with failover
+
+**Data Management:**
+- [ ] External storage integration configured and tested
+- [ ] Retention policies defined and enforced
+- [ ] History API tested for backfill scenarios
+- [ ] Data integrity checks implemented (checksums)
+
+**Cost Management:**
+- [ ] Delta compression enabled and compression ratio validated
+- [ ] Connection management logic implemented
+- [ ] Costs monitored in Ably dashboard
+- [ ] Budget alerts configured
+
+**Operational:**
+- [ ] Connection state indicators in UI
+- [ ] Error handling and fallback mechanisms
+- [ ] Monitoring and alerting for Ably service health
+- [ ] Runbook for common failure scenarios
+- [ ] Load testing at 2x expected peak
+
+## Next steps
+
+* Read the [Delta Compression documentation](/docs/channels/options/deltas) for complete implementation details
+* Read the [Message Conflation documentation](/docs/messages#conflation) for configuration options
+* Explore [Ably Integrations](/docs/platform/integrations) for external storage patterns
+* Review [Message Annotations](/docs/messages/annotations) for alert acknowledgment implementation
+* Learn about [Token Authentication](/docs/auth/token) for production security
+* Understand [Channel Options](/docs/channels/options) for optimization features
+* Review [Connection State Recovery](/docs/connect/states#connection-state-recovery) for resilience patterns
+
+**Related Guides:**
+- [Data Streaming and Distribution](/docs/guides/pub-sub/data-streaming)
+
+**Get Help:**
+- [Contact Ably Sales](https://ably.com/contact) for BAA and enterprise support
+- [Ably Community](https://ably.com/community) for technical questions
