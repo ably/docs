@@ -105,7 +105,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
   // Check if this code block contains only a single utility language
   const utilityLanguageOverride = useMemo(() => {
     // Utility languages that should be shown without warning (like JSON)
-    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql'];
+    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql', 'json'];
 
     const childrenArray = React.Children.toArray(processedChildren);
 
