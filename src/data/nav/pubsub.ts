@@ -341,6 +341,10 @@ export default {
           name: 'Data streaming',
           link: '/docs/guides/pub-sub/data-streaming',
         },
+        {
+          name: 'Dashboards and visualizations',
+          link: '/docs/guides/pub-sub/dashboards-and-visualizations',
+        },
       ],
     },
   ],
