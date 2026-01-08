@@ -28,14 +28,6 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       meta_keywords: String
       redirect_from: [String]
     }
-    type HowToHtml implements Node {
-      slug: String
-      tutorial: Node
-    }
-    type HowToSourceFile implements Node {
-      howToName: String!
-      srcPath: String!
-    }
     type Error implements Node {
       message: String
     }
