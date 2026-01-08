@@ -325,10 +325,15 @@ export default {
       ],
     },
     {
-      name: 'Debugging and errors',
+      name: 'Support and debugging',
       pages: [
         {
-          name: 'Overview',
+          name: 'Support tickets',
+          link: '/docs/platform/support',
+          index: true,
+        },
+        {
+          name: 'Debugging',
           link: '/docs/platform/errors',
           index: true,
         },
