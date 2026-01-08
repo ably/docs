@@ -63,6 +63,10 @@ export default {
           name: 'OpenAI token streaming - message per response',
           link: '/docs/guides/ai-transport/openai-message-per-response',
         },
+        {
+          name: 'Anthropic token streaming - message per token',
+          link: '/docs/guides/ai-transport/anthropic-message-per-token',
+        },
       ],
     },
   ],
