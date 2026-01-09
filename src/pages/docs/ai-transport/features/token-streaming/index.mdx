@@ -3,42 +3,71 @@ title: Token streaming
 meta_description: "Learn about token streaming with Ably AI Transport, including common patterns and the features provided by the Ably solution."
 ---
 
-Token streaming is a technique used with Large Language Models (LLMs) where the model's response is emitted progressively as each token is generated, rather than waiting for the complete response before transmission begins. This allows users to see the response appear incrementally, similar to watching someone type in real time, giving an improved user experience. This is normally accomplished by streaming the tokens as the response to an HTTP request from the client.
+Token streaming delivers LLM responses progressively as each token is generated, rather than waiting for the complete response. Users see text appear incrementally, similar to watching someone type in realtime, which creates responsive, engaging AI experiences. This is the foundation of modern conversational AI, from chatbots to code assistants.
+
+Standard HTTP token streaming creates a direct pipeline between your agent and the user's browser. This works well under ideal conditions, but if a client loses network connectivity, switches tabs, or experiences a browser crash then all tokens transmitted during the interruption are lost. Users must restart their request and wait for the model to regenerate the entire response.
+
+These failures frustrate users and waste compute resources. Every dropped stream means paying for tokens that never reached the user.
+
+Ably AI Transport solves this by decoupling token delivery from connection state. Tokens stream to a [Pub/Sub channel](/docs/channels) that persists independently of both client and agent connections.
 
 ![Ably AIT network diagram](../../../../../images/content/diagrams/ai-transport-before-and-after.png)
 
-If an HTTP stream is interrupted, for example because the client loses network connection, then any tokens that were transmitted during the interruption will be lost. Ably AI Transport solves this problem by streaming tokens to a [Pub/Sub channel](docs/channels), which is not tied to the connection state of either the client or the agent. A client that [reconnects](/docs/connect/states#connection-state-recovery) can receive any tokens transmitted while it was disconnected. If a new client connects, for example because the user has moved to a different device, then it is possible to hydrate the new client with all the tokens transmitted for the current request as well as the output from any previous requests. The detailed mechanism for doing this will depend on which [token streaming pattern](#patterns) you choose to use.
+Dropping in AI Transport to handle the token stream completely changes the user's experience of device switching and failures. You do not need to add complex failure-handling code or additional infrastructure.
 
-The Ably platform guarantees that messages from a given realtime publisher will be [delivered in order](/docs/platform/architecture/message-ordering#ordering-guarantees) and [exactly once](/docs/platform/architecture/idempotency), so your client application does not have to handle duplicate or out-of-order messages.
+| Scenario | HTTP streaming result | Ably AI Transport result |
+|----------|----------------------|--------------------------|
+| Network interruption | Tokens lost, request must restart | Client reconnects automatically and receives missed tokens |
+| User switches tabs | Stream may be throttled or dropped | Stream continues, tokens buffered for delivery |
+| Browser crash | All progress lost, task must be restarted | New session hydrates with complete history, including in-progress response |
+| User switches device | No continuity | New device receives full conversation state, including in-progress response |
+| Mobile network handoff | Connection drops, tokens lost | Seamless recovery within milliseconds, no missed tokens |
 
-## Token streaming patterns <a id="patterns"/>
+The Ably platform guarantees that messages from a given realtime publisher are [delivered in order](/docs/platform/architecture/message-ordering#ordering-guarantees) and [exactly once](/docs/platform/architecture/idempotency). Your client application does not need to handle duplicate or out-of-order tokens.
 
-Ably AI Transport is built on the Pub/Sub messaging platform, which allows you to use whatever message structure and pattern works best for your application. AI transport supports two token streaming patterns using a [Realtime](/docs/api/realtime-sdk) client, so you can choose the one that best fits your requirements and customise it for your application. The Realtime client maintains a persistent connection to the Ably service. This allows you to publish at very high message rates with the lowest possible latencies, while preserving guarantees around message delivery order. For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
+## Token streaming patterns
 
-### Message-per-response <a id="pattern-per-response"/>
-Token streaming with [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response) enables you to stream LLM-generated content as individual tokens in realtime, while maintaining a clean, compacted message history. Each LLM response becomes a single message on an Ably channel that grows as tokens are appended, resulting in efficient storage and easy retrieval of complete responses.
+Ably AI Transport is built on the Pub/Sub messaging platform, giving you flexibility to structure messages and channels for your specific use case. AI Transport supports two token streaming patterns using a [Realtime](/docs/api/realtime-sdk) client, each optimized for different requirements.
 
-This pattern is the recommended approach for most applications. It is useful if you want clients joining mid-stream to catch up efficiently without receiving thousands of individual tokens and if clients build up a long conversation history that must be efficiently loaded on new or reconnecting devices. For example:
+The Realtime client maintains a persistent connection to the Ably service, enabling high message rates with the lowest possible latencies while preserving delivery guarantees. For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
 
-- Chat experiences: The full chat history must be replayed from Ably whenever the user changes device or when a new participant joins the chat, allowing both users and agents to maintain context.
-- Long-running and asynchronous tasks: Users need to catch up quickly when they reconnect to check progress throughout the task lifetime, but do not need to receive the individual tokens that make up the response.
-- Backend-stored responses: The backend writes complete responses to a database and clients load those full responses from there, while Ably is used to deliver the current in-progress response.
+### Message-per-response
 
-### Message-per-token <a id="pattern-per-token"/>
-Token streaming with [message-per-token](/docs/ai-transport/features/token-streaming/message-per-token) is a pattern where every token generated by your model is published as an independent Ably message. Each token then appears as one message in the channel history.
+[Message-per-response](/docs/ai-transport/features/token-streaming/message-per-response) streams tokens as they arrive while maintaining a clean, compacted message history. Each LLM response becomes a single message on an Ably channel that grows as tokens are appended. This results in efficient storage and straightforward retrieval of complete responses.
 
-This pattern is useful when clients only care about the most recent part of a response and you are happy to treat the channel history as a short sliding window rather than a full conversation log, or if you need to preserve the specific token fragmentation that was generated by the model. For example:
+This pattern is the recommended approach for most applications. It excels when:
 
-- Live transcription, captioning, or translation: A viewer who joins a live stream only needs sufficient tokens for the current "frame" of subtitles, not the entire transcript so far.
-- Code assistance in an editor: Streamed tokens become part of the file on disk as they are accepted, so past tokens do not need to be replayed from Ably.
-- Autocomplete: A fresh response is streamed for each change a user makes to a document, with only the latest suggestion being relevant.
+- Clients joining mid-stream need to catch up efficiently without receiving thousands of individual token messages
+- Applications maintain long conversation histories that must load efficiently on new or reconnecting devices
 
-## Message events <a id="events"/>
+Example use cases:
 
-Different models and frameworks use different events to signal what is being sent to the client, such as start/stop events to mark the beginning and end of a streamed response. When you publish a message to an Ably channel, you can set the [message name](/docs/messages#properties) to the event type your client expects.
+- **Chat experiences:** Replay full conversation history when users change devices or when new participants join, allowing both users and agents to maintain context.
+- **Long-running and asynchronous tasks:** Users reconnect to check progress throughout a task's lifetime without needing to receive the tokens that make up the response individually.
+- **Backend-stored responses:** Complete responses persist in your database for loading history, while Ably handles realtime delivery of in-progress output.
 
-## Next steps <a id="next"/>
+### Message-per-token
 
-Read more about token streaming with the [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response) and [message-per-token](/docs/ai-transport/features/token-streaming/message-per-token) patterns. Alternatively, check out the how-to guides to see how to implement these patterns with a variety of models and frameworks.
+[Message-per-token](/docs/ai-transport/features/token-streaming/message-per-token) publishes every generated token as an independent Ably message. Each token appears as a separate message in channel history.
 
-// TODO: guide links
+This pattern is useful when:
+
+- Clients only need the most recent portion of a response
+- You treat channel history as a short sliding window rather than a full conversation log
+- You need to preserve the specific token fragmentation generated by the model
+
+Example use cases:
+
+- **Live transcription, captioning, or translation:** Viewers joining a live stream need only enough tokens for the current subtitle frame, not the entire transcript.
+- **Code assistance in an editor:** Streamed tokens become part of the file on disk as users accept them, so past tokens do not need to be replayed.
+- **Autocomplete:** Each user edit triggers a fresh response stream, with only the latest suggestion being relevant.
+
+## Message events
+
+Different models and frameworks use different events to signal streaming state, for example start events, stop events, tool calls, and content deltas. When you publish a message to an Ably channel, set the [message name](/docs/messages#properties) to the event type your client expects. This allows your frontend to handle each event type appropriately without parsing message content.
+
+## Next steps
+
+- Implement token streaming with [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response) (recommended for most applications)
+- Implement token streaming with [message-per-token](/docs/ai-transport/features/token-streaming/message-per-token) for sliding-window use cases
+- Explore the guides for integration with specific models and frameworks
