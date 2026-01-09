@@ -66,12 +66,7 @@ export const plugins = [
       name: `AblyChangelog`,
     },
   },
-  {
-    resolve: 'gatsby-plugin-root-import',
-    options: {
-      'how-tos': `${__dirname}/how-tos`,
-    },
-  },
+  'gatsby-plugin-root-import',
   {
     resolve: 'gatsby-plugin-mdx',
     options: {
@@ -121,13 +116,6 @@ export const plugins = [
     __key: 'images',
   },
   // Data
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'how-tos',
-      path: './how-tos',
-    },
-  },
   {
     resolve: `gatsby-source-filesystem`,
     options: {
