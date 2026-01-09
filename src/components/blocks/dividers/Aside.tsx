@@ -1,4 +1,5 @@
 import Icon from '@ably/ui/core/Icon';
+import * as styles from './dividers.module.css';
 import {
   inlineGridParagraph,
   inlineContentContainer,
@@ -42,6 +43,14 @@ const Aside = ({ children, attribs }: AsideProps) => {
           <strong className={tipTitleElement}>
             <Icon name="icon-gui-resources" size="1rem" additionalCSS="mr-3" />
             <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Further Reading</span>
+          </strong>
+        </>
+      ) : attribs && attribs[`data-type`] === `see-evidence` ? (
+        <>
+          <span className={`${leftSideElement} ${styles['see-evidence-element']}`}>&nbsp;</span>
+          <strong className={tipTitleElement}>
+            <span className="mr-3 text-3xl">🔎</span>
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">See evidence</span>
           </strong>
         </>
       ) : attribs && isVersioningInfo ? (
