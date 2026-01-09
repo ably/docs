@@ -325,6 +325,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Dashboards and visualizations',
+          link: '/docs/guides/pub-sub/health-tech-dashboard',
+        }
+      ],
+    },
   ],
   api: [
     {
