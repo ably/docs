@@ -330,7 +330,7 @@ export default {
       pages: [
         {
           name: 'Dashboards and visualizations',
-          link: '/docs/guides/pub-sub/health-tech-dashboard',
+          link: '/docs/guides/pub-sub/dashboards-and-visualizations',
         }
       ],
     },
