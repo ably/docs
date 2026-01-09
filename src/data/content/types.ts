@@ -41,6 +41,7 @@ export type ContentData = {
   meta: ContentMeta;
   platformProducts: PlatformProductsSectionData;
   examples: ExamplesSectionData;
+  tooling: ToolingSectionData;
 };
 
 export type PlatformCardData = {
@@ -66,4 +67,15 @@ export type ExamplesSectionData = {
   link: ContentLink;
   content: string;
   image: string;
+};
+
+export type ToolingCardData = {
+  title: string;
+  description: string;
+  link: string;
+};
+
+export type ToolingSectionData = {
+  title: string;
+  cards: ToolingCardData[];
 };

@@ -66,12 +66,7 @@ export const plugins = [
       name: `AblyChangelog`,
     },
   },
-  {
-    resolve: 'gatsby-plugin-root-import',
-    options: {
-      'how-tos': `${__dirname}/how-tos`,
-    },
-  },
+  'gatsby-plugin-root-import',
   {
     resolve: 'gatsby-plugin-mdx',
     options: {
@@ -121,29 +116,6 @@ export const plugins = [
     __key: 'images',
   },
   // Data
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'textile-partials',
-      path: './content/partials',
-    },
-    __key: 'textile-partials',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'textile-nanoc-compatible',
-      path: './content',
-    },
-    __key: 'textile-nanoc-compatible',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'how-tos',
-      path: './how-tos',
-    },
-  },
   {
     resolve: `gatsby-source-filesystem`,
     options: {

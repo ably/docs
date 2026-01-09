@@ -1,7 +1,6 @@
 import React from 'react';
 import { useLocation } from '@reach/router';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
