@@ -13,7 +13,7 @@ import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
-import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
+import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
@@ -105,7 +105,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
   // Check if this code block contains only a single utility language
   const utilityLanguageOverride = useMemo(() => {
     // Utility languages that should be shown without warning (like JSON)
-    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql'];
+    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql', 'json'];
 
     const childrenArray = React.Children.toArray(processedChildren);
 

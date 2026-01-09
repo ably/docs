@@ -4,7 +4,7 @@ import { useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 
 import '../../styles/global.css';
-import { Container } from 'src/components';
+import { Container } from 'src/components/Container';
 import { LayoutOptions } from 'data/onCreatePage';
 import { LayoutProvider } from 'src/contexts/layout-context';
 import Breadcrumbs from './Breadcrumbs';

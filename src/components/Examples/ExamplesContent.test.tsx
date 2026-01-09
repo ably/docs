@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
 import ExamplesContent from './ExamplesContent';
 import { examples } from '../../data/examples/';
 import { Example } from '../../data/examples/types';

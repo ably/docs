@@ -9,7 +9,7 @@ import { IconName } from '@ably/ui/core/Icon/types';
 import SegmentedControl from '@ably/ui/core/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
 import cn from '@ably/ui/core/utils/cn';
-import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
+import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 
 type ExamplesRendererProps = {
   example: ExampleWithContent;
