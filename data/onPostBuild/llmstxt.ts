@@ -309,20 +309,8 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     throw new Error('Site URL not found.');
   }
 
-  // Process textile-based pages (allFileHtml) and extract languages
-  const textilePages = queryRecords.allFileHtml.edges.map((edge) => {
-    // Extract valid languages from the meta.languages field
-    const metaLanguages = edge.node.meta.languages || [];
-    const languages = metaLanguages.filter((lang) => VALID_LANGUAGES.includes(lang));
-
-    return {
-      ...edge.node,
-      languages,
-    };
-  });
-
   // Process MDX pages (allMdx) and extract languages from files
-  const mdxPages = await Promise.all(
+  const pages = await Promise.all(
     queryRecords.allMdx.nodes
       .filter((node) => {
         // Only include pages from docs directory that have the required frontmatter
@@ -354,16 +342,12 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       }),
   );
 
-  const allPages = [...textilePages, ...mdxPages];
-
-  reporter.info(
-    `${REPORTER_PREFIX} Found ${allPages.length} pages to place into llms.txt (${textilePages.length} textile, ${mdxPages.length} MDX)`,
-  );
+  reporter.info(`${REPORTER_PREFIX} Found ${pages.length} pages to place into llms.txt`);
 
   // Organize pages into categories
   const categoryStructure: CategoryStructure = {};
 
-  for (const page of allPages) {
+  for (const page of pages) {
     const { category, subcategory } = categorizePage(page.slug);
 
     // Initialize category if it doesn't exist
@@ -398,23 +382,21 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   const serializedPages = [LLMS_TXT_PREAMBLE];
 
   // Define the order of categories
-  const categoryOrder = [
-    'Platform',
-    'Pub/Sub',
-    'Chat',
-    'Spaces',
-    'LiveObjects',
-    'LiveSync',
-    'General',
-  ];
+  const categoryOrder = ['Platform', 'Pub/Sub', 'Chat', 'Spaces', 'LiveObjects', 'LiveSync', 'General'];
 
   // Sort categories by defined order
   const sortedCategories = Object.keys(categoryStructure).sort((a, b) => {
     const indexA = categoryOrder.indexOf(a);
     const indexB = categoryOrder.indexOf(b);
-    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
+    if (indexA === -1 && indexB === -1) {
+      return a.localeCompare(b);
+    }
+    if (indexA === -1) {
+      return 1;
+    }
+    if (indexB === -1) {
+      return -1;
+    }
     return indexA - indexB;
   });
 

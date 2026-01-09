@@ -47,4 +47,21 @@ export default {
       'From avatar stacks to live cursors, learn how deliver live chat, multiplayer collaboration features, and more.',
     image: 'examples_image.png',
   },
+  tooling: {
+    title: 'Tooling',
+    cards: [
+      {
+        title: 'AI and LLMs',
+        description:
+          'Use AI assistants to build with Ably. Access LLM-friendly markdown docs and prompts for your AI tools.',
+        link: '/docs/platform/ai-llms',
+      },
+      {
+        title: 'Ably CLI',
+        description:
+          'Interact with your Ably apps from the command line. Manage resources, test channels, and debug connections.',
+        link: '/docs/platform/tools/cli',
+      },
+    ],
+  },
 } satisfies ContentData;

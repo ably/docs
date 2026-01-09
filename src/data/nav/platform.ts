@@ -311,10 +311,29 @@ export default {
       ],
     },
     {
-      name: 'Debugging and errors',
+      name: 'AI and LLMs',
       pages: [
         {
-          name: 'Overview',
+          name: 'Building with LLMs',
+          link: '/docs/platform/ai-llms',
+          index: true,
+        },
+        {
+          name: 'llms.txt',
+          link: '/docs/platform/ai-llms/llms-txt',
+        },
+      ],
+    },
+    {
+      name: 'Support and debugging',
+      pages: [
+        {
+          name: 'Support tickets',
+          link: '/docs/platform/support',
+          index: true,
+        },
+        {
+          name: 'Debugging',
           link: '/docs/platform/errors',
           index: true,
         },

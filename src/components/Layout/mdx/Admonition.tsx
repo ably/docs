@@ -1,7 +1,6 @@
 import React from 'react';
 import cn from '@ably/ui/core/utils/cn';
-import Aside from 'src/components/blocks/dividers/Aside';
-import { HtmlComponentPropsData } from 'src/components/html-component-props';
+import Aside from '../../blocks/dividers/Aside';
 
 const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'public-preview'];
 
@@ -49,7 +48,7 @@ const admonitionConfig: Record<
 const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note', children, className, ...rest }) => {
   // For 'new', 'updated', 'experimental' types, we use the older Aside component instead of the newer Admonitions component
   if (LEGACY_ADMONITION_TYPES.includes(dataType)) {
-    return <Aside attribs={{ 'data-type': dataType }} data={(<>{children}</>) as unknown as HtmlComponentPropsData} />;
+    return <Aside attribs={{ 'data-type': dataType }}>{children}</Aside>;
   }
 
   const { borderColor, backgroundColor, title } = admonitionConfig[dataType];
