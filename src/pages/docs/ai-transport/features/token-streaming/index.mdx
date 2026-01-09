@@ -3,7 +3,20 @@ title: Token streaming
 meta_description: "Learn about token streaming with Ably AI Transport, including common patterns and the features provided by the Ably solution."
 ---
 
-Token streaming delivers LLM responses progressively as each token is generated, rather than waiting for the complete response. Users see text appear incrementally, similar to watching someone type in realtime, which creates responsive, engaging AI experiences. This is the foundation of modern conversational AI, from chatbots to code assistants.
+Ably AI Transport provides a drop-in infrastructure layer that transforms brittle HTTP token streams into resilient, multi-device AI experiences.
+
+## What is token streaming?
+
+Token streaming delivers LLM responses progressively as each token is generated, rather than waiting for the complete response. Users see text appear incrementally, similar to watching someone type in realtime, which creates responsive, engaging AI experiences.
+
+This is the foundation of modern conversational AI, from chatbots to code assistants. User expectations for AI experiences are continually rising and they now expect to:
+
+- Recover from interruptions: Experience connection drops, browser refreshes, or network instability without losing conversation progress or having to restart the task
+- Resume conversations across devices: Start a conversation on mobile and seamlessly continue on desktop with full context preserved
+- Return to long-running work: Close the browser while agents continue processing in the background, receiving results when they return
+- Collaborate in shared sessions: Multiple users can participate in the same conversation simultaneously and remain in sync
+
+## Why HTTP token streaming falls short
 
 Standard HTTP token streaming creates a direct pipeline between your agent and the user's browser. This works well under ideal conditions, but if a client loses network connectivity, switches tabs, or experiences a browser crash then all tokens transmitted during the interruption are lost. Users must restart their request and wait for the model to regenerate the entire response.
 
@@ -11,9 +24,14 @@ These failures frustrate users and waste compute resources. Every dropped stream
 
 Ably AI Transport solves this by decoupling token delivery from connection state. Tokens stream to a [Pub/Sub channel](/docs/channels) that persists independently of both client and agent connections.
 
+1. Client sends a single request to agent server to establish a session
+2. Server responds with a unique ID for the session, which is used to identify the channel
+3. All further communication happens over the channel
+
 ![Ably AIT network diagram](../../../../../images/content/diagrams/ai-transport-before-and-after.png)
 
-Dropping in AI Transport to handle the token stream completely changes the user's experience of device switching and failures. You do not need to add complex failure-handling code or additional infrastructure.
+
+Dropping in AI Transport to handle the token stream completely changes the user's experience of device switching and failures. You do not need to add complex failure-handling code to your application or deploy additional infrastructure.
 
 | Scenario | HTTP streaming result | Ably AI Transport result |
 |----------|----------------------|--------------------------|
@@ -22,6 +40,7 @@ Dropping in AI Transport to handle the token stream completely changes the user'
 | Browser crash | All progress lost, task must be restarted | New session hydrates with complete history, including in-progress response |
 | User switches device | No continuity | New device receives full conversation state, including in-progress response |
 | Mobile network handoff | Connection drops, tokens lost | Seamless recovery within milliseconds, no missed tokens |
+| Multi-user session | Agent must stream to a connection per-user | Agent publishes to single channel, thousands of subscribed users receive the response |
 
 The Ably platform guarantees that messages from a given realtime publisher are [delivered in order](/docs/platform/architecture/message-ordering#ordering-guarantees) and [exactly once](/docs/platform/architecture/idempotency). Your client application does not need to handle duplicate or out-of-order tokens.
 
@@ -42,9 +61,9 @@ This pattern is the recommended approach for most applications. It excels when:
 
 Example use cases:
 
-- **Chat experiences:** Replay full conversation history when users change devices or when new participants join, allowing both users and agents to maintain context.
-- **Long-running and asynchronous tasks:** Users reconnect to check progress throughout a task's lifetime without needing to receive the tokens that make up the response individually.
-- **Backend-stored responses:** Complete responses persist in your database for loading history, while Ably handles realtime delivery of in-progress output.
+- Chat experiences: Replay full conversation history when users change devices or when new participants join, allowing both users and agents to maintain context.
+- Long-running and asynchronous tasks: Users reconnect to check progress throughout a task's lifetime without needing to receive the tokens that make up the response individually.
+- Backend-stored responses: Complete responses persist in your database for loading history, while Ably handles realtime delivery of in-progress output.
 
 ### Message-per-token
 
@@ -58,9 +77,9 @@ This pattern is useful when:
 
 Example use cases:
 
-- **Live transcription, captioning, or translation:** Viewers joining a live stream need only enough tokens for the current subtitle frame, not the entire transcript.
-- **Code assistance in an editor:** Streamed tokens become part of the file on disk as users accept them, so past tokens do not need to be replayed.
-- **Autocomplete:** Each user edit triggers a fresh response stream, with only the latest suggestion being relevant.
+- Live transcription, captioning, or translation: Viewers joining a live stream need only enough tokens for the current subtitle frame, not the entire transcript.
+- Code assistance in an editor: Streamed tokens become part of the file on disk as users accept them, so past tokens do not need to be replayed.
+- Autocomplete: Each user edit triggers a fresh response stream, with only the latest suggestion being relevant.
 
 ## Message events
 
