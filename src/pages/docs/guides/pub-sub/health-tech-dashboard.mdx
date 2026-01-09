@@ -222,6 +222,20 @@ The key benefit of server-side batching is that it reduces billable outbound mes
 
 Unlike message conflation, server-side batching preserves all messages. Every update is delivered, just grouped together for efficiency. This makes it suitable for scenarios where you need complete data but want to smooth out traffic spikes.
 
+### Configuring channel rules
+
+Both server-side batching and message conflation are configured through [channel rules](/docs/channels#rules) in your Ably dashboard. Channel rules allow you to apply optimizations to specific channels or entire namespaces using regex pattern matching, making it easy to configure behavior across related channels without code changes.
+
+To configure a channel rule:
+
+1. Navigate to your app settings in the [Ably dashboard](https://ably.com/dashboard) and select the **Channel Rules** tab.
+2. Create a new rule with a channel name pattern (e.g., `^match:.*:stats` to match all match stats channels, or `^vitals:.*` for all patient vitals).
+3. Enable the desired optimization—server-side batching, message conflation, or both.
+4. For batching, set the interval (100ms for responsive dashboards, up to 1000ms for maximum cost savings).
+5. For conflation, configure the conflation interval and key pattern to determine which messages are merged.
+
+Using namespace patterns means you can apply different rules to different parts of your application. For example, you might enable conflation on price ticker channels (`^prices:.*`) while using batching on event feeds (`^events:.*`) where complete data is required.
+
 ### Message conflation for latest-value scenarios
 
 For dashboards where only the current value matters—stock prices, sensor readings, vehicle positions—[message conflation](/docs/messages#conflation) delivers only the most recent value within each time window.
@@ -276,13 +290,41 @@ When dashboard payloads are large but change incrementally between updates, [del
 
 Delta compression is particularly effective for dashboards that display comprehensive state where most values remain stable. A 5KB dashboard payload where only a few fields change each second might compress to 500 bytes—an 90% bandwidth reduction. Across 1000 subscribers receiving updates every second, that's the difference between 5MB/s and 500KB/s of outbound data.
 
+#### Pairing with persist last message
+
+For state-based dashboards using delta compression, the [persist last message](/docs/storage-history/storage#persist-last-message) channel rule provides instant state recovery for new subscribers. When enabled, Ably stores the most recent message published to a channel for up to a year. New clients can then attach with `rewind=1` to immediately receive the last published state—even if the channel has been inactive.
+
+This combination is powerful: a new subscriber receives the complete current state immediately on connection, and subsequent updates arrive as efficient deltas. Without persist last message, a new subscriber would need to wait for the next publish to receive any data.
+
+<Code>
+```javascript
+  // Subscriber: Get the latest state immediately on connection
+  const channel = realtime.channels.get('dashboard:overview', {
+  params: {
+  delta: 'vcdiff',
+  rewind: '1'  // Retrieve the last message on attach
+}
+});
+
+  channel.subscribe('state-update', (message) => {
+  // First message received will be the persisted state
+  // Subsequent messages will be deltas against that baseline
+  updateDashboard(message.data);
+});
+```
+</Code>
+
+Enable persist last message via [channel rules](/docs/channels#rules) in your Ably dashboard. Note that this stores a single message—if you publish multiple messages in a single `publish()` call, all of them are stored and returned on rewind. For state-based dashboards, publish complete state snapshots as single messages rather than partial updates.
+
 ## Authentication
 
 Authentication determines who can connect to your dashboard and what they can access. The approach differs significantly between fan engagement and critical monitoring scenarios, reflecting the different security requirements of each.
 
-### Fan engagement: Anonymous and simple access
+### Fan engagement: Simple and shared access
 
-For public dashboards where anyone can view the data, authentication focuses on preventing abuse rather than controlling access. You'll typically generate anonymous tokens that allow subscription but prevent publishing, ensuring viewers can watch but can't inject fake data.
+For public dashboards where anyone can view the data, authentication focuses on preventing abuse rather than fine-grained access control. You'll typically generate tokens with the same or similar access patterns for all clients.
+
+These tokens might allow broad subscription to many channels, such as stats data for any in-progress match, but likely prevent publishing and other actions, ensuring viewers can watch but can't inject fake data or interact with other clients.
 
 <Code>
 ```javascript
@@ -302,10 +344,10 @@ For public dashboards where anyone can view the data, authentication focuses on 
   iat: currentTime,
   exp: currentTime + 3600, // 1 hour expiration
   'x-ably-capability': JSON.stringify({
-  'match:*:stats': ['subscribe'], // Can only subscribe, not publish
-  'match:*:reactions': ['subscribe', 'publish'] // Can send reactions
+  'match:*:stats': ['subscribe'], // Restricted access, but to any channel in this namespace
+  'match:*:reactions': ['subscribe', 'annotation-publish'] // Allow publishing reactions
 }),
-  'x-ably-clientId': `viewer-${crypto.randomUUID()}`
+  'x-ably-clientId': `viewer-123`
 };
 
   return jwt.sign(claims, '{{ API_KEY_SECRET }}', { header });
@@ -321,7 +363,9 @@ For public dashboards where anyone can view the data, authentication focuses on 
 ```
 </Code>
 
-The token capabilities restrict viewers to subscribing on stats channels while allowing them to both subscribe and publish on reaction channels. This enables interactive features like emoji reactions without compromising the integrity of the primary data stream.
+The token capabilities restrict viewers to subscribing on stats channels while allowing them to both subscribe and annotate existing messages on reaction channels. This enables interactive features like emoji reactions without compromising the integrity of the primary data stream – for example, a trusted source could publish match updates or scores, to which viewers can react but not modify.
+
+Overall, the access patterns are likely to be broad on channels but limited in terms of actions, focusing on read-only access with controlled interactivity.
 
 ### Critical monitoring: Strict access control
 
@@ -337,8 +381,8 @@ For sensitive dashboards where access must be carefully controlled, authenticati
   // Build capability for only their authorized channels
   const capability = {};
   authorizedEntities.forEach(entityId => {
-  capability[`vitals:${entityId}`] = ['subscribe'];
-  capability[`alerts:${entityId}`] = ['subscribe', 'publish']; // Can acknowledge alerts
+  capability[`vitals:${entityId}`] = ['subscribe', 'history'];
+  capability[`alerts:${entityId}`] = ['subscribe', 'publish', 'history']; // Can acknowledge alerts
 });
 
   const header = {
@@ -363,11 +407,15 @@ For sensitive dashboards where access must be carefully controlled, authenticati
 
 The shorter token expiration for sensitive dashboards ensures that if a user's access is revoked, their existing token expires quickly. The capabilities are built dynamically based on the user's current authorizations, so changes in your authorization system are reflected within the token expiration period.
 
+Channels are also tightly scoped to individual entities, and broad access patterns are avoided. A nurse can only subscribe to the vitals and alerts channels for their assigned patients, ensuring strict data isolation.
+
+When granting clients access to a namespace, if a new channel was created, clients could automatically subscribe without re-authenticating. In the critical monitoring scenario, namespaces should be applied cautiously and new channels should generally require updated tokens to ensure access remains tightly controlled.
+
 For production deployments:
 
 * Never expose API keys in client-side code
 * Always use token authentication, with tokens generated by your server based on the user's authenticated session
-* Apply the principle of least privilege, granting only the capabilities each user actually needs
+* Apply the principle of least privilege, granting only the capabilities each user actually needs and on a per-channel basis
 * For compliance scenarios, use [integration rules](/docs/platform/integrations) to log channel activity for audit trails
 
 ### HIPAA compliance for healthcare dashboards
@@ -377,6 +425,7 @@ For healthcare applications handling Protected Health Information (PHI), Ably pr
 * All data is encrypted in transit via TLS 1.2+ and at rest with AES-256
 * Business Associate Agreements (BAAs) are available for enterprise customers
 * Comprehensive audit logging is available through integration rules
+* Regional data constrains ensure all traffic can be routed through specific geographic regions to meet data residency requirements
 
 When building patient monitoring dashboards, use de-identified patient IDs in channel names rather than actual patient identifiers, and ensure your token generation ties into your existing healthcare authorization systems.
 
@@ -411,7 +460,7 @@ Ably's SDKs automatically handle reconnection and [connection state recovery](/d
 ```
 </Code>
 
-Understanding each connection state helps you provide appropriate user feedback:
+Understanding each connection state helps you provide appropriate user feedback, some examples include:
 
 * **`disconnected`** — A temporary loss of connection where the SDK is actively trying to reconnect
 * **`suspended`** — Reconnection attempts have been unsuccessful for an extended period, but the SDK will continue trying in 30-second intervals
@@ -615,11 +664,10 @@ For a dashboard with 1 publisher and 1000 subscribers publishing 1 update per se
 
 [Server-side batching](/docs/messages/batch#server-side) groups messages before fanout, dramatically reducing outbound message count during high-activity periods. This is particularly valuable when your data source publishes multiple updates per second.
 
-Let's calculate the impact for a live sports dashboard with 100,000 viewers and a data source publishing 10 updates per second during an exciting match:
+To understand the impact, consider a live sports dashboard with 100,000 viewers and a data source publishing 10 updates per second during an exciting match:
 
-Without batching, outbound messages are 10 updates × 100,000 subscribers = 1,000,000 messages per second. Over a 2-hour match, that's 7.2 billion messages.
-
-With 500ms server-side batching, messages are grouped into 2 batches per second. Each batch counts as a single outbound message per subscriber, so outbound messages become 2 batches × 100,000 subscribers = 200,000 messages per second. Over the same 2-hour match, that's 1.44 billion messages—an 80% reduction.
+* **Without batching:** 10 updates × 100,000 subscribers = 1,000,000 messages per second. Over a 2-hour match, that totals 7.2 billion messages.
+* **With 500ms batching:** Messages are grouped into 2 batches per second. Each batch counts as a single outbound message per subscriber, so you get 2 batches × 100,000 subscribers = 200,000 messages per second. Over the same 2-hour match, that's 1.44 billion messages—an 80% reduction.
 
 The key insight is that batching's effectiveness scales with your inbound message rate. If you're only publishing once per second, batching provides minimal benefit. But during excitement spikes when updates accelerate, batching automatically smooths the fanout.
 
@@ -706,18 +754,15 @@ To facilitate this, Ably provides [outbound integrations](/docs/platform/integra
 
 ### Configuring outbound streaming for dashboards
 
-To stream your dashboard data externally, configure an integration rule in your [Ably dashboard](https://ably.com/dashboard) or via the [Control API](/docs/platform/account/control-api). You'll specify which channels to stream using a regular expression filter, what events to capture (messages, presence, lifecycle, or occupancy), and the destination service with its connection details.
+To stream your dashboard data externally, configure an integration rule in your [Ably dashboard](https://ably.com/dashboard) or via the [Control API](/docs/platform/account/control-api):
 
-For a patient monitoring dashboard where audit trails are required, you might stream all vitals channels to Kafka for both real-time alerting and long-term storage:
+1. Navigate to your app settings and select the **Integrations** tab.
+2. Create a new integration rule and choose your destination service (e.g., Apache Kafka, Amazon Kinesis).
+3. Specify which channels to stream using a regular expression filter (e.g., `^vitals:.*` for all patient vitals channels).
+4. Select the event types to capture—messages, presence, lifecycle, or occupancy depending on your needs.
+5. Configure the destination connection details, such as the Kafka topic or Kinesis stream name.
 
-<Code>
-  ```text
-  Channel filter: ^vitals:.*
-  Event types: channel.message, channel.presence
-  Destination: Apache Kafka
-  Topic: patient-vitals-audit
-  ```
-</Code>
+For a patient monitoring dashboard where audit trails are required, you might stream all vitals channels to Kafka (channel filter: `^vitals:.*`, event types: `channel.message` and `channel.presence`, topic: `patient-vitals-audit`) for both real-time alerting and long-term storage.
 
 ### Message format considerations
 
@@ -778,24 +823,28 @@ If you're using [message conflation](#message-conflation-for-latest-value-scenar
 
 Before deploying your realtime dashboard to production, verify that you've addressed these key areas:
 
-**Authentication:**
-* Use token authentication rather than API keys in client code
-* Tokens have appropriate capabilities following the principle of least privilege
-* Expiration times are appropriate for your security requirements—shorter for sensitive dashboards, longer for public content
+**Authentication:** Proper authentication protects your data and prevents abuse.
 
-**Message throughput:**
-* Verify throughput is within channel limits (50 messages/second by default)
-* Implement batching if your data source exceeds rate limits
-* Choose and configure the appropriate optimization strategy—batching for burst management, conflation for latest-value scenarios, or delta compression for large payloads
+* Use token authentication rather than API keys in client code.
+* Ensure tokens have appropriate capabilities following the principle of least privilege.
+* Set expiration times appropriate to your security requirements—shorter for sensitive dashboards, longer for public content.
 
-**Connection handling:**
-* Test connection state handling to ensure users see appropriate feedback during disconnections
-* Verify message backfill works correctly for extended outages
-* Implement graceful degradation so the dashboard remains usable even when connectivity is impaired
+**Message throughput:** Understanding your message volumes ensures you stay within limits and control costs.
 
-**Monitoring:**
-* Set up monitoring for connection counts, message rates, and latency percentiles
-* Configure budget alerts in the Ably dashboard to catch unexpected usage spikes before they become costly surprises
+* Verify that your throughput is within channel limits (50 messages/second by default).
+* Implement batching if your data source exceeds rate limits.
+* Choose and configure the appropriate optimization strategy—batching for burst management, conflation for latest-value scenarios, or delta compression for large payloads.
+
+**Connection handling:** Users should always understand the state of their connection and data.
+
+* Test connection state handling to ensure users see appropriate feedback during disconnections.
+* Verify that message backfill works correctly for extended outages.
+* Implement graceful degradation so the dashboard remains usable even when connectivity is impaired.
+
+**Monitoring:** Proactive monitoring helps you catch issues before they impact users or costs.
+
+* Set up monitoring for connection counts, message rates, and latency percentiles.
+* Configure budget alerts in the Ably dashboard to catch unexpected usage spikes before they become costly surprises.
 
 ## Next steps
 
