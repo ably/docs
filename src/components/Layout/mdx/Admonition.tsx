@@ -2,7 +2,7 @@ import React from 'react';
 import cn from '@ably/ui/core/utils/cn';
 import Aside from '../../blocks/dividers/Aside';
 
-const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'public-preview'];
+const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'see-evidence'];
 
 type AdmonitionVariant = 'neutral' | 'note' | 'further-reading' | 'important' | 'warning' | 'usp';
 
@@ -57,7 +57,7 @@ const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note',
     return <Aside attribs={{ 'data-type': dataType }}>{children}</Aside>;
   }
 
-  const { borderColor, backgroundColor, title } = admonitionConfig[dataType];
+  const { borderColor, backgroundColor, title } = admonitionConfig[dataType] || admonitionConfig.note;
 
   // USP callouts have a different structure - no title prefix, content includes the headline
   if (dataType === 'usp') {
