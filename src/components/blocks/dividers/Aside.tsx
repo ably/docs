@@ -47,6 +47,14 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
             <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Further Reading</span>
           </strong>
         </>
+      ) : attribs && attribs[`data-type`] === `see-evidence` ? (
+        <>
+          <span className={`${leftSideElement} ${styles['see-evidence-element']}`}>&nbsp;</span>
+          <strong className={tipTitleElement}>
+            <span className="mr-3 text-3xl">🔎</span>
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">See evidence</span>
+          </strong>
+        </>
       ) : attribs && isVersioningInfo ? (
         <>
           <span
