@@ -25,7 +25,7 @@ Delivering dashboard updates in realtime is key to an engaging and effective use
 
 Despite the challenges of delivering these guarantees, Ably is designed to keep costs predictable. Using features such as server-side batching, delta compression, and efficient connection management, along with Ably's consumption-based pricing model, ensures costs are kept as low as possible, no matter the scale.
 
-## Architecting your dashboard: UX first, scale always
+## Architecting your dashboard
 
 The most important decision you can make when developing a realtime dashboard is understanding the experience you want users to have and the criticality of the data being delivered. This will determine the architecture, feature set, and ultimately the impression your users leave with.
 
@@ -606,7 +606,13 @@ Occupancy updates are debounced and delivered efficiently, making them suitable 
 
 ### Scaling presence for large audiences
 
-If you need presence-like functionality with thousands of users, consider a hybrid approach. Use occupancy for the aggregate viewer count that everyone sees, but enable full presence only for specific user groups who need to see individual identities.
+Some scenarios require presence-like functionality at scale, in these cases, first consider how many viewers actually need to subscribe to presence updates. On a healthcare operations dashboard, while all operators might be entered into the presence set for tracking, only supervisors may need to subscribe and see the presence set. The fewer subscribers there are, the more cost-effective presence becomes.
+
+* You should also consider the throughput limitations of a channel when using presence. Regardless of how few subscribers there are, a channel is still rate limited to 50 inbound messages per second by default. If you have a high churn of presence members (many users joining/leaving frequently), you may hit this limit quickly.
+* Use occupancy for the aggregate viewer count that everyone sees, but enable full presence only for specific user groups who need to see individual identities.
+* You can also enable server-side batching on presence events via [rules](/docs/channels#rules) to reduce outbound message counts during high churn periods, helping to keep costs manageable.
+
+If you are operating presence at scale, consider splitting presence into a separate channel from your main data stream. This allows you to apply different optimizations and access controls to presence without impacting the primary dashboard data, and ensure that high presence activity doesn't interfere with the integrity of your main data stream.
 
 <Code>
 ```javascript
@@ -615,23 +621,16 @@ const statsChannel = realtime.channels.get('match:stats', {
   params: { occupancy: 'metrics' }
 });
 
-// VIP/moderators: also join a separate presence channel
-if (userIsVIP || userIsModerator) {
-  const vipChannel = realtime.channels.get('match:vip-presence');
-  await vipChannel.presence.enter({
-    name: user.name,
-    badge: user.badge
-  });
-
-  // Display VIP/moderator presence in UI
-  vipChannel.presence.subscribe((event) => {
-    updateVIPList(event);
-  });
-}
+// Also join a separate presence channel
+const matchPresence = realtime.channels.get('match:presence');
+await matchPresence.presence.enter({
+  name: user.name,
+  badge: user.badge
+});
 ```
 </Code>
 
-This pattern gives you the best of both worlds: efficient viewer counts for the masses, and detailed presence for the subset of users who need it.
+This pattern ensures that match statistics remain unaffected by high presence activity, and also allows you to apply different rules—such as server-side batching to the presence channel, and delta compression to the stats channel—optimizing each for its specific use case.
 
 ## Priced for scale
 
