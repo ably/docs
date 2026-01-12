@@ -1,0 +1,74 @@
+---
+title: Token streaming limits
+meta_description: "Learn how token streaming interacts with Ably message limits and how to ensure your application delivers consistent performance."
+---
+
+LLM token streaming introduces high-rate or bursty traffic patterns to your application, with some models outputting upwards of 150 distinct events (i.e. tokens or response deltas) per second. Output rates can vary unpredictably over the lifetime of a response stream, and you have limited control over third-party model behaviour. AI Transport provides functionality to help you stay within your [rate limits](/docs/platform/pricing/limits) while delivering a great experience to your users.
+
+Ably's limits divide into two categories:
+
+1. Limits relating to usage across an account, such as the total number of messages sent in a month, or the aggregate instantaneous message rate across all connections and channels
+2. Limits relating to the capacity of a single resource, such as a connection or a channel
+
+Limits in the first category exist to provide protection in the case of accidental spikes or deliberate abuse. Provided that your package is sized correctly for your use-case, these limits should not be hit as a result of valid traffic.
+
+The limits in the second category, however, cannot be increased arbitrarily and exist to protect the integrity of the service. The limits associated with individual connections or channels can be relevant to LLM token streaming use-cases. The following sections discuss these limits in particular.
+
+## Message-per-response <a id="per-response"/>
+
+The [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response) pattern includes automatic rate limit protection. AI Transport prevents a single response stream from reaching the message rate limit for a connection by rolling up multiple appends into a single published message:
+
+1. Your agent streams tokens to the channel at the model's output rate
+2. Ably publishes the first token immediately, then automatically rolls up subsequent tokens on receipt
+3. Clients receive the same content, delivered in fewer discrete messages
+
+By default, a single response stream will be delivered at 25 messages per second or the model output rate, whichever is lower. This means you can publish two simultaneous response streams on the same channel or connection with any [Ably package](/docs/platform/pricing#packages), because each stream will be using half of the [connection inbound message rate](/docs/platform/pricing/limits#connection). You will be charged for the number of published messages, not for the number of streamed tokens.
+
+### Configuring rollup behaviour <a id="rollup"/>
+
+Ably concatenates all appends for a single response that are received during the rollup window into one published message. You can specify the rollup window for a particular connection by setting the `appendRollupWindow` [transport parameter](/docs/api/realtime-sdk#client-options). This allows you to determine how much of the connection message rate can be consumed by a single response stream and control your consumption costs.
+
+
+| `appendRollupWindow` | Maximum message rate for a single response |
+|---|---|
+| 0ms | Model output rate |
+| 20ms | 50 messages/s |
+| 40ms *(default)* | 25 messages/s |
+| 100ms | 10 messages/s |
+| 500ms *(max)* | 2 messages/s |
+
+The following example code demonstrates establishing a connection to Ably with `appendRollupWindow` set to 100ms:
+
+<Code>
+```javascript
+const ably = new Ably.Realtime(
+  {
+    key: 'your-api-key',
+    transportParams: { appendRollupWindow: 100 }
+  }
+);
+```
+</Code>
+
+<Aside data-type="important">
+If you configure the `appendRollupWindow` to allow a single response to use more than your [connection inbound message rate](/docs/platform/pricing/limits#connection) then you will see [limit enforcement](/docs/platform/pricing/limits#hitting) behaviour if you stream tokens faster than the allowed message rate.
+</Aside>
+
+## Message-per-token <a id="per-token"/>
+
+The [message-per-token](/docs/ai-transport/features/token-streaming/message-per-token) pattern requires you to manage rate limits directly. Each token publishes as a separate message, so high-speed model output can cause per-connection or per-channel rate limits to be hit, as well as consuming overall message allowances quickly.
+
+To stay within limits:
+
+- Calculate your headroom by comparing your model's peak output rate against your package's [connection inbound message rate](/docs/platform/pricing/limits#connection)
+- Account for concurrency by multiplying peak rates by the maximum number of simultaneous streams your application supports
+- If required, batch tokens in your agent before publishing to the SDK, reducing message count while maintaining delivery speed
+- Enable [server-side batching](/docs/messages/batch#server-side) to reduce the number of messages delivered to your subscribers
+
+If your application requires higher message rates than your current package allows, [contact Ably](/contact) to discuss options.
+
+## Next steps <a id="next-steps"/>
+
+- Review [Ably platform limits](/docs/platform/pricing/limits) to understand rate limit thresholds for your package
+- Learn about the [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response) pattern for automatic rate limit protection
+- Learn about the [message-per-token](/docs/ai-transport/features/token-streaming/message-per-token) pattern for fine-grained control
