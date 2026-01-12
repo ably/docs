@@ -29,6 +29,10 @@ export default {
           name: 'Message per token',
           link: '/docs/ai-transport/token-streaming/message-per-token',
         },
+        {
+          name: 'Token streaming limits',
+          link: '/docs/ai-transport/token-streaming/token-rate-limits',
+        },
       ],
     },
     {
