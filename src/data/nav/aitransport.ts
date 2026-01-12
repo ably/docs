@@ -9,14 +9,9 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
-      pages: [
-        {
-          name: 'About AI Transport',
-          link: '/docs/ai-transport',
-          index: true,
-        },
-      ],
+      name: 'About AI Transport',
+      link: '/docs/ai-transport',
+      index: true,
     },
     {
       name: 'Token streaming',
