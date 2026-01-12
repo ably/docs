@@ -7,6 +7,8 @@ Token streaming with message-per-response is a pattern where every token generat
 
 This pattern is useful for chat-style applications where you want each complete AI response stored as a single message in history, making it easy to retrieve and display multi-response conversation history. Each agent response becomes a single message that grows as tokens are appended, allowing clients joining mid-stream to catch up efficiently without processing thousands of individual tokens.
 
+The message-per-response pattern includes [automatic rate limit protection](/docs/ai-transport/features/token-streaming/token-rate-limits#per-response) through rollups, making it the recommended approach for most token streaming use cases.
+
 ## How it works <a id="how-it-works"/>
 
 1. **Initial message**: When an agent response begins, publish an initial message with `message.create` action to the Ably channel with an empty or the first token as content.
@@ -95,6 +97,30 @@ Append only supports concatenating data of the same type as the original message
 </Aside>
 
 This pattern allows publishing append operations for multiple concurrent model responses on the same channel. As long as you append to the correct message serial, tokens from different responses will not interfere with each other, and the final concatenated message for each response will contain only the tokens from that response.
+
+### Configuring rollup behaviour <a id="rollups"/>
+
+By default, AI Transport automatically rolls up tokens into messages at a rate of 25 messages per second (using a 40ms rollup window). This protects you from hitting connection rate limits while maintaining a smooth user experience. You can tune this behaviour when establishing your connection to balance between message costs and delivery speed:
+
+<Code>
+```javascript
+const realtime = new Ably.Realtime({
+  key: 'your-api-key',
+  transportParams: { appendRollupWindow: 100 } // 10 messages/s
+});
+```
+</Code>
+
+The `appendRollupWindow` parameter controls how many tokens are combined into each published message for a given model output rate. This creates a trade-off between delivery smoothness and the number of concurrent model responses you can stream on a single connection:
+
+- With a shorter rollup window, tokens are published more frequently, creating a smoother, more fluid experience for users as they see the response appear in more fine-grained chunks. However, this consumes more of your [connection's message rate capacity](/docs/platform/pricing/limits#connection), limiting how many simultaneous model responses you can stream.
+- With a longer rollup window, multiple tokens are batched together into fewer messages, allowing you to run more concurrent response streams on the same connection, but users will notice tokens arriving in larger chunks.
+
+The default 40ms window strikes a balance, delivering tokens at 25 messages per second - smooth enough for a great user experience while allowing you to run two simultaneous response streams on a single connection. If you need to support more concurrent streams, increase the rollup window (up to 500ms), accepting that tokens will arrive in more noticeable batches. Alternatively, instantiate a separate Ably client which uses its own connection, giving you access to additional message rate capacity.
+
+<Aside data-type="further-reading">
+For more details on rate limits and rollup behavior, see [Token streaming limits](/docs/ai-transport/features/token-streaming/token-rate-limits#rollup).
+</Aside>
 
 ## Subscribing to token streams <a id="subscribing"/>
 
