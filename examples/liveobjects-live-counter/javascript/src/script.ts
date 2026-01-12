@@ -1,10 +1,16 @@
-import { DefaultRoot, LiveCounter, LiveMap, Realtime } from 'ably';
-import Objects from 'ably/objects';
+import { Realtime } from 'ably';
+import { LiveCounter, LiveMap, LiveObjects, type PathObject } from 'ably/liveobjects';
 import { nanoid } from 'nanoid';
 import { config } from './config';
 import './styles.css';
 
-export enum Color {
+type ColorCounters = {
+  [Color.red]: LiveCounter;
+  [Color.green]: LiveCounter;
+  [Color.blue]: LiveCounter;
+};
+
+enum Color {
   red = 'red',
   green = 'green',
   blue = 'blue',
@@ -13,75 +19,63 @@ export enum Color {
 const client = new Realtime({
   clientId: nanoid(),
   key: config.ABLY_KEY,
-  plugins: { Objects },
+  plugins: { LiveObjects },
 });
 
 const channelName = config.CHANNEL_NAME || 'objects-live-counter';
-const channel = client.channels.get(channelName, { modes: ['OBJECT_PUBLISH', 'OBJECT_SUBSCRIBE'] });
+const channel = client.channels.get(channelName, { modes: ['object_publish', 'object_subscribe'] });
 
-const colorCountDivs: Record<Color, HTMLElement> = {
-  red: document.getElementById('count-red')!,
-  green: document.getElementById('count-green')!,
-  blue: document.getElementById('count-blue')!,
+const colorCountDivs: Record<Color, HTMLElement | null> = {
+  red: document.getElementById('count-red'),
+  green: document.getElementById('count-green'),
+  blue: document.getElementById('count-blue'),
 };
-const countersReset = document.getElementById('reset')!;
+const countersReset = document.getElementById('reset');
 
 async function main() {
-  await channel.attach();
+  const countersObject = await channel.object.get<ColorCounters>();
 
-  const objects = channel.objects;
-  const root = await objects.getRoot();
-
-  await initCounters(root);
-  addEventListenersToButtons(root);
+  await initCounters(countersObject);
+  addEventListenersToButtons(countersObject);
 }
 
-async function initCounters(root: LiveMap<DefaultRoot>) {
-  // subscribe to root to get notified when counter objects get changed on the root.
-  // for example, when we reset all counters
-  root.subscribe(({ update }) => {
-    Object.entries(update).forEach(([keyName, change]) => {
-      if (change === 'removed') {
-        return;
-      }
-
-      if (Object.values(Color).includes(keyName as Color)) {
-        // key pointing to a counter object got updated, resubscribe to a counter
-        const color = keyName as Color;
-        subscribeToCounterUpdates(color, root.get(color)!);
-      }
-    });
-  });
-
+async function initCounters(counters: PathObject<LiveMap<ColorCounters>>) {
   await Promise.all(
     Object.values(Color).map(async (color) => {
-      if (root.get(color)) {
-        subscribeToCounterUpdates(color, root.get(color)!);
-        return;
-      }
+      subscribeToCounterUpdates(color, counters.get(color));
 
-      await root.set(color, await channel.objects.createCounter());
+      // Initialize counter if it doesn't exist
+      if (counters.get(color).value() === undefined) {
+        await counters.set(color, LiveCounter.create());
+      }
     }),
   );
 }
 
-function subscribeToCounterUpdates(color: Color, counter: LiveCounter) {
+function subscribeToCounterUpdates(color: Color, counter: PathObject<LiveCounter>) {
   counter.subscribe(() => {
-    colorCountDivs[color].innerHTML = counter.value().toString();
+    if (colorCountDivs[color]) {
+      colorCountDivs[color].innerHTML = counter.value()?.toString() ?? '0';
+    }
   });
-  colorCountDivs[color].innerHTML = counter.value().toString();
+  if (colorCountDivs[color]) {
+    colorCountDivs[color].innerHTML = counter.value()?.toString() ?? '0';
+  }
 }
 
-function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
+function addEventListenersToButtons(counters: PathObject<LiveMap<ColorCounters>>) {
   document.querySelectorAll('.vote-button').forEach((button) => {
     const color = button.getAttribute('data-color') as Color;
     button.addEventListener('click', () => {
-      root.get(color)?.increment(1);
+      counters.get(color).increment(1);
     });
   });
 
-  countersReset.addEventListener('click', () => {
-    Object.values(Color).forEach(async (color) => root.set(color, await channel.objects.createCounter()));
+  countersReset?.addEventListener('click', () => {
+    // Use batch to reset all counters atomically
+    counters.batch((ctx) => {
+      Object.values(Color).forEach((color) => ctx.set(color, LiveCounter.create()));
+    });
   });
 }
 
