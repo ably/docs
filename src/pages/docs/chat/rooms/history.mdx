@@ -81,6 +81,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import com.ably.chat.OrderBy
+import com.ably.chat.Room
 import com.ably.chat.extensions.compose.collectAsPagingMessagesState
 
 @Composable
@@ -187,7 +189,7 @@ val subscription = room.messages.subscribe {
     println("New message received")
 }
 
-var historicalMessages = subscription.getPreviousMessages(limit = 50)
+var historicalMessages = subscription.historyBeforeSubscribe(limit = 50)
 println(historicalMessages.items.toString())
 
 while (historicalMessages.hasNext()) {
@@ -199,28 +201,46 @@ println("End of messages")
 ```
 
 ```jetpack
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import com.ably.chat.extensions.compose.collectAsPagingMessagesState
+import com.ably.chat.Room
+import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryBeforeSubscribeComponent(room: Room) {
+  val coroutineScope = rememberCoroutineScope()
+  var messages by remember { mutableStateOf<List<String>>(emptyList()) }
+
   DisposableEffect(room) {
     val subscription = room.messages.subscribe {
       println("New message received")
     }
 
-    var historicalMessages = subscription.getPreviousMessages(limit = 50)
-    println(historicalMessages.items.toString())
-
-    while (historicalMessages.hasNext()) {
-      historicalMessages = historicalMessages.next()
+    // Launch coroutine for suspend function calls
+    coroutineScope.launch {
+      var historicalMessages = subscription.historyBeforeSubscribe(limit = 50)
       println(historicalMessages.items.toString())
-    }
+      messages = historicalMessages.items.map { it.text }
 
-    println("End of messages")
+      while (historicalMessages.hasNext()) {
+        historicalMessages = historicalMessages.next()
+        println(historicalMessages.items.toString())
+        messages = messages + historicalMessages.items.map { it.text }
+      }
+
+      println("End of messages")
+    }
 
     onDispose {
       subscription.unsubscribe()
+    }
+  }
+
+  // Display messages in UI
+  Column {
+    messages.forEach { message ->
+      Text(message)
     }
   }
 }
