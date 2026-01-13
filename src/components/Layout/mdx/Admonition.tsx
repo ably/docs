@@ -34,10 +34,11 @@ const admonitionConfig: Record<
     title: 'Further reading',
   },
   important: {
-    borderColor: 'border-l-orange-500 dark:border-l-orange-600',
-    backgroundColor: 'bg-orange-100 dark:bg-orange-1000',
+    borderColor: 'border-l-yellow-500 dark:border-l-yellow-500',
+    backgroundColor: 'bg-yellow-100 dark:bg-yellow-900',
     title: 'Important',
   },
+  // Unused for now, but available for another type if needed in future.
   warning: {
     borderColor: 'border-l-yellow-500 dark:border-l-yellow-400',
     backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
