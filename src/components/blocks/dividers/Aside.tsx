@@ -1,8 +1,4 @@
-import { HtmlComponentProps } from '../../html-component-props';
-import Html from '../Html';
 import Icon from '@ably/ui/core/Icon';
-import { isArray } from 'lodash';
-import HtmlDataTypes from '../../../../data/types/html';
 import {
   inlineGridParagraph,
   inlineContentContainer,
@@ -14,20 +10,22 @@ import {
   noteElement,
   tipTitleElement,
 } from './dividers.module.css';
+import { PropsWithChildren } from 'react';
 
 const versioningColors: { [key: string]: { bg: string; text: string } } = {
   new: { bg: '#FFF0BA', text: '#AC8600' },
   updated: { bg: '#FFB8F1', text: '#9C007E' },
   experimental: { bg: '#D8BCFB', text: '#460894' },
+  'public-preview': { bg: '#B8E6FF', text: '#005A8C' },
 };
 
-const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
+type AsideProps = PropsWithChildren<{
+  attribs: { 'data-type': string; className?: string };
+}>;
+
+const Aside = ({ children, attribs }: AsideProps) => {
   const isVersioningInfo: boolean = Object.keys(versioningColors).includes(attribs?.[`data-type`] ?? '');
 
-  let paddingBottom: string | false = false;
-  if ((isArray(data) && data[data.length - 1].name === HtmlDataTypes.ul) || isVersioningInfo) {
-    paddingBottom = '0';
-  }
   return (
     <aside className={`${!isVersioningInfo && inlineGridParagraph} ${attribs?.className}`}>
       {attribs && attribs[`data-type`] === `important` ? (
@@ -71,11 +69,10 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
       <div
         className={isVersioningInfo ? versioningContainer : inlineContentContainer}
         style={{
-          paddingBottom: paddingBottom || '24px',
           borderLeftColor: attribs && isVersioningInfo ? versioningColors[attribs[`data-type`]].bg : '',
         }}
       >
-        <Html data={data} />
+        {children}
       </div>
     </aside>
   );

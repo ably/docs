@@ -1,51 +1,74 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
 import Icon from '@ably/ui/core/Icon';
 import cn from '@ably/ui/core/utils/cn';
-import { hierarchicalKey, PageTreeNode } from './utils/nav';
+import { hierarchicalKey } from './utils/nav';
+
+const linkStyles =
+  'ui-text-label4 font-semibold text-neutral-900 hover:text-neutral-1300 active:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-000 dark:active:text-neutral-500 focus-base transition-colors';
 
 const Breadcrumbs: React.FC = () => {
   const { activePage } = useLayoutContext();
 
-  const breadcrumbNodes = useMemo(() => {
-    const filteredNodes = activePage?.tree.filter((node) => node.page.link !== '#') ?? [];
-    const uniqueNodes = filteredNodes.reduce((acc: PageTreeNode[], current) => {
-      const isDuplicate = acc.some((item) => item.page.link === current.page.link);
-      if (!isDuplicate) {
-        acc.push(current);
-      }
-      return acc;
-    }, []);
-    return uniqueNodes;
-  }, [activePage?.tree]);
-
-  if (breadcrumbNodes.length === 0) {
+  if (!activePage?.tree || activePage.tree.length === 0) {
     return null;
   }
 
-  const linkStyles =
-    'ui-text-label4 font-semibold text-neutral-900 hover:text-neutral-1300 active:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-000 dark:active:text-neutral-500';
+  const lastActiveNodeIndex = (() => {
+    const index = activePage.tree
+      .toReversed()
+      .slice(1)
+      .findIndex((node) => node.page.link !== '#');
+
+    if (index !== -1) {
+      const potentialIndex = activePage.tree.length - index - 2;
+
+      if (activePage.page.link === activePage.tree[potentialIndex].page.link) {
+        return null;
+      }
+
+      return potentialIndex;
+    }
+
+    return null;
+  })();
 
   return (
     <nav aria-label="breadcrumb" className="flex mt-8 items-center gap-1">
-      <Link to="/docs" className={cn(linkStyles, 'hidden sm:block')}>
+      {lastActiveNodeIndex === null && (
+        <Icon
+          name="icon-gui-chevron-left-micro"
+          size="16px"
+          color="text-neutral-900 dark:text-neutral-400"
+          additionalCSS="sm:hidden"
+        />
+      )}
+      <Link to="/docs" className={cn(linkStyles, lastActiveNodeIndex !== null && 'hidden sm:block')}>
         Home
       </Link>
       <Icon
         name="icon-gui-chevron-right-micro"
         size="16px"
-        additionalCSS={cn('rotate-180 sm:rotate-0', { 'hidden sm:flex': breadcrumbNodes.length === 1 })}
+        color="text-neutral-900 dark:text-neutral-400"
+        additionalCSS={cn('rotate-180 sm:rotate-0', { 'hidden sm:flex': lastActiveNodeIndex === null })}
       />
-      {breadcrumbNodes.map((node, index) => (
+      {activePage.tree.map((node, index) => (
         <React.Fragment key={hierarchicalKey(node.page.link, index, activePage.tree)}>
-          {index > 0 ? <Icon name="icon-gui-chevron-right-micro" size="16px" additionalCSS="hidden sm:flex" /> : null}
+          {index > 0 ? (
+            <Icon
+              name="icon-gui-chevron-right-micro"
+              size="16px"
+              color="text-neutral-900 dark:text-neutral-400"
+              additionalCSS="hidden sm:flex"
+            />
+          ) : null}
           <Link
             to={node.page.link}
             className={cn(linkStyles, {
               'text-gui-unavailable dark:text-gui-unavailable-dark pointer-events-none':
-                index === breadcrumbNodes.length - 1,
-              'hidden sm:flex': index !== breadcrumbNodes.length - 2,
+                index === activePage.tree.length - 1 || node.page.link === '#',
+              'hidden sm:flex': index !== lastActiveNodeIndex,
             })}
           >
             {node.page.name}

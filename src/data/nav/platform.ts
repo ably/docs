@@ -9,14 +9,9 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
-      pages: [
-        {
-          name: 'About Ably',
-          link: '/docs/platform',
-          index: true,
-        },
-      ],
+      name: 'About Ably',
+      link: '/docs/platform',
+      index: true,
     },
     {
       name: 'Architecture',
@@ -307,10 +302,38 @@ export default {
       ],
     },
     {
-      name: 'Debugging and Errors',
+      name: 'Tools',
       pages: [
         {
-          name: 'Overview',
+          name: 'Ably CLI',
+          link: '/docs/platform/tools/cli',
+        },
+      ],
+    },
+    {
+      name: 'AI and LLMs',
+      pages: [
+        {
+          name: 'Building with LLMs',
+          link: '/docs/platform/ai-llms',
+          index: true,
+        },
+        {
+          name: 'llms.txt',
+          link: '/docs/platform/ai-llms/llms-txt',
+        },
+      ],
+    },
+    {
+      name: 'Support and debugging',
+      pages: [
+        {
+          name: 'Support tickets',
+          link: '/docs/platform/support',
+          index: true,
+        },
+        {
+          name: 'Debugging',
           link: '/docs/platform/errors',
           index: true,
         },
@@ -323,7 +346,7 @@ export default {
   ],
   api: [
     {
-      name: 'API References',
+      name: 'API references',
       pages: [
         {
           link: '/docs/api/control-api',

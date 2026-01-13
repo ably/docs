@@ -170,63 +170,12 @@ export const inkeepOnLoad = (
           contentType?: string;
           tag?: string;
         };
-    theme: {
-      styles: Array<{
-        key: string;
-        type: string;
-        value: string;
-      }>;
-    };
     onEvent?: (event: ConversationEvent) => void;
   }
 
   const baseSettings: BaseSettings = {
     apiKey,
     transformSource,
-    theme: {
-      styles: [
-        {
-          key: 'custom-style',
-          type: 'style',
-          value: `
-            .ikp-chat-button__container {
-              z-index: 10;
-            }
-
-            .ikp-ai-chat-message-toolbar {
-              flex-wrap: wrap;
-              justify-content: flex-end;
-            }
-
-            .ikp-ai-chat-message-tool-actions {
-              width: 100%;
-            }
-
-            .ikp-ai-chat-message-tool-action {
-              background: #03020d;
-              color: white;
-              height: 36px;
-              font-size: 15px;
-              border: none;
-              margin: 0px auto;
-              margin-bottom: 8px;
-              padding: 12px 24px;
-              height: auto;
-              gap: 12px;
-            }
-
-            .ikp-ai-chat-message-tool-action > .ikp-icon {
-              font-size: 18px;
-            }
-
-            .ikp-ai-chat-message-tool-action:hover:not([disabled]) {
-              background: #2c3344;
-              color: white;
-            }
-          `,
-        },
-      ],
-    },
   };
 
   const sendConversationData = (event: ConversationEvent, conversationsUrl: string): void => {
@@ -270,30 +219,40 @@ export const inkeepOnLoad = (
     shouldShowAskAICard: false,
   };
 
-  if (inkeepChatEnabled) {
-    window.inkeepWidget = window.Inkeep.ChatButton({
-      ...config,
-    });
+  // Only enable keyboard shortcut for one instance to prevent multiple popups
+  if (inkeepSearchEnabled) {
+    loadInkeepSearch(config, 'inkeep-search', false); // Keep keyboard shortcut
   }
 
-  if (inkeepSearchEnabled) {
-    loadInkeepSearch(config);
+  if (inkeepChatEnabled) {
+    loadInkeepSearch(config, 'inkeep-ai-chat', true); // Disable keyboard shortcut
   }
 };
 
-const loadInkeepSearch = (config: object) => {
-  const searchBar = document.getElementById('inkeep-search');
+const loadInkeepSearch = (config: object, elementId: string, disableShortcut: boolean) => {
+  const searchBar = document.getElementById(elementId);
   if (!searchBar) {
     return;
   }
 
-  window.Inkeep.SearchBar(`#${searchBar.id}`, {
+  // Check if already initialized to prevent duplicate instances
+  if (searchBar.hasChildNodes()) {
+    return;
+  }
+
+  const defaultView = elementId === 'inkeep-ai-chat' ? 'chat' : 'search';
+
+  const widgetConfig: Record<string, unknown> = {
     ...config,
-    modalSettings: {
-      defaultView: 'SEARCH',
-    },
+    defaultView,
     shouldShowAskAICard: false,
-  }).remount();
+  };
+
+  if (disableShortcut) {
+    widgetConfig.modalSettings = { shortcutKey: '' };
+  }
+
+  window.Inkeep.SearchBar(`#${searchBar.id}`, widgetConfig);
 };
 
 export type InkeepUser = {

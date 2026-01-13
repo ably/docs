@@ -2,7 +2,7 @@
 
 These are technical writing guidelines that should be used for Ably's developer documentation.
 
-This guide does not cover the details of marking up content source. See the [documentation formatting guide](https://github.com/ably/docs/blob/main/content/client-lib-development-guide/documentation-formatting-guide.textile) for the latest details on how to markup source content.
+This guide does not cover the details of marking up content source. See the [CONTRIBUTING.md](CONTRIBUTING.md) guide for details on content formatting.
 
 Some of the benefits of using this style guide are:
 
@@ -205,6 +205,21 @@ The guidance here is to use sentence case for most things, as per the [Microsoft
 There are some exceptions: for example, the names of products, the titles of stand-alone manuals or guides, whitepaper or article titles, and the titles of people, should use title case. If you do need to use title case, you can use one of the widely available [tools](https://titlecaseconverter.com/).
 
 So, unless there is a good reason not to, use sentence case (first letter is capitalized).
+
+## Heading forms
+
+Use imperative form for headings.
+
+The imperative form is direct and action-oriented, making it clear what the developer needs to do.
+
+Examples:
+
+* *Imperative (preferred):* Configure the API client
+* *Gerund (avoid):* Configuring the API client
+* *Imperative (preferred):* Install the SDK
+* *Gerund (avoid):* Installing the SDK
+
+The only exception is FAQ-style content where the heading is phrased as a question. In all other cases, use the imperative form.
 
 ## Bulleted lists
 

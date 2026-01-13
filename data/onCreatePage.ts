@@ -5,7 +5,6 @@ import fs from 'fs';
 export type LayoutOptions = {
   leftSidebar: boolean;
   rightSidebar: boolean;
-  searchBar: boolean;
   template: string;
   mdx: boolean;
 };
@@ -13,18 +12,16 @@ export type LayoutOptions = {
 const mdxWrapper = path.resolve('src/components/Layout/MDXWrapper.tsx');
 
 const pageLayoutOptions: Record<string, LayoutOptions> = {
-  '/docs': { leftSidebar: true, rightSidebar: false, searchBar: true, template: 'index', mdx: false },
+  '/docs': { leftSidebar: true, rightSidebar: false, template: 'index', mdx: false },
   '/docs/api/control-api': {
     leftSidebar: false,
     rightSidebar: false,
-    searchBar: true,
     template: 'control-api',
     mdx: false,
   },
-  '/docs/sdks': { leftSidebar: false, rightSidebar: false, searchBar: true, template: 'sdk', mdx: false },
-  '/examples': { leftSidebar: false, rightSidebar: false, searchBar: true, template: 'examples', mdx: false },
-  '/docs/how-to/pub-sub': { leftSidebar: true, rightSidebar: true, searchBar: true, template: 'how-to', mdx: true },
-  '/docs/404': { leftSidebar: false, rightSidebar: false, searchBar: false, template: '404', mdx: false },
+  '/docs/sdks': { leftSidebar: false, rightSidebar: false, template: 'sdk', mdx: false },
+  '/examples': { leftSidebar: false, rightSidebar: false, template: 'examples', mdx: false },
+  '/docs/404': { leftSidebar: false, rightSidebar: false, template: '404', mdx: false },
 };
 
 // Function to extract code element classes from an MDX file
@@ -66,9 +63,7 @@ export const onCreatePage: GatsbyNode['onCreatePage'] = async ({ page, actions }
       ...page,
       context: {
         ...page.context,
-        layout: pathOptions
-          ? pathOptions[1]
-          : { leftSidebar: true, rightSidebar: true, searchBar: true, template: 'base', mdx: isMDX },
+        layout: pathOptions ? pathOptions[1] : { leftSidebar: true, rightSidebar: true, template: 'base', mdx: isMDX },
         ...(isMDX ? { languages: Array.from(detectedLanguages) } : {}),
       },
       component: isMDX ? `${mdxWrapper}?__contentFilePath=${page.component}` : page.component,

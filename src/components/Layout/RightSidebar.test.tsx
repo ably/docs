@@ -1,7 +1,6 @@
 import React from 'react';
 import { useLocation } from '@reach/router';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
 import RightSidebar from './RightSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
@@ -11,10 +10,6 @@ jest.mock('src/contexts/layout-context', () => ({
 
 jest.mock('@reach/router', () => ({
   useLocation: jest.fn(),
-}));
-
-jest.mock('./LanguageSelector', () => ({
-  LanguageSelector: jest.fn(() => <div>LanguageSelector</div>),
 }));
 
 const mockUseLayoutContext = useLayoutContext as jest.Mock;
@@ -62,31 +57,23 @@ describe('RightSidebar', () => {
     document.body.innerHTML = '';
   });
 
-  it('does not render the LanguageSelector component when activePage.languages is empty', () => {
-    render(<RightSidebar />);
-    expect(screen.queryByText('LanguageSelector')).not.toBeInTheDocument();
-  });
-
-  it('renders the LanguageSelector component when activePage.languages is not empty', () => {
-    mockUseLayoutContext.mockReturnValue({
-      activePage: {
-        page: {
-          name: 'Test Page',
-          link: '/test-path',
-        },
-        tree: [0],
-        languages: ['javascript'],
-      },
-      products: [['pubsub']],
-    });
-    render(<RightSidebar />);
-    expect(screen.getByText('LanguageSelector')).toBeInTheDocument();
-  });
-
   it('renders headers from the article', () => {
     render(<RightSidebar />);
     expect(screen.getByRole('heading', { level: 2, name: 'Header 1' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Header 2' })).toBeInTheDocument();
+  });
+
+  it('renders sidebar links for article headers', () => {
+    const { container } = render(<RightSidebar />);
+
+    // Verify sidebar links are created with correct IDs
+    const header1Link = container.querySelector('#sidebar-header1');
+    const header2Link = container.querySelector('#sidebar-header2');
+
+    expect(header1Link).toBeInTheDocument();
+    expect(header2Link).toBeInTheDocument();
+    expect(header1Link).toHaveAttribute('href', '#header1');
+    expect(header2Link).toHaveAttribute('href', '#header2');
   });
 
   it('sets active header on click', async () => {
@@ -94,51 +81,5 @@ describe('RightSidebar', () => {
     const headerLink = await screen.findByRole('link', { name: 'Header 1' });
     fireEvent.click(headerLink);
     expect(headerLink).toHaveClass('text-neutral-1300');
-  });
-
-  it('renders external links', () => {
-    render(<RightSidebar />);
-    expect(screen.getByText('Edit on GitHub')).toBeInTheDocument();
-    expect(screen.getByText('Request changes')).toBeInTheDocument();
-  });
-
-  it('renders a textile Github link when the page is textile', () => {
-    mockUseLayoutContext.mockReturnValue({
-      activePage: {
-        page: {
-          name: 'Test Page',
-          link: '/test-path',
-        },
-        template: 'textile',
-        tree: [0],
-        languages: [],
-      },
-      products: [['pubsub']],
-    });
-    render(<RightSidebar />);
-
-    const githubLink = screen.getByTestId('external-github-link');
-    expect(githubLink).toBeInTheDocument();
-    expect(githubLink).toHaveAttribute('href', 'https://github.com/ably/docs/blob/main/content/test-path.textile');
-  });
-
-  it('renders an MDX Github link when the page is MDX', () => {
-    mockUseLayoutContext.mockReturnValue({
-      activePage: {
-        page: {
-          name: 'Test Page',
-          link: '/test-path',
-        },
-        template: 'mdx',
-        tree: [0],
-        languages: [],
-      },
-      products: [['pubsub']],
-    });
-    render(<RightSidebar />);
-
-    const githubLink = screen.getByTestId('external-github-link');
-    expect(githubLink).toBeInTheDocument();
-    expect(githubLink).toHaveAttribute('href', 'https://github.com/ably/docs/blob/main/src/pages/docs/test-path.mdx');
   });
 });

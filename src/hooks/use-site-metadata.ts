@@ -15,7 +15,6 @@ export const useSiteMetadata = () => {
           siteUrl
           externalScriptsData {
             hubspotTrackingId
-            addsearchSiteKey
             gtmContainerId
             headwayAccountId
             announcementEnabled
@@ -28,6 +27,7 @@ export const useSiteMetadata = () => {
             mixpanelAutoCapture
             posthogApiKey
             posthogHost
+            posthogFeedbackSurveyName
             conversationsUrl
           }
         }

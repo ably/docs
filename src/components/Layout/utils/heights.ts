@@ -4,5 +4,5 @@
   to Layout components, consider these values and update where necessary.
 */
 
-export const LANGUAGE_SELECTOR_HEIGHT = 38;
+export const LANGUAGE_SELECTOR_HEIGHT = 32;
 export const INKEEP_ASK_BUTTON_HEIGHT = 48;

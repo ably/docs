@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useRef, useState, MouseEvent, TouchEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
-import Select from 'react-select';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import cn from '@ably/ui/core/utils/cn';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
+import { track } from '@ably/ui/core/insights';
 import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
-import { useOnClickOutside } from 'src/hooks';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
 import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import * as Select from '../ui/Select';
+import { Skeleton } from '../ui/Skeleton';
 
 type LanguageSelectorOptionData = {
   label: LanguageKey;
@@ -19,74 +20,13 @@ type LanguageSelectorOptionData = {
   version: string;
 };
 
-type LanguageSelectorOptionProps = {
-  data: LanguageSelectorOptionData;
-  isOption?: boolean;
-  setMenuOpen: (menuOpen: boolean) => void;
-  selectProps: {
-    menuIsOpen: boolean;
-  };
-  langParam: string | null;
-};
-
-const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: LanguageSelectorOptionProps) => {
-  const lang = languageInfo[props.data.label];
-  const location = useLocation();
-
-  const handleClick = (e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
-    e.preventDefault();
-
-    if (isOption) {
-      navigate(`${location.pathname}?lang=${props.data.label}`);
-    }
-
-    setMenuOpen(!props.selectProps.menuIsOpen);
-  };
-
-  return (
-    <div
-      className={cn(
-        'ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-2 items-center rounded',
-        {
-          'p-2 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
-        },
-      )}
-      onClick={handleClick}
-      onTouchEnd={handleClick}
-      role="menuitem"
-    >
-      <div className={cn('flex items-center gap-2', { 'flex-1': isOption })}>
-        <Icon size="20px" name={`icon-tech-${lang?.alias ?? props.data.label}` as IconName} />
-        {isOption ? lang?.label : null}
-      </div>
-      <Badge
-        color="neutral"
-        size="xs"
-        className={cn('my-px', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}
-      >
-        v{props.data.version}
-      </Badge>
-      {isOption ? (
-        <div className="w-4 h-4">
-          {props.data.label === langParam ? (
-            <Icon name="icon-gui-check-outline" size="16px" color="text-neutral-1000" />
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-};
-
 export const LanguageSelector = () => {
   const { activePage } = useLayoutContext();
+  const location = useLocation();
   const languageVersions = languageData[activePage.product ?? 'pubsub'];
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<LanguageSelectorOptionData | null>(null);
-  const selectRef = useRef<HTMLDivElement>(null);
+  const [value, setValue] = useState<string>('');
 
-  useOnClickOutside(() => setMenuOpen(false), selectRef);
-
-  const options = useMemo(
+  const options: LanguageSelectorOptionData[] = useMemo(
     () =>
       Object.entries(languageVersions)
         .map(([lang, version]) => ({
@@ -100,66 +40,74 @@ export const LanguageSelector = () => {
 
   useEffect(() => {
     const defaultOption = options.find((option) => option.label === activePage.language) || options[0];
-    setSelectedOption(defaultOption);
+    if (defaultOption) {
+      setValue(defaultOption.value);
+    }
   }, [activePage.language, options]);
 
-  const handleClick = (e: MouseEvent<HTMLButtonElement> | TouchEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    setMenuOpen(!menuOpen);
+  const selectedOption = useMemo(() => options.find((option) => option.value === value), [options, value]);
+
+  const handleValueChange = (newValue: string) => {
+    setValue(newValue);
+
+    const option = options.find((opt) => opt.value === newValue);
+    if (option) {
+      track('language_selector_changed', {
+        language: option.label,
+        location: location.pathname,
+      });
+      navigate(`${location.pathname}?lang=${option.label}`);
+    }
   };
+
+  if (!selectedOption) {
+    return <Skeleton className="w-[180px] h-5 my-[9px]" />;
+  }
+
+  const selectedLang = languageInfo[selectedOption.label];
 
   return (
     <div
-      ref={selectRef}
-      className="md:relative w-full text-right md:text-left mb-6 focus-base -mt-1 md:mt-0 -mr-1 md:mr-0"
+      className="flex items-center md:relative w-full text-right md:text-left"
+      style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
     >
-      <Select
-        options={options}
-        value={selectedOption}
-        onChange={(option) => setSelectedOption(option)}
-        classNames={{
-          control: () => '!border-none !inline-flex !cursor-pointer group/lang-dropdown',
-          valueContainer: () => '!p-0',
-          menu: () => 'absolute right-0 w-60 z-10',
-        }}
-        styles={{
-          control: () => ({ height: LANGUAGE_SELECTOR_HEIGHT }),
-          menu: () => ({ boxShadow: 'none' }),
-        }}
-        tabIndex={0}
-        menuIsOpen={menuOpen}
-        components={{
-          Option: (props) => (
-            <LanguageSelectorOption
-              {...props}
-              setMenuOpen={setMenuOpen}
-              langParam={selectedOption?.label || null}
-              isOption
-            />
-          ),
-          SingleValue: (props) => (
-            <LanguageSelectorOption {...props} setMenuOpen={setMenuOpen} langParam={selectedOption?.label || null} />
-          ),
-          IndicatorSeparator: null,
-          DropdownIndicator: () => (
-            <button
-              role="button"
-              className="flex items-center pl-2 text-red-orange cursor-pointer"
-              onClick={handleClick}
-              onTouchEnd={handleClick}
-              aria-label="Toggle language dropdown"
-            >
+      <Select.Root value={value} onValueChange={handleValueChange}>
+        <Select.Trigger
+          className={cn(
+            'border-none inline-flex items-center group/lang-dropdown focus-base rounded px-0',
+            options.length > 1 ? 'cursor-pointer' : 'cursor-auto',
+          )}
+          style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
+          aria-label="Select code language"
+          disabled={options.length === 1}
+        >
+          <div className="ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 flex gap-2 items-center">
+            <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+            <span className="text-neutral-900 dark:text-neutral-400 font-semibold">{selectedLang?.label}</span>
+            <Badge color="neutral" size="xs" className="my-px">
+              v{selectedOption.version}
+            </Badge>
+          </div>
+          {options.length > 1 && (
+            <Select.Icon className="flex items-center pl-2 text-red-orange cursor-pointer">
               <Icon
                 name="icon-gui-chevron-down-micro"
                 size="20px"
                 additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
               />
-            </button>
-          ),
-          Input: () => null,
-          MenuList: ({ children }) => (
-            <div
-              className="overflow-y-scroll bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft p-2"
+            </Select.Icon>
+          )}
+        </Select.Trigger>
+
+        <Select.Portal>
+          <Select.Content
+            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft z-40"
+            position="popper"
+            align="end"
+            sideOffset={4}
+          >
+            <Select.Viewport
+              className="p-2"
               style={{
                 maxHeight: componentMaxHeight(
                   HEADER_HEIGHT,
@@ -168,16 +116,50 @@ export const LanguageSelector = () => {
                   INKEEP_ASK_BUTTON_HEIGHT,
                 ),
               }}
-              role="menu"
             >
-              <p className="ui-text-overline2 text-left py-4 px-2 text-neutral-700 dark:text-neutral-600">
+              <p className="ui-text-overline2 text-left p-2 pb-3 text-neutral-700 dark:text-neutral-600">
                 Code Language
               </p>
-              {children}
-            </div>
-          ),
-        }}
-      />
+              {options.map((option) => {
+                const lang = languageInfo[option.label];
+                return (
+                  <Select.Item
+                    key={option.value}
+                    value={option.value}
+                    className={cn(
+                      'ui-text-label4 text-left leading-none w-full text-neutral-900 dark:text-neutral-400',
+                      'hover:text-neutral-1300 dark:hover:text-neutral-000 transition-colors',
+                      'p-2 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer',
+                      'flex gap-2 items-center rounded outline-none',
+                      'focus:bg-neutral-100 dark:focus:bg-neutral-1200',
+                      'data-[highlighted]:bg-neutral-100 dark:data-[highlighted]:bg-neutral-1200 focus-base',
+                    )}
+                  >
+                    <div className="flex items-center gap-2 flex-1">
+                      <Icon size="20px" name={`icon-tech-${lang?.alias ?? option.label}` as IconName} />
+                      {lang?.label}
+                    </div>
+                    <Badge color="neutral" size="xs" className="my-px hover:bg-neutral-000 w-9 justify-center">
+                      v{option.version}
+                    </Badge>
+                    {option.value === value ? (
+                      <Select.ItemIndicator className="w-4 h-4 flex items-center justify-center">
+                        <Icon
+                          name="icon-gui-check-outline"
+                          size="16px"
+                          color="text-neutral-1000 dark:text-neutral-300"
+                        />
+                      </Select.ItemIndicator>
+                    ) : (
+                      <div className="w-4 h-4" aria-hidden={option.value === value} />
+                    )}
+                  </Select.Item>
+                );
+              })}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      </Select.Root>
     </div>
   );
 };

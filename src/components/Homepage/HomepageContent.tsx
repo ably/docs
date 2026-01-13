@@ -4,6 +4,7 @@ import { HeroSection } from './HeroSection';
 import { PlatformAndProducts } from './PlatformAndProducts';
 import { ExamplesSection } from './ExamplesSection';
 import { ChangelogSection } from './Changelog';
+import { ToolingSection } from './ToolingSection';
 
 export const HomepageContent = ({
   homepageContent,
@@ -12,7 +13,7 @@ export const HomepageContent = ({
   homepageContent: ContentData;
   images: ImageProps[];
 }) => {
-  const { platformProducts, examples } = homepageContent;
+  const { platformProducts, examples, tooling } = homepageContent;
 
   const mobileImage = getImageFromList(images, 'background_pattern_mobile.svg');
   const desktopImage = getImageFromList(images, 'background_pattern.svg');
@@ -38,9 +39,14 @@ export const HomepageContent = ({
         <HeroSection />
       </div>
 
-      <div className="mb-3 md:mb-5">
+      <div className="mb-3 md:mb-5 mt-16">
         <h3 className="ui-text-h3 pb-6">{platformProducts.title}</h3>
         <PlatformAndProducts section={platformProducts} images={images} />
+      </div>
+
+      <div className="mb-3 md:mb-5 mt-8">
+        <h3 className="ui-text-h3 pb-6">{tooling.title}</h3>
+        <ToolingSection section={tooling} />
       </div>
 
       <div className="grid grid-cols-1 gap-y-[1.875rem] mt-16 md:gap-y-0 md:grid-cols-2 md:gap-x-3 lg:gap-x-6">

@@ -36,15 +36,7 @@ export type AblyPageContext = {
   script: string;
 };
 
-export type ProductName =
-  | 'channels'
-  | 'spaces'
-  | 'livesync'
-  | 'chat'
-  | 'liveobjects'
-  | 'asset-tracking'
-  | 'api-reference'
-  | 'home';
+export type ProductName = 'channels' | 'spaces' | 'livesync' | 'chat' | 'liveobjects' | 'api-reference' | 'home';
 
 export type ProductTitle =
   | 'Channels'
@@ -52,7 +44,6 @@ export type ProductTitle =
   | 'Ably LiveSync'
   | 'Ably Chat'
   | 'Ably LiveObjects'
-  | 'Ably Asset Tracking'
   | 'API References'
   | 'Home'
   | 'Ably Pub/Sub';

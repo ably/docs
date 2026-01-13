@@ -29,7 +29,7 @@ Find out more about [member location](/docs/spaces/locations).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

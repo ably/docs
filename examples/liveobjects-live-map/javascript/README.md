@@ -2,24 +2,27 @@
 
 Enable clients to update and synchronize key/value data in an application in realtime.
 
-LiveMap is a key/value data structure that synchronizes its state across users in realtime. It enables you to store primitive values, such as numbers, strings, booleans and buffers, as well as other objects, enabling you to build complex, hierarchical object structure.
+[`LiveMap`](/docs/liveobjects/map) is a key/value data structure that synchronizes its state across users in realtime. It enables you to store primitive values, such as numbers, strings, booleans, binary data, JSON-serializable objects or arrays and other live [object types](/docs/liveobjects/concepts/objects#object-types), enabling you to build complex, hierarchical channel objects.
 
-LiveMap can be used to store both predefined and dynamic datasets that need to be updated in realtime. They are ideal for scenarios such as collaborative task management, live leaderboards, multiplayer game state, shared settings, or live dashboards.
+`LiveMap` can be used to store both predefined and dynamic datasets that need to be updated in realtime. It is ideal for scenarios such as collaborative task management, live leaderboards, multiplayer game state, shared settings, or live dashboards.
 
-LiveMap is implemented using [Ably LiveObjects](/docs/liveobjects). LiveObjects, as a feature of [Ably Pub/Sub](/docs/channels), contains a set of purpose-built APIs that abstract away the complexities of managing shared state between clients in an application. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
+`LiveMap` is a feature of [LiveObjects](/docs/liveobjects), which provides a serverless, durable, and scalable way to create, update, and subscribe to shared state across large numbers of connected clients at any scale. LiveObjects is built on [channels](/docs/channels) and provides the same [performance guarantees and scaling potential](/docs/platform/architecture).
 
 ## Resources
 
-Use the following methods to interact with a LiveMap in your application:
+Use the following methods to interact with a `LiveMap` in your application:
 
-- [`objects.getRoot()`](/docs/liveobjects/concepts/objects#root-object): retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
-- [`objects.createMap()`](/docs/liveobjects/map#create): creates a new LiveMap instance.
-- [`liveMap.get(key)`](/docs/liveobjects/map#get): returns the current value associated with a given key in the map.
-- [`liveMap.set(key, value)`](/docs/liveobjects/map#set): sends the operation message to the Ably system to assign a value to a key in the map.
-- [`liveMap.remove(key)`](/docs/liveobjects/map#remove): sends the operation message to the Ably system to remove a key from the map.
-- [`liveMap.subscribe()`](/docs/liveobjects/map#subscribe-data): subscribes to LiveMap updates by registering a listener.
+- [`channel.object.get()`](/docs/liveobjects/concepts/path-object): retrieve a [`PathObject`](/docs/liveobjects/concepts/path-object) reference to the [channel object](/docs/liveobjects/concepts/objects#channel-object). Use this `PathObject` to update and subscribe to data via:
+  - [`get(key)`](/docs/liveobjects/concepts/path-object#navigate): navigate to child paths within the `PathObject`, such as entries in a `LiveMap`.
+  - [`set(key, value)`](/docs/liveobjects/concepts/path-object#update): assign a value to a key in the `LiveMap`.
+  - [`remove(key)`](/docs/liveobjects/concepts/path-object#delete): send an [operation](/docs/liveobjects/concepts/operations) to remove a key from the `LiveMap`.
+  - [`value()`](/docs/liveobjects/concepts/path-object#read-values): read the current value at the specified path.
+  - [`entries()`](/docs/liveobjects/concepts/path-object#iterate): iterate over key-value pairs in the `LiveMap`.
+  - [`subscribe()`](/docs/liveobjects/concepts/path-object#subscribe): subscribe to updates at the specified path by registering a listener.
+  - [`batch()`](/docs/liveobjects/concepts/path-object#batch-multiple-updates): group multiple operations into a single message for atomic updates.
+- [`LiveMap.create()`](/docs/liveobjects/map#create): create a new `LiveMap` instance.
 
-Find out more about [LiveMap](/docs/liveobjects/map).
+Find out more about [PathObject](/docs/liveobjects/concepts/path-object) and [LiveMap](/docs/liveobjects/map).
 
 ## Getting started
 
@@ -32,7 +35,7 @@ Find out more about [LiveMap](/docs/liveobjects/map).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

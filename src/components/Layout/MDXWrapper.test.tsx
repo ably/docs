@@ -1,29 +1,40 @@
-import React, { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
+import { ReactNode } from 'react';
+import { WindowLocation } from '@reach/router';
+import { render, screen, waitFor } from '@testing-library/react';
+import { Helmet } from 'react-helmet';
 import If from './mdx/If';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import UserContext from 'src/contexts/user-context';
+import MDXWrapper from './MDXWrapper';
 
-// Mock the dependencies we need for testing
-jest.mock('./MDXWrapper', () => {
-  return {
-    __esModule: true,
-    default: ({ children, pageContext }: { children: ReactNode; pageContext: any }) => (
-      <div data-testid="mdx-wrapper">
-        {pageContext?.frontmatter?.title && <h1>{pageContext.frontmatter.title}</h1>}
-        <div data-testid="mdx-content">{children}</div>
-      </div>
-    ),
-  };
-});
+const mockUseLayoutContext = jest.fn(() => ({
+  activePage: {
+    language: 'javascript',
+    languages: ['javascript'],
+    product: 'pubsub',
+    page: {
+      name: 'Test Page',
+      link: '/docs/test-page',
+    },
+    tree: [],
+    template: 'mdx' as const,
+  },
+}));
 
 // Mock the layout context
 jest.mock('src/contexts/layout-context', () => ({
-  useLayoutContext: () => ({
-    activePage: { language: 'javascript' },
-  }),
+  useLayoutContext: () => mockUseLayoutContext(),
   LayoutProvider: ({ children }: { children: ReactNode }) => <div data-testid="layout-provider">{children}</div>,
+}));
+
+jest.mock('@reach/router', () => ({
+  useLocation: () => ({ pathname: '/docs/test-page' }),
+}));
+
+jest.mock('src/hooks/use-site-metadata', () => ({
+  useSiteMetadata: () => ({
+    canonicalUrl: (path: string) => `https://example.com${path}`,
+  }),
 }));
 
 // We need to mock minimal implementation of other dependencies that CodeSnippet might use
@@ -54,7 +65,36 @@ jest.mock('@ably/ui/core/Code', () => {
   };
 });
 
+// Mock Radix UI Tooltip to avoid act() warnings from async state updates
+jest.mock('@radix-ui/react-tooltip', () => ({
+  Provider: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Root: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Trigger: ({ children, asChild }: { children: ReactNode; asChild?: boolean }) =>
+    asChild ? children : <div>{children}</div>,
+  Portal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Content: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
 describe('MDX component integration', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Suppress console warnings for MSW unhandled .md requests
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      const message = String(args[0]);
+      if (message.includes('[MSW]') && message.includes('.md')) {
+        return;
+      }
+      originalWarn.apply(console, args);
+    };
+  });
+
+  afterEach(() => {
+    // Restore console.warn and clear timers
+    jest.restoreAllMocks();
+    jest.clearAllTimers();
+  });
+
   it('renders basic content correctly', () => {
     render(
       <div>
@@ -233,5 +273,115 @@ channel.subscribe('event', (message: Ably.Types.Message) => {
 
     expect(javascriptElement).not.toBeInTheDocument();
     expect(typescriptElement).toBeInTheDocument();
+  });
+});
+
+describe('MDXWrapper structured data', () => {
+  const defaultPageContext = {
+    frontmatter: {
+      title: 'Test Page',
+      meta_description: 'Test description',
+    },
+    languages: [],
+    layout: { mdx: true, leftSidebar: true, rightSidebar: true, template: 'docs' },
+  };
+
+  const defaultLocation = {
+    pathname: '/docs/test-page',
+  } as WindowLocation;
+
+  beforeEach(() => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        product: 'pubsub',
+        language: 'javascript',
+        languages: [],
+        page: {
+          name: 'Test Page',
+          link: '/docs/test-page',
+        },
+        tree: [],
+        template: 'mdx' as const,
+      },
+    });
+
+    // Mock fetch to prevent async issues with jsdom teardown
+    global.fetch = jest.fn(() => Promise.reject(new Error('Markdown not available'))) as jest.Mock;
+
+    // Suppress console.error for expected fetch failures
+    jest.spyOn(console, 'error').mockImplementation((message) => {
+      if (typeof message === 'string' && message.includes('Failed to fetch markdown')) {
+        return;
+      }
+    });
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.restoreAllMocks();
+  });
+
+  it('does not generate structured data when only one language is present', async () => {
+    render(
+      <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
+        <MDXWrapper pageContext={defaultPageContext} location={defaultLocation}>
+          <div>Test content</div>
+        </MDXWrapper>
+      </UserContext.Provider>,
+    );
+
+    // Wait for any async operations to settle
+    await waitFor(() => {
+      expect(screen.getByText('Test content')).toBeInTheDocument();
+    });
+
+    const helmet = Helmet.peek();
+    const jsonLdScript = helmet.scriptTags?.find((tag: { type?: string }) => tag.type === 'application/ld+json');
+
+    expect(jsonLdScript).toBeUndefined();
+  });
+
+  it('generates TechArticle structured data with multiple languages', async () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        product: 'pubsub',
+        language: 'javascript',
+        languages: ['javascript', 'python'],
+        page: {
+          name: 'Test Page',
+          link: '/docs/test-page',
+        },
+        tree: [],
+        template: 'mdx' as const,
+      },
+    });
+
+    render(
+      <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
+        <MDXWrapper pageContext={defaultPageContext} location={defaultLocation}>
+          <div>Test content</div>
+        </MDXWrapper>
+      </UserContext.Provider>,
+    );
+
+    // Wait for any async operations to settle
+    await waitFor(() => {
+      expect(screen.getByText('Test content')).toBeInTheDocument();
+    });
+
+    const helmet = Helmet.peek();
+    const jsonLdScript = helmet.scriptTags?.find((tag: { type?: string }) => tag.type === 'application/ld+json');
+
+    expect(jsonLdScript).toBeDefined();
+    expect(jsonLdScript?.type).toBe('application/ld+json');
+
+    const structuredData = JSON.parse(jsonLdScript?.innerHTML || '{}');
+    expect(structuredData['@type']).toBe('TechArticle');
+    expect(structuredData.hasPart).toHaveLength(2);
+    expect(structuredData.hasPart[0]['@type']).toBe('SoftwareSourceCode');
+    expect(structuredData.hasPart[0].programmingLanguage).toBe('JavaScript');
+    expect(structuredData.hasPart[1].programmingLanguage).toBe('Python');
+    expect(structuredData.hasPart[0].url).toBe('https://example.com/docs/test-page?lang=javascript');
+    expect(structuredData.hasPart[1].url).toBe('https://example.com/docs/test-page?lang=python');
   });
 });

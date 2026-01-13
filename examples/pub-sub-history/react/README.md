@@ -30,7 +30,7 @@ Find out more about [history](/docs/storage-history/history).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

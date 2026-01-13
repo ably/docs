@@ -22,7 +22,6 @@ export const siteMetadata = {
   title: 'Documentation | Ably Realtime',
   externalScriptsData: {
     hubspotTrackingId: process.env.HUBSPOT_TRACKING_ID,
-    addsearchSiteKey: process.env.ADDSEARCH_SITE_KEY,
     gtmContainerId: process.env.GTM_CONTAINER_ID,
     headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
     announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
@@ -38,6 +37,7 @@ export const siteMetadata = {
     mixpanelAutoCapture: !!process.env.MIXPANEL_AUTO_CAPTURE,
     posthogApiKey: process.env.POSTHOG_API_KEY,
     posthogHost: process.env.POSTHOG_API_HOST || 'https://insights.ably.com',
+    posthogFeedbackSurveyName: process.env.POSTHOG_FEEDBACK_SURVEY_NAME || 'Docs Feedback',
     conversationsUrl: process.env.CONVERSATIONS_API_URL,
   },
 };
@@ -66,12 +66,7 @@ export const plugins = [
       name: `AblyChangelog`,
     },
   },
-  {
-    resolve: 'gatsby-plugin-root-import',
-    options: {
-      'how-tos': `${__dirname}/how-tos`,
-    },
-  },
+  'gatsby-plugin-root-import',
   {
     resolve: 'gatsby-plugin-mdx',
     options: {
@@ -121,29 +116,6 @@ export const plugins = [
     __key: 'images',
   },
   // Data
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'textile-partials',
-      path: './content/partials',
-    },
-    __key: 'textile-partials',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'textile-nanoc-compatible',
-      path: './content',
-    },
-    __key: 'textile-nanoc-compatible',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'how-tos',
-      path: './how-tos',
-    },
-  },
   {
     resolve: `gatsby-source-filesystem`,
     options: {
