@@ -65,6 +65,10 @@ export default {
           link: '/docs/ai-transport/features/messaging/accepting-user-input',
         },
         {
+          name: 'Tool calls',
+          link: '/docs/ai-transport/features/messaging/tool-calls',
+        },
+        {
           name: 'Human-in-the-loop',
           link: '/docs/ai-transport/features/messaging/human-in-the-loop',
         },
