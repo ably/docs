@@ -1,0 +1,270 @@
+---
+title: "Tool calls"
+meta_description: "Stream tool call execution visibility to users, enabling transparent AI interactions and generative UI experiences."
+meta_keywords: "tool calls, function calling, generative UI, AI transparency, tool execution, streaming JSON, realtime feedback"
+---
+
+Modern AI models can invoke tools (also called functions) to perform specific tasks like retrieving data, performing calculations, or triggering actions. Streaming tool call information to users provides visibility into what the AI is doing, creates opportunities for rich generative UI experiences, and builds trust through transparency.
+
+## What are tool calls? <a id="what"/>
+
+Tool calls occur when an AI model decides to invoke a specific function or tool to accomplish a task. Rather than only returning text, the model can request to execute tools you've defined, such as fetching weather data, searching a database, or performing calculations.
+
+A tool call consists of:
+
+- Tool name: The identifier of the tool being invoked
+- Tool input: Parameters passed to the tool, often structured as JSON
+- Tool output: The result returned after execution
+
+As an application developer, you decide how to surface tool calls to users. You may choose to display all tool calls, selectively surface specific tools or inputs/outputs, or keep tool calls entirely private.
+
+Surfacing tool calls supports:
+
+- Trust and transparency: Users see what actions the AI is taking, building confidence in the agent
+- Human-in-the-loop workflows: Expose tool calls [resolved by humans](/docs/ai-transport/features/messaging/human-in-the-loop) where users can review and approve tool execution before it happens
+- Generative UI: Build dynamic, contextual UI components based on the structured tool data
+
+## Publishing tool calls <a id="publishing"/>
+
+Publish tool call and model output messages to the channel.
+
+In the example below, the `responseId` is included in the message [extras](/docs/messages#properties) to allow subscribers to correlate all messages belonging to the same response. The message [`name`](/docs/messages#properties) allows the client to distinguish between the different message types:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Example: stream returns events like:
+// { type: 'tool_call', name: 'get_weather', args: '{"location":"San Francisco"}', toolCallId: 'tool_123', responseId: 'resp_abc123' }
+// { type: 'tool_result', name: 'get_weather', result: '{"temp":72,"conditions":"sunny"}', toolCallId: 'tool_123', responseId: 'resp_abc123' }
+// { type: 'message', text: 'The weather in San Francisco is 72°F and sunny.', responseId: 'resp_abc123' }
+
+for await (const event of stream) {
+  if (event.type === 'tool_call') {
+    // Publish tool call arguments
+    await channel.publish({
+      name: 'tool_call',
+      data: {
+        name: event.name,
+        args: event.args
+      },
+      extras: {
+        headers: {
+          responseId: event.responseId,
+          toolCallId: event.toolCallId
+        }
+      }
+    });
+  } else if (event.type === 'tool_result') {
+    // Publish tool call results
+    await channel.publish({
+      name: 'tool_result',
+      data: {
+        name: event.name,
+        result: event.result
+      },
+      extras: {
+        headers: {
+          responseId: event.responseId,
+          toolCallId: event.toolCallId
+        }
+      }
+    });
+  } else if (event.type === 'message') {
+    // Publish model output messages
+    await channel.publish({
+      name: 'message',
+      data: event.text,
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  }
+}
+```
+</Code>
+
+<Aside data-type="note">
+Model APIs like OpenAI's [Responses API](https://platform.openai.com/docs/api-reference/responses) and Anthropic's [Messages API](https://platform.claude.com/docs/en/api/messages) don't include tool results in their streams - instead, you execute tools in your code and return results to the model, but the model's output doesn't echo those results back. Agent SDKs like [OpenAI Agent SDK](https://platform.openai.com/docs/guides/agents-sdk) and [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) maintain context and surface both tool calls and results on the stream. When using model APIs directly, publish tool results to the channel separately if you want to surface them to subscribers.
+</Aside>
+
+<Aside data-type="note">
+To learn how to stream individual tokens as they are generated, see the [token streaming](/docs/ai-transport/features/token-streaming) documentation.
+</Aside>
+
+## Subscribing to tool calls <a id="subscribing"/>
+
+Subscribe to tool call and model output messages on the channel.
+
+In the example below, the `responseId` from the message [`extras`](/docs/api/realtime-sdk/messages#extras) is used to group tool calls and model output messages belonging to the same response. The message [`name`](/docs/messages#properties) allows the client to distinguish between the different message types:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Track responses by ID, each containing tool calls and final response
+const responses = new Map();
+
+// Subscribe to all events on the channel
+await channel.subscribe((message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn('Message missing responseId');
+    return;
+  }
+
+  // Initialize response object if needed
+  if (!responses.has(responseId)) {
+    responses.set(responseId, {
+      toolCalls: new Map(),
+      message: ''
+    });
+  }
+
+  const response = responses.get(responseId);
+
+  // Handle each message type
+  switch (message.name) {
+    case 'message':
+      response.message = message.data;
+      break;
+    case 'tool_call':
+      const toolCallId = message.extras?.headers?.toolCallId;
+      response.toolCalls.set(toolCallId, {
+        name: message.data.name,
+        args: message.data.args
+      });
+      break;
+    case 'tool_result':
+      const resultToolCallId = message.extras?.headers?.toolCallId;
+      const toolCall = response.toolCalls.get(resultToolCallId);
+      if (toolCall) {
+        toolCall.result = message.data.result;
+      }
+      break;
+  }
+
+  // Display the tool calls and response for this turn
+  console.log(`Response ${responseId}:`, response);
+});
+```
+</Code>
+
+<Aside data-type="further-reading">
+To learn about hydrating responses from channel history, including using `rewind` or `untilAttach`, handling in-progress responses, and correlating with database records, see client hydration in the [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response#hydration) and [message-per-token](/docs/ai-transport/features/token-streaming/message-per-token#hydration) documentation.
+</Aside>
+
+## Generative UI <a id="generative-ui"/>
+
+Tool calls provide structured data that can form the basis of generative UI - dynamically creating UI components based on the tool being invoked, its parameters, and the results returned. Rather than just displaying raw tool call information, you can render rich, contextual components that provide a better user experience.
+
+For example, when a weather tool is invoked, instead of showing raw JSON like `{ location: 'San Francisco', temp: 72, conditions: 'sunny' }`, you can render a weather card component with icons, formatted temperature, and visual indicators:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+await channel.subscribe((message) => {
+  // Render component when tool is invoked
+  if (message.name === 'tool_call' && message.data.name === 'get_weather') {
+    const args = JSON.parse(message.data.args);
+    renderWeatherCard({ location: args.location, loading: true });
+  }
+
+  // Update component with results
+  if (message.name === 'tool_result' && message.data.name === 'get_weather') {
+    const result = JSON.parse(message.data.result);
+    renderWeatherCard(result);
+  }
+});
+```
+</Code>
+
+<Aside data-type="note">
+Tool call arguments can be streamed token by token as they are generated by the model. When implementing token-level streaming, your UI should handle parsing partial JSON gracefully to render realtime updates as the arguments stream in. To learn more about approaches to token streaming, see the [token streaming](/docs/ai-transport/features/token-streaming) documentation.
+</Aside>
+
+## Client-side tools <a id="client-tools"/>
+
+Some tools need to be executed directly on the client device rather than on the server, allowing agents to dynamically access information available on the end user's device as needed. These include tools that access device capabilities such as GPS location, camera, SMS, local files, or other native functionality.
+
+Client-side tool calls follow a request-response pattern over Ably channels:
+
+1. The agent publishes a tool call request to the channel.
+2. The client receives and executes the tool using device APIs.
+3. The client publishes the result back to the channel.
+4. The agent receives the result and continues processing.
+
+<Aside data-type="further-reading">
+For more information about bi-directional communication patterns between agents and users, see [Accepting user input](/docs/ai-transport/features/messaging/accepting-user-input) and [Human-in-the-loop](/docs/ai-transport/features/messaging/human-in-the-loop).
+</Aside>
+
+The client subscribes to tool call requests, executes the tool using device APIs, and publishes the result back to the channel. The `toolCallId` enables correlation between tool call requests and results:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+await channel.subscribe('tool_call', async (message) => {
+  const { name, args } = message.data;
+  const { responseId, toolCallId } = message.extras?.headers || {};
+
+  if (name === 'get_location') {
+    const result = await getGeolocationPosition();
+    await channel.publish({
+      name: 'tool_result',
+      data: {
+        name: name,
+        result: {
+          lat: result.coords.latitude,
+          lng: result.coords.longitude
+        }
+      },
+      extras: {
+        headers: {
+          responseId: responseId,
+          toolCallId: toolCallId
+        }
+      }
+    });
+  }
+});
+```
+</Code>
+
+<Aside data-type="note">
+Client-side tools often require user permission to access device APIs. These permissions are managed by the device operating system, not the agent. Handle permission denials gracefully by publishing an error tool result so the AI can respond appropriately.
+</Aside>
+
+The agent subscribes to tool results to continue processing. The `toolCallId` correlates the result back to the original request:
+
+<Code>
+```javascript
+const pendingToolCalls = new Map();
+
+await channel.subscribe('tool_result', (message) => {
+  const { toolCallId, result } = message.data;
+  const pending = pendingToolCalls.get(toolCallId);
+
+  if (!pending) return;
+
+  // Pass result back to the AI model to continue the conversation
+  processResult(pending.responseId, toolCallId, result);
+
+  pendingToolCalls.delete(toolCallId);
+});
+```
+</Code>
+
+## Human-in-the-loop workflows <a id="human-in-the-loop"/>
+
+Tool calls resolved by humans are one approach to implementing human-in-the-loop workflows. When an agent encounters a tool call that needs human resolution, it publishes the tool call to the channel and waits for the human to publish the result back over the channel.
+
+For example, a tool that modifies data, performs financial transactions, or accesses sensitive resources might require explicit user approval before execution. The tool call information is surfaced to the user, who can then approve or reject the action.
+
+<Aside data-type="further-reading">
+For detailed implementation patterns and best practices for human-in-the-loop workflows, including authorization and verification strategies, see the [human-in-the-loop](/docs/ai-transport/features/messaging/human-in-the-loop) documentation.
+</Aside>
