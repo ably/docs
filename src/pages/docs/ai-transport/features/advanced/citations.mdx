@@ -4,7 +4,7 @@ meta_description: "Attach source citations to AI responses using message annotat
 meta_keywords: "citations, references, RAG, retrieval augmented generation, source attribution, message annotations, AI transparency, source tracking, annotation summaries, model-agnostic, LLM-neutral"
 ---
 
-AI agents often draw information from external sources like documents, web pages, or databases. Citations enable users to verify information, explore sources in detail, and understand where responses came from. Ably's [message annotations](/docs/messages/annotations) provide a model-agnostic, structured way to attach source citations to AI responses without modifying the response content. It enable clients to append information to existing messages on a channel.
+AI agents often draw information from external sources such as documents, web pages, or databases. Citations to those sources enable users to verify information, explore sources in detail, and understand where responses came from. Ably's [message annotations](/docs/messages/annotations) provide a model-agnostic, structured way to attach source citations to AI responses without modifying the response content. It enable clients to append information to existing messages on a channel.
 
 This pattern works with both single message publishing and the [message-per-response](/docs/ai-transport/message-per-response) approach using message appends.
 
@@ -31,14 +31,14 @@ The annotation publishing workflow:
 3. **Aggregate summaries**: Ably automatically aggregates annotations and generates summaries showing total counts and groupings (e.g., by domain)
 4. **Subscribe citations**: Clients receive citation summaries automatically and can optionally subscribe to individual annotation events for detailed citation data
 
-Annotations are associated with a message's serial identifier. This works with:
+Annotations are associated with a message's `serial` identifier. This works with:
 
 - **Single message publish**: Complete response published as one message
 - **Message appends**: Response built incrementally by appending tokens to a single message (see [message-per-response](/docs/ai-transport/message-per-response))
 
 ## Setup <a id="setup"/>
 
-Message annotations require the "Message annotations, updates, and deletes" [channel rule](/docs/channels#rules) enabled for your channel or [namespace](/docs/channels#namespaces). This rule automatically enables message persistence.
+Message annotations require the "Message annotations, updates, deletes, and appends" [channel rule](/docs/channels#rules) enabled for your channel or [namespace](/docs/channels#namespaces). This rule automatically enables message persistence.
 
 To enable the channel rule:
 
@@ -63,7 +63,7 @@ Use the `citations:multiple.v1` annotation type for citation features. It provid
 
 ### Citation payload <a id="citation-payload"/>
 
-Each citation is carried in the Ably annotation `data` field and should include:
+Each citation is proposed to be carried in the Ably annotation `data` field and should include:
 
 <Code>
 ```json
@@ -72,8 +72,7 @@ Each citation is carried in the Ably annotation `data` field and should include:
   "title": "Example Article Title",
   "startOffset": 120,
   "endOffset": 180,
-  "snippet": "Optional short excerpt from source",
-  "sourceId": "optional-stable-identifier"
+  "snippet": "Optional short excerpt from source"
 }
 ```
 </Code>
@@ -82,16 +81,17 @@ Each citation is carried in the Ably annotation `data` field and should include:
 
 - `url`: The source URL (required)
 - `title`: Human-readable source title (required)
-- `startOffset`: Character position in response where citation applies (optional)
-- `endOffset`: End character position for citation range (optional)
-- `snippet`: Short excerpt from the source (optional)
-- `sourceId`: Stable identifier for deduplication (optional)
+- `startOffset`: Character position in the LLM generated response where this citation begins to apply, enabling clients to associate citations with specific portions of the response text (optional)
+- `endOffset`: Character position where the citation’s applicability ends, used together with `startOffset` to define a citation range (optional)
+- `snippet`: Short excerpt from the source content, intended for preview, tooltip, or summary displays without requiring a full page fetch (optional)
 
 Character offsets allow UIs to attach inline citation markers to specific portions of the response text.
 
 ## Publishing citations from agents <a id="publishing"/>
 
-After publishing the response (or during streaming, if citations are available), publish citation annotations referencing the message serial. For incremental streaming using message appends, see [message-per-response](/docs/ai-transport/message-per-response).
+Agents publish citations as annotation messages that reference the `serial` of the response message they relate to. This allows clients to associate citations with the correct response message.
+
+Citations can be published once the response has been sent, or progressively during streaming if citation data becomes available earlier. For incremental streaming using message appends, see [message-per-response](/docs/ai-transport/message-per-response).
 
 ### Publishing a single citation <a id="single-citation-example"/>
 
@@ -313,8 +313,8 @@ When you subscribe to raw annotations, each annotation event has the following s
 **Key fields in raw annotations:**
 
 - `action`: Always `"annotation.create"` for new annotations
-- `type`: The annotation type (`citations:multiple.v1`)
-- `messageSerial`: The serial of the message this citation is attached to
+- `type`: The annotation `type` (`citations:multiple.v1`)
+- `messageSerial`: The `serial` of the message this citation is attached to
 - `name`: The grouping key (e.g., domain name)
 - `data`: Your citation payload with URL, title, offsets, snippet
 - `clientId`: The client that published the annotation
@@ -328,6 +328,8 @@ Ably raw citations provide:
 
 <Aside data-type="note">
 Use summary view by default for efficient rendering and subscribe to raw annotations only when users need detailed citation information. This minimizes overhead while providing full transparency when required.
+
+Annotation details can also be retrieved via the REST API without maintaining a realtime subscription. The [Annotations](/docs/api/rest-api#annotations-list) endpoint allows clients to retrieve all annotations published for a specific message, identified by its `serial`, starting from the earliest available annotation.
 </Aside>
 
 ## Related topics <a id="related"/>
