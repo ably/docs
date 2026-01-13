@@ -61,6 +61,10 @@ export default {
       name: 'Messaging',
       pages: [
         {
+          name: 'Accepting user input',
+          link: '/docs/ai-transport/features/messaging/accepting-user-input',
+        },
+        {
           name: 'Human-in-the-loop',
           link: '/docs/ai-transport/features/messaging/human-in-the-loop',
         },
