@@ -252,8 +252,8 @@ fun ChatBox(room: Room?) {
     var sending by remember { mutableStateOf(false) }
     val messages = remember { mutableStateListOf<Message>() }
 
-    DisposableEffect(room) {
-        val subscription = room?.messages?.subscribe { event ->
+    LaunchedEffect(room) {
+        room?.messages?.asFlow()?.collect { event ->
             when (event.type) {
                 MessageEventType.Created -> {
                     // Check if the incoming message is correctly ordered
@@ -265,10 +265,6 @@ fun ChatBox(room: Room?) {
                 }
                 else -> Unit
             }
-        }
-
-        onDispose {
-            subscription?.unsubscribe()
         }
     }
 
@@ -445,8 +441,8 @@ var edited: Message? by remember { mutableStateOf(null) }
 
 <Code>
 ```kotlin
-DisposableEffect(room) {
-    val subscription = room?.messages?.subscribe { event ->
+LaunchedEffect(room) {
+    room?.messages?.asFlow()?.collect { event ->
         when (event.type) {
             MessageEventType.Created -> messages.add(0, event.message)
             MessageEventType.Updated -> messages.replaceFirstWith(event.message) {
@@ -454,10 +450,6 @@ DisposableEffect(room) {
             }
             else -> Unit
         }
-    }
-
-    onDispose {
-        subscription?.unsubscribe()
     }
 }
 ```
@@ -551,9 +543,10 @@ Extend the `ChatBox` component to include a method to retrieve the last 10 messa
 ```kotlin
 fun ChatBox(room: Room?) {
     /* variables declaration */
+    var subscription by remember { mutableStateOf<MessagesSubscription?>(null) }
 
     DisposableEffect(room) {
-      val subscription = room?.messages?.subscribe { event ->
+      subscription = room?.messages?.subscribe { event ->
           when (event.type) {
               MessageEventType.Created -> messages.add(0, event.message)
               MessageEventType.Updated -> messages.replaceFirstWith(event.message) {
@@ -563,16 +556,19 @@ fun ChatBox(room: Room?) {
           }
       }
 
-      scope.launch {
-          val previousMessages = subscription?.historyBeforeSubscribe(10)?.items ?: emptyList()
-          messages.addAll(previousMessages)
-      }
-
       onDispose {
           subscription?.unsubscribe()
       }
-  }
-  /* rest of your code */
+    }
+
+    LaunchedEffect(subscription) {
+        subscription?.let { sub ->
+            val previousMessages = sub.historyBeforeSubscribe(10)?.items ?: emptyList()
+            messages.addAll(previousMessages)
+        }
+    }
+
+    /* rest of your code */
 }
 ```
 </Code>
@@ -722,14 +718,15 @@ In your `MainActivity.kt` file, create a new component called `PresenceStatusUi`
 ```kotlin
 @Composable
 fun PresenceStatusUi(room: Room?) {
-    val members = room?.collectAsPresenceMembers()
+    val membersState = room?.collectAsPresenceMembers()
+    val members by membersState ?: remember { mutableStateOf(emptyList()) }
 
     LaunchedEffect(room) {
         room?.presence?.enter()
     }
 
     Text(
-        text = "Online: ${members?.size ?: 0}",
+        text = "Online: ${members.size}",
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(start = 8.dp)
     )
