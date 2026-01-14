@@ -252,8 +252,8 @@ fun ChatBox(room: Room?) {
     var sending by remember { mutableStateOf(false) }
     val messages = remember { mutableStateListOf<Message>() }
 
-    DisposableEffect(room) {
-        val subscription = room?.messages?.subscribe { event ->
+    LaunchedEffect(room) {
+        room?.messages?.asFlow()?.collect { event ->
             when (event.type) {
                 MessageEventType.Created -> {
                     // Check if the incoming message is correctly ordered
@@ -265,10 +265,6 @@ fun ChatBox(room: Room?) {
                 }
                 else -> Unit
             }
-        }
-
-        onDispose {
-            subscription?.unsubscribe()
         }
     }
 
@@ -445,8 +441,8 @@ var edited: Message? by remember { mutableStateOf(null) }
 
 <Code>
 ```kotlin
-DisposableEffect(room) {
-    val subscription = room?.messages?.subscribe { event ->
+LaunchedEffect(room) {
+    room?.messages?.asFlow()?.collect { event ->
         when (event.type) {
             MessageEventType.Created -> messages.add(0, event.message)
             MessageEventType.Updated -> messages.replaceFirstWith(event.message) {
@@ -454,10 +450,6 @@ DisposableEffect(room) {
             }
             else -> Unit
         }
-    }
-
-    onDispose {
-        subscription?.unsubscribe()
     }
 }
 ```
@@ -543,7 +535,7 @@ When you click on the edit button in the UI, you can modify the text and it will
 
 ## Step 6: Message history and continuity <a id="step-6"/>
 
-Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The message subscription object exposes the [`getPreviousMessages()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat/com.ably.chat/-messages-subscription/get-previous-messages.html) method to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
+Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The message subscription object exposes the [`historyBeforeSubscribe()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat/com.ably.chat/-messages-subscription/history-before-subscribe.html) method to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
 
 Extend the `ChatBox` component to include a method to retrieve the last 10 messages when the component mounts. In your `MainActivity.kt` file, add the `DisposableEffect` in your `ChatBox` component:
 
@@ -551,9 +543,10 @@ Extend the `ChatBox` component to include a method to retrieve the last 10 messa
 ```kotlin
 fun ChatBox(room: Room?) {
     /* variables declaration */
+    var subscription by remember { mutableStateOf<MessagesSubscription?>(null) }
 
     DisposableEffect(room) {
-      val subscription = room?.messages?.subscribe { event ->
+      subscription = room?.messages?.subscribe { event ->
           when (event.type) {
               MessageEventType.Created -> messages.add(0, event.message)
               MessageEventType.Updated -> messages.replaceFirstWith(event.message) {
@@ -563,16 +556,19 @@ fun ChatBox(room: Room?) {
           }
       }
 
-      scope.launch {
-          val previousMessages = subscription?.historyBeforeSubscribe(10)?.items ?: emptyList()
-          messages.addAll(previousMessages)
-      }
-
       onDispose {
           subscription?.unsubscribe()
       }
-  }
-  /* rest of your code */
+    }
+
+    LaunchedEffect(subscription) {
+        subscription?.let { sub ->
+            val previousMessages = sub.historyBeforeSubscribe(10)?.items ?: emptyList()
+            messages.addAll(previousMessages)
+        }
+    }
+
+    /* rest of your code */
 }
 ```
 </Code>
@@ -709,7 +705,7 @@ fun ChatBox(room: Room?) {
 Do the following to test this out:
 
 1. Use the ably CLI to simulate sending some messages to the room from another client.
-2. Refresh the page, this will cause the `ChatBox` component to mount again and call the `getPreviousMessages()` method.
+2. Refresh the page, this will cause the `ChatBox` component to mount again and call the `historyBeforeSubscribe()` method.
 3. You'll see the last 10 messages appear in the chat box.
 
 ## Step 7: Display who is present in the room <a id="step-7"/>
@@ -722,14 +718,15 @@ In your `MainActivity.kt` file, create a new component called `PresenceStatusUi`
 ```kotlin
 @Composable
 fun PresenceStatusUi(room: Room?) {
-    val members = room?.collectAsPresenceMembers()
+    val membersState = room?.collectAsPresenceMembers()
+    val members by membersState ?: remember { mutableStateOf(emptyList()) }
 
     LaunchedEffect(room) {
         room?.presence?.enter()
     }
 
     Text(
-        text = "Online: ${members?.size ?: 0}",
+        text = "Online: ${members.size}",
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(start = 8.dp)
     )
