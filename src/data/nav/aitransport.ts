@@ -93,6 +93,10 @@ export default {
           name: 'Anthropic token streaming - message per token',
           link: '/docs/guides/ai-transport/anthropic-message-per-token',
         },
+        {
+          name: 'Anthropic token streaming - message per response',
+          link: '/docs/guides/ai-transport/anthropic-message-per-response',
+        },
       ],
     },
   ],
