@@ -72,6 +72,10 @@ export default {
           name: 'Chain of thought',
           link: '/docs/ai-transport/features/messaging/chain-of-thought',
         },
+        {
+          name: 'Citations',
+          link: '/docs/ai-transport/features/advanced/citations',
+        },
       ],
     },
     {
