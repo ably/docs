@@ -77,6 +77,75 @@ const ChatComponent = () => {
   );
 };
 ```
+
+```swift
+struct MediaData {
+    let id: String
+    let title: String
+    let width: Int
+    let height: Int
+}
+
+class ChatViewController {
+    var mediaToAttach: [MediaData] = []
+
+    func onMediaAttach() async {
+        let mediaData = await uploadMedia()
+        mediaToAttach.append(mediaData)
+    }
+}
+```
+
+```kotlin
+data class MediaData(
+    val id: String,
+    val title: String,
+    val width: Int,
+    val height: Int
+)
+
+var mediaToAttach = mutableListOf<MediaData>()
+
+suspend fun onMediaAttach() {
+    val mediaData = uploadMedia()
+    mediaToAttach.add(mediaData)
+}
+```
+
+```jetpack
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+
+data class MediaData(
+    val id: String,
+    val title: String,
+    val width: Int,
+    val height: Int
+)
+
+@Composable
+fun MediaAttachmentComponent() {
+    var mediaToAttach by remember { mutableStateOf<List<MediaData>>(emptyList()) }
+    val coroutineScope = rememberCoroutineScope()
+
+    Column {
+        Button(onClick = {
+            coroutineScope.launch {
+                val mediaData = uploadMedia()
+                mediaToAttach = mediaToAttach + mediaData
+            }
+        }) {
+            Text("Attach Media")
+        }
+
+        mediaToAttach.forEach { mediaData ->
+            Text("Media to attach: ${mediaData.id} (${mediaData.title}, ${mediaData.width}x${mediaData.height})")
+        }
+    }
+}
+```
 </Code>
 
 ## Send a message <a id="send"/>
@@ -142,6 +211,122 @@ const MessageSender = () => {
   );
 };
 ```
+
+```swift
+func send(text: String, mediaToAttach: [MediaData]) async throws {
+    var metadata: MessageMetadata = [:]
+    if !mediaToAttach.isEmpty {
+        let mediaArray: [JSONValue] = mediaToAttach.map { media in
+            .object([
+                "id": .string(media.id),
+                "title": .string(media.title),
+                "width": .number(Double(media.width)),
+                "height": .number(Double(media.height))
+            ])
+        }
+        metadata["media"] = .array(mediaArray)
+    }
+
+    try await room.messages.send(params: .init(
+        text: text,
+        metadata: metadata
+    ))
+}
+```
+
+```kotlin
+suspend fun send(text: String, mediaToAttach: List<MediaData>) {
+    val metadata = if (mediaToAttach.isNotEmpty()) {
+        buildJsonObject {
+            put("media", buildJsonArray {
+                mediaToAttach.forEach { media ->
+                    add(buildJsonObject {
+                        put("id", media.id)
+                        put("title", media.title)
+                        put("width", media.width)
+                        put("height", media.height)
+                    })
+                }
+            })
+        }
+    } else {
+        null
+    }
+
+    room.messages.send(
+        text = text,
+        metadata = metadata
+    )
+}
+```
+
+```jetpack
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import com.ably.chat.Room
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+@Composable
+fun MessageSenderComponent(room: Room) {
+    var mediaToAttach by remember { mutableStateOf<List<MediaData>>(emptyList()) }
+    var messageText by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+
+    Column {
+        TextField(
+            value = messageText,
+            onValueChange = { messageText = it },
+            placeholder = { Text("Type a message...") }
+        )
+
+        Button(onClick = {
+            coroutineScope.launch {
+                val mediaData = uploadMedia()
+                mediaToAttach = mediaToAttach + mediaData
+            }
+        }) {
+            Text("Attach Media")
+        }
+
+        Button(onClick = {
+            coroutineScope.launch {
+                val metadata = if (mediaToAttach.isNotEmpty()) {
+                    buildJsonObject {
+                        put("media", buildJsonArray {
+                            mediaToAttach.forEach { media ->
+                                add(buildJsonObject {
+                                    put("id", media.id)
+                                    put("title", media.title)
+                                    put("width", media.width)
+                                    put("height", media.height)
+                                })
+                            }
+                        })
+                    }
+                } else null
+
+                room.messages.send(
+                    text = messageText,
+                    metadata = metadata
+                )
+
+                mediaToAttach = emptyList()
+                messageText = ""
+            }
+        }) {
+            Text("Send")
+        }
+
+        mediaToAttach.forEach { mediaData ->
+            Text("Media to attach: ${mediaData.id} (${mediaData.title}, ${mediaData.width}x${mediaData.height})")
+        }
+    }
+}
+```
 </Code>
 
 Be aware that message `metadata` is not validated by the server. Always treat it as untrusted user input.
@@ -177,6 +362,91 @@ const getValidMedia = (message) => {
   }
   return [];
 };
+```
+
+```swift
+import Foundation
+
+// assume IDs are 10-15 characters long and alphanumeric
+let mediaIdRegex = try! NSRegularExpression(pattern: "^[a-z0-9]{10,15}$")
+
+func getValidMedia(message: Message) -> [MediaData] {
+    guard case let .array(mediaArray) = message.metadata["media"] else {
+        return []
+    }
+
+    return mediaArray.compactMap { mediaValue -> MediaData? in
+        guard case let .object(mediaObj) = mediaValue,
+              case let .string(id) = mediaObj["id"],
+              case let .string(title) = mediaObj["title"],
+              case let .number(width) = mediaObj["width"],
+              case let .number(height) = mediaObj["height"] else {
+            return nil
+        }
+
+        let range = NSRange(location: 0, length: id.utf16.count)
+        guard mediaIdRegex.firstMatch(in: id, options: [], range: range) != nil else {
+            return nil
+        }
+
+        return MediaData(id: id, title: title, width: Int(width), height: Int(height))
+    }
+}
+```
+
+```kotlin
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+// assume IDs are 10-15 characters long and alphanumeric
+val mediaIdRegex = Regex("^[a-z0-9]{10,15}$")
+
+fun getValidMedia(message: Message): List<MediaData> {
+    val mediaArray = message.metadata["media"]?.jsonArray ?: return emptyList()
+
+    return mediaArray.mapNotNull { mediaValue ->
+        val mediaObj = mediaValue.jsonObject
+        val id = mediaObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+        val title = mediaObj["title"]?.jsonPrimitive?.content ?: return@mapNotNull null
+        val width = mediaObj["width"]?.jsonPrimitive?.content?.toIntOrNull() ?: return@mapNotNull null
+        val height = mediaObj["height"]?.jsonPrimitive?.content?.toIntOrNull() ?: return@mapNotNull null
+
+        if (mediaIdRegex.matches(id)) {
+            MediaData(id, title, width, height)
+        } else {
+            null
+        }
+    }
+}
+```
+
+```jetpack
+import com.ably.chat.Message
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+// assume IDs are 10-15 characters long and alphanumeric
+val mediaIdRegex = Regex("^[a-z0-9]{10,15}$")
+
+fun getValidMedia(message: Message): List<MediaData> {
+    val mediaArray = message.metadata["media"]?.jsonArray ?: return emptyList()
+
+    return mediaArray.mapNotNull { mediaValue ->
+        val mediaObj = mediaValue.jsonObject
+        val id = mediaObj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+        val title = mediaObj["title"]?.jsonPrimitive?.content ?: return@mapNotNull null
+        val width = mediaObj["width"]?.jsonPrimitive?.content?.toIntOrNull() ?: return@mapNotNull null
+        val height = mediaObj["height"]?.jsonPrimitive?.content?.toIntOrNull() ?: return@mapNotNull null
+
+        if (mediaIdRegex.matches(id)) {
+            MediaData(id, title, width, height)
+        } else {
+            null
+        }
+    }
+}
 ```
 </Code>
 
@@ -242,6 +512,115 @@ const MessageDisplay = ({ message }) => {
   );
 };
 ```
+
+```swift
+import UIKit
+
+func createMessageView(message: Message) -> UIView {
+    let container = UIStackView()
+    container.axis = .vertical
+    container.spacing = 8
+
+    let textLabel = UILabel()
+    textLabel.text = message.text
+    container.addArrangedSubview(textLabel)
+
+    let validMedia = getValidMedia(message: message)
+    if !validMedia.isEmpty {
+        let mediaContainer = UIStackView()
+        mediaContainer.axis = .vertical
+        mediaContainer.spacing = 4
+
+        for media in validMedia {
+            let imageView = UIImageView()
+            imageView.contentMode = .scaleAspectFit
+
+            if let url = URL(string: "https://example.com/images/\(media.id)") {
+                // Load image from URL (using URLSession or an image loading library)
+                // imageView.load(url: url)
+            }
+
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                imageView.widthAnchor.constraint(equalToConstant: CGFloat(media.width)),
+                imageView.heightAnchor.constraint(equalToConstant: CGFloat(media.height))
+            ])
+
+            mediaContainer.addArrangedSubview(imageView)
+        }
+
+        container.addArrangedSubview(mediaContainer)
+    }
+
+    return container
+}
+```
+
+```kotlin
+import android.view.View
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+
+fun createMessageView(message: Message, context: android.content.Context): View {
+    val container = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+    }
+
+    val textView = TextView(context).apply {
+        text = message.text
+    }
+    container.addView(textView)
+
+    val validMedia = getValidMedia(message)
+    if (validMedia.isNotEmpty()) {
+        val mediaContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        validMedia.forEach { media ->
+            val imageView = ImageView(context).apply {
+                // Load image from URL (using Coil, Glide, or Picasso)
+                // load("https://example.com/images/${media.id}")
+            }
+
+            mediaContainer.addView(imageView)
+        }
+
+        container.addView(mediaContainer)
+    }
+
+    return container
+}
+```
+
+```jetpack
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import coil.compose.AsyncImage
+import com.ably.chat.Message
+
+@Composable
+fun MessageDisplayComponent(message: Message) {
+    val validMedia = getValidMedia(message)
+
+    Column {
+        Text(text = message.text)
+
+        if (validMedia.isNotEmpty()) {
+            Column {
+                validMedia.forEach { media ->
+                    AsyncImage(
+                        model = "https://example.com/images/${media.id}",
+                        contentDescription = media.title,
+                    )
+                }
+            }
+        }
+    }
+}
+```
 </Code>
 
 ### Add media to an existing message <a id="add"/>
@@ -286,6 +665,118 @@ const AddMediaToMessage = ({ message }) => {
     </button>
   );
 };
+```
+
+```swift
+func addMediaToMessage(message: Message, mediaData: MediaData) async throws {
+    var newMetadata = message.metadata
+
+    var mediaArray: [JSONValue]
+    if case let .array(existingArray) = newMetadata["media"] {
+        mediaArray = existingArray
+    } else {
+        mediaArray = []
+    }
+
+    mediaArray.append(.object([
+        "id": .string(mediaData.id),
+        "title": .string(mediaData.title),
+        "width": .number(Double(mediaData.width)),
+        "height": .number(Double(mediaData.height))
+    ]))
+
+    newMetadata["media"] = .array(mediaArray)
+
+    try await room.messages.update(
+        serial: message.serial,
+        params: .init(
+            text: message.text,
+            metadata: newMetadata
+        )
+    )
+}
+```
+
+```kotlin
+import kotlinx.serialization.json.*
+
+suspend fun addMediaToMessage(message: Message, mediaData: MediaData) {
+    val existingMedia = message.metadata["media"]?.jsonArray ?: buildJsonArray { }
+
+    val newMediaArray = buildJsonArray {
+        existingMedia.forEach { add(it) }
+        add(buildJsonObject {
+            put("id", mediaData.id)
+            put("title", mediaData.title)
+            put("width", mediaData.width)
+            put("height", mediaData.height)
+        })
+    }
+
+    val newMetadata = buildJsonObject {
+        message.metadata.forEach { (key, value) ->
+            if (key != "media") {
+                put(key, value)
+            }
+        }
+        put("media", newMediaArray)
+    }
+
+    room.messages.update(
+        serial = message.serial,
+        text = message.text,
+        metadata = newMetadata
+    )
+}
+```
+
+```jetpack
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import com.ably.chat.Message
+import com.ably.chat.Room
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.*
+
+@Composable
+fun AddMediaToMessageComponent(room: Room, message: Message) {
+    val coroutineScope = rememberCoroutineScope()
+
+    Button(onClick = {
+        coroutineScope.launch {
+            val mediaData = MediaData("abcd123abcd", "A beautiful image", 1024, 768)
+
+            val existingMedia = message.metadata["media"]?.jsonArray ?: buildJsonArray { }
+
+            val newMediaArray = buildJsonArray {
+                existingMedia.forEach { add(it) }
+                add(buildJsonObject {
+                    put("id", mediaData.id)
+                    put("title", mediaData.title)
+                    put("width", mediaData.width)
+                    put("height", mediaData.height)
+                })
+            }
+
+            val newMetadata = buildJsonObject {
+                message.metadata.forEach { (key, value) ->
+                    if (key != "media") {
+                        put(key, value)
+                    }
+                }
+                put("media", newMediaArray)
+            }
+
+            room.messages.update(
+                serial = message.serial,
+                text = message.text,
+                metadata = newMetadata
+            )
+        }
+    }) {
+        Text("Add Media to Message")
+    }
+}
 ```
 </Code>
 
@@ -334,6 +825,125 @@ const RemoveMediaFromMessage = ({ message }) => {
     </button>
   );
 };
+```
+
+```swift
+func removeMediaFromMessage(message: Message, mediaIdToRemove: String) async throws {
+    guard case let .array(mediaArray) = message.metadata["media"],
+          !mediaArray.isEmpty else {
+        // do nothing if there is no media
+        return
+    }
+
+    let newMediaArray = mediaArray.filter { mediaValue in
+        guard case let .object(mediaObj) = mediaValue,
+              case let .string(id) = mediaObj["id"] else {
+            return true
+        }
+        return id != mediaIdToRemove
+    }
+
+    var newMetadata = message.metadata
+    newMetadata["media"] = .array(newMediaArray)
+
+    try await room.messages.update(
+        serial: message.serial,
+        params: .init(
+            text: message.text,
+            metadata: newMetadata
+        )
+    )
+}
+```
+
+```kotlin
+import kotlinx.serialization.json.*
+
+suspend fun removeMediaFromMessage(message: Message, mediaIdToRemove: String) {
+    val existingMedia = message.metadata["media"]?.jsonArray
+    if (existingMedia == null || existingMedia.isEmpty()) {
+        // do nothing if there is no media
+        return
+    }
+
+    val newMediaArray = buildJsonArray {
+        existingMedia.forEach { mediaValue ->
+            val mediaObj = mediaValue.jsonObject
+            val id = mediaObj["id"]?.jsonPrimitive?.content
+            if (id != mediaIdToRemove) {
+                add(mediaValue)
+            }
+        }
+    }
+
+    val newMetadata = buildJsonObject {
+        message.metadata.forEach { (key, value) ->
+            if (key != "media") {
+                put(key, value)
+            }
+        }
+        put("media", newMediaArray)
+    }
+
+    room.messages.update(
+        serial = message.serial,
+        text = message.text,
+        metadata = newMetadata
+    )
+}
+```
+
+```jetpack
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import com.ably.chat.Message
+import com.ably.chat.Room
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.*
+
+@Composable
+fun RemoveMediaFromMessageComponent(room: Room, message: Message) {
+    val coroutineScope = rememberCoroutineScope()
+
+    Button(onClick = {
+        coroutineScope.launch {
+            val mediaIdToRemove = "abcd123abcd"
+
+            val existingMedia = message.metadata["media"]?.jsonArray
+            if (existingMedia == null || existingMedia.isEmpty()) {
+                // do nothing if there is no media
+                return@launch
+            }
+
+            val newMediaArray = buildJsonArray {
+                existingMedia.forEach { mediaValue ->
+                    val mediaObj = mediaValue.jsonObject
+                    val id = mediaObj["id"]?.jsonPrimitive?.content
+                    if (id != mediaIdToRemove) {
+                        add(mediaValue)
+                    }
+                }
+            }
+
+            val newMetadata = buildJsonObject {
+                message.metadata.forEach { (key, value) ->
+                    if (key != "media") {
+                        put(key, value)
+                    }
+                }
+                put("media", newMediaArray)
+            }
+
+            room.messages.update(
+                serial = message.serial,
+                text = message.text,
+                metadata = newMetadata
+            )
+        }
+    }) {
+        Text("Remove Media from Message")
+    }
+}
 ```
 </Code>
 
