@@ -68,6 +68,10 @@ export default {
           name: 'Chain of thought',
           link: '/docs/ai-transport/features/messaging/chain-of-thought',
         },
+        {
+          name: 'Citations',
+          link: '/docs/ai-transport/features/advanced/citations',
+        },
       ],
     },
     {
@@ -80,15 +84,6 @@ export default {
         {
           name: 'OpenAI token streaming - message per response',
           link: '/docs/guides/ai-transport/openai-message-per-response',
-        },
-      ],
-    },
-    {
-      name: 'Advanced',
-      pages: [
-        {
-          name: 'Citations',
-          link: '/docs/ai-transport/features/advanced/citations',
         },
       ],
     },
