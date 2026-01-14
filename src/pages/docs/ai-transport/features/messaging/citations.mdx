@@ -1,0 +1,259 @@
+---
+title: "Citations"
+meta_description: "Attach source citations to AI responses using message annotations"
+meta_keywords: "citations, references, source attribution, message annotations, AI transparency, source tracking, annotation summaries"
+---
+
+AI agents often draw information from external sources such as documents, web pages, or databases. Citations to those sources enable users to verify information, explore sources in detail, and understand where responses came from. Ably's [message annotations](/docs/messages/annotations) provide a model-agnostic, structured way to attach source citations to AI responses without modifying the response content. It enables clients to append information to existing messages on a channel.
+
+This pattern works when publishing complete responses as messages on a channel or when streaming responses using the [message-per-response](/docs/ai-transport/message-per-response) pattern.
+
+## Why citations matter <a id="why"/>
+
+Including citations on AI responses provides:
+
+- Transparency: Users can verify claims and understand the basis for AI responses. This builds trust and allows users to fact-check information independently.
+- Source exploration: Citations enable users to dive deeper into topics by accessing original sources. This is particularly valuable for research, learning, and decision-making workflows.
+- Attribution: Proper attribution respects content creators and helps users understand which sources informed the AI's response.
+- Audit trails: For enterprise applications, citations provide explicit traceability between LLM responses and the information sources that were consulted when generating them.
+
+## How it works <a id="how-it-works"/>
+
+Use [message annotations](/docs/messages/annotations) to attach source metadata to AI response messages without modifying the response content:
+
+1. The agent publishes an AI response as a single message, or builds it incrementally using [message appends](/docs/ai-transport/message-per-response).
+2. The agent publishes one or more annotations to attach citations to the response message, each referencing the response message [`serial`](/docs/messages#properties).
+3. Ably automatically aggregates annotations and generates summaries showing total counts and groupings (for example, by source domain name).
+4. Clients receive citation summaries automatically and can optionally subscribe to individual annotation events for detailed citation data as part of the realtime stream. Alternatively, clients can obtain annotations for a given message via the REST API.
+
+## Enable message annotations <a id="enable"/>
+
+Message append functionality requires "Message annotations, updates, deletes and appends" to be enabled in a [channel rule](/docs/channels#rules) associated with the channel.
+
+<Aside data-type="important">
+When the "Message annotations, updates, deletes and appends" channel rule is enabled, messages are persisted irrespective of whether or not persistence has also been explicitly enabled. This will be reflected in increased usage since [we charge for persisting messages](https://faqs.ably.com/how-does-ably-count-messages).
+</Aside>
+
+To enable the channel rule:
+
+1. Go to the [Ably dashboard](https://www.ably.com/dashboard) and select your app.
+2. Navigate to the "Configuration" > "Rules" section from the left-hand navigation bar.
+3. Choose "Add new rule".
+4. Enter a channel name or namespace pattern (e.g. `ai` for all channels starting with `ai:`).
+5. Select the "Message annotations, updates, deletes and appends" option from the list.
+6. Click "Create channel rule".
+
+The examples in this guide use the `ai:` namespace prefix, which assumes you have configured the rule for `ai`.
+
+<Aside data-type="note">
+The `ai:` namespace is just a naming convention used in this guide. There's nothing special about it - you can use any namespace pattern you like, as long as your channel name matches the configured channel rule.
+</Aside>
+
+## Citation data model <a id="data-model"/>
+
+Citations are implemented using [message annotations](/docs/messages/annotations). Each citation includes an annotation `type` that determines how citations are aggregated into summaries, and a `data` payload containing the citation details.
+
+### Annotation type <a id="annotation-type"/>
+
+[Annotation types](/docs/messages/annotations#annotation-types) determine how annotations are processed and aggregated into summaries. The type is a string of the format `namespace:summarization_method`:
+
+- `namespace` is a string that logically groups related annotations. For example, use `citations` for AI response citations.
+- `summarization_method` specifies how annotations are aggregated to produce summaries.
+
+Use the [`multiple.v1`](/docs/messages/annotations#multiple) summarization method for AI response citations. This is well suited for citations because:
+
+- AI responses often reference the same source multiple times, and `multiple.v1` counts each citation separately.
+- Citations can be grouped by source using the `name` field (for example, by domain name), so clients can display "3 citations from wikipedia.org, 2 from nasa.gov".
+
+The examples below use the annotation type `citations:multiple.v1`.
+
+### Annotation data <a id="annotation-data"/>
+
+The annotation `data` field can contain any structured data relevant to your citation use case. For example, a citation for a web search result might include:
+
+<Code>
+```json
+{
+  "url": "https://example.com/article",
+  "title": "Example Article Title",
+  "startOffset": 120,
+  "endOffset": 180,
+  "snippet": "Short excerpt from source"
+}
+```
+</Code>
+
+In this example:
+
+- `url` is the source URL.
+- `title` is the title of the web page.
+- `startOffset` is the character position in the response where this citation begins.
+- `endOffset` is the character position in the response where the citation ends.
+- `snippet` is a short excerpt from the source content for preview displays.
+
+Including character offsets in annotation data allow UIs to attach inline citation markers to specific portions of the response text.
+
+<Aside data-type="note">
+Annotation data is not included in [summaries](#summary-view), but can be accessed by subscribing to [individual annotation events](/docs/messages/annotations#individual-annotations).
+</Aside>
+
+## Publishing citations <a id="publishing"/>
+
+Agents create citations by publishing [message annotations](/docs/messages/annotations) that reference the [`serial`](/docs/messages#properties) of the response message:
+
+<Code>
+```javascript
+const channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+// Publish the AI response message
+const response = "The James Webb Space Telescope launched in December 2021 and its first images were released in July 2022.";
+const { serials: [msgSerial] } = await channel.publish("response", response);
+
+// Add citations by annotating the response message
+await channel.annotations.publish(msgSerial, {
+  type: "citations:multiple.v1",
+  name: "science.nasa.gov",
+  data: {
+    url: "https://science.nasa.gov/mission/webb/",
+    title: "James Webb Space Telescope - NASA Science",
+    startOffset: 43,
+    endOffset: 56,
+    snippet: "Webb launched on Dec. 25th 2021"
+  }
+});
+await channel.annotations.publish(msgSerial, {
+  type: "citations:multiple.v1",
+  name: "en.wikipedia.org",
+  data: {
+    url: "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope",
+    title: "James Webb Space Telescope - Wikipedia",
+    startOffset: 95,
+    endOffset: 104,
+    snippet: "The telescope's first image was released to the public on 11 July 2022."
+  }
+});
+```
+</Code>
+
+<Aside data-type="note">
+When streaming response tokens using the [message-per-response](/docs/ai-transport/message-per-response) pattern, citations can be published while the response is still being streamed since the `serial` of the response message is known after the [initial message is published](/docs/ai-transport/features/token-streaming/message-per-response#publishing).
+</Aside>
+
+<Aside data-type="note">
+Identify the agent with a [`clientId`](/docs/messages#properties) in order to attribute a citation to a specific agent. This is useful in multi-agent architectures where multiple agents may contribute citations to the same response. For more information, see [Agent identity](/docs/ai-transport/features/sessions-identity/identifying-users-and-agents#agent-identity).
+</Aside>
+
+## Subscribing to summaries <a id="annotation-summary"/>
+
+
+Clients can display a summary of the citations attached to a response by using [annotation summaries](/docs/messages/annotations#annotation-summaries). Clients receive realtime updates to annotation summaries automatically when subscribing to a channel, which are [delivered as messages](/docs/messages/annotations#subscribe) with an `action` of `message.summary`. When using [`multiple.v1`](/docs/messages/annotations#multiple) summarization, counts are grouped by the annotation `name`.
+
+<Aside data-type="note">
+Subscribe to annotation summaries when you want to display citation counts updated in realtime, such as showing "3 citations from wikipedia.org, 2 from nasa.gov".
+</Aside>
+
+In the example below, the `name` is set to the domain name of the citation source, so summaries show counts per domain:
+
+<Code>
+```javascript
+const channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+await channel.subscribe((message) => {
+  if (message.action === "message.summary") {
+    const citations = message.annotations.summary["citations:multiple.v1"];
+    if (citations) {
+      console.log("Citation summary:", citations);
+    }
+  }
+});
+```
+</Code>
+
+The `multiple.v1` summary groups counts by the annotation `name`, with totals and per-client breakdowns for each group:
+
+<Code>
+```json
+{
+  "citations:multiple.v1": {
+    "science.nasa.gov": {
+      "total": 1,
+      "clientIds": {
+        "research-agent": 1
+      },
+      "totalUnidentified": 0,
+      "totalClientIds": 1,
+      "clipped": false
+    },
+    "en.wikipedia.org": {
+      "total": 1,
+      "clientIds": {
+        "research-agent": 1
+      },
+      "totalUnidentified": 0,
+      "totalClientIds": 1,
+      "clipped": false
+    }
+  }
+}
+```
+</Code>
+
+When agents publish citations with a [`clientId`](/docs/auth/identified-clients), summaries include a per-client count showing how many citations each agent contributed. Citations published by [unidentified](/docs/auth/identified-clients#unidentified) clients are counted in the `totalUnidentified` field.
+
+<Aside data-type="note">
+The `clipped` field indicates whether the summary was truncated due to size limits. This only occurs when a large number of clients with distinct `clientId`s publish annotations. See [large summaries](/docs/messages/annotations#large-summaries) for more information.
+</Aside>
+
+## Subscribing to individual citations <a id="individual-citations"/>
+
+To access the full citation data, subscribe to [individual annotation events](/docs/messages/annotations#individual-annotations):
+
+<Code>
+```javascript
+const channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}", {
+  modes: ["ANNOTATION_SUBSCRIBE"]
+});
+
+await channel.annotations.subscribe((annotation) => {
+  if (annotation.action === "annotation.create" &&
+      annotation.type === "citations:multiple.v1") {
+    const { url, title } = annotation.data;
+    console.log(`Citation: ${title} (${url})`);
+    // Output: Citation: James Webb Space Telescope - Wikipedia (https://en.wikipedia.org/wiki/James_Webb_Space_Telescope)
+  }
+});
+```
+</Code>
+
+Each annotation event includes the `messageSerial` of the response message it is attached to, the `name` used for grouping in summaries, and the full citation `data` payload. This data can be used to render clickable source links or attach inline citation markers to specific portions of the response text:
+
+<Code>
+```json
+{
+  "action": "annotation.create",
+  "clientId": "research-agent",
+  "type": "citations:multiple.v1",
+  "messageSerial": "01767638186693-000@108SP4XcgBxfMO07491612:000",
+  "name": "en.wikipedia.org",
+  "data": {
+    "url": "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope",
+    "title": "James Webb Space Telescope - Wikipedia",
+    "startOffset": 95,
+    "endOffset": 104,
+    "snippet": "The telescope's first image was released to the public on 11 July 2022."
+  }
+}
+```
+</Code>
+
+<Aside data-type="note">
+Subscribe to individual annotation events when you need the full citation data updated in realtime, such as for rendering clickable source links or attaching inline citation markers to specific portions of the response text as citations arrive.
+</Aside>
+
+## Retrieving citations on demand <a id="on-demand"/>
+
+Annotations can also be retrieved via the [REST API](/docs/api/rest-api#annotations-list) without maintaining a realtime subscription.
+
+<Aside data-type="note">
+Use the REST API to retrieve citation data on demand, such as when a user expands a citation list or navigates to a previous response.
+</Aside>

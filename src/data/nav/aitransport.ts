@@ -78,7 +78,7 @@ export default {
         },
         {
           name: 'Citations',
-          link: '/docs/ai-transport/features/advanced/citations',
+          link: '/docs/ai-transport/features/messaging/citations',
         },
       ],
     },
