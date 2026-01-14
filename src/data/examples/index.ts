@@ -4,6 +4,16 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
+    id: 'ai-transport-message-per-token',
+    name: 'Message per token streaming',
+    description: 'Stream AI responses token-by-token using the message-per-token pattern.',
+    products: ['ai_transport'],
+    layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'src/llm.ts', 'src/agent.ts', 'App.tsx', 'llm.ts', 'agent.ts', 'index.tsx'],
+    metaTitle: 'Build AI message-per-token streaming with Ably AI Transport',
+    metaDescription: `Stream AI-generated tokens in realtime using the message-per-token pattern with Ably's AI Transport. Implement scalable token streaming with low latency.`,
+  },
+  {
     id: 'chat-presence',
     name: 'Chat presence',
     description: 'Show online/offline status of users in a chat application.',
@@ -287,7 +297,7 @@ export const products = {
   spaces: {
     label: 'Spaces',
   },
-  aitransport: {
+  ai_transport: {
     label: 'AI Transport',
   },
 };
