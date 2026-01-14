@@ -86,6 +86,11 @@ export default {
     label: 'Kotlin',
     syntaxHighlighterKey: 'kotlin',
   },
+  jetpack: {
+    label: 'Jetpack Compose',
+    syntaxHighlighterKey: 'kotlin',
+    alias: 'kotlin',
+  },
   realtime: {
     label: 'Realtime',
     syntaxHighlighterKey: 'javascript',
