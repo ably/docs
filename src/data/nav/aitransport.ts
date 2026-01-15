@@ -23,16 +23,16 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/ai-transport/features/token-streaming',
+          link: '/docs/ai-transport/token-streaming',
           index: true,
         },
         {
           name: 'Message per response',
-          link: '/docs/ai-transport/features/token-streaming/message-per-response',
+          link: '/docs/ai-transport/token-streaming/message-per-response',
         },
         {
           name: 'Message per token',
-          link: '/docs/ai-transport/features/token-streaming/message-per-token',
+          link: '/docs/ai-transport/token-streaming/message-per-token',
         },
       ],
     },
@@ -41,19 +41,19 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/ai-transport/features/sessions-identity',
+          link: '/docs/ai-transport/sessions-identity',
         },
         {
           name: 'Identifying users and agents',
-          link: '/docs/ai-transport/features/sessions-identity/identifying-users-and-agents',
+          link: '/docs/ai-transport/sessions-identity/identifying-users-and-agents',
         },
         {
           name: 'Online status',
-          link: '/docs/ai-transport/features/sessions-identity/online-status',
+          link: '/docs/ai-transport/sessions-identity/online-status',
         },
         {
           name: 'Resuming sessions',
-          link: '/docs/ai-transport/features/sessions-identity/resuming-sessions',
+          link: '/docs/ai-transport/sessions-identity/resuming-sessions',
         },
       ],
     },
@@ -62,23 +62,23 @@ export default {
       pages: [
         {
           name: 'Accepting user input',
-          link: '/docs/ai-transport/features/messaging/accepting-user-input',
+          link: '/docs/ai-transport/messaging/accepting-user-input',
         },
         {
           name: 'Tool calls',
-          link: '/docs/ai-transport/features/messaging/tool-calls',
+          link: '/docs/ai-transport/messaging/tool-calls',
         },
         {
           name: 'Human-in-the-loop',
-          link: '/docs/ai-transport/features/messaging/human-in-the-loop',
+          link: '/docs/ai-transport/messaging/human-in-the-loop',
         },
         {
           name: 'Chain of thought',
-          link: '/docs/ai-transport/features/messaging/chain-of-thought',
+          link: '/docs/ai-transport/messaging/chain-of-thought',
         },
         {
           name: 'Citations',
-          link: '/docs/ai-transport/features/messaging/citations',
+          link: '/docs/ai-transport/messaging/citations',
         },
       ],
     },
