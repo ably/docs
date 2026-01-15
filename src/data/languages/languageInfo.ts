@@ -89,7 +89,6 @@ export default {
   jetpack: {
     label: 'Jetpack Compose',
     syntaxHighlighterKey: 'kotlin',
-    alias: 'kotlin',
   },
   realtime: {
     label: 'Realtime',
