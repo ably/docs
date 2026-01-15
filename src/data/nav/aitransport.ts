@@ -14,6 +14,15 @@ export default {
       index: true,
     },
     {
+      name: 'Getting started',
+      pages: [
+        {
+          name: 'JavaScript',
+          link: '/docs/ai-transport/getting-started/javascript',
+        },
+      ],
+    },
+    {
       name: 'Token streaming',
       pages: [
         {

@@ -1,0 +1,468 @@
+---
+title: "Getting started: AI Transport in JavaScript / TypeScript"
+meta_description: "Build a realtime AI agent with token streaming using Ably. Learn to authenticate users, stream responses, and handle user input with verified identities."
+meta_keywords: "AI Transport JavaScript, Ably AI agent, token streaming JavaScript, realtime AI, LLM streaming, AI agent tutorial, Ably Pub/Sub AI, message streaming, AI chat JavaScript, realtime messaging AI"
+redirect_from:
+  - /docs/ai-transport/getting-started
+---
+
+This guide will get you started with Ably AI Transport using TypeScript.
+
+You'll learn how to authenticate users with verified identities, stream tokens from an agent to clients in realtime, and handle user input with message correlation. This example uses a mock LLM so you can focus on the Ably integration patterns without needing credentials for a specific AI provider.
+
+## Prerequisites
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+
+2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
+
+3. Your API key will need the `publish`, `subscribe`, and `message-update-own` capabilities.
+
+4. Enable message appends for the channel:
+   1. Go to the **Settings** tab of your app in the dashboard.
+   2. Under **Rules**, click **Add new rule**.
+   3. Enter `ai` as the channel namespace.
+   4. Check **Message annotations, updates, deletes, and appends**.
+   5. Click **Create channel rule** to save.
+
+5. Install any current LTS version of [Node.js](https://nodejs.org/en).
+
+## Step 1: Project setup
+
+Create a new directory for your project and initialize it:
+
+<Code>
+```shell
+mkdir ai-agent-demo && cd ai-agent-demo
+npm init -y && npm pkg set type=module
+```
+</Code>
+
+Install the required dependencies:
+
+<Code>
+```shell
+npm install ably jsonwebtoken express
+npm install -D typescript @types/node @types/express @types/jsonwebtoken
+```
+</Code>
+
+Create a TypeScript configuration file:
+
+<Code>
+```shell
+npx tsc --init
+```
+</Code>
+
+Create a `.env` file in your project root and add your API key:
+
+<Code>
+```shell
+echo "ABLY_API_KEY={{API_KEY}}" > .env
+```
+</Code>
+
+## Step 2: Authenticate users
+
+Users authenticate with Ably using [token authentication](/docs/auth/token). Your server generates signed JWTs that establish a verified identity for each user. Agents can trust this identity because only your server can issue valid tokens.
+
+Create a file called `auth-server.ts` with an endpoint that generates signed JWTs:
+
+<Code>
+```typescript
+import express from 'express';
+import jwt from 'jsonwebtoken';
+
+const app = express();
+
+const apiKey = process.env.ABLY_API_KEY;
+if (!apiKey) {
+  throw new Error('ABLY_API_KEY environment variable is required');
+}
+
+const [keyName, keySecret] = apiKey.split(':');
+if (!keyName || !keySecret) {
+  throw new Error('ABLY_API_KEY must be in format "keyName:keySecret"');
+}
+
+app.get('/api/auth/token', (req, res) => {
+  // In production, authenticate the user and get their ID from your session
+  const userId = 'user-123';
+
+  const token = jwt.sign({
+    'x-ably-clientId': userId,
+    'ably.channel.*': 'user'
+  }, keySecret, {
+    algorithm: 'HS256',
+    keyid: keyName,
+    expiresIn: '1h'
+  });
+
+  res.type('application/jwt').send(token);
+});
+
+app.listen(3001, () => {
+  console.log('Auth server running on http://localhost:3001');
+});
+```
+</Code>
+
+<Aside data-type="note">
+In production, replace the hardcoded `userId` with your actual authentication logic that verifies user credentials.
+</Aside>
+
+The JWT includes two claims:
+- `x-ably-clientId`: Establishes a verified identity that appears on all messages the user publishes.
+- `ably.channel.*`: Assigns a role that agents can use to distinguish users from other agents on the channel.
+
+<Aside data-type="further-reading">
+For more information about establishing verified identities and roles, see [Identifying users and agents](/docs/ai-transport/sessions-identity/identifying-users-and-agents).
+</Aside>
+
+## Step 3: Create the mock LLM
+
+This example uses a mock LLM to simulate token streaming without requiring API keys for external AI providers. The mock follows a common pattern used by most LLM providers: emitting `message_start`, `message_delta`, and `message_stop` events. You can replace this with any real LLM SDK that supports streaming.
+
+Create a file called `mock-llm.ts`:
+
+<Code>
+```typescript
+export type StreamEvent =
+  | { type: 'message_start' }
+  | { type: 'message_delta'; delta: string }
+  | { type: 'message_stop' };
+
+export class MockLLM {
+  private responses: Record<string, string> = {
+    'hello': 'Hello! How can I help you today?',
+    'weather': 'I don\'t have access to real-time weather data, but I can help you find weather services.',
+    'default': 'I\'m a mock AI assistant. I can respond to basic prompts for demonstration purposes.'
+  };
+
+  async *stream(prompt: string): AsyncGenerator<StreamEvent> {
+    yield { type: 'message_start' };
+
+    const key = Object.keys(this.responses).find(k => prompt.toLowerCase().includes(k)) || 'default';
+    const response = this.responses[key]!;
+    const words = response.split(' ');
+
+    for (const word of words) {
+      await this.delay(50 + Math.random() * 100);
+      yield { type: 'message_delta', delta: word + ' ' };
+    }
+
+    yield { type: 'message_stop' };
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+```
+</Code>
+
+The `stream()` method is an async generator that yields events as they occur. This pattern works with streaming APIs from OpenAI, Anthropic, and other providers.
+
+## Step 4: Create the agent
+
+The agent runs in a trusted server environment and uses [API key authentication](/docs/auth#basic-authentication). It subscribes to a channel to receive user prompts, processes them with the mock LLM, and streams responses back using the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern.
+
+Create a file called `agent.ts`:
+
+<Code>
+```typescript
+import * as Ably from 'ably';
+import { MockLLM } from './mock-llm.js';
+
+const apiKey = process.env.ABLY_API_KEY;
+if (!apiKey) {
+  throw new Error('ABLY_API_KEY environment variable is required');
+}
+
+const realtime = new Ably.Realtime({
+  key: apiKey,
+  clientId: 'ai-agent'
+});
+
+const channel = realtime.channels.get('ai:conversation');
+const llm = new MockLLM();
+
+await channel.subscribe('user-input', async (message: Ably.Message) => {
+  const { promptId, text } = message.data as { promptId: string; text: string };
+  const userId = message.clientId;
+  const role = message.extras?.userClaim;
+
+  console.log(`Received prompt from ${userId} (role: ${role}): ${text}`);
+
+  // Verify the message came from a user (not another agent)
+  if (role !== 'user') {
+    console.log('Ignoring message from non-user');
+    return;
+  }
+
+  // Create the initial message
+  const response = await channel.publish({
+    name: 'agent-response',
+    data: '',
+    extras: {
+      headers: { promptId }
+    }
+  });
+
+  const serial = response.serials[0];
+  if (!serial) {
+    console.error('No serial returned from publish');
+    return;
+  }
+
+  // Stream tokens by appending to the message
+  for await (const event of llm.stream(text)) {
+    if (event.type === 'message_delta') {
+      try {
+        channel.appendMessage({
+          serial,
+          data: event.delta,
+          extras: {
+            headers: { promptId }
+          }
+        });
+      } catch (err) {
+        console.error('appendMessage failed:', err);
+      }
+    }
+  }
+
+  // Signal completion
+  await channel.publish({
+    name: 'agent-response-complete',
+    extras: {
+      headers: { promptId }
+    }
+  });
+
+  console.log(`Completed response for prompt ${promptId}`);
+});
+
+console.log('Agent is listening for prompts...');
+```
+</Code>
+
+The agent:
+1. Connects with a `clientId` of `ai-agent` so clients can identify responses.
+2. Verifies incoming messages have the `user` role using `message.extras?.userClaim`.
+3. Creates an initial message with `channel.publish()` and streams tokens using `channel.appendMessage()`.
+4. Includes the `promptId` in message headers so clients can correlate responses to their prompts.
+
+## Step 5: Create the client
+
+The client uses an [`authCallback`](/docs/auth/token#auth-callback) to obtain a signed JWT from your auth server. The `clientId` from the token is automatically attached to all messages the client publishes.
+
+Create a file called `client.ts`:
+
+<Code>
+```typescript
+import * as Ably from 'ably';
+import crypto from 'crypto';
+import * as readline from 'readline';
+
+const realtime = new Ably.Realtime({
+  authCallback: async (
+    _tokenParams: Ably.TokenParams,
+    callback: (error: Ably.ErrorInfo | string | null, token: Ably.TokenDetails | Ably.TokenRequest | string | null) => void
+  ) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/token');
+      const token = await response.text();
+      callback(null, token);
+    } catch (error) {
+      callback(error instanceof Error ? error.message : String(error), null);
+    }
+  }
+});
+
+realtime.connection.on('connected', () => {
+  console.log('Connected to Ably as', realtime.auth.clientId);
+});
+
+const channel = realtime.channels.get('ai:conversation');
+
+// Track responses by promptId
+const responses = new Map<string, string>();
+const pendingPrompts = new Map<string, () => void>();
+
+await channel.subscribe('agent-response', (message: Ably.Message) => {
+  const promptId = message.extras?.headers?.promptId;
+  if (!promptId) return;
+
+  switch (message.action) {
+    case 'message.create':
+      // New response started
+      responses.set(promptId, message.data || '');
+      break;
+    case 'message.append':
+      // Append token to existing response
+      const current = responses.get(promptId) || '';
+      responses.set(promptId, current + (message.data || ''));
+      break;
+    case 'message.update':
+      // Replace entire response content (e.g., after reconnection)
+      responses.set(promptId, message.data || '');
+      break;
+  }
+
+  // Print the accumulated response
+  process.stdout.write(`\r${responses.get(promptId)}`);
+});
+
+await channel.subscribe('agent-response-complete', (message: Ably.Message) => {
+  const promptId = message.extras?.headers?.promptId;
+  if (!promptId) return;
+
+  // Print newline and trigger next prompt
+  console.log('\n');
+  const resolve = pendingPrompts.get(promptId);
+  if (resolve) {
+    pendingPrompts.delete(promptId);
+    resolve();
+  }
+});
+```
+</Code>
+
+The client:
+1. Authenticates using the auth server endpoint created in Step 2.
+2. Subscribes to `agent-response` messages and handles different message actions:
+   - `message.create`: A new response has started.
+   - `message.append`: A token has been appended to an existing response.
+   - `message.update`: The full response content (used after reconnection).
+3. Displays the response in realtime as each token is appended.
+
+## Step 6: Send user prompts
+
+Each prompt includes a unique `promptId` to correlate responses. The user's `clientId` is automatically attached to the message by Ably.
+
+Add the following to the end of `client.ts`:
+
+<Code>
+```typescript
+async function sendPrompt(text: string): Promise<void> {
+  const promptId = crypto.randomUUID();
+
+  // Create a promise that resolves when the response is complete
+  const completionPromise = new Promise<void>((resolve) => {
+    pendingPrompts.set(promptId, resolve);
+  });
+
+  await channel.publish('user-input', {
+    promptId,
+    text
+  });
+
+  // Wait for the agent to finish responding
+  await completionPromise;
+}
+
+// Create readline interface for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+function askQuestion() {
+  rl.question('Enter a prompt (or "quit" to exit): ', async (text) => {
+    if (text.toLowerCase() === 'quit') {
+      rl.close();
+      realtime.close();
+      return;
+    }
+
+    await sendPrompt(text);
+    askQuestion();
+  });
+}
+
+askQuestion();
+```
+</Code>
+
+When the agent receives the prompt, it can:
+- Verify the sender using `message.clientId` (the verified user identity).
+- Check the sender's role using `message.extras?.userClaim`.
+- Correlate its response using the `promptId` from the message data.
+
+## Step 7: Run the example
+
+Open three terminal windows to run the auth server, agent, and client.
+
+Terminal 1: Start the auth server
+
+<Code>
+```shell
+npx tsx --env-file=.env auth-server.ts
+```
+</Code>
+
+You should see:
+
+<Code>
+```text
+Auth server running on http://localhost:3001
+```
+</Code>
+
+Terminal 2: Start the agent
+
+<Code>
+```shell
+npx tsx --env-file=.env agent.ts
+```
+</Code>
+
+You should see:
+
+<Code>
+```text
+Agent is listening for prompts...
+```
+</Code>
+
+Terminal 3: Run the client
+
+<Code>
+```shell
+npx tsx --env-file=.env client.ts
+```
+</Code>
+
+You should see the client connect and prompt for input. Try entering "hello" or "weather" to see different responses:
+
+<Code>
+```text
+Connected to Ably as user-123
+Enter a prompt (or "quit" to exit): hello
+
+Sent prompt: hello
+
+Hello! How can I help you today?
+Enter a prompt (or "quit" to exit):
+```
+</Code>
+
+The agent terminal will show the received prompt and completion:
+
+<Code>
+```text
+Received prompt from user-123 (role: user): hello
+Completed response for prompt abc-123...
+```
+</Code>
+
+## Next steps
+
+Continue exploring AI Transport features:
+
+* Learn about [token streaming patterns](/docs/ai-transport/token-streaming) including [message-per-response](/docs/ai-transport/token-streaming/message-per-response) and [message-per-token](/docs/ai-transport/token-streaming/message-per-token).
+* Understand [user input](/docs/ai-transport/messaging/accepting-user-input) patterns for handling prompts and correlating responses.
+* Explore [identifying users and agents](/docs/ai-transport/sessions-identity/identifying-users-and-agents) for more advanced authentication scenarios.
+* Implement [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) workflows for agent actions requiring approval.
