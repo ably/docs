@@ -16,6 +16,19 @@ export default {
           link: '/docs/ai-transport',
           index: true,
         },
+        {
+          name: 'Getting started',
+          link: '/docs/ai-transport/getting-started',
+        },
+        {
+          name: 'Getting started',
+          pages: [
+            {
+              name: 'JavaScript',
+              link: '/docs/ai-transport/getting-started/javascript',
+            },
+          ],
+        },
       ],
     },
     {
