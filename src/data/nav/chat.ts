@@ -200,6 +200,10 @@ export default {
           name: 'Export chat messages',
           link: '/docs/guides/chat/export-chat',
         },
+        {
+          name: 'Support chat',
+          link: '/docs/guides/chat/support-chat',
+        },
       ],
     },
   ],
