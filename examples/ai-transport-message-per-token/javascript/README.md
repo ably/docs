@@ -17,7 +17,7 @@ Use the following methods to implement AI Transport token streaming:
 - [`channel.publish()`](/docs/channels#publish): publishes individual tokens as they arrive from the LLM service with response tracking headers.
 - [`channel.history()`](/docs/channels/history) with [`untilAttach`](/docs/channels/options#attach): enables seamless message recovery during reconnections, ensuring no tokens are lost.
 
-Find out more about [AI Transport](/docs/ai-transport) and [message history](/docs/channels/history).
+Find out more about [AI Transport](/docs/ai-transport), [token streaming](/docs/ai-transport/token-streaming), and [message history](/docs/storage-history/history).
 
 ## Getting started
 
