@@ -18,7 +18,7 @@ Use the following methods to implement AI Transport message-per-response streami
 - [`channel.subscribe()`](/docs/channels#subscribe): subscribes to messages, handling `message.create`, `message.append`, and `message.update` actions.
 - [`channel.setOptions()`](/docs/channels/options) with [`rewind`](/docs/channels/options/rewind): enables seamless message recovery during reconnections, delivering historical messages as `message.update` events.
 
-Find out more about [AI Transport](/docs/ai-transport) and [message appending](/docs/ai-transport/features/token-streaming/message-per-response).
+Find out more about [AI Transport](/docs/ai-transport) and [message appending](/docs/ai-transport/token-streaming/message-per-response).
 
 ## Getting started
 
