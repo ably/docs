@@ -21,6 +21,12 @@ const AITransportDemo: React.FC = () => {
   const isHydrating = useRef<boolean>(false);
   const pendingTokens = useRef<string[]>([]);
 
+  // Agent persists across renders to avoid creating new connections
+  const agentRef = React.useRef<Agent | null>(null);
+  if (!agentRef.current) {
+    agentRef.current = new Agent(config.ABLY_KEY, CHANNEL_NAME);
+  }
+
   const { channel } = useChannel(CHANNEL_NAME, (message: Message) => {
     const responseId = message.extras?.headers?.responseId;
 
@@ -57,8 +63,7 @@ const AITransportDemo: React.FC = () => {
 
     const responseId = `request-${crypto.randomUUID()}`;
     currentResponseId.current = responseId;
-    const agent = new Agent(config.ABLY_KEY, CHANNEL_NAME);
-    agent.processPrompt('What is Ably AI Transport?', responseId);
+    agentRef.current?.processPrompt('What is Ably AI Transport?', responseId);
   };
 
   const handleDisconnect = () => {

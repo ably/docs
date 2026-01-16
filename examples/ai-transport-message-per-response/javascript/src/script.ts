@@ -10,6 +10,9 @@ const client = new Ably.Realtime({
 
 const channel = client.channels.get(CHANNEL_NAME);
 
+// Agent for processing prompts
+const agent = new Agent(config.ABLY_KEY, CHANNEL_NAME);
+
 // DOM elements
 const responseTextElement = document.getElementById('response-text') as HTMLDivElement;
 const connectionToggle = document.getElementById('connection-toggle') as HTMLButtonElement;
@@ -62,7 +65,6 @@ const handlePromptClick = () => {
   responseTextElement.innerText = '';
   processingStatus.innerText = 'Streaming';
 
-  const agent = new Agent(config.ABLY_KEY, CHANNEL_NAME);
   agent.processPrompt('What is Ably AI Transport?');
 };
 
