@@ -48,6 +48,60 @@ for await (const event of stream) {
 
 This approach maximizes throughput while maintaining ordering guarantees, allowing you to stream tokens as fast as your AI model generates them.
 
+### Handling publish failures <a id="publish-failures"/>
+
+When publishing without awaiting, it is possible for an intermediate publish to fail while subsequent publishes succeed. This creates a gap in the streamed response. For example, if a rate limit is exceeded, a single token may be rejected while the following tokens continue to be accepted.
+
+To detect failures, keep a reference to each publish operation and check for rejections after the stream completes:
+
+<Code>
+```javascript
+// Track all publish operations
+const publishPromises = [];
+
+// Track the full response for recovery
+let fullResponse = '';
+
+for await (const event of stream) {
+  if (event.type === 'token') {
+    fullResponse += event.text;
+    publishPromises.push(channel.publish('token', event.text));
+  }
+}
+
+// Check for any failures after the stream completes
+const results = await Promise.allSettled(publishPromises);
+const failed = results.some(result => result.status === 'rejected');
+
+if (failed) {
+  // Publish the complete response as a recovery message
+  await channel.publish('response-complete', fullResponse);
+}
+```
+</Code>
+
+If any publish fails, publish a new message with a different event type (such as `response-complete`) containing the full response. Subscribers should handle this event by replacing any tokens they have accumulated for that response:
+
+<Code>
+```javascript
+let response = '';
+
+// Handle individual tokens
+await channel.subscribe('token', (message) => {
+  response += message.data;
+});
+
+// Handle recovery message that replaces all previous tokens
+await channel.subscribe('response-complete', (message) => {
+  response = message.data;
+});
+```
+</Code>
+
+<Aside data-type="note">
+Include a `responseId` in message [extras](/docs/messages#properties) when streaming multiple concurrent responses, so subscribers can correctly associate the recovery message with the tokens it replaces. See [token stream with multiple responses](#multiple-responses) for details on correlating messages.
+</Aside>
+
 ## Streaming patterns <a id="patterns"/>
 
 Ably is a pub/sub messaging platform, so you can structure your messages however works best for your application. Below are common patterns for streaming tokens, each showing both agent-side publishing and client-side subscription. Choose the approach that fits your use case, or create your own variation.

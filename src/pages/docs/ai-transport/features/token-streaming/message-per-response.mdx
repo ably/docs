@@ -90,6 +90,47 @@ for await (const event of stream) {
 ```
 </Code>
 
+### Handling append failures <a id="append-failures"/>
+
+When appending without awaiting, it is possible for an intermediate append to fail while subsequent appends succeed. This creates a gap in the streamed response. For example, if a rate limit is exceeded, a single append may be rejected while the following tokens continue to be accepted.
+
+To detect failures, keep a reference to each append operation and check for rejections after the stream completes:
+
+<Code>
+```javascript
+// Publish initial message and capture the serial for appending tokens
+const { serials: [msgSerial] } = await channel.publish('response', { data: '' });
+
+// Track all append operations
+const appendPromises = [];
+
+// Track the full response for recovery
+let fullResponse = '';
+
+for await (const event of stream) {
+  if (event.type === 'token') {
+    fullResponse += event.text;
+    appendPromises.push(channel.appendMessage(msgSerial, event.text));
+  }
+}
+
+// Check for any failures after the stream completes
+const results = await Promise.allSettled(appendPromises);
+const failed = results.some(result => result.status === 'rejected');
+
+if (failed) {
+  // Replace the message with the full response
+  await channel.updateMessage({ serial: msgSerial, data: fullResponse });
+}
+```
+</Code>
+
+If any append fails, use `updateMessage()` to replace the message content with the complete response. This ensures subscribers receive the full response regardless of any gaps caused by failed appends. The `message.update` action replaces the entire message content, so subscribers will have the complete response after processing the update.
+
+<Aside data-type="note">
+When using `updateMessage()` for recovery, the message `data` is replaced entirely rather than appended. This is the expected behavior for correcting gaps in the stream.
+</Aside>
+
 <Aside data-type="important">
 Append only supports concatenating data of the same type as the original message. For example, if the initial message data is a string, all appended tokens must also be strings. If the initial message data is binary, all appended tokens must be binary.
 </Aside>
