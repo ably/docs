@@ -8,6 +8,10 @@ const client = new Ably.Realtime({
   key: config.ABLY_KEY,
 });
 const channel = client.channels.get(CHANNEL_NAME);
+
+// Agent for processing prompts
+const agent = new Agent(config.ABLY_KEY, CHANNEL_NAME);
+
 const responseTextElement = document.getElementById('response-text') as HTMLDivElement;
 const connectionToggle = document.getElementById('connection-toggle') as HTMLButtonElement;
 const promptButton = document.getElementById('prompt-button') as HTMLButtonElement;
@@ -90,7 +94,6 @@ const handlePromptClick = () => {
   currentResponseId = `request-${crypto.randomUUID()}`;
   responseText = '';
   updateDisplay();
-  const agent = new Agent(config.ABLY_KEY, CHANNEL_NAME);
   agent.processPrompt('What is Ably AI Transport?', currentResponseId);
 };
 

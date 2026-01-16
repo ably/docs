@@ -18,6 +18,12 @@ const AITransportDemo: React.FC = () => {
   const [connectionState, setConnectionState] = useState<string>('disconnected');
   const [isChannelDetached, setIsChannelDetached] = useState<boolean>(false);
 
+  // Agent persists across renders to avoid creating new connections
+  const agentRef = React.useRef<Agent | null>(null);
+  if (!agentRef.current) {
+    agentRef.current = new Agent(config.ABLY_KEY, CHANNEL_NAME);
+  }
+
   // Subscribe to messages on the channel
   const { channel } = useChannel(CHANNEL_NAME, (message: Message) => {
     const serial = message.serial;
@@ -66,8 +72,7 @@ const AITransportDemo: React.FC = () => {
     setResponses(new Map());
     setCurrentSerial(null);
 
-    const agent = new Agent(config.ABLY_KEY, CHANNEL_NAME);
-    agent.processPrompt('What is Ably AI Transport?');
+    agentRef.current?.processPrompt('What is Ably AI Transport?');
   };
 
   const handleDisconnect = () => {
