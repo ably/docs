@@ -18,7 +18,7 @@ Use the following components to implement AI Transport message-per-response stre
 - [`rewind`](/docs/channels/options/rewind) channel option: enables seamless message recovery during reconnections, delivering historical messages as `message.update` events.
 - [`appendMessage()`](/docs/api/realtime-sdk/channels#append-message): appends tokens to an existing message using its serial.
 
-Find out more about [AI Transport](/docs/ai-transport) and [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response).
+Find out more about [AI Transport](/docs/ai-transport) and [message-per-response](/docs/ai-transport/token-streaming/message-per-response).
 
 ## Getting started
 
