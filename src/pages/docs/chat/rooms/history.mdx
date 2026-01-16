@@ -7,12 +7,8 @@ The history feature enables users to retrieve messages that have been previously
 
 ## Retrieve previously sent messages <a id="history"/>
 
-<If lang="javascript,swift,kotlin">
-Use the <If lang="javascript">[`messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#history)</If><If lang="swift">[`messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/messages/history(withparams:))</If><If lang="kotlin">[`messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat/com.ably.chat/-messages/history.html)</If> method to retrieve messages that have been previously sent to a room. This returns a paginated response, which can be queried further to retrieve the next set of messages.
-</If>
-
-<If lang="jetpack">
-Use the [`collectAsPagingMessagesState()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/jetpack/chat-extensions-compose/com.ably.chat.extensions.compose/collect-as-paging-messages-state.html) method to retrieve messages that have been previously sent to a room. This returns a paginated response, which can be queried further to retrieve the next set of messages.
+<If lang="javascript,swift,kotlin,jetpack">
+Use the <If lang="javascript">[`messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#history)</If><If lang="swift">[`messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/messages/history(withparams:))</If><If lang="kotlin,jetpack">[`messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat/com.ably.chat/-messages/history.html)</If> method to retrieve messages that have been previously sent to a room. This returns a paginated response, which can be queried further to retrieve the next set of messages.
 </If>
 
 <If lang="react">
@@ -77,24 +73,16 @@ println("End of messages")
 ```
 
 ```jetpack
-import androidx.compose.foundation.lazy.*
-import androidx.compose.material.*
-import androidx.compose.runtime.*
-import com.ably.chat.OrderBy
-import com.ably.chat.Room
-import com.ably.chat.extensions.compose.collectAsPagingMessagesState
+var historicalMessages = room.messages.history(orderBy = OrderBy.NewestFirst)
+println(historicalMessages.items.toString())
 
-@Composable
-fun HistoryComponent(room: Room) {
-  val pagingMessagesState = room.collectAsPagingMessagesState()
-
-  LazyColumn {
-    items(pagingMessagesState.loaded.size) { index ->
-      val message = pagingMessagesState.loaded[index]
-      Text("Message: ${message.text}")
-    }
-  }
+// historical messages are paginated, so we can iterate through
+while (historicalMessages.hasNext()) {
+    historicalMessages = historicalMessages.next()
+    println(historicalMessages.items.toString())
 }
+
+println("End of messages")
 ```
 </Code>
 
@@ -252,3 +240,79 @@ The following parameters can be passed when retrieving previously sent messages:
 | start | Earliest time to retrieve messages from, as a unix timestamp in milliseconds. Messages with a timestamp equal to, or greater than, this value will be returned. |
 | end | Latest time to retrieve messages from, as a unix timestamp in milliseconds. Messages with a timestamp less than this value will be returned. |
 | limit | Maximum number of messages to be retrieved per page, up to 1,000. |
+
+<If lang="jetpack">
+
+## Messages pagination <a id="messages-pagination"/>
+
+Alternatively, you can use the [`collectAsPagingMessagesState()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-extensions-compose/com.ably.chat.extensions.compose/collect-as-paging-messages-state.html) composable function to observe messages with automatic pagination support.
+
+This function provides a complete solution for displaying chat messages in Jetpack Compose by:
+- Subscribing to new messages in real-time and adding them to the list
+- Handling message updates and deletions automatically
+- Listening to [message reaction](/docs/chat/rooms/message-reactions) events and updating messages with reaction summaries
+- Managing pagination when scrolling near the end of the list using `historyBeforeSubscribe()`
+- Handling [discontinuities](/docs/chat/rooms/messages#discontinuity) by clearing and reloading messages
+- Only fetching messages when the room is in the attached state
+- Cleaning up resources when the composable leaves the composition
+
+The function accepts two optional parameters:
+- `scrollThreshold`: The number of items remaining before reaching the last item at which fetching the next page is triggered (default: 10)
+- `fetchSize`: The number of messages to load per page (default: 100)
+
+The returned [`PagingMessagesState`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-extensions-compose/com.ably.chat.extensions.compose/-paging-messages-state/index.html) provides:
+- `loaded`: A list of messages in reverse chronological order (newest first)
+- `listState`: A `LazyListState` for controlling the scroll position and triggering automatic pagination
+- `loading`: Whether a loading operation is in progress
+- `hasMore`: Whether there are more messages to load (returns `false` before the first page is fetched)
+- `error`: Any error encountered during loading (of type `ErrorInfo`)
+- `refresh()`: A function to clear the error state and retry loading
+
+<Code>
+```jetpack
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Button
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import com.ably.chat.Room
+import com.ably.chat.annotations.ExperimentalChatApi
+import com.ably.chat.extensions.compose.collectAsPagingMessagesState
+
+@OptIn(ExperimentalChatApi::class)
+@Composable
+fun MessagesComponent(room: Room) {
+  val pagingMessagesState = room.collectAsPagingMessagesState(
+    scrollThreshold = 10,
+    fetchSize = 50,
+  )
+
+  // Handle error state
+  pagingMessagesState.error?.let { error ->
+    Text("Error: ${error.message}")
+    Button(onClick = { pagingMessagesState.refresh() }) {
+      Text("Retry")
+    }
+  }
+
+  LazyColumn(
+    reverseLayout = true,
+    state = pagingMessagesState.listState,
+  ) {
+    items(
+      items = pagingMessagesState.loaded,
+      key = { it.serial },
+    ) { message ->
+      Text("${message.clientId}: ${message.text}")
+    }
+
+    // Show loading indicator when fetching messages
+    if (pagingMessagesState.loading) {
+      item { CircularProgressIndicator() }
+    }
+  }
+}
+```
+</Code>
+</If>
