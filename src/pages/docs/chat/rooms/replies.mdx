@@ -62,6 +62,78 @@ const ReplyComponent = ({ messageToReplyTo }) => {
   );
 };
 ```
+
+```swift
+func sendReply(replyToMessage: Message, replyText: String) async throws {
+    let metadata: MessageMetadata = [
+        "reply": .object([
+            "serial": .string(replyToMessage.serial),
+            "timestamp": .number(Double(replyToMessage.timestamp.timeIntervalSince1970 * 1000)),
+            "clientId": .string(replyToMessage.clientID),
+            "previewText": .string(String(replyToMessage.text.prefix(140)))
+        ])
+    ]
+
+    try await room.messages.send(withParams: .init(
+        text: replyText,
+        metadata: metadata
+    ))
+}
+```
+
+```kotlin
+import com.ably.chat.json.jsonObject
+
+suspend fun sendReply(replyToMessage: Message, replyText: String) {
+    val metadata = jsonObject {
+        putObject("reply") {
+            put("serial", replyToMessage.serial)
+            put("timestamp", replyToMessage.timestamp)
+            put("clientId", replyToMessage.clientId)
+            put("previewText", replyToMessage.text.take(140))
+        }
+    }
+
+    room.messages.send(
+        text = replyText,
+        metadata = metadata
+    )
+}
+```
+
+```jetpack
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import com.ably.chat.Message
+import com.ably.chat.Room
+import com.ably.chat.json.jsonObject
+import kotlinx.coroutines.launch
+
+@Composable
+fun SendReplyComponent(room: Room, messageToReplyTo: Message) {
+    val coroutineScope = rememberCoroutineScope()
+
+    Button(onClick = {
+        coroutineScope.launch {
+            val metadata = jsonObject {
+                putObject("reply") {
+                    put("serial", messageToReplyTo.serial)
+                    put("timestamp", messageToReplyTo.timestamp)
+                    put("clientId", messageToReplyTo.clientId)
+                    put("previewText", messageToReplyTo.text.take(140))
+                }
+            }
+
+            room.messages.send(
+                text = "My reply",
+                metadata = metadata
+            )
+        }
+    }) {
+        Text("Send Reply")
+    }
+}
+```
 </Code>
 
 ## Subscribe to message replies <a id="subscribe"/>
@@ -96,6 +168,40 @@ const prepareReply = (parentMessage) => {
   };
 };
 ```
+
+```swift
+func prepareReply(parentMessage: Message) -> JSONObject {
+    return [
+        "serial": .string(parentMessage.serial),
+        "timestamp": .number(Double(parentMessage.timestamp.timeIntervalSince1970 * 1000)),
+        "clientId": .string(parentMessage.clientID),
+        "previewText": .string(String(parentMessage.text.prefix(140)))
+    ]
+}
+```
+
+```kotlin
+import com.ably.chat.json.jsonObject
+
+fun prepareReply(parentMessage: Message) = jsonObject {
+    put("serial", parentMessage.serial)
+    put("timestamp", parentMessage.timestamp)
+    put("clientId", parentMessage.clientId)
+    put("previewText", parentMessage.text.take(140))
+}
+```
+
+```jetpack
+import com.ably.chat.Message
+import com.ably.chat.json.jsonObject
+
+fun prepareReply(parentMessage: Message) = jsonObject {
+    put("serial", parentMessage.serial)
+    put("timestamp", parentMessage.timestamp)
+    put("clientId", parentMessage.clientId)
+    put("previewText", parentMessage.text.take(140))
+}
+```
 </Code>
 
 If a parent message isn't in local state, fetch it directly using its `serial`:
@@ -125,6 +231,52 @@ const FetchParentMessage = ({ replyData }) => {
     <div>{parentMessage.text}</div>
   ) : null;
 };
+```
+
+```swift
+func fetchParentMessage(replyData: JSONObject) async throws -> Message {
+    guard case let .string(serial) = replyData["serial"] else {
+        throw NSError(domain: "ReplyError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid serial"])
+    }
+    let message = try await room.messages.get(withSerial: serial)
+    return message
+}
+```
+
+```kotlin
+import com.ably.chat.json.JsonObject
+import com.ably.chat.json.JsonString
+
+suspend fun fetchParentMessage(replyData: JsonObject): Message {
+    val serial = (replyData["serial"] as? JsonString)?.value
+        ?: throw IllegalArgumentException("Invalid serial")
+    return room.messages.get(serial)
+}
+```
+
+```jetpack
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import com.ably.chat.Message
+import com.ably.chat.Room
+import com.ably.chat.json.JsonObject
+import com.ably.chat.json.JsonString
+
+@Composable
+fun FetchParentMessageComponent(room: Room, replyData: JsonObject) {
+    var parentMessage by remember { mutableStateOf<Message?>(null) }
+
+    LaunchedEffect(replyData) {
+        val serial = (replyData["serial"] as? JsonString)?.value
+        if (serial != null) {
+            parentMessage = room.messages.get(serial)
+        }
+    }
+
+    parentMessage?.let { message ->
+        Text(text = message.text)
+    }
+}
 ```
 </Code>
 
@@ -186,6 +338,100 @@ const MessageList = () => {
     </div>
   );
 };
+```
+
+```swift
+// Subscribe to messages and handle replies
+var localMessages: [Message] = []
+
+room.messages.subscribe { event in
+    let message = event.message
+
+    if let replyMetadata = message.metadata["reply"],
+       case let .object(replyData) = replyMetadata {
+        if case let .string(replySerial) = replyData["serial"] {
+            if let parentMessage = localMessages.first(where: { $0.serial == replySerial }) {
+                print("Reply to \(parentMessage.clientID): \(parentMessage.text)")
+            } else if case let .string(replyClientId) = replyData["clientId"],
+                      case let .string(previewText) = replyData["previewText"] {
+                print("Reply to \(replyClientId): \(previewText)")
+            }
+        }
+    }
+
+    print("Message: \(message.text)")
+    localMessages.append(message)
+}
+```
+
+```kotlin
+import com.ably.chat.json.JsonObject
+import com.ably.chat.json.JsonString
+
+// Subscribe to messages and handle replies
+val localMessages = mutableListOf<Message>()
+
+room.messages.subscribe { event ->
+    val message = event.message
+
+    val replyData = message.metadata["reply"] as? JsonObject
+    if (replyData != null) {
+        val replySerial = (replyData["serial"] as? JsonString)?.value
+        val parentMessage = localMessages.find { it.serial == replySerial }
+
+        if (parentMessage != null) {
+            println("Reply to ${parentMessage.clientId}: ${parentMessage.text}")
+        } else {
+            val replyClientId = (replyData["clientId"] as? JsonString)?.value
+            val previewText = (replyData["previewText"] as? JsonString)?.value
+            println("Reply to $replyClientId: $previewText")
+        }
+    }
+
+    println("Message: ${message.text}")
+    localMessages.add(message)
+}
+```
+
+```jetpack
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import com.ably.chat.Message
+import com.ably.chat.Room
+import com.ably.chat.json.JsonObject
+import com.ably.chat.json.JsonString
+
+@Composable
+fun MessageListComponent(room: Room) {
+    var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
+
+    DisposableEffect(room) {
+        val (unsubscribe) = room.messages.subscribe { event ->
+            messages = messages + event.message
+        }
+
+        onDispose {
+            unsubscribe()
+        }
+    }
+
+    Column {
+        messages.forEach { message ->
+            Column {
+                // Display reply information if present
+                val replyData = message.metadata["reply"] as? JsonObject
+                if (replyData != null) {
+                    val previewText = (replyData["previewText"] as? JsonString)?.value
+                    Text(text = "Replying to: $previewText")
+                }
+
+                // Display the message text
+                Text(text = message.text)
+            }
+        }
+    }
+}
 ```
 </Code>
 
