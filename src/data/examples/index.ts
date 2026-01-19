@@ -29,27 +29,17 @@ export const examples: Example[] = [
     description: 'Generate a JSON Web Token (JWT) for authenticating users.',
     products: ['auth'],
     layout: 'single-horizontal',
-    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
     metaTitle: `Authenticate with Ably using JWTs`,
     metaDescription: `Learn how to generate and use JWTs for client authentication with Ably. Secure token-based auth for realtime applications.`,
   },
   {
     id: 'auth-request-token',
-    name: 'Request Token',
-    description: 'Request an Ably Token for authenticating users.',
+    name: 'Request an Ably Token',
+    description: 'Request an Ably Token for authenticating users. JWTs are recommended for most use cases.',
     products: ['auth'],
     layout: 'single-horizontal',
-    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
-    metaTitle: `Authenticate with Ably Token`,
-    metaDescription: `Learn how to request and use Ably Tokens for client authentication. Secure token-based auth for realtime applications.`,
-  },
-  {
-    id: 'auth-request-token',
-    name: 'Request Token',
-    description: 'Request an Ably Token for authenticating users.',
-    products: ['auth'],
-    layout: 'single-horizontal',
-    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
     metaTitle: `Authenticate with Ably Token`,
     metaDescription: `Learn how to request and use Ably Tokens for client authentication. Secure token-based auth for realtime applications.`,
   },
@@ -325,6 +315,9 @@ export const examples: Example[] = [
 ];
 
 export const products = {
+  auth: {
+    label: 'Authentication',
+  },
   pubsub: {
     label: 'Pub/Sub',
   },

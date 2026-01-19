@@ -15,7 +15,22 @@ function handleConnect() {
     messageOne.textContent = '✓';
 
     const realtimeClient = new Ably.Realtime({
-      authUrl: config.AUTH_URL || 'http://localhost:3001/request-token',
+      authCallback: async (_tokenParams, callback) => {
+        try {
+          const response = await fetch(config.AUTH_URL || 'http://localhost:3001/request-token');
+          if (!response.ok) {
+            callback(`Auth server error: ${response.status}`, null);
+            return;
+          }
+          const contentType = response.headers.get('content-type');
+          const token = contentType?.includes('application/json')
+            ? await response.json()
+            : await response.text();
+          callback(null, token);
+        } catch (error) {
+          callback(error instanceof Error ? error.message : String(error), null);
+        }
+      },
     });
 
     const messageTwo = document.getElementById('message-2');
