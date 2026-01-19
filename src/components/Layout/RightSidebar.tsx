@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useLocation } from '@reach/router';
+import { usePathname, useSearchParams } from 'next/navigation';
 import cn from '@ably/ui/core/utils/cn';
 import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
 import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
@@ -48,10 +50,11 @@ const getElementIndent = (type: string, isStepped: boolean) => {
 };
 
 const RightSidebar = () => {
-  const location = useLocation();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({
-    id: location.hash ? location.hash.slice(1) : '#',
+    id: typeof window !== 'undefined' && window.location.hash ? window.location.hash.slice(1) : '#',
   });
   const [isStepped, setIsStepped] = useState<boolean>(false);
   const [sidebarDimensions, setSidebarDimensions] = useState<{
@@ -156,7 +159,7 @@ const RightSidebar = () => {
     return () => {
       observer.disconnect();
     };
-  }, [location.pathname, location.search, extractHeaders, handleIntersect]);
+  }, [pathname, searchParams, extractHeaders, handleIntersect]);
 
   // Calculate sidebar dimensions after DOM is ready
   useEffect(() => {
@@ -282,7 +285,7 @@ const RightSidebar = () => {
                 {headers.map((header, index) => (
                   <a
                     href={`#${header.id}`}
-                    key={[location.pathname, header.id, index].join('-')}
+                    key={[pathname, header.id, index].join('-')}
                     id={`sidebar-${header.id}`}
                     tabIndex={0}
                     data-heading={header.type.toLowerCase()}

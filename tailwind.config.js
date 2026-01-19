@@ -3,9 +3,13 @@ const extendConfig = require('@ably/ui/tailwind.extend.js');
 module.exports = extendConfig((ablyUIConfig) => ({
   ...ablyUIConfig,
   content: [
-    './src/pages/docs/*.{ts,tsx}',
+    // Next.js App Router
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    // Existing components
     './src/components/**/*.{ts,tsx}',
-    './src/templates/**/*.{ts,tsx}',
+    // Library files
+    './lib/**/*.{ts,tsx}',
+    // Ably UI components
     ...ablyUIConfig.content,
   ],
   theme: {

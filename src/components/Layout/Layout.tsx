@@ -1,6 +1,7 @@
+'use client';
+
 import React from 'react';
-import { PageProps } from 'gatsby';
-import { useLocation } from '@reach/router';
+import { usePathname } from 'next/navigation';
 import cn from '@ably/ui/core/utils/cn';
 
 import '../../styles/global.css';
@@ -30,15 +31,18 @@ export type PageContextType = {
   frontmatter: Frontmatter;
 };
 
-type LayoutProps = PageProps<unknown, PageContextType>;
+type LayoutProps = {
+  children: React.ReactNode;
+  pageContext: PageContextType;
+};
 
 const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
-  const location = useLocation();
+  const pathname = usePathname();
   const { leftSidebar, rightSidebar, template } = pageContext.layout ?? {};
   const isRedocPage =
-    location.pathname === '/docs/api/control-api' ||
-    location.pathname === '/docs/api/chat-rest' ||
-    location.pathname === '/docs/api/liveobjects-rest';
+    pathname === '/docs/api/control-api' ||
+    pathname === '/docs/api/chat-rest' ||
+    pathname === '/docs/api/liveobjects-rest';
 
   return (
     <GlobalLoading template={template}>

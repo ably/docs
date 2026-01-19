@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation } from '@reach/router';
+import { usePathname } from 'next/navigation';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import Status, { StatusUrl } from '@ably/ui/core/Status';
@@ -92,7 +94,7 @@ const customGithubPaths = {
 const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => {
   const { activePage } = useLayoutContext();
   const { frontmatter } = pageContext;
-  const location = useLocation();
+  const pathname = usePathname();
   const [feedbackMode, setFeedbackMode] = useState<FeedbackMode | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -163,7 +165,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
 
   const githubEditPath = useMemo(() => {
     let path = '#';
-    const pathName = location.pathname.replace('docs/', '');
+    const pathName = pathname.replace('docs/', '');
 
     if (customGithubPaths[pathName]) {
       path = customGithubPaths[pathName];
@@ -176,7 +178,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
     }
 
     return path;
-  }, [location.pathname, activePage.template, activePage.page.index]);
+  }, [pathname, activePage.template, activePage.page.index]);
 
   return (
     <footer className="flex flex-col my-10">

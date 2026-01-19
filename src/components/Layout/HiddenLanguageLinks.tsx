@@ -1,4 +1,6 @@
-import { useLocation } from '@reach/router';
+'use client';
+
+import { usePathname } from 'next/navigation';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
@@ -14,7 +16,7 @@ import { LanguageKey } from 'src/data/languages/types';
  */
 const HiddenLanguageLinks = () => {
   const { activePage } = useLayoutContext();
-  const location = useLocation();
+  const pathname = usePathname();
   const languageVersions = languageData[activePage.product ?? 'pubsub'];
 
   // Filter languages to match what's available on this page
@@ -37,7 +39,7 @@ const HiddenLanguageLinks = () => {
           const langInfo = languageInfo[language.label];
           return (
             <li key={language.label}>
-              <a href={`${location.pathname}?lang=${language.label}`}>
+              <a href={`${pathname}?lang=${language.label}`}>
                 {langInfo?.label || language.label} v{language.version}
               </a>
             </li>

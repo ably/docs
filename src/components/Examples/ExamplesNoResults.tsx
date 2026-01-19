@@ -1,5 +1,5 @@
 import Badge from '@ably/ui/core/Badge';
-import { Link } from 'gatsby';
+import Link from 'src/components/Link';
 
 const ExamplesNoResults = () => {
   const popularSearchTerm = ['Avatar stack', 'Live Cursors', 'Occupancy', 'Presence'];

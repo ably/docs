@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from '@reach/router';
+import { usePathname } from 'next/navigation';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
@@ -22,7 +24,7 @@ type LanguageSelectorOptionData = {
 
 export const LanguageSelector = () => {
   const { activePage } = useLayoutContext();
-  const location = useLocation();
+  const pathname = usePathname();
   const languageVersions = languageData[activePage.product ?? 'pubsub'];
   const [value, setValue] = useState<string>('');
 
@@ -54,9 +56,9 @@ export const LanguageSelector = () => {
     if (option) {
       track('language_selector_changed', {
         language: option.label,
-        location: location.pathname,
+        location: pathname,
       });
-      navigate(`${location.pathname}?lang=${option.label}`);
+      navigate(`${pathname}?lang=${option.label}`);
     }
   };
 

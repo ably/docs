@@ -1,6 +1,7 @@
+'use client';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { graphql, useStaticQuery } from 'gatsby';
-import { useLocation } from '@reach/router';
+import { useSearchParams } from 'next/navigation';
 import * as Accordion from '@radix-ui/react-accordion';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
@@ -10,6 +11,7 @@ import { NavProductContent, NavProductPage } from 'src/data/nav/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { interactiveButtonClassName } from './utils/styles';
+import { externalScriptsData } from 'lib/site-config';
 
 type LeftSidebarProps = {
   className?: string;
@@ -33,7 +35,7 @@ const iconClassName = 'text-neutral-1300 dark:text-neutral-000 transition-transf
 
 const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProductContent)[]; tree: number[] }) => {
   const { activePage } = useLayoutContext();
-  const location = useLocation();
+  const searchParams = useSearchParams();
   const activeTriggerRef = useRef<HTMLButtonElement>(null);
   const layer = tree.length - 1;
   const previousTree = activePage.tree.map(({ index }) => index).slice(0, layer + 2);
@@ -78,7 +80,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
     }
   }, [activePage.tree.length, subtreeIdentifier]);
 
-  const lang = new URLSearchParams(location.search).get('lang');
+  const lang = searchParams.get('lang');
 
   return (
     <Accordion.Root
@@ -162,22 +164,6 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   );
 
   const [openProducts, setOpenProducts] = useState(defaultPageItems);
-
-  const {
-    site: {
-      siteMetadata: { externalScriptsData },
-    },
-  } = useStaticQuery(graphql`
-    query {
-      site {
-        siteMetadata {
-          externalScriptsData {
-            inkeepSearchEnabled
-          }
-        }
-      }
-    }
-  `);
 
   useEffect(() => {
     if (activePage.tree[0]?.index !== undefined) {

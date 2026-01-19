@@ -1,3 +1,5 @@
+'use client';
+
 import React, {
   useState,
   createContext,
@@ -8,7 +10,7 @@ import React, {
   ReactNode,
   ReactElement,
 } from 'react';
-import { navigate, PageProps } from 'gatsby';
+import { useRouter, usePathname } from 'next/navigation';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
@@ -37,7 +39,10 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from '../common/meta-title';
 import { ProductName } from 'src/templates/template-data';
 
-type MDXWrapperProps = PageProps<unknown, PageContextType>;
+type MDXWrapperProps = {
+  children: React.ReactNode;
+  pageContext: PageContextType;
+};
 
 // Create SDK Context
 type SDKContextType = {
@@ -69,6 +74,8 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
   ...props
 }) => {
   const { sdk, setSdk } = useSDK();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const replacements: Replacement[] = useMemo(
     () => [{ term: 'RANDOM_CHANNEL_NAME', replacer: getRandomChannelName }],
@@ -143,7 +150,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
       sdk={sdk}
       onChange={(lang, sdk) => {
         setSdk(sdk ?? null);
-        navigate(`${location.pathname}?lang=${lang}`);
+        router.push(`${pathname}?lang=${lang}`);
       }}
       className={cn(props.className, 'mb-5')}
       languageOrdering={
@@ -162,8 +169,9 @@ const META_PRODUCT_FALLBACK = 'pub_sub';
 const getFrontmatter = (frontmatter: Frontmatter, prop: keyof Frontmatter, alternative: string | string[] = '') =>
   frontmatter?.[prop] ? frontmatter[prop] : alternative;
 
-const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location }) => {
+const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext }) => {
   const { frontmatter } = pageContext;
+  const pathname = usePathname();
 
   const { activePage } = useLayoutContext();
   const [sdk, setSdk] = useState<SDKType>(
@@ -181,7 +189,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl(location.pathname);
+  const canonical = canonicalUrl(pathname);
 
   // Generate JSON-LD structured data for SEO
   const structuredData: StructuredData | undefined = useMemo(() => {
@@ -193,7 +201,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
     const codeParts = activePage.languages.map((lang) => ({
       '@type': 'SoftwareSourceCode',
       programmingLanguage: languageInfo[lang]?.label ?? lang,
-      url: canonicalUrl(`${location.pathname}?lang=${lang}`),
+      url: canonicalUrl(`${pathname}?lang=${lang}`),
     }));
 
     return {
@@ -204,7 +212,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
       url: canonical,
       hasPart: codeParts,
     };
-  }, [activePage.languages, title, description, canonical, location.pathname, canonicalUrl]);
+  }, [activePage.languages, title, description, canonical, pathname, canonicalUrl]);
 
   // Use the copyable headers hook
   useCopyableHeaders();
