@@ -3,8 +3,8 @@ title: Using the REST API
 meta_description: "Learn how to work with Ably LiveObjects using the REST API"
 ---
 
-<Aside data-type='experimental'>
-LiveObjects REST API is currently Experimental. Its features are still in development and subject to rapid change.
+<Aside data-type='public-preview'>
+LiveObjects REST API is in Public Preview. We are committed to supporting the LiveObjects REST API and welcome adoption and feedback.
 
 **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
 </Aside>
@@ -19,31 +19,11 @@ To use LiveObjects, an API key must have at least the `object-subscribe` capabil
 
 In order to create or update objects, make sure your API key includes both `object-subscribe` and `object-publish` [capabilities](/docs/auth/capabilities) to allow full read and write access.
 
-## Data values <a id="data-values"/>
+## Getting started: Fetch objects <a id="fetch-object"/>
 
-When working with objects via the REST API, [primitive types](/docs/liveobjects/concepts/objects#primitive-types) and [object references](/docs/liveobjects/concepts/objects#composability) are included in request and response bodies under `data` fields.
+### Get the entire channel object <a id="fetching-object-get"/>
 
-The key in the `data` object indicates the type of the value:
-
-<Code>
-```json
-{ "data": { "number": 42 } }
-{ "data": { "string": "LiveObjects is awesome" } }
-{ "data": { "boolean": true } }
-{ "data": { "bytes": "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo=" } }
-{ "data": { "objectId": "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669" } }
-```
-</Code>
-
-<Aside data-type='note'>
-`bytes` values use base64 string encoding in JSON request and response bodies.
-</Aside>
-
-## Fetch the channel object <a id="fetch-object"/>
-
-### Get the entire object <a id="fetching-object-get"/>
-
-The following request returns the entire channel object.
+The following request returns the entire channel object in compact format.
 
 <Code>
 ```shell
@@ -52,22 +32,433 @@ The following request returns the entire channel object.
 ```
 </Code>
 
-This endpoint returns the compact representation of the channel object.
+This endpoint returns the compact representation, which shows the logical structure of your data without metadata.
+
+Example response:
 
 <Code>
   ```json
   {
     "votes": {
       "down": 10,
-      "up": 5,
+      "up": 5
     }
   }
   ```
 </Code>
 
-#### Get the entire object with metadata <a id="fetching-object"/>
+This example shows a LiveMap "votes" stored on the channel object containing two LiveCounter instances: "down" and "up".
+
+
+### Query objects by path <a id="fetch-object-with-path"/>
+
+Return a subset of the channel object by specifying the `path` query parameter. For example, to return only the `votes` LiveMap instance from the root object:
+
+<Code>
+  ```shell
+  curl "https://main.realtime.ably.net/channels/my-channel/object?path=votes" \
+  -u {{API_KEY}}
+  ```
+</Code>
+
+Example response:
+
+<Code>
+  ```json
+  {
+    "down": 5,
+    "up": 10
+  }
+  ```
+</Code>
+
+### Get an object by ID <a id="simple-object-get-by-id"/>
+
+To get a specific instance of an object type on the channel you can specify the object ID in the URL path:
+
+<Code>
+```shell
+  curl "https://main.realtime.ably.net/channels/my-channel/object/map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692" \
+    -u {{API_KEY}}
+```
+</Code>
+
+This endpoint also supports the `path` query option. Note that the path is evaluated relative to the specified object instance.
+
+## Publishing operations <a id="publishing-operations"/>
+
+Publish all operations to the same endpoint: `POST /channels/{channelId}/object`
+
+Each operation includes:
+1. A reference to an object using either **objectId** or **path**
+2. An **operation-specific field** (`mapSet`, `counterInc`, etc.) containing the operation parameters
+
+### Address objects in operations <a id="addressing-objects"/>
+
+Address objects using either `objectId` or `path`:
+- `objectId` (string): The unique identifier of the object instance to update
+- `path` (string): The path to the object instance within the channel object
+
+Use dot-separated notation for paths (e.g. `votes.up`), relative to the root of the channel object. An empty path `""` refers to the root channel object.
+
+<Aside data-type='important'>
+When using path operations, the server resolves object IDs at the time it receives the request. Ably applies the operation to these specific object instances. If the object instances at the specified path change due to concurrent updates before Ably processes the operation, Ably does not apply the operation to the new object instances.
+</Aside>
+
+### Available operations <a id="operation-types"/>
+
+LiveObjects supports the following operations:
+
+| Operation | Description |
+| --------- | ----------- |
+| `mapSet` | Sets a key/value pair in a LiveMap. |
+| `mapRemove` | Removes a key from a LiveMap. |
+| `counterInc` | Increments or decrements a LiveCounter. |
+| `mapCreate` | Creates a new LiveMap instance. |
+| `counterCreate` | Creates a new LiveCounter instance. |
+
+<Aside data-type='further-reading'>
+For complete OpenAPI specifications, see the [LiveObjects OpenAPI spec](/docs/api/liveobjects-rest).
+</Aside>
+
+Each operation has specific required and optional fields:
+
+**mapSet** <a id="mapset-spec"/>
+
+<Code>
+```json
+{
+  "path": "user",
+  "mapSet": {
+    "key": "username",
+    "value": {"string": "alice"}
+  }
+}
+```
+</Code>
+
+**mapRemove** <a id="mapremove-spec"/>
+
+<Code>
+```json
+{
+  "path": "user",
+  "mapRemove": {
+    "key": "username"
+  }
+}
+```
+</Code>
+
+**counterInc** <a id="counterinc-spec"/>
+
+<Code>
+```json
+{
+  "path": "votes.up",
+  "counterInc": {
+    "number": 5
+  }
+}
+```
+</Code>
+
+<Aside data-type='note'>
+There is no explicit `counterDec` operation. To decrement a counter, use `counterInc` with a negative number.
+</Aside>
+
+**mapCreate** <a id="mapcreate-spec"/>
+
+Optionally omit the `path` or `objectId` fields when creating an object with `mapCreate`.
+For the object to be reachable in the state tree, assign it to a key in a LiveMap that is
+reachable from the root.
+
+<Code>
+```json
+{
+  "path": "posts.post1",
+  "mapCreate": {
+    "semantics": 0,
+    "entries": {
+      "title": {"data": {"string": "LiveObjects is awesome"}},
+      "createdAt": {"data": {"number": 1745835181122}},
+      "isPublished": {"data": {"boolean": true}}
+    }
+  }
+}
+```
+</Code>
+
+**counterCreate** <a id="countercreate-spec"/>
+
+Optionally omit the `path` or `objectId` fields when creating an object with `counterCreate`.
+For the object to be reachable in the state tree, assign it to a key in a LiveMap that is
+reachable from the root.
+
+<Code>
+```json
+{
+  "path": "visits",
+  "counterCreate": {
+    "count": 0
+  }
+}
+```
+</Code>
+
+### Publishing an operation request <a id="issue-operation"/>
+
+**Update a specific object by ID** <a id="updating-objects-by-id"/>
+
+To perform operations on a specific object instance, provide its object ID in the request body:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "objectId": "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
+      "counterInc": {
+        "number": 1
+      }
+    }'
+```
+</Code>
+
+The response includes the ID of the published operation message, the channel and a list of object IDs that were affected by the operation:
+
+<Code>
+```json
+{
+  "messageId": "TJPWHhMTrF:0",
+  "channel": "my-channel",
+  "objectIds": ["counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269"]
+}
+```
+</Code>
+
+**Update an object by path** <a id="updating-objects-by-path"/>
+
+Path operations target objects based on their location in the channel object.
+
+Paths are expressed relative to the structure of the object as defined by the [compact](#fetching-object-get) view of the channel object.
+
+The following example increments the `LiveCounter` instance stored at the `up` key on the `votes` `LiveMap` object:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "path": "votes.up",
+      "counterInc": {
+        "number": 1
+      }
+    }'
+```
+</Code>
+
+## Creating objects <a id="creating-objects"/>
+
+Use `mapCreate` and `counterCreate` operations to create new LiveObjects instances.
+
+### Creating objects with paths <a id="creating-with-path"/>
+
+The simplest way to create an object is to specify a `path` where it should be created. The server automatically creates the object and assigns it to that path in a single atomic operation.
+
+The following example creates a new `LiveMap` instance and assigns it to the `posts` `LiveMap` instance on the root object under the key `post1`:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "path": "posts.post1",
+      "mapCreate": {
+        "semantics": 0,
+        "entries": {
+          "title": {"data": {"string": "LiveObjects is awesome"}},
+          "createdAt": {"data": {"number": 1745835181122}},
+          "isPublished": {"data": {"boolean": true}}
+        }
+      }
+    }'
+```
+</Code>
+
+When using `path` with a create operation, the server constructs two operations published as a [batch](#batch-operations):
+
+1. A `mapCreate` or `counterCreate` operation to create the new object
+2. A `mapSet` operation to assign the new object to the parent LiveMap at the specified path
+
+This ensures the new object is immediately [reachable](#object-reachability) from the root.
+
+The response will include the object IDs of all objects affected by the resulting set of operations:
+
+<Code>
+```json
+{
+  "messageId": "mkfjWU2jju:0",
+  "channel": "my-channel",
+  "objectIds": [
+    "map:cRCKx-eev7Tl66jGfl1SkZh_uEMo6F5jyV0B7mUn4Zs@1745835549101",
+    "map:a_oQqPYUGxi95_Cn0pWcsoeBlHZZtVW5xKIw0hnJCZs@1745835547258"
+  ]
+}
+```
+</Code>
+
+### Creating standalone objects <a id="creating-standalone"/>
+
+You can create objects without immediately assigning them by omitting both `objectId` and `path` from the create operation.
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "mapCreate": {
+        "semantics": 0,
+        "entries": {
+          "name": {"data": {"string": "Alice"}}
+        }
+      }
+    }'
+```
+</Code>
+
+The response includes the generated object ID:
+
+<Code>
+```json
+{
+  "messageId": "TJPWHhMTrF:0",
+  "channel": "my-channel",
+  "objectIds": ["map:abc123def456...@1745835549101"]
+}
+```
+</Code>
+
+<Aside data-type='important'>
+Standalone objects are not reachable until assigned to the object tree. Unreachable objects are eligible for garbage collection. See [Object reachability and garbage collection](#object-reachability) for details.
+</Aside>
+
+## Advanced path operations <a id="advanced-path-operations"/>
+
+### Path wildcards <a id="path-wildcards"/>
+
+Use wildcards in paths to target multiple objects at once. To increment all `LiveCounter` instances in the `votes` `LiveMap` instance:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "path": "votes.*",
+      "counterInc": {
+        "number": 1
+      }
+    }'
+```
+</Code>
+
+The response includes the IDs of each of the affected object instances:
+
+<Code>
+```json
+{
+  "messageId": "0Q1w-LpA11:0",
+  "channel": "my-channel",
+  "objectIds": [
+    "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
+    "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669"
+  ]
+}
+```
+</Code>
+
+Wildcards match exactly one level in the channel object and can appear at the end or middle of paths. For example, given the following compact view of the channel object:
+
+<Code>
+```json
+{
+  "posts": {
+    "post1": {
+      "votes": {
+        "up": 5,
+        "down": 10
+      }
+    },
+    "post2": {
+      "votes": {
+        "up": 5,
+        "down": 10
+      }
+    }
+  }
+}
+```
+</Code>
+
+The following example increments the upvote `LiveCounter` instances for all posts in the `posts` `LiveMap` instance:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "path": "posts.*.votes.up",
+      "counterInc": {
+        "number": 1
+      }
+    }'
+```
+</Code>
+
+### Escaping special characters <a id="path-escaping"/>
+
+If your `LiveMap` keys contain periods, you can escape them with a backslash. The following example increments the upvote `LiveCounter` instance for a post with the key `post.123`:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "path": "posts.post\.123.votes.up",
+      "counterInc": {
+        "number": 1
+      }
+    }'
+```
+</Code>
+
+## Get objects with metadata <a id="get-object-metadata"/>
+
+By default, the REST API returns objects in **compact format**, which shows the logical structure of your data without metadata. This format is ideal for most use cases.
+
+You can request the **non-compact format** by adding `compact=false` to your request. This returns the full object structure including:
+- Object IDs for each instance
+- Object type metadata (map semantics, counter values)
+- Complete object hierarchy
+
+**When to use each format:**
+
+| Format | When to use |
+|--------|------------|
+| **Compact** (default) | Reading data values, understanding logical structure |
+| **Non-compact** | Inspecting object IDs, debugging, understanding metadata |
+
+### Get the root object with metadata <a id="fetching-object"/>
 
 You can optionally include additional object [metadata](/docs/liveobjects/concepts/objects#metadata) in the response by specifying the `compact=false` query option:
+
 <Code>
   ```shell
   curl "https://main.realtime.ably.net/channels/my-channel/object?compact=false" \
@@ -119,27 +510,7 @@ You can optionally include additional object [metadata](/docs/liveobjects/concep
   ```
 </Code>
 
-### Query the object by path <a id="fetch-object-with-path"/>
-
-You can return a subset of the channel object by specifying the `path` query param. For example, to return only the `votes` `LiveMap` instance from the root object:
-
-<Code>
-  ```shell
-  curl "https://main.realtime.ably.net/channels/my-channel/object?path=votes" \
-  -u {{API_KEY}}
-  ```
-</Code>
-
-<Code>
-  ```json
-  {
-    "down": 5,
-    "up": 10
-  }
-  ```
-</Code>
-
-### Get an object by id <a id="fetch-object-get-by-id"/>
+### Get an object by ID with metadata <a id="metadata-object-get-by-id"/>
 
 To fetch a specific instance of an object type on the channel you can specify the object ID in the URL path:
 
@@ -153,15 +524,15 @@ To fetch a specific instance of an object type on the channel you can specify th
 This endpoint supports the `path` and `compact` query options. Note that the path is evaluated relative to the specified object instance.
 
 <Code>
-  ```json
-  {
-    "down": 5,
-    "up": 10
-  }
-  ```
+```json
+{
+  "down": 5,
+  "up": 10
+}
+```
 </Code>
 
-The full object response can be retrieved by providing the `compact=false` query param.
+The full object response can be retrieved by providing the `compact=false` query parameter:
 
 <Code>
   ```shell
@@ -203,8 +574,7 @@ The full object response can be retrieved by providing the `compact=false` query
   ```
 </Code>
 
-
-The `path` param can also be provided here to return a subset of the channel object starting from the specified object ID.
+The `path` parameter can also be provided here to return a subset of the channel object starting from the specified object ID:
 
 <Code>
   ```shell
@@ -214,15 +584,15 @@ The `path` param can also be provided here to return a subset of the channel obj
 </Code>
 
 <Code>
-  ```json
-  {
-    "down": 5,
-    "up": 10
-  }
-  ```
+```json
+{
+  "down": 5,
+  "up": 10
+}
+```
 </Code>
 
-### Cyclic references <a id="fetching-objects-get-cycles"/>
+## Cyclic references <a id="fetching-objects-get-cycles"/>
 
 For both the full object and the compact response formats, cyclic references in the channel object are included as a
 reference to the object ID rather than including the same object instance in the response more than once.
@@ -235,9 +605,11 @@ For example, if you create a cycle in the channel object by adding a reference t
     -u {{API_KEY}} \
     -H "Content-Type: application/json" \
     -d '{
-      "operation": "MAP_SET",
       "objectId": "map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692",
-      "data": {"key": "myRoot", "value": {"objectId": "root"}}
+      "mapSet": {
+        "key": "myRoot",
+        "value": {"objectId": "root"}
+      }
     }'
 ```
 </Code>
@@ -256,337 +628,83 @@ The response will handle the cyclic reference by including the `myRoot` key in t
   {
     "votes": {
       "down": 5,
-      "up": 10
+      "up": 10,
       "myRoot": {
         "objectId": "root"
-      },
+      }
     }
   }
   ```
 </Code>
 
-## Publishing operations <a id="publishing-operations"/>
+## Object reachability and garbage collection <a id="object-reachability"/>
 
-All operations are published to the same endpoint. The request body specifies:
+Objects must be reachable from the root object to persist. Unreachable objects are automatically removed by garbage collection. Learn more about [reachability and object lifecycle](/docs/liveobjects/concepts/objects#reachability).
 
-* The type of operation to publish
-* The object(s) to which the operation should be applied
-* The operation payload
+### Removing objects <a id="removing-objects"/>
 
-The request body is of the form:
+Remove an object from the channel using `mapRemove` to delete the key referencing it:
 
 <Code>
-```json
-{
-  "operation": "<operationType>",
-  "objectId": "<objectId>",
-  "path": "<path>",
-  "data": "<data>"
-}
-```
-</Code>
-
-Example setting a key on the channel object:
-
-<Code>
-  ```shell
+```shell
   curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
     -u {{API_KEY}} \
     -H "Content-Type: application/json" \
     -d '{
-      "operation": "MAP_SET",
-      "path": "",
-      "data": {
-        "key" : "myKey",
-        "value": {"string": "myValue"}
+      "objectId": "root",
+      "mapRemove": {
+        "key": "posts"
       }
     }'
-  ```
+```
 </Code>
 
-
-The `operationType` is a string that specifies the type of operation to publish and must be one of:
-
-| Operation | Description |
-| --------- | ----------- |
-| `MAP_CREATE` | Creates LiveMap object. |
-| `MAP_SET` | Set the value of a key in a LiveMap object. |
-| `MAP_REMOVE` | Tombstone a key in a LiveMap object. |
-| `COUNTER_CREATE` | Creates a LiveCounter object. |
-| `COUNTER_INC` | Increments or decrements the value of a LiveCounter object. |
+If no other references to the object exist, it becomes unreachable and is eligible for garbage collection.
 
 <Aside data-type='note'>
-There is no explicit `COUNTER_DEC` operation. To decrement a counter, use the `COUNTER_INC` operation with a negative number.
+Removing a key may also make nested child objects unreachable. These objects are also eligible for garbage collection.
 </Aside>
 
-Either the `objectId` or `path` fields are used to specify the target object(s) for the operation.
-
-The operation payload is provided in the `data` in accordance with the specified operation type.
-
-### Update a specific object instance <a id="updating-objects-by-id"/>
-
-To perform operations on a specific object instance, you need to provide its object ID in the request body:
+**Example lifecycle:**
 
 <Code>
 ```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "COUNTER_INC",
-      "objectId": "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
-      "data": {"number":1}
-    }'
-```
-</Code>
+# 1. Create a map and assign it to "user"
+curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+  -u {{API_KEY}} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "user",
+    "mapCreate": {
+      "semantics": 0,
+      "entries": {"name": {"data": {"string": "Alice"}}}
+    }
+  }'
+# Object is now REACHABLE at path "user"
 
-The response includes the ID of the published operation message, the channel and a list of object IDs that were affected by the operation:
+# 2. Remove the "user" key from root
+curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+  -u {{API_KEY}} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "",
+    "mapRemove": {"key": "user"}
+  }'
+# Object is now UNREACHABLE and eligible for garbage collection
 
-<Code>
-```json
-{
-  "messageId": "TJPWHhMTrF:0",
-  "channel": "my-channel",
-  "objectIds": ["counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269"]
-}
-```
-</Code>
-
-### Update an object by path <a id="updating-objects-by-path"/>
-
-Path operations provide a convenient way to target objects based on their location in the channel object.
-
-Paths are expressed relative to the structure of the object as defined by the [compact](#fetching-object-get) view of the channel object.
-
-For example, given the following compact view of the channel object:
-
-The following example increments the `LiveCounter` instance stored at the `up` key on the `votes` `LiveMap` object:
-
-<Code>
-```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "COUNTER_INC",
-      "path": "votes.up",
-      "data": { "number": 1 }
-    }'
+# 3. After garbage collection runs, the object is permanently deleted
 ```
 </Code>
 
 <Aside data-type='important'>
-When using path operations, the `objectId`s of the target objects are resolved by the server at the time the request is received.
-
-Ably applies the operation to these specific object instances. If the object instances located at that specified path change before Ably processes the operation, due to concurrent updates from other clients, Ably does not apply the operation to the new object instances.
+Garbage collection is permanent. Once collected, objects cannot be recovered.
 </Aside>
 
-You can use wildcards in paths to target multiple objects at once. To increment all `LiveCounter` instances in the `votes` `LiveMap` instance:
+## Batch operations <a id="batch-operations"/>
 
-<Code>
-```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "COUNTER_INC",
-      "path": "votes.*",
-      "data": { "number": 1 }
-    }'
-```
-</Code>
+Group multiple operations into a single request by sending an array of operations. All operations are published as a single message and processed as a single atomic unit. Learn more about [batch operations](/docs/liveobjects/batch).
 
-The response includes the IDs of each of the affected object instances:
-
-<Code>
-```json
-{
-  "messageId": "0Q1w-LpA11:0",
-  "channel": "my-channel",
-  "objectIds": [
-    "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
-    "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669"
-  ]
-}
-```
-</Code>
-
-Wildcards can be included at the end or in the middle of paths and match exactly one level in the channel object. For example, given the following compact view of the channel object:
-
-<Code>
-```json
-{
-  "posts": {
-    "post1": {
-      "votes": {
-        "up": 5,
-        "down": 10
-      }
-    },
-    "post2": {
-      "votes": {
-        "up": 5,
-        "down": 10
-      }
-    }
-  }
-}
-```
-</Code>
-
-The following example increments the upvote `LiveCounter` instances for all posts in the `posts` `LiveMap` instance:
-
-<Code>
-```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "COUNTER_INC",
-      "path": "posts.*.votes.up",
-      "data": { "number": 1 }
-    }'
-```
-</Code>
-
-If your `LiveMap` keys contain periods, you can escape them with a backslash. The following example increments the upvote `LiveCounter` instance for a post with the key `post.123`:
-
-<Code>
-```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "COUNTER_INC",
-      "path": "posts.post\.123.votes.up",
-      "data": { "number": 1 }
-    }'
-```
-</Code>
-
-### Creating objects <a id="creating-objects"/>
-
-Use the `MAP_CREATE` and `COUNTER_CREATE` operations to create new objects. You can optionally specify an initial value for the object in the `data` field when creating it.
-
-For `MAP_CREATE`, the `data` field should be a JSON object that contains the initial entries for the `LiveMap` instance:
-
-<Code>
-```json
-{
-  "operation": "MAP_CREATE",
-  "data": {
-    "title": {"string": "LiveObjects is awesome"},
-    "createdAt": {"number": 1745835181122},
-    "isPublished": {"boolean": true}
-  }
-}
-```
-</Code>
-
-For `COUNTER_CREATE`, the `data` field should be a JSON object that contains the initial value for the `LiveCounter` instance:
-
-<Code>
-```json
-{
-  "operation": "COUNTER_CREATE",
-  "data": { "number": 5 }
-}
-```
-</Code>
-
-When you create a new object it is important that the new object instance is assigned to the channel object so that it is [reachable](/docs/liveobjects/concepts/object#reachability).
-
-The simplest way to do this is to use the `path` field in the request body. The path is relative to the root object and specifies where in the channel object the new object should be created.
-
-The following example creates a new `LiveMap` instance and assigns it to the `posts` `LiveMap` instance on the root object under the key `post1`:
-
-<Code>
-```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "MAP_CREATE",
-      "path": "posts.post1",
-      "data": {
-        "title": {"string": "LiveObjects is awesome"},
-        "createdAt": {"number": 1745835181122},
-        "isPublished": {"boolean": true}
-      }
-    }'
-```
-</Code>
-
-The following example shows how to update a key and value in a `LiveMap`:
-
-<Code>
-```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "MAP_SET",
-      "path": "posts.post1",
-      "data": {
-        "key" : "title",
-        "value": {"string": "LiveObjects is still awesome"}
-      }
-    }'
-```
-</Code>
-
-When using the `path` specifier with a `COUNTER_CREATE` or `MAP_CREATE` operation, the server constructs *two* operations which are published as a [batch](#batch-operations):
-
-* A `MAP_CREATE` or `COUNTER_CREATE` operation used to create the new object
-* A `MAP_SET` operation used to assign the new object to the `LiveMap` instance specified by the `path`
-
-Therefore the response will include the object IDs of all objects affected by the resulting set of operations:
-
-<Code>
-```json
-{
-  "messageId": "mkfjWU2jju:0",
-  "channel": "my-channel",
-  "objectIds": [
-    "map:cRCKx-eev7Tl66jGfl1SkZh_uEMo6F5jyV0B7mUn4Zs@1745835549101",
-    "map:a_oQqPYUGxi95_Cn0pWcsoeBlHZZtVW5xKIw0hnJCZs@1745835547258"
-  ]
-}
-```
-</Code>
-
-### Removing objects <a id="removing-objects"/>
-
-There is no explicit delete operation for objects themselves. Objects that are not reachable from the root map will be eligible for garbage collection.
-
-Remove a reference to a nested object in a `LiveMap` instance using the `MAP_REMOVE` operation:
-
-<Code>
-```shell
-  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
-    -u {{API_KEY}} \
-    -H "Content-Type: application/json" \
-    -d '{
-      "operation": "MAP_REMOVE",
-      "objectId": "root",
-      "data": {"key": "posts"}
-    }'
-```
-</Code>
-
-If no other references to the object exist, it will no longer be reachable from the root object and will be eligible for garbage collection.
-
-<Aside data-type='note'>
-Removing the nested object may also make any nested child objects unreachable from the root object. These objects will also be eligible for garbage collection.
-</Aside>
-
-### Batch operations <a id="batch-operations"/>
-
-You can group several operations into a single request by sending an array of operations.
-
-All operations inside the array form a [batch operation](/docs/liveobjects/concepts/operations#batch-operations). Ably publishes this as a single message. Ably processes all operations in the batch as a single atomic unit.
-
-The following example shows how to increment two distinct `LiveCounter` instances in a single batch operation:
+The following example increments two distinct `LiveCounter` instances in a single batch operation:
 
 <Code>
 ```shell
@@ -595,22 +713,24 @@ The following example shows how to increment two distinct `LiveCounter` instance
     -H "Content-Type: application/json" \
     -d '[
       {
-        "operation": "COUNTER_INC",
         "objectId": "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
-        "data": {"number": 1}
+        "counterInc": {
+          "number": 1
+        }
       },
       {
-        "operation": "COUNTER_INC",
         "objectId": "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669",
-        "data": {"number": 1}
+        "counterInc": {
+          "number": 1
+        }
       }
     ]'
 ```
 </Code>
 
-### Idempotent operations <a id="idempotent-operations"/>
+## Idempotent operations <a id="idempotent-operations"/>
 
-Publish operations idempotently in the same way as for [idempotent message publishing](/docs/api/rest-api#idempotent-publish) by specifying an `id` for the operation message:
+Publish operations idempotently by specifying an `id` for the operation message, using the same approach as [idempotent message publishing](/docs/api/rest-api#idempotent-publish):
 
 <Code>
 ```shell
@@ -619,9 +739,10 @@ Publish operations idempotently in the same way as for [idempotent message publi
     -H "Content-Type: application/json" \
     -d '{
       "id": "my-idempotency-key",
-      "operation": "COUNTER_INC",
       "objectId": "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
-      "data": {"number": 1}
+      "counterInc": {
+        "number": 1
+      }
     }'
 ```
 </Code>
@@ -636,16 +757,146 @@ For batch operations, use the format `<baseId>:<index>` where the index is the z
     -d '[
       {
         "id": "my-idempotency-key:0",
-        "operation": "COUNTER_INC",
         "objectId": "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
-        "data": {"number": 1}
+        "counterInc": {
+          "number": 1
+        }
       },
       {
         "id": "my-idempotency-key:1",
-        "operation": "COUNTER_INC",
         "objectId": "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669",
-        "data": {"number": 1}
+        "counterInc": {
+          "number": 1
+        }
       }
     ]'
 ```
 </Code>
+
+## Advanced: Client-generated object IDs <a id="client-generated-ids"/>
+
+Generate object IDs when creating objects to enable atomic batch operations with cross-references between newly created objects. This is useful when creating multiple objects that reference each other in a single batch.
+
+Object IDs are generated by hashing the operation type, the JSON-encoded initial value, and a random nonce. Format: `{type}:{hash}@{timestamp}`
+
+There are additional operations for creating objects with client-generated IDs:
+- `mapCreateWithObjectId`
+- `counterCreateWithObjectId`
+
+**mapCreateWithObjectId**
+
+- `objectId` (string): The pre-computed object ID for the new map
+- `initialValue` (string): JSON-encoded string of the map data, matching the format from
+  `mapCreate`.
+- `nonce` (string): Random string you generated
+
+<Code>
+```json
+{
+  "objectId": "map:abc123@ts1",
+  "mapCreateWithObjectId": {
+    "initialValue": "{\"entries\":{\"name\":{\"data\":{\"string\":\"Alice\"}},\"age\":{\"data\":{\"number\":30}}}}",
+    "nonce": "random-nonce-abc123"
+  }
+}
+```
+</Code>
+
+**counterCreateWithObjectId**
+
+- `objectId` (string): The pre-computed object ID for the new counter
+- `initialValue` (string): JSON-encoded string of the counter data, matching the format from
+  `counterCreate`.
+- `nonce` (string): Random string you generated
+
+<Code>
+```json
+{
+  "objectId": "counter:xyz789@ts1",
+  "counterCreateWithObjectId": {
+    "initialValue": "{\"count\":0}",
+    "nonce": "nonce-xyz789"
+  }
+}
+```
+</Code>
+
+<Aside data-type='important'>
+The server validates that your `objectId` matches the hash of `initialValue + nonce`.
+</Aside>
+
+### Creating objects with client-generated IDs <a id="creating-with-client-ids"/>
+
+Publish an operation using either `mapCreateWithObjectId` or `counterCreateWithObjectId` to create
+an object with a client-generated ID.
+
+For example:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '{
+      "objectId": "map:abc123@ts1",
+      "mapCreateWithObjectId": {
+        "initialValue": "{\"entries\":{\"name\":{\"data\":{\"string\":\"Alice\"}},\"age\":{\"data\":{\"number\":30}}}}",
+        "nonce": "random-nonce-abc123"
+      }
+    }'
+```
+</Code>
+
+### Atomic batch with cross-references <a id="atomic-batch-cross-references"/>
+
+Create a map and immediately link it to root in a single atomic operation:
+
+<Code>
+```shell
+  curl -X POST "https://main.realtime.ably.net/channels/my-channel/object" \
+    -u {{API_KEY}} \
+    -H "Content-Type: application/json" \
+    -d '[
+      {
+        "objectId": "map:abc123@ts1",
+        "mapCreateWithObjectId": {
+          "initialValue": "{\"entries\":{\"name\":{\"data\":{\"string\":\"Alice\"}}}}",
+          "nonce": "nonce-1"
+        }
+      },
+      {
+        "objectId": "root",
+        "mapSet": {
+          "key": "alice",
+          "value": {"objectId": "map:abc123@ts1"}
+        }
+      }
+    ]'
+```
+</Code>
+
+Both operations execute atomically. The second operation references the object created in the first because you pre-computed the ID.
+
+<Aside data-type='note'>
+Only use client-generated IDs when you need atomic batch operations with cross-references. For most use cases, use simple operations or path-based operations instead.
+</Aside>
+
+## Data values reference <a id="data-values"/>
+
+When working with objects via the REST API, [primitive types](/docs/liveobjects/concepts/objects#primitive-types) and [object references](/docs/liveobjects/concepts/objects#composability) are included in request and response bodies under `data` fields.
+
+The key in the `data` object indicates the type of the value. Examples of data value formats:
+
+<Code>
+```json
+{ "data": { "number": 42 } }
+{ "data": { "string": "LiveObjects is awesome" } }
+{ "data": { "boolean": true } }
+{ "data": { "bytes": "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo=" } }
+{ "data": { "objectId": "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669" } }
+```
+</Code>
+
+<Aside data-type='note'>
+`bytes` values use base64 string encoding in JSON request and response bodies.
+</Aside>
