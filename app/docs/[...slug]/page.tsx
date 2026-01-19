@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { serialize } from 'next-mdx-remote/serialize';
+import remarkGfm from 'remark-gfm';
 import { getAllMdxSlugs, getMdxBySlug } from '@/lib/mdx';
 import { canonicalUrl, META_DESCRIPTION_FALLBACK } from '@/lib/site-config';
 import { MDXPageClient } from './MDXPageClient';
@@ -65,6 +66,7 @@ export default async function DocPage({ params }: DocPageProps) {
   // Serialize MDX content on the server
   const mdxSource = await serialize(content, {
     mdxOptions: {
+      remarkPlugins: [remarkGfm],
       development: process.env.NODE_ENV === 'development',
     },
     parseFrontmatter: false, // Already parsed via gray-matter

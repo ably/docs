@@ -24,9 +24,16 @@ const nextConfig = {
 
   // Webpack configuration for compatibility
   webpack: (config, { isServer }) => {
-    // Handle SVG imports
+    // Handle SVG imports - support both URL and React component
+    // Use ?url suffix for URL imports, default to React component
     config.module.rules.push({
       test: /\.svg$/,
+      resourceQuery: /url/, // *.svg?url
+      type: 'asset/resource',
+    });
+    config.module.rules.push({
+      test: /\.svg$/,
+      resourceQuery: { not: /url/ }, // exclude *.svg?url
       use: ['@svgr/webpack'],
     });
 
