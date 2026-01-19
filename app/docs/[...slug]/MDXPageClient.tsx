@@ -76,16 +76,17 @@ const WrappedCodeSnippet: React.FC<WrappedCodeSnippetProps> = ({
       return result;
     };
 
-    const processChild = (child: ReactNode): ReactNode => {
+    const processChild = (child: ReactNode, index?: number): ReactNode => {
       if (typeof child === 'string') {
         return replaceInString(child);
       }
       if (Array.isArray(child)) {
-        return child.map(processChild);
+        return child.map((c, i) => processChild(c, i));
       }
       if (isValidElement(child)) {
-        const element = child as ReactElement<{ children?: ReactNode }>;
-        return cloneElement(element, element.props, processChild(element.props.children));
+        const element = child as ReactElement<{ children?: ReactNode; key?: string | number }>;
+        const key = element.key ?? index;
+        return cloneElement(element, { ...element.props, key }, processChild(element.props.children));
       }
       return child;
     };

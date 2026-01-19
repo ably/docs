@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ChangeEvent, useCallback, useEffect, useState } from 'react';
+import React, { ChangeEvent, useCallback, useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import ExamplesGrid from '@/src/components/Examples/ExamplesGrid';
 import ExamplesFilter from '@/src/components/Examples/ExamplesFilter';
@@ -9,15 +9,26 @@ import { filterSearchExamples } from '@/src/components/Examples/filter-search-ex
 import ExamplesNoResults from '@/src/components/Examples/ExamplesNoResults';
 import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
 import { useSearchParams } from 'next/navigation';
+import { ImageProps } from '@/src/components/Image';
 
 export type SelectedFilters = { products: ProductName[]; useCases: string[] };
 
 export function ExamplesListPage() {
   const searchParams = useSearchParams();
 
+  // Generate image props from example IDs
+  const exampleImages: ImageProps[] = useMemo(() => {
+    return examples.map((example) => ({
+      name: example.id,
+      src: `/images/examples/${example.id}.png`,
+      width: 400,
+      height: 300,
+    }));
+  }, []);
+
   // Parse product query parameters and filter for valid ProductName values
   const getInitialProducts = (): ProductName[] => {
-    const productParam = searchParams.get('product');
+    const productParam = searchParams?.get('product');
     const validProductNames = Object.keys(dataProducts).map((product) => product.toLowerCase());
 
     if (!productParam) {
@@ -51,7 +62,7 @@ export function ExamplesListPage() {
 
   return (
     <>
-      <section className="mx-auto px-6 md:px-0 relative">
+      <section className="max-w-screen-lg mx-auto px-6 md:px-0 relative">
         <div className="w-full sm:w-1/2 max-w-[37.5rem] pt-20 sm:pt-24">
           <h1 className="ui-text-title text-title">Examples</h1>
           <p className="ui-text-sub-header mt-4">
@@ -65,7 +76,7 @@ export function ExamplesListPage() {
           </div>
           <div className="w-full sm:w-[80%] mt-10 sm:mt-0">
             {filteredExamples.length > 0 ? (
-              <ExamplesGrid exampleImages={[]} examples={filteredExamples} searchTerm={searchTerm} />
+              <ExamplesGrid exampleImages={exampleImages} examples={filteredExamples} searchTerm={searchTerm} />
             ) : (
               <ExamplesNoResults />
             )}
