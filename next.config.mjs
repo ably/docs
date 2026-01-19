@@ -1,10 +1,7 @@
-import createMDX from '@next/mdx';
-import remarkGfm from 'remark-gfm';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable MDX pages
-  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+  // Page extensions (MDX handled via next-mdx-remote, not as pages)
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
 
   // For static export compatibility
   images: {
@@ -71,11 +68,4 @@ const nextConfig = {
   },
 };
 
-const withMDX = createMDX({
-  options: {
-    remarkPlugins: [remarkGfm],
-    rehypePlugins: [],
-  },
-});
-
-export default withMDX(nextConfig);
+export default nextConfig;

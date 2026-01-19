@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, isValidElement, cloneElement, ReactNode, ReactElement, createContext, useContext } from 'react';
+import { useState, useMemo, useEffect, isValidElement, cloneElement, ReactNode, ReactElement, createContext, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
@@ -8,7 +8,7 @@ import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
 import { useUser, getApiKeysForCodeSnippet } from '@/lib/user-context';
-import { useLayoutContext } from '@/lib/layout-context';
+import { useLayoutContext, Frontmatter } from '@/lib/layout-context';
 import { useCopyableHeaders } from '@/src/components/Layout/mdx/headers';
 import { getRandomChannelName } from '@/src/utilities/get-random-channel-name';
 import { FrontmatterData } from '@/lib/mdx';
@@ -149,7 +149,7 @@ interface MDXPageClientProps {
 }
 
 export function MDXPageClient({ mdxSource, frontmatter, slug }: MDXPageClientProps) {
-  const { activePage } = useLayoutContext();
+  const { activePage, setPageContext } = useLayoutContext();
   const userContext = useUser();
 
   const [sdk, setSdk] = useState<SDKType>(() => {
@@ -160,6 +160,16 @@ export function MDXPageClient({ mdxSource, frontmatter, slug }: MDXPageClientPro
       .find((language: string) => activePage.language && language.endsWith(activePage.language));
     return (sdkLanguage?.split('_')[0] as SDKType) ?? null;
   });
+
+  // Set page context with frontmatter for Footer and other components
+  useEffect(() => {
+    setPageContext({
+      frontmatter: frontmatter as Frontmatter,
+    });
+    return () => {
+      setPageContext({});
+    };
+  }, [frontmatter, setPageContext]);
 
   // Use copyable headers hook
   useCopyableHeaders();

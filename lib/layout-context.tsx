@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, PropsWithChildren, useContext, useMemo } from 'react';
+import React, { createContext, PropsWithChildren, useContext, useMemo, useState, useCallback } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { stripSdkType } from '@ably/ui/core/CodeSnippet/languages';
 import { productData } from '@/src/data';
@@ -13,9 +13,22 @@ export const DEFAULT_LANGUAGE = 'javascript';
 
 export type PageTemplate = 'mdx' | 'examples' | 'api' | null;
 
+export type Frontmatter = {
+  title: string;
+  meta_description: string;
+  meta_keywords?: string;
+  redirect_from?: string[];
+  last_updated?: string;
+  intro?: string;
+};
+
+export type PageContextType = {
+  frontmatter?: Frontmatter;
+};
+
 export type ActivePage = {
   tree: Array<{ index: number; page: NavProductPage | NavProductContent }>;
-  page: NavProductPage | { name: string; link: string };
+  page: NavProductPage | { name: string; link: string; index?: boolean };
   languages: LanguageKey[];
   language: LanguageKey | null;
   product: ProductKey | null;
@@ -24,6 +37,8 @@ export type ActivePage = {
 
 const LayoutContext = createContext<{
   activePage: ActivePage;
+  pageContext: PageContextType;
+  setPageContext: (ctx: PageContextType) => void;
 }>({
   activePage: {
     tree: [],
@@ -33,6 +48,8 @@ const LayoutContext = createContext<{
     product: null,
     template: null,
   },
+  pageContext: {},
+  setPageContext: () => {},
 });
 
 /**
@@ -105,6 +122,11 @@ export interface LayoutProviderProps {
 export function LayoutProvider({ children, pageLanguages }: PropsWithChildren<LayoutProviderProps>) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [pageContext, setPageContextState] = useState<PageContextType>({});
+
+  const setPageContext = useCallback((ctx: PageContextType) => {
+    setPageContextState(ctx);
+  }, []);
 
   const activePage = useMemo(() => {
     const activePageData = findActivePageInNav(pathname);
@@ -139,6 +161,8 @@ export function LayoutProvider({ children, pageLanguages }: PropsWithChildren<La
     <LayoutContext.Provider
       value={{
         activePage,
+        pageContext,
+        setPageContext,
       }}
     >
       {children}

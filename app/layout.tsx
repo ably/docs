@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { getSandpackCssText } from '@codesandbox/sandpack-react';
 import { siteConfig, externalScriptsData } from '@/lib/site-config';
 import { Providers } from './providers';
 import './globals.css';
@@ -59,14 +58,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             />
           </>
         )}
-
-        {/* Sandpack CSS */}
-        <style
-          id="sandpack"
-          dangerouslySetInnerHTML={{
-            __html: getSandpackCssText(),
-          }}
-        />
 
         {/* Google Tag Manager */}
         {externalScriptsData.gtmContainerId && (
