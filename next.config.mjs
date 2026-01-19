@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Page extensions (MDX handled via next-mdx-remote, not as pages)
@@ -75,4 +77,14 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry webpack plugin options
+  silent: true, // Suppresses source map upload logs during build
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+}, {
+  // Sentry SDK options
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+});
