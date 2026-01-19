@@ -1,12 +1,12 @@
 ---
 title: "Guide: Building a notification center at scale with Ably"
-meta_description: "Architecting a scalable notification center with Ably: outbox/inbox pattern, authentication, integrations, and cost optimization."
-meta_keywords: "notifications, notification center, push, push-notifications, inbox, outbox, pub/sub, scalability, Ably, realtime messaging, authentication, integrations, cost optimization"
+meta_description: "Architecting a scalable notification center with Ably: inbox pattern, authentication, backend integration, and cost optimization."
+meta_keywords: "notifications, notification center, push, push-notifications, inbox, pub/sub, scalability, Ably, realtime messaging, authentication, backend integration, cost optimization"
 ---
 
 Ably provides the infrastructure to build a robust, scalable notification center that can handle everything from individual user notifications to system-wide broadcasts. Whether you're building friend requests for a social platform, order updates for e-commerce, or alerts for a gaming application, Ably's platform enables you to deliver notifications reliably at any scale.
 
-Building with Ably means you can focus on your application logic while Ably handles the complexities of realtime delivery, connection management, and global distribution. This guide explains how to architect a notification center using the outbox/inbox pattern, with a focus on security, scalability, and cost optimization.
+Building with Ably means you can focus on your application logic while Ably handles the complexities of realtime delivery, connection management, and global distribution. This guide explains how to architect a notification center using the inbox pattern, with a focus on security, scalability, and cost optimization.
 
 ## Why Ably for notification centers?
 
@@ -25,26 +25,26 @@ For notifications that need to reach users even when they're offline, Ably integ
 
 ## Architecting your notification center
 
-The outbox/inbox pattern is a proven architecture for building scalable notification systems. It provides clear separation of concerns, simplified authentication, and flexible processing workflows.
+The inbox pattern is a proven architecture for building scalable notification systems. It provides clear separation of concerns, secure authentication, and flexible processing workflows.
 
 ### The pattern
 
 The architecture consists of three main components:
 
-* **Outbox channel:** Clients publish notification requests to an outbox channel. This could be a friend request, an alert, or any other client-initiated action.
-* **Processing pipeline:** An integration (Lambda function, webhook, or stream consumer) receives the outbox message, validates it, applies business logic, and determines the target recipients.
-* **Inbox channels:** After processing, notifications are published to client-specific inbox channels (e.g., `inbox:clientId`), where recipients are subscribed.
+* **Client application:** Clients send notification requests to your backend API (via HTTP, gRPC, or other protocols). This could be a friend request, an alert, or any other client-initiated action.
+* **Backend processing:** Your backend receives the request, validates it, applies business logic, determines the target recipients, and publishes notifications to Ably.
+* **Inbox channels:** Notifications are published to client-specific inbox channels (e.g., `inbox:clientId`), where recipients are subscribed to receive realtime updates.
 
-[/TODO/]: # (Should add some diagram here showing the flow from user -> outbox -> processing -> inbox -> recipient tp break up the text a bit)
+[/TODO/]: # (Should add some diagram here showing the flow from user -> backend -> Ably -> inbox -> recipient to break up the text a bit)
 
 ### Key benefits
 
 This pattern provides several advantages:
 
-* **Security:** Clients have publish-only access to the outbox and subscribe-only access to their own inbox. This prevents clients from accessing notifications they shouldn't see, or bypassing processing logic.
-* **Flexibility:** The processing pipeline can implement any business logic - validation, rate limiting, enrichment, filtering, or integration with other services.
-* **Scalability:** Each component scales independently. Ably handles the channels, your processing pipeline scales based on load, and inboxes grow with your client base.
-* **Auditability:** All notification requests pass through your processing pipeline, enabling logging, analytics, and compliance tracking.
+* **Security:** Clients only have subscribe access to their own inbox channels. All notification publishing flows through your backend, ensuring complete control over validation and authorization.
+* **Flexibility:** Your backend can implement any business logic - validation, rate limiting, enrichment, filtering, or integration with other services before publishing to Ably.
+* **Scalability:** Each component scales independently. Ably handles the inbox channels and realtime delivery, while your backend scales based on request load.
+* **Auditability:** All notification requests pass through your backend, enabling logging, analytics, and compliance tracking.
 
 ### Channel structure
 
@@ -52,10 +52,7 @@ When designing your notification center, consider the following channel structur
 
 <Code>
 ```javascript
-// User publishes to a shared outbox
-const outboxChannel = 'notifications:outbox';
-
-// Processing pipeline publishes to client-specific inboxes
+// Backend publishes to client-specific inboxes
 const inboxChannel = 'notifications:inbox:clientId123';
 
 // Optional: general broadcast channel for system-wide notifications
@@ -63,18 +60,7 @@ const generalChannel = 'notifications:inbox:general';
 ```
 </Code>
 
-The outbox can be a single channel, or any numbers of channels to distribute load in high throughput scenarios. Inboxes are client-specific, one per client. The general channel is optional and used for notifications that should reach all clients.
-
-#### Scaling outbox channels
-
-Each Ably account has [channel limits](/docs/platform/pricing/limits#channels) that govern the allowed rate of publish.
-If you have high throughput with many clients publishing to the same outbox simultaneously, you may need to split the outbox into multiple channels to avoid overwhelming a single channel and being rate limited. For example, with 100,000 clinets all publishing notifications, a single outbox could become a bottleneck.
-
-How many outbox channels you need depends on your expected traffic and account limits. You can shard outbox channels based on some meaningful dimension, such as:
-
-* **User group:** `notifications:outbox:group1`, `notifications:outbox:group2`, etc.
-
-Multiple outbox channels can be routed through one or more integrations using a namespace filter. For example, the filter `^notifications:outbox` matches all channels starting with `notifications:outbox`, allowing your Lambda or webhook to process messages from all outbox channels.
+Inboxes are client-specific, one per client. The general channel is optional and used for notifications that should reach all clients.
 
 ### Deciding between individual inboxes and a general channel
 
@@ -97,20 +83,17 @@ See the [cost optimization section](#cost-optimization) for detailed calculation
 
 ## Authentication: Securing your notification center
 
-Authentication is critical in a notification center. You need to ensure that clients can only publish to an outbox and only receive notifications intended for them.
+Authentication is critical in a notification center. You need to ensure that clients can only receive notifications intended for them and cannot access other users' notifications.
 
 ### Token-based authentication
 
 Ably's [token authentication](/docs/auth/token) with JSON Web Tokens (JWT) provides the flexibility to implement fine-grained access control. Tokens are short-lived, can be easily revoked, and include [capabilities](/docs/auth/capabilities) that define what actions a client can perform.
 
-For a notification center, you typically need two types of access:
-
-* **Outbox publish:** Grant publish-only access to the outbox channel(s).
-* **Inbox subscribe:** Grant subscribe-only access to a user's specific inbox channel.
+For a notification center, clients typically need subscribe-only access to their specific inbox channel, plus optional access to a general broadcast channel.
 
 ### Creating a token
 
-The following example shows how to generate a JWT that strictly allows publish access to the outbox channel and subscribe access to a specific inbox channel. It also includes the `clientId` to identify the client:
+The following example shows how to generate a JWT that grants subscribe access to a specific inbox channel. It also includes the `clientId` to identify the client:
 
 <Code>
 ```javascript
@@ -124,13 +107,12 @@ const header = {
 
 const currentTime = Math.round(Date.now() / 1000);
 
-// Allow publish-only access to the outbox channel
 const claims = {
     "iat": currentTime,
     "exp": currentTime + 3600, // Token expires in 1 hour
     "x-ably-capability": JSON.stringify({
-        "notifications:outbox": ["publish"] // Outbox publish access
-        "inbox:client123": ["subscribe", "history"] // Inbox subscribe + history access
+        "inbox:client123": ["subscribe", "history"], // Inbox subscribe + history access
+        "notifications:inbox:general": ["subscribe"] // Optional: general broadcast channel
     }),
     "x-ably-clientId": "client123" // Identify the client
 }
@@ -141,12 +123,12 @@ const token = jwt.sign(
     { header: header }
 );
 
-console.log('Outbox JWT:', token);
+console.log('Inbox JWT:', token);
 ```
 </Code>
 
 **History capability:**
-Inbox tokens can also include the `history` capability to allow clients to retrieve notifications they might have missed while offline.
+Including the `history` capability allows clients to retrieve notifications they might have missed while offline.
 Message persistence must be enabled to use history - see [message history documentation](/docs/channels/history) for details.
 
 ### Best practices
@@ -154,144 +136,244 @@ Message persistence must be enabled to use history - see [message history docume
 * **Use short-lived tokens:** Set token expiry to 1-4 hours to limit exposure if a token is compromised. Ably's SDKs automatically handle token renewal.
 * **Tie tokens to clientId:** Always include a `clientId` in your tokens to identify the client and enable auditing. You can also setup a rule to prevent anonymous connections.
 * **Implement token refresh:** Use [`authUrl`](/docs/auth/token#auth-url) or [`authCallback`](/docs/auth/token#auth-callback) to automatically refresh expiring tokens.
-* **Validate on the server:** Never trust client-provided data. Your processing pipeline should validate all notification request data.
-* **Custom rate Limits:** It is possible to apply custom rate limits to tokens using Ably's [rate limiting feature](docs/auth/capabilities#jwt-limits). This is recommended for outbox tokens to help prevent abuse. Standard connection rate limits still apply based on your account plan.
+* **Validate on the server:** Never trust client-provided data. Your backend should validate all notification request data before publishing to Ably.
+* **Restrict channel access:** Use wildcard patterns in capabilities (like `inbox:*`) sparingly. Always scope tokens to the specific channels a client needs access to.
 
-## Integration: Processing notifications
+## Publishing notifications from your backend
 
-The processing pipeline is where your business logic lives. It receives notifications from the outbox, validates them, applies transformations, and publishes to the appropriate inbox channels.
+Your backend is responsible for processing notification requests and publishing them to Ably inbox channels. Ably provides two primary methods for backends to publish notifications:
 
-Ably provides multiple integration options:
+### REST API publishing
 
-* **[Webhooks](/docs/platform/integrations/webhooks):** HTTP endpoints (including AWS Lambda, Azure Functions, Google Cloud Functions)
-* **[Streaming](/docs/platform/integrations/streaming):** Kafka, Kinesis, SQS, AMQP
+The simplest approach is to use Ably's [REST API](/docs/api/rest-api) directly from your backend. All Ably SDKs provide REST client libraries for various languages (JavaScript, Python, Go, Java, Ruby, and more).
 
-### Choosing your integration approach
-
-The right integration depends on your throughput, ordering requirements, and infrastructure:
-
-#### AWS Lambda / Serverless Functions
-Serverless functions offer automatic scaling with no server management and pay-per-execution pricing. However, costs can escalate quickly without proper monitoring and limits. Keep in mind that [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not always guaranteed.
-
-* **Recommended when:** You want simplicity and automatic scaling
-
-#### Webhooks to your own servers
-This approach gives you full control over your processing logic and infrastructure, though you're responsible for managing scaling and reliability yourself. Like serverless functions, [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not always guaranteed.
-
-* **Recommended when:** You have existing infrastructure or require custom processing not suited to serverless functions
-
-#### Streaming to message brokers
-[Streaming integrations](/docs/platform/integrations/streaming) enable you to stream notification events from Ably to external message brokers like Kafka, Amazon Kinesis, Google Pub/Sub, or RabbitMQ. This approach is designed for high-throughput scenarios and provides the most flexibility for complex processing workflows.
-
-Streaming integrations are particularly well-suited for notification centers because they enable you to handle high message volumes that exceed webhook concurrency limits, implement custom ordering strategies (see [ordering considerations](#ordering-considerations) below), build fault-tolerant processing with at-least-once delivery semantics, and integrate with existing data processing infrastructure.
-
-* **Recommended when:** You need high throughput or complex processing pipelines
-
-### Ordering considerations <a id="ordering-considerations"/>
-
-Message ordering can be important in notification systems. You may want to ensure that notifications from the same client are processed in the order they were sent.
-
-#### Webhooks and Serverless functions
-
-**Batched mode:**
-[Webhooks](/docs/platform/integrations/webhooks) configured in batched mode preserve ordering for messages published to the same channel by the same client. Batched webhooks group messages into batches (up to 1000 messages per batch) and deliver them sequentially to your webhook endpoint. However, if your throughput exceeds the rate at which the webhook can process batches, messages may be dropped.
-
-**Single message mode:**
-Webhooks in single message mode do not guarantee ordering due to concurrent processing and retry behavior. If a webhook request fails and is retried, it may be processed after later messages have already been delivered.
-
-#### Streaming integrations
-Streaming integrations provide reliable ordering control for high-throughput scenarios. When streaming to Kafka, Kinesis, or similar systems, you can [implement ordering strategies](/docs/messages#routing) by using message attributes as topic or partition keys.
-
-For example, when configuring a Kafka reactor rule, you could route to a dynamic topic based on the channel name, and use the `clientId` as the partition key.
-
-### Example: Friend request processing with Lambda
-
-The following example demonstrates a notification flow for a social media application using AWS Lambda:
-
-#### Step 1: Configure the integration
-
-Configure an [AWS Lambda integration](/docs/platform/integrations/webhooks/lambda) in your Ably dashboard:
-
-* **Event type:** `channel.message`
-* **Channel filter:** `^notifications:outbox$` (only trigger for outbox messages)
-* **Enveloped:** Enabled (to receive full message metadata)
-
-#### Step 2: Client publishes a friend request
-
-<Code>
-```javascript
-const outbox = ably.channels.get('notifications:outbox');
-// User sends a friend request
-await outbox.publish('friend-request', {
-    type: 'friend-request',
-    fromUserId: 'client123',
-    toUserId: 'user456',
-    timestamp: Date.now()
-});
-```
-</Code>
-
-#### Step 3: Lambda processes and validates
+#### Single channel publishing
 
 <Code>
 ```javascript
 const Ably = require('ably');
 
-exports.handler = async (event) => {
-    console.log('Received notification request:', JSON.stringify(event));
+// Initialize REST client with your API key
+const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
 
-    // Parse the incoming event
-    const message = event.messages[0];
-    const data = JSON.parse(message.data);
-
-    // Validate the request, checking:
-    // - User existence
-    // - Payload integrity
-    // - Business rules (e.g., not already friends, not blocked)
-
-    if (!data.fromUserId || !data.toUserId) {
-        console.error('Invalid friend request data');
-        return { statusCode: 400, body: 'Invalid request' };
-    }
-
-    const isValid = await validateFriendRequest(data.fromUserId, data.toUserId);
-    if (!isValid) {
-        console.log('Friend request validation failed');
-        return { statusCode: 403, body: 'Request denied' };
-    }
-
-    // Prepare the notification payload
-    const fromUserProfile = await getUserProfile(data.fromUserId);
-
-    const notification = {
-        type: 'friend-request',
-        fromUserId: data.fromUserId,
-        fromUserName: fromUserProfile.name,
-        fromUserAvatar: fromUserProfile.avatar,
-        timestamp: data.timestamp,
-    };
-
-    // Use REST client to publish to the target user's inbox
-    const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
-    const inbox = ably.channels.get(`inbox:${data.toUserId}`);
-
-    try {
-        await inbox.publish('notification', notification);
-        console.log(`Notification sent to inbox:${data.toUserId}`);
-        return { statusCode: 200, body: 'Success' };
-    } catch (error) {
-        console.error('Failed to publish notification:', error);
-        return { statusCode: 500, body: 'Failed to send notification' };
-    }
-};
+// Publish a notification to a specific user's inbox
+const inbox = ably.channels.get('inbox:user123');
+await inbox.publish('notification', {
+    type: 'friend-request',
+    fromUserId: 'user456',
+    fromUserName: 'Jane Doe',
+    timestamp: Date.now()
+});
 ```
 </Code>
 
-#### Step 4: Recipient receives the notification
+#### Batch publishing
+
+For notifications targeting multiple recipients, use the [batch publish REST endpoint](/docs/api/rest-api#batch-publish) to publish to multiple channels in a single HTTP request, reducing latency and improving efficiency.
 
 <Code>
 ```javascript
+const Ably = require('ably');
+const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+// Publish to multiple inboxes at once
+const specs = [
+    {
+        channel: 'inbox:user123',
+        messages: [{ name: 'notification', data: { type: 'system-alert', message: 'Server maintenance scheduled' } }]
+    },
+    {
+        channel: 'inbox:user456',
+        messages: [{ name: 'notification', data: { type: 'system-alert', message: 'Server maintenance scheduled' } }]
+    },
+    // ... up to 100 channels per request
+];
+
+await ably.request('post', '/messages', null, specs, null);
+```
+</Code>
+
+### Kafka Connector publishing
+
+For high-throughput scenarios or when you already use Kafka in your infrastructure, you can publish notifications through [Ably's Kafka Connector](/docs/platform/integrations/kafka-connector). This allows your backend to produce messages to Kafka topics, which are then automatically published to Ably channels.
+
+The Kafka Connector supports dynamic channel routing, allowing you to determine the target Ably channel based on Kafka message attributes like topic, partition, key, or custom headers.
+
+#### Configuration
+
+Configure the Kafka Connector to route messages from your Kafka topic to Ably inbox channels:
+
+1. Set up the Kafka Connector in your Ably dashboard
+2. Configure topic mappings to route to inbox channels
+3. Optionally use dynamic channel templates based on message attributes
+
+<Code>
+```yaml
+# Example Kafka Connector configuration
+topic: notifications
+channelTemplate: inbox:${header.userId}
+```
+</Code>
+
+#### Publishing via Kafka
+
+<Code>
+```javascript
+const { Kafka } = require('kafkajs');
+
+const kafka = new Kafka({
+    clientId: 'notification-service',
+    brokers: ['kafka:9092']
+});
+
+const producer = kafka.producer();
+await producer.connect();
+
+// Publish notification - will be routed to inbox:user123
+await producer.send({
+    topic: 'notifications',
+    messages: [{
+        headers: { userId: 'user123' },
+        value: JSON.stringify({
+            type: 'friend-request',
+            fromUserId: 'user456',
+            fromUserName: 'Jane Doe',
+            timestamp: Date.now()
+        })
+    }]
+});
+```
+</Code>
+
+### Choosing your publishing approach
+
+The right approach depends on your throughput, infrastructure, and ordering requirements:
+
+**REST API:**
+* **Best for:** Most use cases, simple integrations, moderate throughput
+* **Pros:** Simple to implement, built into all Ably SDKs, no additional infrastructure
+* **Cons:** Each publish is a synchronous HTTP request, potential latency for high volumes
+
+**Kafka Connector:**
+* **Best for:** High throughput, existing Kafka infrastructure, async publishing
+* **Pros:** Handles millions of messages per second, decouples publishing from Ably availability, preserves Kafka ordering guarantees
+* **Cons:** Additional infrastructure complexity, requires Kafka setup and management
+
+### Ordering considerations <a id="ordering-considerations"/>
+
+Message ordering can be important in notification systems, particularly when multiple related notifications are sent to the same recipient.
+
+#### REST API ordering
+
+When using the REST API, messages published to the same channel by the same connection are delivered in order by default. However, if you're publishing from multiple backend instances or using batch publish, ordering is not guaranteed across different API calls.
+
+To ensure ordering:
+* Publish related notifications sequentially from the same connection
+* Use [idempotency keys](/docs/platform/architecture/idempotency) to prevent duplicate processing if retries occur
+* Consider including sequence numbers in your notification payload for client-side ordering
+
+#### Kafka Connector ordering
+
+The Kafka Connector preserves Kafka's ordering guarantees. Messages in the same Kafka partition are published to Ably in order. To maintain ordering:
+* Use consistent partition keys (e.g., userId) for related notifications
+* Configure appropriate partition counts for your throughput needs
+* Messages published to the same channel from the same partition maintain order
+
+### Example: Friend request notification flow
+
+The following example demonstrates a complete notification flow for a social media application:
+
+#### Step 1: Client sends friend request to backend
+
+<Code>
+```javascript
+// Client-side code
+async function sendFriendRequest(toUserId) {
+    try {
+        const response = await fetch('https://api.example.com/friend-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userAuthToken}`
+            },
+            body: JSON.stringify({
+                toUserId: toUserId
+            })
+        });
+
+        if (response.ok) {
+            console.log('Friend request sent');
+        } else {
+            console.error('Failed to send friend request');
+        }
+    } catch (error) {
+        console.error('Error sending friend request:', error);
+    }
+}
+```
+</Code>
+
+#### Step 2: Backend processes and publishes to Ably
+
+<Code>
+```javascript
+// Backend API endpoint (Node.js/Express example)
+const Ably = require('ably');
+const express = require('express');
+
+const app = express();
+const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+app.post('/friend-request', authenticateUser, async (req, res) => {
+    const fromUserId = req.user.id; // From authenticated session
+    const { toUserId } = req.body;
+
+    // Validate the request
+    if (!toUserId) {
+        return res.status(400).json({ error: 'Missing toUserId' });
+    }
+
+    // Check business rules (not already friends, not blocked, etc.)
+    const isValid = await validateFriendRequest(fromUserId, toUserId);
+    if (!isValid) {
+        return res.status(403).json({ error: 'Request denied' });
+    }
+
+    // Get sender's profile information
+    const fromUserProfile = await getUserProfile(fromUserId);
+
+    // Prepare the notification payload
+    const notification = {
+        type: 'friend-request',
+        fromUserId: fromUserId,
+        fromUserName: fromUserProfile.name,
+        fromUserAvatar: fromUserProfile.avatar,
+        timestamp: Date.now()
+    };
+
+    // Publish to the recipient's inbox channel
+    try {
+        const inbox = ably.channels.get(`inbox:${toUserId}`);
+        await inbox.publish('notification', notification);
+
+        console.log(`Notification sent to inbox:${toUserId}`);
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Failed to publish notification:', error);
+        res.status(500).json({ error: 'Failed to send notification' });
+    }
+});
+```
+</Code>
+
+#### Step 3: Recipient receives the notification
+
+<Code>
+```javascript
+// Client-side code for recipient
+const ably = new Ably.Realtime({ authUrl: '/api/ably-token' });
 const inbox = ably.channels.get('inbox:user456');
+
 await inbox.subscribe('notification', (message) => {
     const notification = message.data;
 
@@ -307,21 +389,18 @@ function displayFriendRequest(notification) {
 ```
 </Code>
 
-### Integration considerations
+### Implementation considerations
 
-When implementing your processing pipeline, consider:
+When implementing your notification system, consider:
 
-* **Idempotency:** Design your pipeline to handle duplicate messages gracefully. Ably provides [idempotent publishing](/docs/platform/architecture/idempotency), which can help prevent duplicate notifications at the publish stage.
-* **Error handling:** Implement proper error handling and monitoring. Use Ably's [`[meta]log` channel](/docs/platform/errors#meta) to track integration errors.
+* **Idempotency:** Design your backend to handle duplicate requests gracefully. Ably provides [idempotent publishing](/docs/platform/architecture/idempotency) to prevent duplicate notifications at the publish stage.
+* **Error handling:** Implement proper error handling and monitoring. Use Ably's [`[meta]log` channel](/docs/platform/errors#meta) to track publishing errors.
+* **Authentication:** Secure both your backend API (using your auth system) and Ably connections (using JWT tokens with appropriate capabilities).
 * **Scalability:**
-  * All integrations have [concurrency limits](/docs/platform/pricing/limits#integrations) based on your account plan. For high throughput, consider streaming to a message broker like Kafka or Kinesis to handle traffic spikes.
-  * Lambda functions scale automatically, but monitor for rate limits and usage.
-  * Streaming integrations can handle millions of messages per second with appropriate broker infrastructure.
-* **Retry behavior:** Understand your integration's retry behavior:
-  * [Lambda retries](/docs/platform/integrations/webhooks/lambda#retry) up to 2 times with delays between attempts
-  * [Webhooks retry](/docs/platform/integrations/webhooks#retry) up to 2 times with delays between attempts
-  * Streaming integrations provide at-least-once delivery with broker-specific acknowledgment and retry mechanisms
-* **Ordering guarantees:** If ordering is required, run webhooks in batched mode or use [streaming integrations](/docs/platform/integrations/streaming) with partition keys to control message ordering. See [ordering considerations](#ordering-considerations) for details.
+  * Your backend should scale horizontally to handle request load
+  * Use batch publishing for notifications targeting multiple recipients
+  * Consider using Kafka Connector for very high throughput scenarios (millions of messages per second)
+* **Retry behavior:** Implement retry logic in your backend for failed Ably publishes. The Ably REST client includes automatic retries for transient failures.
 
 ## Cost optimization <a id="cost-optimization"/>
 
@@ -423,7 +502,7 @@ Individual inbox costs scale linearly with notification frequency (doubling noti
 
 ## Handling offline notifications <a id="offline-notifications"/>
 
-Clients may not always be online when a notification arrives. Ably provides multiple mechanisms to ensure they receive important notifications:
+Clients may not always be online when a notification arrives. Ably provides multiple mechanisms to eTansure they receive important notifications:
 
 ### Temporary disconnections
 
@@ -606,18 +685,19 @@ For detailed information on configuring and using push notifications with Ably, 
 Before launching your notification center, review these key points:
 
 * **Authentication:** Use JWT authentication for all client-side communication with short TTLs (1-4 hours max).
-* **Capabilities:** Apply the principle of least privilege - clients should only have publish access to an outbox and subscribe access to their own inbox.
-* **Validation:** Validate all notification request data in your processing pipeline, never trust client data.
-* **Monitoring:** Subscribe to [`[meta]log` channels](/docs/platform/errors#meta) to track integration errors and issues.
-* **Rate limiting:** Implement rate limiting in tokens to help prevent abuse.
-* **Scalability:** Ensure your processing pipeline can scale to handle peak loads.
+* **Capabilities:** Apply the principle of least privilege - clients should only have subscribe access to their own inbox channels.
+* **Validation:** Validate all notification request data in your backend, never trust client data.
+* **Monitoring:** Subscribe to [`[meta]log` channels](/docs/platform/errors#meta) to track publishing errors and issues.
+* **Rate limiting:** Implement rate limiting in your backend to help prevent abuse.
+* **Scalability:** Ensure your backend can scale horizontally to handle request and publishing load.
 * **Cost monitoring:** Set up billing alerts and monitor usage patterns to optimize costs.
 * **Offline handling:** Enable message history on inbox channels and consider push notifications for critical alerts.
 
 ## Next steps
 
 * Read the [JWT authentication documentation](/docs/auth/token) for detailed auth implementation.
-* Explore [integration options](/docs/platform/integrations) to choose the right processing pipeline for your needs.
+* Review the [REST API documentation](/docs/api/rest-api) for publishing to Ably from your backend.
+* Explore the [Kafka Connector](/docs/platform/integrations/kafka-connector) for high-throughput scenarios.
 * Learn about [push notifications](/docs/push) to handle offline delivery.
 * Review the [batch publish API](/docs/api/rest-api#batch-publish) for efficient multi-channel publishing.
 * Understand [message history](/docs/channels/history) for retrieving missed notifications.
