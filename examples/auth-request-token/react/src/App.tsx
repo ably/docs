@@ -59,7 +59,15 @@ export default function App() {
 
     // Initialize Ably client with token auth
     const realtimeClient = new Ably.Realtime({
-      authUrl: config.AUTH_URL || 'http://localhost:3001/request-token',
+      authCallback: async (_tokenParams, callback) => {
+        try {
+          const response = await fetch(config.AUTH_URL || 'http://localhost:3001/request-token');
+          const token = await response.text();
+          callback(null, token);
+        } catch (error) {
+          callback(error instanceof Error ? error.message : String(error), null);
+        }
+      },
     });
 
     // Update second message

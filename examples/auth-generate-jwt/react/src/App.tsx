@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider, useConnectionStateListener } from 'ably/react';
 import './styles/styles.css';
@@ -59,7 +59,15 @@ export default function App() {
 
     // Initialize Ably client with JWT auth
     const realtimeClient = new Ably.Realtime({
-      authUrl: config.AUTH_URL || 'http://localhost:3001/generate-jwt',
+      authCallback: async (_tokenParams, callback) => {
+        try {
+          const response = await fetch(config.AUTH_URL || 'http://localhost:3001/generate-jwt');
+          const token = await response.text();
+          callback(null, token);
+        } catch (error) {
+          callback(error instanceof Error ? error.message : String(error), null);
+        }
+      },
     });
 
     // Update second message

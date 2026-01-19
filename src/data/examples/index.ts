@@ -44,16 +44,6 @@ export const examples: Example[] = [
     metaDescription: `Learn how to request and use Ably Tokens for client authentication. Secure token-based auth for realtime applications.`,
   },
   {
-    id: 'auth-request-token',
-    name: 'Request Token',
-    description: 'Request an Ably Token for authenticating users.',
-    products: ['auth'],
-    layout: 'single-horizontal',
-    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
-    metaTitle: `Authenticate with Ably Token`,
-    metaDescription: `Learn how to request and use Ably Tokens for client authentication. Secure token-based auth for realtime applications.`,
-  },
-  {
     id: 'chat-presence',
     name: 'Chat presence',
     description: 'Show online/offline status of users in a chat application.',
