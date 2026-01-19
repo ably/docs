@@ -53,7 +53,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
 
     const fetchMarkdown = async () => {
       try {
-        const response = await fetch(`${pathname}.md`, {
+        // Fetch pre-generated markdown from /docs/{slug}.md
+        const slug = pathname.replace(/^\/docs\//, '');
+        const response = await fetch(`/docs/${slug}.md`, {
           signal: abortController.signal,
         });
 
@@ -62,12 +64,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
         }
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch markdown: ${response.status} ${response.statusText}`);
+          setMarkdownContent(null);
+          return;
         }
 
         const contentType = response.headers.get('Content-Type');
         if (!contentType || !contentType.includes('text/markdown')) {
-          throw new Error(`Invalid content type: expected text/markdown, got ${contentType}`);
+          setMarkdownContent(null);
+          return;
         }
 
         const content = await response.text();
@@ -81,7 +85,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
         if (!isMounted || (error instanceof Error && error.name === 'AbortError')) {
           return;
         }
-        console.error('Failed to fetch markdown:', error);
         setMarkdownContent(null);
       }
     };
@@ -159,7 +162,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
                   <a
-                    href={`${pathname}.md`}
+                    href={`/docs/${pathname.replace(/^\/docs\//, '')}.md`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={interactiveButtonClassName}
