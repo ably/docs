@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider, useConnectionStateListener } from 'ably/react';
 import './styles/styles.css';
@@ -59,7 +59,22 @@ export default function App() {
 
     // Initialize Ably client with token auth
     const realtimeClient = new Ably.Realtime({
-      authUrl: config.AUTH_URL || 'http://localhost:3001/request-token',
+      authCallback: async (_tokenParams, callback) => {
+        try {
+          const response = await fetch(config.AUTH_URL || 'http://localhost:3001/request-token');
+          if (!response.ok) {
+            callback(`Auth server error: ${response.status}`, null);
+            return;
+          }
+          const contentType = response.headers.get('content-type');
+          const token = contentType?.includes('application/json')
+            ? await response.json()
+            : await response.text();
+          callback(null, token);
+        } catch (error) {
+          callback(error instanceof Error ? error.message : String(error), null);
+        }
+      },
     });
 
     // Update second message
