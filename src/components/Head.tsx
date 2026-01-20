@@ -1,34 +1,12 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
 
+import { getMarkdownUrl, getLlmsTxtUrl } from '../utilities/llm-urls';
+
 export type StructuredData = {
   '@context': string;
   '@type': string;
   [key: string]: unknown;
-};
-
-/**
- * Converts a canonical URL to its markdown equivalent for LLM/agent discovery.
- * Example: https://ably.com/docs/channels -> https://ably.com/docs/channels.md
- */
-const getMarkdownUrl = (canonical: string): string => {
-  // Remove trailing slash if present, then add .md
-  const withoutTrailingSlash = canonical.endsWith('/') ? canonical.slice(0, -1) : canonical;
-  return `${withoutTrailingSlash}.md`;
-};
-
-/**
- * Gets the base URL for llms.txt from a canonical URL.
- * Example: https://ably.com/docs/channels -> https://ably.com/llms.txt
- */
-const getLlmsTxtUrl = (canonical: string): string => {
-  try {
-    const url = new URL(canonical);
-    return `${url.origin}/llms.txt`;
-  } catch {
-    // Fallback for relative URLs or parsing errors
-    return '/llms.txt';
-  }
 };
 
 export const Head = ({

@@ -29,6 +29,7 @@ import { MarkdownProvider } from '../Markdown';
 
 import Article from '../Article';
 import { Head, StructuredData } from '../Head';
+import { getMarkdownUrl } from '../../utilities/llm-urls';
 
 import UserContext from 'src/contexts/user-context';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -180,12 +181,11 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const keywords = getFrontmatter(frontmatter, 'meta_keywords') as string;
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
-  const { canonicalUrl, siteUrl } = useSiteMetadata();
+  const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl(location.pathname);
 
-  // Generate markdown URL for noscript fallback
-  const markdownPath = `${location.pathname}.md`;
-  const markdownUrl = `${siteUrl}${markdownPath}`;
+  // Generate markdown URL for noscript fallback (uses shared utility for consistent URL handling)
+  const markdownUrl = getMarkdownUrl(canonical);
 
   // Generate JSON-LD structured data for SEO
   const structuredData: StructuredData | undefined = useMemo(() => {
