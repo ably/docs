@@ -405,71 +405,30 @@ Server-side tracking is also possible with [message annotations](/docs/messages/
 
 #### Tracking via message ID
 
-Each message has a unique [`id`](/docs/api/realtime-sdk/types#message) assigned by Ably. If your client stores the `id` of the last message it successfully processed, you can query history and stop processing when you encounter that message:
+Each message has a unique [`id`](/docs/api/realtime-sdk/types#message) assigned by Ably. Clients can track which messages they've processed by storing the last message ID. When reconnecting, they can query history to retrieve any missed notifications.
 
 <Code>
 ```javascript
 const inbox = ably.channels.get('inbox:client456');
 
-// Retrieve the last processed message ID and timestamp from local storage
-const lastProcessedId = localStorage.getItem('lastNotificationId');
-const lastProcessedTimestamp = localStorage.getItem('lastNotificationTimestamp');
-
-// Track whether we're still processing history
-let processingHistory = true;
-const queuedMessages = [];
-
-// Subscribe to new notifications
-await inbox.subscribe('notification', (message) => {
-    if (processingHistory) {
-        // Queue messages that arrive while we're processing history
-        queuedMessages.push(message);
-    } else {
-        handleNotification(message.data);
-        localStorage.setItem('lastNotificationId', message.id);
-        localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
-    }
+// Query history for messages since a specific timestamp
+const historyPage = await inbox.history({
+    start: lastProcessedTimestamp,
+    limit: 100,
+    untilAttach: true
 });
 
-// Retrieve notifications received while offline
-const historyOptions = {
-    limit: 100,
-    untilAttach: true // Fetch messages from before subscription up to the attached point
-};
-
-if (lastProcessedTimestamp) {
-    historyOptions.start = parseInt(lastProcessedTimestamp);
-}
-
-const historyPage = await inbox.history(historyOptions);
-
-// Process historical messages (they arrive in reverse order with untilAttach)
-for (const message of historyPage.items.reverse()) {
-    if (lastProcessedId && message.id === lastProcessedId) {
+// Process messages until you find the last one you've seen
+for (const message of historyPage.items) {
+    if (message.id === lastProcessedId) {
         break;
     }
     handleNotification(message.data);
-    localStorage.setItem('lastNotificationId', message.id);
-    localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
-}
-
-// Now process any messages that arrived while we were handling history
-processingHistory = false;
-for (const message of queuedMessages) {
-    handleNotification(message.data);
-    localStorage.setItem('lastNotificationId', message.id);
-    localStorage.setItem('lastNotificationTimestamp', message.timestamp.toString());
 }
 ```
 </Code>
 
-The `start` parameter is inclusive and helps limit the query range to messages from that timestamp onwards, but you still need to check `message.id` to detect which specific message you last processed. This approach works because history with `untilAttach: true` returns messages in reverse order, allowing you to paginate backwards and stop when you find the last message you've already seen.
-
-Message history is particularly useful for notifications that clients need to see when they return, but that don't require immediate push notification delivery. This is common in internal systems where notifications might inform clients of completed processes, status updates, or system alerts that can be reviewed when a client connects.
-
-<Aside data-type='note'>
- History returns a paginated list of messages. As such, you may need to paginate through multiple pages to find the last processed message, depending on how many messages were sent while the client was offline.
-</Aside>
+History queries can be paginated if needed, allowing you to retrieve larger sets of missed notifications across multiple requests.
 
 #### Tracking via message annotations
 
@@ -572,8 +531,6 @@ Before launching your notification center, review these key points:
 
 * **Authentication:** Use JWT authentication for all client-side communication with short TTLs (1-4 hours max).
 * **Capabilities:** Apply the principle of least privilege - clients should only have subscribe access to their own inbox channels.
-* **Validation:** Validate all notification request data in your backend, never trust client data.
-* **Monitoring:** Subscribe to [`[meta]log` channels](/docs/platform/errors#meta) to track publishing errors and issues.
 * **Rate limiting:** Implement rate limiting in your backend to help prevent abuse.
 * **Scalability:** Ensure your backend can scale horizontally to handle request and publishing load.
 * **Cost monitoring:** Set up billing alerts and monitor usage patterns to optimize costs.
