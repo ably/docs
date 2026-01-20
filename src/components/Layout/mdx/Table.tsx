@@ -2,7 +2,7 @@ import React from 'react';
 import cn from '@ably/ui/core/utils/cn';
 
 // Table Root Component
-interface TableRootProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface TableRootProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
@@ -15,7 +15,7 @@ const TableRoot: React.FC<TableRootProps> = ({ children, className, ...props }) 
 };
 
 // Table Header Component
-interface TableHeaderProps extends React.HTMLAttributes<HTMLTableSectionElement> {
+export interface TableHeaderProps extends React.HTMLAttributes<HTMLTableSectionElement> {
   children: React.ReactNode;
 }
 
@@ -28,7 +28,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({ children, className, ...props
 };
 
 // Table Body Component
-interface TableBodyProps extends React.HTMLAttributes<HTMLTableSectionElement> {
+export interface TableBodyProps extends React.HTMLAttributes<HTMLTableSectionElement> {
   children: React.ReactNode;
 }
 
@@ -41,7 +41,7 @@ const TableBody: React.FC<TableBodyProps> = ({ children, className, ...props }) 
 };
 
 // Table Row Component
-interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
   children: React.ReactNode;
 }
 
@@ -54,7 +54,7 @@ const TableRow: React.FC<TableRowProps> = ({ children, className, ...props }) =>
 };
 
 // Table Head Cell Component
-interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
+export interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
   children: React.ReactNode;
 }
 
@@ -75,7 +75,7 @@ const TableHead: React.FC<TableHeadProps> = ({ children, className, ...props }) 
 };
 
 // Table Cell Component
-interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
+export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
   children: React.ReactNode;
 }
 
@@ -98,7 +98,7 @@ const TableCell: React.FC<TableCellProps> = ({ children, className, ...props }) 
 };
 
 // Table Caption Component (optional)
-interface TableCaptionProps extends React.HTMLAttributes<HTMLTableCaptionElement> {
+export interface TableCaptionProps extends React.HTMLAttributes<HTMLTableCaptionElement> {
   children: React.ReactNode;
 }
 
