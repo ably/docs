@@ -111,7 +111,7 @@ const claims = {
     "exp": currentTime + 3600, // Token expires in 1 hour
     "x-ably-capability": JSON.stringify({
         "inbox:client123": ["subscribe", "history"], // Inbox subscribe + history access
-        "notifications:inbox:general": ["subscribe"] // Optional: general broadcast channel
+        "inbox:general": ["subscribe"] // Optional: general broadcast channel
     }),
     "x-ably-clientId": "client123" // Identify the client
 }
@@ -202,7 +202,7 @@ The Kafka Connector supports dynamic channel routing, allowing you to determine 
 
 Ably channels are very lightweight, and it would be typical to have one inbox channel per client. To route messages to the correct inbox channel, you can use the Kafka message key or headers to specify the target client ID.
 
-For example, you could define a channel mapping such as `notifications:inbox:${key}` to route messages to the appropriate inbox based on the Kafka message key.
+For example, you could define a channel mapping such as `inbox:${key}` to route messages to the appropriate inbox based on the Kafka message key.
 
 <Code>
 ```javascript
@@ -216,7 +216,7 @@ const kafka = new Kafka({
 const producer = kafka.producer();
 await producer.connect();
 
-// Publish notification - will be routed to notifications:inbox:client123
+// Publish notification - will be routed to inbox:client123
 await producer.send({
     topic: 'notifications',
     messages: [{
@@ -254,127 +254,39 @@ Ably's kafka connector should be used when you have existing Kafka infrastructur
 * Configure appropriate partition counts for your throughput needs.
 * Messages published to the same channel from the same partition maintain order, but this requires some [configuration](https://github.com/ably/kafka-connect-ably?tab=readme-ov-file#message-ordering).
 
-### Example: Friend request notification flow
+## Receiving notifications on the client
 
-The following example demonstrates a complete notification flow for a social media application:
+Clients subscribe to their inbox channels using Ably's realtime SDKs. When your backend publishes a message to a client's inbox channel, the client will receive it in realtime provided they are attached and subscribed to the channel.
 
-#### Step 1: Client sends friend request to backend
-
-<Code>
-```javascript
-// Client-side code
-async function sendFriendRequest(toUserId) {
-    try {
-        const response = await fetch('https://api.example.com/friend-request', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userAuthToken}`
-            },
-            body: JSON.stringify({
-                toUserId: toUserId
-            })
-        });
-
-        if (response.ok) {
-            console.log('Friend request sent');
-        } else {
-            console.error('Failed to send friend request');
-        }
-    } catch (error) {
-        console.error('Error sending friend request:', error);
-    }
-}
-```
-</Code>
-
-#### Step 2: Backend processes and publishes to Ably
+Using the token-based authentication described earlier, clients can securely connect and subscribe to their permitted channels.
 
 <Code>
 ```javascript
-// Backend API endpoint (Node.js/Express example)
-const Ably = require('ably');
-const express = require('express');
-
-const app = express();
-const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
-
-app.post('/friend-request', authenticateUser, async (req, res) => {
-    const fromUserId = req.user.id; // From authenticated session
-    const { toUserId } = req.body;
-
-    // Validate the request
-    if (!toUserId) {
-        return res.status(400).json({ error: 'Missing toUserId' });
-    }
-
-    // Check business rules (not already friends, not blocked, etc.)
-    const isValid = await validateFriendRequest(fromUserId, toUserId);
-    if (!isValid) {
-        return res.status(403).json({ error: 'Request denied' });
-    }
-
-    // Get sender's profile information
-    const fromUserProfile = await getUserProfile(fromUserId);
-
-    // Prepare the notification payload
-    const notification = {
-        type: 'friend-request',
-        fromUserId: fromUserId,
-        fromUserName: fromUserProfile.name,
-        fromUserAvatar: fromUserProfile.avatar,
-        timestamp: Date.now()
-    };
-
-    // Publish to the recipient's inbox channel
-    try {
-        const inbox = ably.channels.get(`inbox:${toUserId}`);
-        await inbox.publish('notification', notification);
-
-        console.log(`Notification sent to inbox:${toUserId}`);
-        res.status(200).json({ success: true });
-    } catch (error) {
-        console.error('Failed to publish notification:', error);
-        res.status(500).json({ error: 'Failed to send notification' });
-    }
-});
-```
-</Code>
-
-#### Step 3: Recipient receives the notification
-
-<Code>
-```javascript
-// Client-side code for recipient
 const ably = new Ably.Realtime({ authUrl: '/api/ably-token' });
-const inbox = ably.channels.get('inbox:user456');
 
-await inbox.subscribe('notification', (message) => {
+// Subscribe to your personal inbox channel
+const inbox = ably.channels.get('inbox:client123');
+await inbox.subscribe((message) => {
     const notification = message.data;
-
-    if (notification.type === 'friend-request') {
-        displayFriendRequest(notification);
+    displayNotification(notification);
     }
 });
-
-function displayFriendRequest(notification) {
-    console.log(`Friend request from ${notification.fromUserName}`);
-    // Update UI to show the notification
-}
 ```
 </Code>
 
-### Implementation considerations
+If you're using a general broadcast channel for system-wide notifications, clients can subscribe to it alongside their personal inbox.
 
-When implementing your notification system, consider:
+<Code>
+```javascript
+// Subscribe to general broadcast channel
+const general = ably.channels.get('inbox:general');
+await general.subscribe((message) => {
+    displaySystemNotification(message.data);
+});
+```
+</Code>
 
-* **Idempotency:** Design your backend to handle duplicate requests gracefully. Ably provides [idempotent publishing](/docs/platform/architecture/idempotency) to prevent duplicate notifications at the publish stage.
-* **Error handling:** Implement proper error handling and monitoring. Use Ably's [`[meta]log` channel](/docs/platform/errors#meta) to track publishing errors.
-* **Authentication:** Secure both your backend API (using your auth system) and Ably connections (using JWT tokens with appropriate capabilities).
-* **Scalability:**
-  * Your backend should scale horizontally to handle request load
-  * Use batch publishing for notifications targeting multiple recipients
-* **Retry behavior:** Implement retry logic in your backend for failed Ably publishes. The Ably REST client includes automatic retries for transient failures.
+Clients can subscribe to multiple channels simultaneously over a single connection, allowing them to receive both personal and broadcast notifications efficiently.
 
 ## Cost optimization <a id="cost-optimization"/>
 
@@ -485,7 +397,7 @@ Ably stores messages by default for 2 minutes to support short-term [history](/d
 ### Longer-term message history
 
 If longer retention is required, you can enable this using a rule to [persist all messages](/docs/storage-history/storage#all-message-persistence) for a particular channel or namespace.
-This defaults to 24 hours, but can be extended for some plans. Speak to [Ably customer support](https://ably.com/contact) to discuss your requirements
+This defaults to 24 hours, but can be extended for some plans. Speak to [Ably customer support](https://ably.com/contact) to discuss your requirements.
 
 When clients come online, they can retrieve missed notifications from their inbox. If notfications need to be handled idempotently, messages have a [`message.id`](/docs/api/realtime-sdk/types#message) field that can be tracked client-side to avoid processing duplicates.
 
