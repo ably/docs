@@ -8,6 +8,9 @@ trap stop_nginx EXIT
 
 set -euo pipefail
 
+# Test counter
+TEST_COUNT=0
+
 # Disable auth for content negotiation tests
 export ENABLE_BASIC_AUTH=false
 export CONTENT_REQUEST_AUTH_TOKENS=""
@@ -31,6 +34,7 @@ run_test() {
   local test_name="$5"
   local user_agent="${6:-}"
 
+  TEST_COUNT=$((TEST_COUNT + 1))
   echo "🧪 $test_name"
 
   # Build curl command with optional Accept header and User-Agent
@@ -152,7 +156,7 @@ run_test "/docs/channels" "text/html" "200" "markdown" "Bot overrides Accept: te
 echo
 
 echo "================================"
-echo "✅ All 20 tests passed!"
+echo "✅ All $TEST_COUNT tests passed!"
 echo "================================"
 
 # Exit explicitly with success
