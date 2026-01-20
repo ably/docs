@@ -66,6 +66,29 @@ Content without intro`;
       expect(output).toContain('Content here');
     });
 
+    it('should remove side-effect imports without semicolons', () => {
+      const input = `import 'side-effect-module'
+
+## First Heading
+
+Content here`;
+      const output = removeImportExportStatements(input);
+      expect(output).not.toContain('import');
+      expect(output).not.toContain('side-effect');
+      expect(output).toContain('## First Heading');
+      expect(output).toContain('Content here');
+    });
+
+    it('should remove side-effect imports with semicolons', () => {
+      const input = `import "another-module";
+
+Content here`;
+      const output = removeImportExportStatements(input);
+      expect(output).not.toContain('import');
+      expect(output).not.toContain('another-module');
+      expect(output).toContain('Content here');
+    });
+
     it('should remove export default statements', () => {
       const input = `export default SomeComponent;\n\nContent here`;
       const output = removeImportExportStatements(input);
@@ -94,6 +117,102 @@ Content without intro`;
       expect(output).not.toContain('export');
       expect(output).not.toContain('class Foo');
       expect(output).toContain('Content here');
+    });
+
+    it('should preserve import/export statements in code blocks', () => {
+      const input = `import Component from './component'
+
+## Code Example
+
+\`\`\`javascript
+import { realtime } from '@ably/realtime';
+export const config = { ... };
+\`\`\`
+`;
+      const output = removeImportExportStatements(input);
+      expect(output).toContain('import { realtime }');
+      expect(output).toContain('export const config');
+      expect(output).not.toContain('import Component');
+    });
+
+    it('should handle multi-line imports followed by content', () => {
+      const input = `import {
+  Foo,
+  Bar
+} from 'module';
+
+## First Heading
+
+Content here`;
+      const output = removeImportExportStatements(input);
+      expect(output).toContain('## First Heading');
+      expect(output).toContain('Content here');
+      expect(output).not.toContain('import');
+      expect(output).not.toContain('Foo');
+      expect(output).not.toContain('Bar');
+    });
+
+    it('should stop removing at first non-import/export line', () => {
+      const input = `import Foo from 'bar';
+
+{/* JSX comment */}
+
+import { something } from 'somewhere';`;
+      const output = removeImportExportStatements(input);
+      expect(output).toContain('{/* JSX comment */}');
+      expect(output).toContain("import { something } from 'somewhere'");
+      expect(output).not.toContain('import Foo');
+    });
+
+    it('should handle blank lines between imports', () => {
+      const input = `import Foo from 'bar';
+
+import Baz from 'qux';
+
+## Content`;
+      const output = removeImportExportStatements(input);
+      expect(output).toContain('## Content');
+      expect(output).not.toContain('import Foo');
+      expect(output).not.toContain('import Baz');
+    });
+
+    it('should handle export function on one line', () => {
+      const input = `export function foo() { return 'bar'; }
+
+## Content`;
+      const output = removeImportExportStatements(input);
+      expect(output).toContain('## Content');
+      expect(output).not.toContain('export');
+      expect(output).not.toContain('function foo');
+    });
+
+    it('should remove multi-line arrow function exports', () => {
+      const input = `export const MyComponent = () => {
+  const x = 1;
+  return x;
+};
+
+## Content`;
+      const output = removeImportExportStatements(input);
+      expect(output).toContain('## Content');
+      expect(output).not.toContain('export');
+      expect(output).not.toContain('MyComponent');
+      expect(output).not.toContain('const x = 1');
+    });
+
+    it('should remove object exports with nested braces', () => {
+      const input = `export const config = {
+  nested: {
+    value: 'test';
+  }
+};
+
+## Content`;
+      const output = removeImportExportStatements(input);
+      expect(output).toContain('## Content');
+      expect(output).not.toContain('export');
+      expect(output).not.toContain('config');
+      expect(output).not.toContain('nested');
     });
   });
 
