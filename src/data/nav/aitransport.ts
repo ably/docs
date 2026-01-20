@@ -101,12 +101,20 @@ export default {
           link: '/docs/guides/ai-transport/openai-message-per-response',
         },
         {
+          name: 'OpenAI messaging - chain of thought',
+          link: '/docs/guides/ai-transport/openai-chain-of-thought',
+        },
+        {
           name: 'Anthropic token streaming - message per token',
           link: '/docs/guides/ai-transport/anthropic-message-per-token',
         },
         {
           name: 'Anthropic token streaming - message per response',
           link: '/docs/guides/ai-transport/anthropic-message-per-response',
+        },
+        {
+          name: 'Anthropic messaging - chain of thought',
+          link: '/docs/guides/ai-transport/anthropic-chain-of-thought',
         },
         {
           name: 'Vercel AI SDK token streaming - message per token',
