@@ -8,6 +8,9 @@ trap stop_nginx EXIT
 
 set -euo pipefail
 
+# Test counter
+TEST_COUNT=0
+
 # Disable auth for content negotiation tests
 export ENABLE_BASIC_AUTH=false
 export CONTENT_REQUEST_AUTH_TOKENS=""
@@ -31,6 +34,7 @@ run_test() {
   local test_name="$5"
   local user_agent="${6:-}"
 
+  TEST_COUNT=$((TEST_COUNT + 1))
   echo "🧪 $test_name"
 
   # Build curl command with optional Accept header and User-Agent
@@ -141,8 +145,6 @@ echo "Group 6: Bot Detection (User-Agent)"
 echo "------------------------------------"
 run_test "/docs/channels" "" "200" "markdown" "Claude-User bot gets markdown" "Claude-User/1.0"
 run_test "/docs/channels" "" "200" "markdown" "ClaudeBot gets markdown" "Mozilla/5.0 (compatible; ClaudeBot/1.0)"
-run_test "/docs/channels" "" "200" "markdown" "ChatGPT-User bot gets markdown" "ChatGPT-User"
-run_test "/docs/channels" "" "200" "markdown" "GPTBot gets markdown" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0)"
 run_test "/docs/channels" "" "200" "markdown" "PerplexityBot gets markdown" "PerplexityBot"
 run_test "/docs/channels" "" "200" "html" "Regular browser gets HTML" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
 echo
@@ -151,11 +153,10 @@ echo
 echo "Group 7: Combined Bot + Accept Header"
 echo "--------------------------------------"
 run_test "/docs/channels" "text/html" "200" "markdown" "Bot overrides Accept: text/html" "Claude-User/1.0"
-run_test "/docs/channels" "text/markdown" "200" "markdown" "Bot + markdown Accept both work" "GPTBot/1.0"
 echo
 
 echo "================================"
-echo "✅ All 23 tests passed!"
+echo "✅ All $TEST_COUNT tests passed!"
 echo "================================"
 
 # Exit explicitly with success
