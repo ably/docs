@@ -176,7 +176,7 @@ Ably applies rate limits to ensure platform stability. By default, channels acce
 
 Server-side batching is configured through [channel rules](/docs/channels#rules) and works by holding messages for a configurable interval (e.g., 100ms) before publishing them as a batch, up to a maximum batch size of 200 messages. This means your data source can publish at high frequency without exceeding rate limits, and Ably handles all the batching work automatically.
 
-The key advantage for high-frequency data sources is simplicity: your producer continues publishing at whatever rate it generates data, and Ably handles the batching transparently. No client-side buffering or rate limiting logic is needed.
+This means your producer continues publishing at whatever rate it generates data, and Ably handles the batching transparently. No client-side buffering or rate limiting logic is needed.
 
 <Code>
 ```javascript
@@ -200,27 +200,59 @@ channel.subscribe('sensor-update', (message) => {
 
 Server-side batching is configured via [channel rules](/docs/channels#rules) in your Ably dashboard. You specify the batching interval (e.g., 100ms) which determines how long messages are held before being published. This interval also determines the maximum additional latency introduced—a 100ms interval means subscribers see data with at most 100ms additional latency, which is imperceptible for most dashboard use cases.
 
-### Managing cost efficiency
+### Cost efficiency with batching strategies
 
-Beyond enabling higher inbound message rates, server-side batching also dramatically reduces costs by grouping messages before fanout to subscribers. During high-activity periods—a goal being scored, market volatility, or a major incident—message rates can spike dramatically, and server-side batching helps manage these spikes automatically.
+Dashboard applications with high message volumes or large subscriber counts can benefit significantly from Ably's batching strategies. Both server-side batching and message conflation reduce costs, but they work differently and are suited to different use cases.
+
+#### Server-side batching: Preserving all messages
+
+[Server-side batching](/docs/messages/batch#server-side) reduces costs by grouping messages before fanout to subscribers. During high-activity periods—a goal being scored, market volatility, or a major incident—message rates can spike dramatically, and server-side batching helps manage these spikes automatically.
 
 The cost benefit comes from reduced outbound message counts. If your source publishes 10 updates per second and you have 1000 subscribers, without batching you'd have 10,000 outbound messages per second. With 500ms batching, messages are grouped into 2 batches per second, resulting in 2,000 outbound messages per second—a 5x reduction.
 
-Unlike message conflation, server-side batching preserves all messages and message order. Every update is delivered, just grouped together for efficiency. This makes it suitable for scenarios where you need complete data, but can tolerate some latency in exchange for cost savings and higher inbound throughput capacity.
+Server-side batching preserves all messages and guarantees ordering within message types. Every update is delivered, just grouped together for efficiency. This makes it ideal for scenarios where you need complete data but can tolerate some latency in exchange for cost savings.
 
-### Message conflation for latest-value scenarios
+Messages of the same type maintain their relative order within batches. For example, if you publish both regular messages and presence messages on the same channel, regular messages will be ordered correctly relative to other regular messages, and presence messages will be ordered correctly relative to other presence messages. However, the relative ordering between different message types (e.g., a regular message published before a presence message) is not guaranteed to be preserved across the batch.
 
-For dashboards where only the current state over some time window matters—stock prices, sensor readings, vehicle positions—[message conflation](/docs/messages#conflation) delivers only the most recent value within each time window.
+#### Message conflation: Latest-value batching
 
-Configure conflation through [rules](/docs/channels#rules) in your dashboard. You'll specify a conflation interval and a conflation key pattern that determines which messages are considered related. Messages with the same conflation key within the time window are conflated together, with only the latest delivered. Multiple conflated messages are then delivered in a single batch at the end of the interval.
+[Message conflation](/docs/messages#conflation) is a specialized form of batching for dashboards where only the most recent value matters—stock prices, sensor readings, vehicle positions. Instead of delivering all messages like server-side batching, conflation delivers only the latest message per conflation key within each time window.
+
+Configure conflation through [rules](/docs/channels#rules) in your Ably dashboard. You specify a conflation interval and a conflation key pattern that determines which messages are related. Messages with the same conflation key within the time window are then conflated together automatically, no code changes are needed.
+
+Conflation allows you to combine multiple producers with varying publish rates into a single stream efficiently, and delivers dramatic reductions in both outbound message count and bandwidth usage. For example, consider multiple sensors publishing at different rates:
+
+<Code>
+```javascript
+// Multiple sensors publishing at different rates
+// sensor-1 publishes 50 messages/second
+channel.publish({
+  name: 'sensor-update',
+  data: { value: 42.3, timestamp: Date.now() },
+  extras: { headers: { key: 'sensor-1' } }
+});
+
+// sensor-2 publishes only 2 messages/second
+channel.publish({
+  name: 'sensor-update',
+  data: { value: 18.7, timestamp: Date.now() },
+  extras: { headers: { key: 'sensor-2' } }
+});
+
+// With 100ms conflation window:
+// - sensor-1: ~5 messages received, only latest delivered
+// - sensor-2: ~0.2 messages received (likely 0-1), latest delivered
+// Result: 1 outbound message containing 2 messages (latest from each sensor)
+```
+</Code>
+
+If sensor-1 publishes 50 updates per second but only the latest value each 100ms matters, you reduce from 50 messages to 5 messages per second per subscriber a 90% reduction. The bandwidth savings are equally significant, as clients receive and process far fewer messages.
 
 <Aside data-type='important'>
-  Message conflation permanently discards intermediate messages. Even messages streamed to external storage via Ably integrations will only contain conflated data. Use conflation only when displaying the latest value is sufficient and historical accuracy isn't required. For audit trails or time-series analysis, use server-side batching or delta compression instead, which preserve all messages.
+  Message conflation permanently discards intermediate messages. Even messages streamed to external storage via Ably integrations will only contain conflated data. Use conflation only when displaying the latest value is sufficient and historical accuracy isn't required. For audit trails or time-series analysis, use server-side batching instead, which preserves all messages.
 </Aside>
 
-Conflation dramatically reduces costs when publishers send updates faster than users can perceive. If a price feed publishes 10 updates per second but your dashboard refreshes only each second, you're wasting 90% of your message budget on updates users never see. With 100ms conflation, you reduce outbound messages by 10x while showing users the most current data available.
-
-### Configuring rules
+### Configuring batching rules
 
 Both server-side batching and message conflation are configured through [rules](/docs/channels#rules) in your Ably dashboard. Rules allow you to apply optimizations to specific channels or entire namespaces using regex pattern matching, making it easy to configure behavior across related channels without code changes.
 
@@ -229,10 +261,10 @@ To configure a channel rule:
 1. Navigate to your app settings in the [Ably dashboard](https://ably.com/dashboard) and select the **Rules** tab.
 2. Create a new rule with a channel name pattern (e.g., `^match:.*:stats` to match all match stats channels, or `^vitals:.*` for all patient vitals).
 3. Enable the desired optimization—server-side batching or message conflation.
-4. Set an interval (e.g. 100ms for responsive dashboards), determining how frequently messages are batched or conflated.
-5. If using conflation, configure the key pattern to determine which messages are conflated.
+4. Set a batching interval (e.g., 100ms for responsive dashboards), determining how frequently batches are sent to subscribers.
+5. For conflation, configure the conflation key pattern (referenced in message `extras.ref.params.key`) to determine which messages are related and should be conflated together.
 
-Using namespace patterns means you can apply different rules to different parts of your application. For example, you might enable conflation on price ticker channels (`^prices:.*`) while using batching on event feeds (`^events:.*`) where complete data is required.
+Using namespace patterns means you can apply different rules to different parts of your application. For example, you might enable conflation on high-frequency sensor channels (`^sensors:.*`) where only the latest reading matters, while using server-side batching on event feeds (`^events:.*`) where complete event history is required. You can also combine both strategies—server-side batching with conflation enabled will first conflate messages by key, then batch the conflated messages together for efficient delivery.
 
 ### Delta compression for large payloads
 
@@ -631,28 +663,26 @@ Ably charges for messages, connections, and channels. For most dashboard applica
 
 For a dashboard with 1 publisher and 1000 subscribers publishing 1 update per second, that's 1 inbound message plus 1000 outbound messages per second—86.4 million messages per day. Understanding this fanout effect is crucial for cost planning.
 
-### Server-side batching for burst management <a id="server-side-batching"/>
+### Batching strategies for cost optimization <a id="server-side-batching"/>
 
-[Server-side batching](/docs/messages/batch#server-side) groups messages before fanout, dramatically reducing outbound message count during high-activity periods. This is particularly valuable when your data source publishes multiple updates per second.
+As covered in [Cost efficiency with batching strategies](#cost-efficiency-with-batching-strategies), both server-side batching and message conflation can dramatically reduce message costs. The choice depends on whether you need to preserve all messages or only the latest values.
 
-To understand the impact, consider a live sports dashboard with 100,000 viewers and a data source publishing 10 updates per second during an exciting match:
+**Server-side batching** is ideal when you need complete message history but can tolerate some latency. Consider a live sports dashboard with 100,000 viewers and a data source publishing 10 updates per second during an exciting match:
 
 * **Without batching:** 10 updates × 100,000 subscribers = 1,000,000 messages per second. Over a 2-hour match, that totals 7.2 billion messages.
 * **With 500ms batching:** Messages are grouped into 2 batches per second. Each batch counts as a single outbound message per subscriber, so you get 2 batches × 100,000 subscribers = 200,000 messages per second. Over the same 2-hour match, that's 1.44 billion messages—an 80% reduction.
 
-The key insight is that batching's effectiveness scales with your inbound message rate. If you're only publishing once per second, batching provides minimal benefit. But during excitement spikes when updates accelerate, batching automatically smooths the fanout.
+Batching's effectiveness scales with your inbound message rate. If you're only publishing once per second, batching provides minimal benefit. But during excitement spikes when updates accelerate, batching automatically smooths the fanout.
+
+**Message conflation** provides the most aggressive cost reduction when only the latest value matters. A high-frequency sensor publishing 100 updates per second with 100ms conflation delivers only 10 updates per second to subscribers—a 90% reduction in both message count and bandwidth. For scenarios with varying rates across different conflation keys, the savings compound as only the latest message for each unique key is delivered in each batch.
+
+However, conflation permanently discards intermediate messages, which may not be appropriate for all use cases. For audit trails, historical analysis, or scenarios where users might want to see the full sequence of events, use server-side batching instead.
 
 ### Delta compression for bandwidth efficiency
 
 [Delta compression](/docs/channels/options/deltas) reduces the size of each message rather than the count. When dashboard payloads are large but change incrementally, deltas can achieve 80-90% bandwidth reduction.
 
 For a dashboard payload of 5KB where most fields remain unchanged between updates, the delta might be only 500 bytes. Across 100,000 subscribers, that's 500MB/s versus 50MB/s of data transfer. While this doesn't directly reduce message count, it reduces data transfer costs and improves delivery latency.
-
-### Conflation for latest-value scenarios
-
-When only the current value matters and intermediate values can be discarded, [conflation](/docs/messages#conflation) provides the most aggressive cost reduction. A price feed publishing 100 updates per second, conflated to 10 updates per second, reduces outbound messages by 90%.
-
-However, conflation should be used carefully. It permanently discards intermediate messages, which may not be appropriate for all use cases. For audit trails, historical analysis, or scenarios where users might want to see the full sequence of events, use batching instead.
 
 ### Connection management
 
