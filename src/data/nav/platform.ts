@@ -247,16 +247,12 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/account',
+          link: '/docs/platform/account',
           index: true,
         },
         {
-          name: 'User management',
-          link: '/docs/platform/account/users',
-        },
-        {
-          name: 'Organizations',
-          link: '/docs/platform/account/organizations',
+          name: 'Team',
+          link: '/docs/platform/account/teams',
         },
         {
           name: 'Single sign-on (SSO)',
