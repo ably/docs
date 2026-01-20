@@ -31,8 +31,8 @@ The inbox pattern is a proven architecture for building scalable notification sy
 
 The architecture consists of three main components:
 
-* **Client application:** Clients send notification requests to your backend API (via HTTP, gRPC, or other protocols). This could be a friend request, an alert, or any other client-initiated action.
-* **Backend processing:** Your backend receives the request, validates it, applies business logic, determines the target recipients, and publishes notifications to Ably.
+* **Notification trigger:** Notifications can originate from various sources - frontend clients sending requests (like friend requests), backend systems or jobs (like game events or scheduled alerts), or event-driven processes. These are sent to your backend for processing.
+* **Backend processing:** Your backend receives the trigger, validates it, applies business logic, determines the target recipients, and publishes notifications to Ably.
 * **Inbox channels:** Notifications are published to client-specific inbox channels (e.g., `inbox:clientId`), where recipients are subscribed to receive realtime updates.
 
 [/TODO/]: # (Should add some diagram here showing the flow from user -> backend -> Ably -> inbox -> recipient to break up the text a bit)
@@ -69,15 +69,14 @@ For notifications that need to reach all clients, you have two architectural opt
 **Option 1: Individual inboxes**
 Iterate through the list of target clients and publish to each clients's inbox channel individually. Ably's [batch publish REST endpoint](/docs/api/rest-api#batch-publish) makes this efficient, allowing you to publish to multiple channels in a single HTTP request.
 
-
 **Option 2: General broadcast channel**
 Create a shared channel where all clients subscribe.
 Notifications published to this channel reach all subscribers.
 
 The decision comes down to cost and frequency:
 
-* **Individual inboxes:** Best when broadcast notifications are infrequent. You pay per message published and per user receiving it.
-* **General channel:** Best when broadcast notifications are frequent. You pay per channel attachment per minute, but save on message costs since you publish once regardless of the number of subscribers.
+* **Individual inboxes:** are best when broadcast notifications are infrequent. You pay per message published and per user receiving it.
+* **General channel:** is best when broadcast notifications are frequent. You pay per channel attachment per minute, but save on message costs since you publish once regardless of the number of subscribers.
 
 See the [cost optimization section](#cost-optimization) for detailed calculations to help you decide.
 
@@ -141,7 +140,7 @@ Message persistence must be enabled to use history - see [message history docume
 
 ## Publishing notifications from your backend
 
-Your backend is responsible for processing notification requests and publishing them to Ably inbox channels. Ably provides two primary methods for backends to publish notifications:
+Your backend is responsible for processing notification requests and publishing them to Ably inbox channels. Ably provides some methods for backends to publish notifications:
 
 ### REST API publishing
 
@@ -195,27 +194,15 @@ await ably.request('post', '/messages', null, specs, null);
 
 ### Kafka Connector publishing
 
-For high-throughput scenarios or when you already use Kafka in your infrastructure, you can publish notifications through [Ably's Kafka Connector](/docs/platform/integrations/kafka-connector). This allows your backend to produce messages to Kafka topics, which are then automatically published to Ably channels.
+You can also publish directly from your existing Kafka infrastructure through [Ably's Kafka Connector](/docs/platform/integrations/kafka-connector). This allows your backend to produce messages to Kafka topics, which are then automatically published to Ably channels based on your [configured mappings](docs/platform/integrations/inbound/kafka-connector#mapping).
 
 The Kafka Connector supports dynamic channel routing, allowing you to determine the target Ably channel based on Kafka message attributes like topic, partition, key, or custom headers.
 
-#### Configuration
-
-Configure the Kafka Connector to route messages from your Kafka topic to Ably inbox channels:
-
-1. Set up the Kafka Connector in your Ably dashboard
-2. Configure topic mappings to route to inbox channels
-3. Optionally use dynamic channel templates based on message attributes
-
-<Code>
-```yaml
-# Example Kafka Connector configuration
-topic: notifications
-channelTemplate: inbox:${header.userId}
-```
-</Code>
-
 #### Publishing via Kafka
+
+Ably channels are very lightweight, and it would be typical to have one inbox channel per client. To route messages to the correct inbox channel, you can use the Kafka message key or headers to specify the target client ID.
+
+For example, you could define a channel mapping such as `notifications:inbox:${key}` to route messages to the appropriate inbox based on the Kafka message key.
 
 <Code>
 ```javascript
@@ -229,14 +216,14 @@ const kafka = new Kafka({
 const producer = kafka.producer();
 await producer.connect();
 
-// Publish notification - will be routed to inbox:user123
+// Publish notification - will be routed to notifications:inbox:client123
 await producer.send({
     topic: 'notifications',
     messages: [{
-        headers: { userId: 'user123' },
+        key: 'client123',
         value: JSON.stringify({
             type: 'friend-request',
-            fromUserId: 'user456',
+            fromUserId: 'client123',
             fromUserName: 'Jane Doe',
             timestamp: Date.now()
         })
@@ -247,37 +234,25 @@ await producer.send({
 
 ### Choosing your publishing approach
 
-The right approach depends on your throughput, infrastructure, and ordering requirements:
+The right approach depends on your infrastructure and ordering requirements.
 
-**REST API:**
-* **Best for:** Most use cases, simple integrations, moderate throughput
-* **Pros:** Simple to implement, built into all Ably SDKs, no additional infrastructure
-* **Cons:** Each publish is a synchronous HTTP request, potential latency for high volumes
+**REST API**
 
-**Kafka Connector:**
-* **Best for:** High throughput, existing Kafka infrastructure, async publishing
-* **Pros:** Handles millions of messages per second, decouples publishing from Ably availability, preserves Kafka ordering guarantees
-* **Cons:** Additional infrastructure complexity, requires Kafka setup and management
+Ably's Rest API is the simplest option and is recommended for most use cases. It's built into all Ably SDKs for ease of use and requires no additional infrastructure. Each publish is a synchronous HTTP request, and multiple requests can be batched together to reduce API calls.
 
-### Ordering considerations <a id="ordering-considerations"/>
+When using the REST API, and making concurrent publish requests, ordering is not guaranteed. If you're publishing via the batch publish endpoint, messages within a single batch maintain order, but batches themselves may be processed out of order. This is a consequence of HTTP's stateless nature and network variability.
 
-Message ordering can be important in notification systems, particularly when multiple related notifications are sent to the same recipient.
+To maintain ordering when using the REST API:
+* Publish related notifications sequentially rather than concurrently.
+* Use [idempotency keys](/docs/platform/architecture/idempotency) to prevent duplicate processing if retries occur.
 
-#### REST API ordering
+**Kafka Connector**
 
-When using the REST API, messages published to the same channel by the same connection are delivered in order by default. However, if you're publishing from multiple backend instances or using batch publish, ordering is not guaranteed across different API calls.
+Ably's kafka connector should be used when you have existing Kafka infrastructure and want to integrate this directly with Ably. The Kafka Connector preserves Kafka's ordering guarantees, so messages in the same Kafka partition are published to Ably in order.
 
-To ensure ordering:
-* Publish related notifications sequentially from the same connection
-* Use [idempotency keys](/docs/platform/architecture/idempotency) to prevent duplicate processing if retries occur
-* Consider including sequence numbers in your notification payload for client-side ordering
-
-#### Kafka Connector ordering
-
-The Kafka Connector preserves Kafka's ordering guarantees. Messages in the same Kafka partition are published to Ably in order. To maintain ordering:
-* Use consistent partition keys (e.g., userId) for related notifications
-* Configure appropriate partition counts for your throughput needs
-* Messages published to the same channel from the same partition maintain order
+* Use consistent partition keys (e.g., clientId) for related client notifications.
+* Configure appropriate partition counts for your throughput needs.
+* Messages published to the same channel from the same partition maintain order, but this requires some [configuration](https://github.com/ably/kafka-connect-ably?tab=readme-ov-file#message-ordering).
 
 ### Example: Friend request notification flow
 
@@ -399,7 +374,6 @@ When implementing your notification system, consider:
 * **Scalability:**
   * Your backend should scale horizontally to handle request load
   * Use batch publishing for notifications targeting multiple recipients
-  * Consider using Kafka Connector for very high throughput scenarios (millions of messages per second)
 * **Retry behavior:** Implement retry logic in your backend for failed Ably publishes. The Ably REST client includes automatic retries for transient failures.
 
 ## Cost optimization <a id="cost-optimization"/>
@@ -502,7 +476,7 @@ Individual inbox costs scale linearly with notification frequency (doubling noti
 
 ## Handling offline notifications <a id="offline-notifications"/>
 
-Clients may not always be online when a notification arrives. Ably provides multiple mechanisms to eTansure they receive important notifications:
+Clients may not always be online when a notification arrives. Ably provides multiple mechanisms to ensure they receive important notifications:
 
 ### Temporary disconnections
 
@@ -511,7 +485,7 @@ Ably stores messages by default for 2 minutes to support short-term [history](/d
 ### Longer-term message history
 
 If longer retention is required, you can enable this using a rule to [persist all messages](/docs/storage-history/storage#all-message-persistence) for a particular channel or namespace.
-This defaults to 24 hours, but can be configured up to 1 year for some packages.
+This defaults to 24 hours, but can be extended for some plans. Speak to [Ably customer support](https://ably.com/contact) to discuss your requirements
 
 When clients come online, they can retrieve missed notifications from their inbox. If notfications need to be handled idempotently, messages have a [`message.id`](/docs/api/realtime-sdk/types#message) field that can be tracked client-side to avoid processing duplicates.
 
