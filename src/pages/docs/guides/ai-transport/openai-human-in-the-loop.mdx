@@ -1,0 +1,481 @@
+---
+title: "Guide: Human-in-the-loop approval with OpenAI"
+meta_description: "Implement human approval workflows for AI agent tool calls with progress streaming using OpenAI and Ably."
+meta_keywords: "AI, human in the loop, HITL, OpenAI, tool calls, approval workflow, AI transport, Ably, realtime, progress streaming"
+---
+
+This guide shows you how to implement a human-in-the-loop (HITL) approval workflow for AI agent tool calls using OpenAI and Ably. The agent requests human approval before executing sensitive operations and streams progress updates back to the user during long-running tool execution.
+
+Using Ably for HITL workflows enables reliable, realtime communication between AI agents and human approvers. The request-response pattern ensures approval requests are delivered and decisions are processed, while progress streaming keeps users informed during tool execution.
+
+<Aside data-type="further-reading">
+To learn more about human-in-the-loop patterns and verification strategies, see the [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+To follow this guide, you need:
+- Node.js 20 or higher
+- An OpenAI API key
+- An Ably API key
+
+Useful links:
+- [OpenAI function calling guide](https://platform.openai.com/docs/guides/function-calling)
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+
+Create a new NPM package, which will contain the agent and client code:
+
+<Code>
+```shell
+mkdir ably-openai-hitl-example && cd ably-openai-hitl-example
+npm init -y
+```
+</Code>
+
+Install the required packages using NPM:
+
+<Code>
+```shell
+npm install openai@^4 ably@^2
+```
+</Code>
+
+<Aside data-type="note">
+This guide uses version 4.x of the OpenAI SDK. Some details of interacting with the OpenAI SDK may differ from those given here if using a different major version.
+</Aside>
+
+Export your OpenAI API key to the environment, which will be used later in the guide by the OpenAI SDK:
+
+<Code>
+```shell
+export OPENAI_API_KEY="your_api_key_here"
+```
+</Code>
+
+## Step 1: Define a tool requiring approval <a id="step-1"/>
+
+Define an OpenAI tool that represents a sensitive operation requiring human approval. This example uses a file deletion tool that should not execute without explicit user consent.
+
+Create a new file `agent.mjs` with the following contents:
+
+<Code>
+```javascript
+import OpenAI from 'openai';
+import Ably from 'ably';
+import crypto from 'crypto';
+
+const openai = new OpenAI();
+
+// Define a tool that requires human approval
+const tools = [
+  {
+    type: 'function',
+    name: 'delete_files',
+    description: 'Delete files matching a pattern. This is a destructive operation requiring human approval.',
+    parameters: {
+      type: 'object',
+      properties: {
+        pattern: {
+          type: 'string',
+          description: 'File pattern to delete (e.g., "*.log", "temp/*")'
+        },
+        directory: {
+          type: 'string',
+          description: 'Directory to search in'
+        }
+      },
+      required: ['pattern', 'directory']
+    }
+  }
+];
+```
+</Code>
+
+Tools that modify data, access sensitive resources, or perform irreversible actions are good candidates for HITL approval workflows.
+
+## Step 2: Set up Ably channels <a id="step-2"/>
+
+Initialize the Ably client and create a channel for communication between the agent and user. The agent publishes approval requests and progress updates, while the user publishes approval decisions.
+
+Add the following to your `agent.mjs` file:
+
+<Code>
+```javascript
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+
+// Wait for connection to be established
+await realtime.connection.once('connected');
+
+// Create a channel for HITL communication
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track pending approval requests
+const pendingApprovals = new Map();
+```
+</Code>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own messages, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+## Step 3: Request human approval <a id="step-3"/>
+
+When the OpenAI model returns a tool call, check if it requires approval. If so, publish an approval request to the channel and wait for a human decision before executing.
+
+Add the approval request function to `agent.mjs`:
+
+<Code>
+```javascript
+async function requestApproval(toolCall) {
+  const requestId = crypto.randomUUID();
+
+  // Create a promise that resolves when approval is received
+  const approvalPromise = new Promise((resolve) => {
+    pendingApprovals.set(requestId, { toolCall, resolve });
+  });
+
+  // Publish the approval request
+  const parameters = JSON.parse(toolCall.arguments);
+  await channel.publish('approval-request', {
+    requestId,
+    tool: toolCall.name,
+    parameters,
+    message: `The agent wants to delete files matching "${parameters.pattern}" in "${parameters.directory}". Do you approve?`
+  });
+
+  console.log(`Approval request sent: ${requestId}`);
+  return approvalPromise;
+}
+```
+</Code>
+
+The `requestId` correlates the approval request with the response, enabling the agent to handle multiple concurrent approval flows.
+
+## Step 4: Subscribe to approval responses <a id="step-4"/>
+
+Set up a subscription to receive approval decisions from human users. When a response arrives, verify the approver and resolve the pending promise.
+
+Add the subscription handler to `agent.mjs`:
+
+<Code>
+```javascript
+// Subscribe to approval responses from humans
+await channel.subscribe('approval-response', (message) => {
+  const { requestId, decision } = message.data;
+  const pending = pendingApprovals.get(requestId);
+
+  if (!pending) {
+    console.log(`No pending approval for request: ${requestId}`);
+    return;
+  }
+
+  // Verify the approver (in production, check clientId or user claims)
+  const approverId = message.clientId;
+  console.log(`Received ${decision} from ${approverId || 'anonymous user'}`);
+
+  // Resolve the promise with the decision
+  pending.resolve({
+    approved: decision === 'approved',
+    approverId,
+    requestId
+  });
+
+  pendingApprovals.delete(requestId);
+});
+```
+</Code>
+
+<Aside data-type="important">
+In production, verify the approver's identity using [`clientId`](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-identity) or [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) embedded in their JWT. This ensures only authorized users can approve sensitive operations.
+</Aside>
+
+## Step 5: Execute tool with progress streaming <a id="step-5"/>
+
+Once approved, execute the tool and stream progress updates back to the user. This keeps the user informed during long-running operations.
+
+Add the tool execution function to `agent.mjs`:
+
+<Code>
+```javascript
+async function executeDeleteFiles(parameters, requestId) {
+  const { pattern, directory } = parameters;
+
+  // Simulate finding files to delete
+  const files = [
+    `${directory}/app.log`,
+    `${directory}/error.log`,
+    `${directory}/debug.log`,
+    `${directory}/access.log`
+  ].filter(f => f.includes(pattern.replace('*', '')));
+
+  // Stream progress updates
+  await channel.publish('tool-progress', {
+    requestId,
+    status: 'started',
+    message: `Found ${files.length} files matching "${pattern}"`
+  });
+
+  // Process each file with progress updates
+  const results = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+
+    // Simulate deletion delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    results.push({ file, deleted: true });
+
+    // Stream progress for each file
+    await channel.publish('tool-progress', {
+      requestId,
+      status: 'in_progress',
+      message: `Deleted ${file} (${i + 1}/${files.length})`,
+      progress: Math.round(((i + 1) / files.length) * 100)
+    });
+  }
+
+  // Stream completion
+  await channel.publish('tool-progress', {
+    requestId,
+    status: 'completed',
+    message: `Successfully deleted ${results.length} files`,
+    results
+  });
+
+  return results;
+}
+```
+</Code>
+
+Progress streaming keeps users engaged and informed during operations that take time to complete.
+
+## Step 6: Process tool calls with HITL <a id="step-6"/>
+
+Integrate the approval workflow into the OpenAI response processing. When a tool call requires approval, pause execution until a human decision is received.
+
+Add the main agent loop to `agent.mjs`:
+
+<Code>
+```javascript
+async function processToolCall(toolCall) {
+  const name = toolCall.name;
+  const parameters = JSON.parse(toolCall.arguments);
+
+  if (name === 'delete_files') {
+    // Request human approval
+    const approval = await requestApproval(toolCall);
+
+    if (!approval.approved) {
+      return {
+        call_id: toolCall.call_id,
+        output: JSON.stringify({
+          success: false,
+          error: 'Operation rejected by user'
+        })
+      };
+    }
+
+    // Execute with progress streaming
+    const results = await executeDeleteFiles(parameters, approval.requestId);
+
+    return {
+      call_id: toolCall.call_id,
+      output: JSON.stringify({
+        success: true,
+        deleted_files: results.length,
+        results
+      })
+    };
+  }
+
+  return {
+    call_id: toolCall.call_id,
+    output: JSON.stringify({ error: 'Unknown tool' })
+  };
+}
+
+async function runAgent(userMessage) {
+  console.log(userMessage);
+
+  // Create initial response with tools
+  const response = await openai.responses.create({
+    model: 'gpt-4o',
+    instructions: 'You are a helpful assistant. When the user asks you to perform file operations like deleting files, use the available tools to do so. Do not ask for confirmation - the tools have their own approval mechanisms.',
+    input: userMessage,
+    tools
+  });
+
+  // Check if the model wants to call a tool
+  const toolCalls = response.output.filter(item => item.type === 'function_call');
+
+  if (toolCalls.length === 0) {
+    // No tool calls, return the text response
+    const textOutput = response.output.find(item => item.type === 'message');
+    console.log(`Agent: ${textOutput?.content?.[0]?.text || 'No response'}`);
+    return;
+  }
+
+  // Process each tool call
+  const toolResults = [];
+  for (const toolCall of toolCalls) {
+    console.log(`Tool call: ${toolCall.name}`);
+    const result = await processToolCall(toolCall);
+    toolResults.push(result);
+  }
+
+  // Submit tool results back to the model
+  const finalResponse = await openai.responses.create({
+    model: 'gpt-4o',
+    input: [
+      { role: 'user', content: userMessage },
+      ...toolCalls.map(tc => ({
+        type: 'function_call',
+        id: tc.id,
+        call_id: tc.call_id,
+        name: tc.name,
+        arguments: tc.arguments
+      })),
+      ...toolResults.map(tr => ({
+        type: 'function_call_output',
+        call_id: tr.call_id,
+        output: tr.output
+      }))
+    ]
+  });
+
+  const finalText = finalResponse.output.find(item => item.type === 'message');
+  console.log(`Agent: ${finalText?.content?.[0]?.text || 'Task completed'}`);
+}
+
+// Example usage
+runAgent('Please clean up the log files in /var/logs by deleting all .log files');
+```
+</Code>
+
+Run the agent:
+
+<Code>
+```shell
+node agent.mjs
+```
+</Code>
+
+The agent will request approval and wait for a human decision before proceeding.
+
+## Step 7: Create the approval client <a id="step-7"/>
+
+Create a client application that receives approval requests and allows humans to approve or reject them.
+
+Create a new file `client.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+import readline from 'readline';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  clientId: 'human-approver'
+});
+
+// Get the same channel used by the agent
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Set up readline for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+// Subscribe to approval requests
+await channel.subscribe('approval-request', (message) => {
+  const request = message.data;
+
+  console.log('\n========================================');
+  console.log('APPROVAL REQUEST');
+  console.log('========================================');
+  console.log(`Tool: ${request.tool}`);
+  console.log(`Parameters: ${JSON.stringify(request.parameters, null, 2)}`);
+  console.log(`Message: ${request.message}`);
+  console.log('========================================');
+
+  rl.question('Approve this action? (y/n): ', async (answer) => {
+    const decision = answer.toLowerCase() === 'y' ? 'approved' : 'rejected';
+
+    await channel.publish('approval-response', {
+      requestId: request.requestId,
+      decision
+    });
+
+    console.log(`Decision sent: ${decision}`);
+  });
+});
+
+// Subscribe to progress updates
+await channel.subscribe('tool-progress', (message) => {
+  const progress = message.data;
+  const progressBar = progress.progress ? ` [${progress.progress}%]` : '';
+  console.log(`Progress${progressBar}: ${progress.message}`);
+});
+
+console.log('Waiting for approval requests...');
+```
+</Code>
+
+Run the client in a separate terminal:
+
+<Code>
+```shell
+node client.mjs
+```
+</Code>
+
+Once the client is running, restart your agent. With both the agent and client running, the workflow proceeds as follows:
+
+1. The agent sends a prompt to OpenAI that triggers a tool call
+2. The agent publishes an approval request to the channel
+3. The client displays the request and prompts the user
+4. The user approves or rejects the request
+5. If approved, the agent executes the tool and streams progress
+6. The client displays progress updates in realtime
+
+## Step 8: Handle rejection gracefully <a id="step-8"/>
+
+When a user rejects an approval request, the agent should handle the rejection gracefully and provide appropriate feedback.
+
+The rejection is already handled in the `processToolCall` function, which returns an error response to the model. The model can then generate an appropriate message for the user.
+
+You can also publish a rejection notification to inform all subscribers:
+
+<Code>
+```javascript
+if (!approval.approved) {
+  // Notify subscribers about the rejection
+  await channel.publish('tool-progress', {
+    requestId: approval.requestId,
+    status: 'rejected',
+    message: 'Operation was rejected by the user'
+  });
+
+  return {
+    call_id: toolCall.call_id,
+    output: JSON.stringify({
+      success: false,
+      error: 'Operation rejected by user'
+    })
+  };
+}
+```
+</Code>
+
+## Next steps
+
+- Learn more about [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) patterns and verification strategies
+- Explore [identifying users and agents](/docs/ai-transport/sessions-identity/identifying-users-and-agents) for secure identity verification
+- Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI-enabled applications
+- Learn about [tool calls](/docs/ai-transport/messaging/tool-calls) for agent-to-agent communication

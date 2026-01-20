@@ -93,12 +93,20 @@ export default {
           link: '/docs/guides/ai-transport/openai-message-per-response',
         },
         {
+          name: 'OpenAI messaging - human-in-the-loop',
+          link: '/docs/guides/ai-transport/openai-human-in-the-loop',
+        },
+        {
           name: 'Anthropic token streaming - message per token',
           link: '/docs/guides/ai-transport/anthropic-message-per-token',
         },
         {
           name: 'Anthropic token streaming - message per response',
           link: '/docs/guides/ai-transport/anthropic-message-per-response',
+        },
+        {
+          name: 'Anthropic messaging - human-in-the-loop',
+          link: '/docs/guides/ai-transport/anthropic-human-in-the-loop',
         },
         {
           name: 'Vercel AI SDK token streaming - message per token',
