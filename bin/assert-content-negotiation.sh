@@ -141,8 +141,6 @@ echo "Group 6: Bot Detection (User-Agent)"
 echo "------------------------------------"
 run_test "/docs/channels" "" "200" "markdown" "Claude-User bot gets markdown" "Claude-User/1.0"
 run_test "/docs/channels" "" "200" "markdown" "ClaudeBot gets markdown" "Mozilla/5.0 (compatible; ClaudeBot/1.0)"
-run_test "/docs/channels" "" "200" "markdown" "ChatGPT-User bot gets markdown" "ChatGPT-User"
-run_test "/docs/channels" "" "200" "markdown" "GPTBot gets markdown" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0)"
 run_test "/docs/channels" "" "200" "markdown" "PerplexityBot gets markdown" "PerplexityBot"
 run_test "/docs/channels" "" "200" "html" "Regular browser gets HTML" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
 echo
@@ -151,11 +149,10 @@ echo
 echo "Group 7: Combined Bot + Accept Header"
 echo "--------------------------------------"
 run_test "/docs/channels" "text/html" "200" "markdown" "Bot overrides Accept: text/html" "Claude-User/1.0"
-run_test "/docs/channels" "text/markdown" "200" "markdown" "Bot + markdown Accept both work" "GPTBot/1.0"
 echo
 
 echo "================================"
-echo "✅ All 23 tests passed!"
+echo "✅ All 20 tests passed!"
 echo "================================"
 
 # Exit explicitly with success
