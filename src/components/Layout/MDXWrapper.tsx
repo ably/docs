@@ -180,8 +180,12 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const keywords = getFrontmatter(frontmatter, 'meta_keywords') as string;
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
-  const { canonicalUrl } = useSiteMetadata();
+  const { canonicalUrl, siteUrl } = useSiteMetadata();
   const canonical = canonicalUrl(location.pathname);
+
+  // Generate markdown URL for noscript fallback
+  const markdownPath = `${location.pathname}.md`;
+  const markdownUrl = `${siteUrl}${markdownPath}`;
 
   // Generate JSON-LD structured data for SEO
   const structuredData: StructuredData | undefined = useMemo(() => {
@@ -236,6 +240,36 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
         keywords={keywords}
         structuredData={structuredData}
       />
+      {/* Fallback for non-JS clients (LLMs, bots, screen readers with JS disabled) */}
+      <noscript>
+        <div
+          style={{
+            padding: '1rem',
+            margin: '1rem',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            backgroundColor: '#f9f9f9',
+          }}
+        >
+          <p>
+            <strong>Looking for machine-readable content?</strong>
+          </p>
+          <ul>
+            <li>
+              <a href={markdownUrl}>View this page as Markdown</a>
+            </li>
+            <li>
+              <a href="/llms.txt">Browse all documentation pages (llms.txt)</a>
+            </li>
+          </ul>
+          <p>
+            <em>
+              Tip: Request pages with <code>Accept: text/markdown</code> header or use a recognized LLM user agent to
+              receive markdown directly.
+            </em>
+          </p>
+        </div>
+      </noscript>
       <Article>
         <MarkdownProvider
           components={{
