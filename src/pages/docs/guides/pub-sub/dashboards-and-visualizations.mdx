@@ -29,7 +29,7 @@ Despite the challenges of delivering these guarantees, Ably is designed to keep 
 
 The most important decision you can make when developing a realtime dashboard is understanding the experience you want users to have and the criticality of the data being delivered. This will determine the architecture, feature set, and ultimately the impression your users leave with.
 
-The key architectural decision is understanding which category your dashboard falls into. With Ably, you are not limited by technology—only by the user experience you want to deliver. Realtime dashboards typically fall into two categories, each with distinct requirements:
+The key architectural decision is understanding which category your dashboard falls into. With Ably, you are not limited by technology only by the user experience you want to deliver. Realtime dashboards typically fall into two categories, each with distinct requirements:
 
 ### Fan engagement dashboards: Streaming to millions
 
@@ -170,54 +170,43 @@ This pattern enables bandwidth optimization because you don't stream detailed te
 
 Dashboard applications face varying throughput demands, from steady streams of updates to sudden spikes during significant events. When a goal is scored, markets open, or an incident occurs, message rates can spike dramatically. Ably [is engineered](/docs/platform/architecture/platform-scalability) to handle these loads without degradation, delivering over 500 billion messages per month across its customer base.
 
-### Understanding rate limits
+### Managing rate limits
 
-Ably applies rate limits to ensure platform stability. By default, channels accept up to 50 inbound messages per second. Enterprise plans can request higher limits for specific use cases. When working with high-frequency data sources, consider batching multiple updates into single messages to stay within these limits.
+Ably applies rate limits to ensure platform stability. By default, channels accept up to 50 inbound messages per second. Enterprise plans can request higher limits for specific use cases. However, when [server-side batching](/docs/messages/batch#server-side) is enabled, this effective limit can be increased dramatically, at the cost of some additional latency.
 
-For example, data sources generating more than 50 updates per second could be batched into periodic publishes:
+Server-side batching is configured through [channel rules](/docs/channels#rules) and works by holding messages for a configurable interval (e.g., 100ms) before publishing them as a batch, up to a maximum batch size of 200 messages. This means your data source can publish at high frequency without exceeding rate limits, and Ably handles all the batching work automatically.
+
+The key advantage for high-frequency data sources is simplicity: your producer continues publishing at whatever rate it generates data, and Ably handles the batching transparently. No client-side buffering or rate limiting logic is needed.
 
 <Code>
 ```javascript
-// Batch high-frequency sensor readings into periodic publishes
-const sensorBuffer = [];
-const BATCH_INTERVAL_MS = 100; // Publish every 100ms
-const MAX_BATCH_SIZE = 10;
-
-function collectSensorReading(reading) {
-  sensorBuffer.push({
+// Producer: Publish high-frequency sensor readings directly to Ably
+// With server-side batching enabled, you can publish well over 50 msg/s
+function onSensorReading(reading) {
+  channel.publish('sensor-update', {
     sensorId: reading.id,
     value: reading.value,
     timestamp: Date.now()
   });
-
-  if (sensorBuffer.length >= MAX_BATCH_SIZE) {
-    flushBuffer();
-  }
 }
 
-function flushBuffer() {
-  if (sensorBuffer.length === 0) return;
-
-  channel.publish('sensor-batch', {
-    readings: sensorBuffer.splice(0),
-    batchTimestamp: Date.now()
-  });
-}
-
-// Flush periodically even if batch isn't full
-setInterval(flushBuffer, BATCH_INTERVAL_MS);
+// Subscriber: Receive batched updates automatically
+// The SDK handles batch reconstruction transparently
+channel.subscribe('sensor-update', (message) => {
+  updateDashboard(message.data);
+});
 ```
 </Code>
 
-This approach helps keeps you well within rate limits while still delivering timely updates. A 100ms batching interval means subscribers see data with at most 100ms additional latency, which is imperceptible for most dashboard use cases.
+Server-side batching is configured via [channel rules](/docs/channels#rules) in your Ably dashboard. You specify the batching interval (e.g., 100ms) which determines how long messages are held before being published. This interval also determines the maximum additional latency introduced—a 100ms interval means subscribers see data with at most 100ms additional latency, which is imperceptible for most dashboard use cases.
 
-### Server-side batching for cost efficiency
+### Managing cost efficiency
 
-During high-activity periods—a goal being scored, market volatility, or a major incident—message rates can spike dramatically. [Server-side batching](/docs/messages/batch#server-side) helps manage these spikes by grouping messages before delivery to subscribers. Ordering and delivery guarantees are preserved, but billable outbound message counts are reduced.
+Beyond enabling higher inbound message rates, server-side batching also dramatically reduces costs by grouping messages before fanout to subscribers. During high-activity periods—a goal being scored, market volatility, or a major incident—message rates can spike dramatically, and server-side batching helps manage these spikes automatically.
 
-The key benefit of server-side batching is that it reduces billable outbound message count, especially during traffic spikes. If your source publishes 10 updates per second and you have 1000 subscribers, without batching you'd have 10,000 outbound messages per second. With 500ms batching, messages are grouped into 2 batches per second, resulting in 2,000 outbound messages per second—a 5x reduction.
+The cost benefit comes from reduced outbound message counts. If your source publishes 10 updates per second and you have 1000 subscribers, without batching you'd have 10,000 outbound messages per second. With 500ms batching, messages are grouped into 2 batches per second, resulting in 2,000 outbound messages per second—a 5x reduction.
 
-Unlike message conflation, server-side batching preserves all messages and message order. Every update is delivered, just grouped together for efficiency. This makes it suitable for scenarios where you need complete data, but can tolerate some latency in exchange for cost savings.
+Unlike message conflation, server-side batching preserves all messages and message order. Every update is delivered, just grouped together for efficiency. This makes it suitable for scenarios where you need complete data, but can tolerate some latency in exchange for cost savings and higher inbound throughput capacity.
 
 ### Message conflation for latest-value scenarios
 
