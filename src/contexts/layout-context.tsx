@@ -1,5 +1,7 @@
+'use client';
+
 import React, { createContext, PropsWithChildren, useContext, useMemo } from 'react';
-import { useLocation } from '@reach/router';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { stripSdkType } from '@ably/ui/core/CodeSnippet/languages';
 import { ActivePage, determineActivePage, PageTemplate } from 'src/components/Layout/utils/nav';
 import { productData } from 'src/data';
@@ -51,10 +53,11 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
   children,
   pageContext,
 }) => {
-  const location = useLocation();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const activePage = useMemo(() => {
-    const activePageData = determineActivePage(productData, location.pathname);
+    const activePageData = determineActivePage(productData, pathname);
 
     let languages: LanguageKey[] = [];
     if (activePageData?.page.languages) {
@@ -63,7 +66,7 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
       languages = Array.from(new Set(pageContext.languages.map(stripSdkType))) as LanguageKey[];
     }
 
-    const language = determineActiveLanguage(languages, location.search, activePageData?.product ?? null);
+    const language = determineActiveLanguage(languages, searchParams.toString(), activePageData?.product ?? null);
 
     return {
       tree: activePageData?.tree ?? [],
@@ -73,7 +76,7 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
       product: activePageData?.product ?? null,
       template: 'mdx' as PageTemplate,
     };
-  }, [location.pathname, location.search, pageContext?.languages]);
+  }, [pathname, searchParams, pageContext?.languages]);
 
   return (
     <LayoutContext.Provider

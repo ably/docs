@@ -1,6 +1,6 @@
-import { useStaticQuery } from 'gatsby';
-import { graphql } from 'gatsby';
-import { Key } from 'react';
+'use client';
+
+import { Key, useEffect, useState } from 'react';
 import Badge from '@ably/ui/core/Badge';
 import FeaturedLink from '@ably/ui/core/FeaturedLink';
 import Link from '../Link';
@@ -164,24 +164,46 @@ const formatChangelogDate = (isoDate: string): string => {
   return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
 };
 
+const CHANGELOG_URL = 'https://changelog.ably.com/';
+const CHANGELOG_FEED_URL = 'https://changelog.ably.com/feed.xml';
+
 export const ChangelogSection = () => {
-  const data = useStaticQuery<ChangelogQueryData>(graphql`
-    query ChangelogFeedQuery {
-      allFeedAblyChangelog(sort: { isoDate: DESC }, limit: 3) {
-        edges {
-          node {
-            title
-            link
-            content
-            isoDate
-          }
+  const [changelogData, setChangelogData] = useState<ChangelogFeedItemNode[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChangelog = async () => {
+      try {
+        // Fetch the RSS feed through a CORS proxy or API route
+        const response = await fetch(`/api/changelog`);
+        if (response.ok) {
+          const data = await response.json();
+          setChangelogData(data.items || []);
         }
+      } catch (error) {
+        console.error('Failed to fetch changelog:', error);
+      } finally {
+        setIsLoading(false);
       }
-      feedAblyChangelogMeta {
-        link
-      }
-    }
-  `);
+    };
+
+    fetchChangelog();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-neutral-300 dark:border-neutral-1000 p-6 lg:p-8 mt-6 md:mt-0">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="ui-text-h3 text-neutral-1300 dark:text-neutral-000">Changelog</h3>
+        </div>
+        <div className="animate-pulse space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 bg-neutral-200 dark:bg-neutral-1100 rounded" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-neutral-300 dark:border-neutral-1000 p-6 lg:p-8 mt-6 md:mt-0">
@@ -190,13 +212,13 @@ export const ChangelogSection = () => {
         <FeaturedLink
           iconColor="text-orange-600"
           additionalCSS="ui-text-p3 text-neutral-1300 dark:text-neutral-000 hover:text-neutral-1300 dark:hover:text-neutral-000"
-          url={data.feedAblyChangelogMeta.link}
+          url={CHANGELOG_URL}
         >
           View all
         </FeaturedLink>
       </div>
       <ul className="grid grid-cols-1 gap-y-6">
-        {data.allFeedAblyChangelog.edges.map(({ node }: ChangelogFeedEdge, index: Key) => {
+        {changelogData.slice(0, 3).map((node: ChangelogFeedItemNode, index: Key) => {
           try {
             const { tags, description } = parseChangelogContent(node.content);
 

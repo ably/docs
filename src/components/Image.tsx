@@ -1,13 +1,17 @@
-import { GatsbyImage, IGatsbyImageData, getImage } from 'gatsby-plugin-image';
+import NextImage from 'next/image';
 import { ComponentProps } from 'react';
 
 export type ImageProps = {
-  childImageSharp: IGatsbyImageData;
-  extension: string;
-  publicURL: string;
+  // Next.js compatible props
   src?: string;
-  base?: string;
   name?: string;
+  base?: string;
+  width?: number;
+  height?: number;
+  // Legacy Gatsby props (optional for compatibility)
+  childImageSharp?: unknown;
+  extension?: string;
+  publicURL?: string;
 };
 
 export type ImageComponentProps = ComponentProps<'img'> & {
@@ -16,7 +20,7 @@ export type ImageComponentProps = ComponentProps<'img'> & {
 
 export const getImageFromList = (images: ImageProps[] = [], name?: string | ImageProps): ImageProps | undefined => {
   const imageName = typeof name === 'string' ? name : name?.base;
-  const result = images.find((image) => image.base === imageName);
+  const result = images.find((image) => image.base === imageName || image.name === imageName);
 
   if (name && result === undefined) {
     console.warn(`Could not find image '${name}' in list`, images);
@@ -25,28 +29,34 @@ export const getImageFromList = (images: ImageProps[] = [], name?: string | Imag
   return result;
 };
 
-export const Image = ({ image, src, ...attribs }: ImageComponentProps) => {
+export const Image = ({ image, src, alt, className, ...attribs }: ImageComponentProps) => {
   if (!image) {
     return null;
   }
 
+  // Handle direct src prop
   if (src) {
-    console.warn(`You're using <Image> in an unsupported way by passing src="${src}"`);
-    return <img {...attribs} src={src} />;
+    return <img {...attribs} src={src} alt={alt ?? ''} className={className} />;
   }
 
-  const { childImageSharp, extension, publicURL } = image ?? {};
-
-  if (!childImageSharp && extension === 'svg') {
-    return <img {...attribs} src={publicURL} />;
+  // Handle Next.js style image (src in image object)
+  if (image.src) {
+    return (
+      <NextImage
+        src={image.src}
+        alt={alt ?? ''}
+        className={className}
+        width={image.width || 400}
+        height={image.height || 300}
+        style={{ objectFit: 'cover' }}
+        {...attribs}
+      />
+    );
   }
 
-  const { alt, className } = attribs ?? {};
-  const imageAttributes = { alt: alt ?? '', className };
-  const fetchedImage = getImage(image.childImageSharp);
-
-  if (fetchedImage) {
-    return <GatsbyImage image={fetchedImage} {...imageAttributes} />;
+  // Handle legacy Gatsby publicURL
+  if (image.publicURL) {
+    return <img {...attribs} src={image.publicURL} alt={alt ?? ''} className={className} />;
   }
 
   return null;

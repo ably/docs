@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from '@reach/router';
+import { usePathname, useRouter } from 'next/navigation';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
@@ -8,8 +10,7 @@ import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/u
 import { track } from '@ably/ui/core/insights';
 import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
-import { useLayoutContext } from 'src/contexts/layout-context';
-import { navigate } from '../Link';
+import { useLayoutContext } from '@/lib/layout-context';
 import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 import * as Select from '../ui/Select';
 import { Skeleton } from '../ui/Skeleton';
@@ -22,7 +23,8 @@ type LanguageSelectorOptionData = {
 
 export const LanguageSelector = () => {
   const { activePage } = useLayoutContext();
-  const location = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
   const languageVersions = languageData[activePage.product ?? 'pubsub'];
   const [value, setValue] = useState<string>('');
 
@@ -54,9 +56,9 @@ export const LanguageSelector = () => {
     if (option) {
       track('language_selector_changed', {
         language: option.label,
-        location: location.pathname,
+        location: pathname,
       });
-      navigate(`${location.pathname}?lang=${option.label}`);
+      router.push(`${pathname}?lang=${option.label}`, { scroll: false });
     }
   };
 

@@ -1,6 +1,7 @@
+'use client';
+
 import React, { FC } from 'react';
-import { useStaticQuery, graphql } from 'gatsby';
-import { useLocation } from '@reach/router';
+import { useSearchParams } from 'next/navigation';
 import { MDXProvider } from '@mdx-js/react';
 import Link from 'src/components/Link';
 import { CodeBlock } from './CodeBlock';
@@ -43,35 +44,12 @@ const Paragraph: FC<JSX.IntrinsicElements['p']> = ({ children, ...props }) => (
 );
 
 export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...props }) => {
-  /**
-   * Inspired by https://github.com/gatsbyjs/gatsby/issues/21462#issuecomment-605606702
-   * to work around the issues with broken links being emitted by gatsby-plugin-mdx when
-   * specifying an assetPrefix (like we do in production). So what we do is we "break"
-   * the asset prefix pretty much like gatsby-plugin-mdx does [1], and if we find the
-   * broken prefix on the URL we strip it off again...
-   *
-   * 1. https://github.com/gatsbyjs/gatsby/blob/3d4d6a6e222cf3bff3f2c2cdfb0cc539bad2403a/packages/gatsby-plugin-mdx/src/remark-path-prefix-plugin.ts#L18-L28
-   */
-  const { site } = useStaticQuery(graphql`
-    {
-      site {
-        assetPrefix
-      }
-    }
-  `);
-  const location = useLocation();
+  const searchParams = useSearchParams();
 
   let cleanHref = href;
-  const assetPrefix = site.assetPrefix ?? '';
-  const brokenAssetPrefix = assetPrefix.replace('://', ':/');
-
-  if (href?.startsWith(brokenAssetPrefix)) {
-    cleanHref = href.slice(brokenAssetPrefix.length);
-  }
 
   // Add lang param from current URL if available
-  const urlParams = new URLSearchParams(location.search);
-  const langParam = urlParams.get('lang');
+  const langParam = searchParams.get('lang');
 
   if (langParam && cleanHref && checkLinkIsInternal(cleanHref)) {
     const url = new URL(cleanHref, 'https://ably.com');

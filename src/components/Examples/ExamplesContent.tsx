@@ -1,5 +1,8 @@
+'use client';
+
 import React, { ChangeEvent, useCallback, useEffect, useState } from 'react';
-import { StaticImage } from 'gatsby-plugin-image';
+import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import ExamplesGrid from './ExamplesGrid';
 import ExamplesFilter from './ExamplesFilter';
 import { ImageProps } from '../Image';
@@ -7,17 +10,15 @@ import { examples } from '../../data/examples/';
 import { filterSearchExamples } from './filter-search-examples';
 import ExamplesNoResults from './ExamplesNoResults';
 import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
-import { useLocation } from '@reach/router';
 
 export type SelectedFilters = { products: ProductName[]; useCases: string[] };
 
 const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => {
-  const location = useLocation();
+  const searchParams = useSearchParams();
 
   // Parse product query parameters and filter for valid ProductName values
   const getInitialProducts = (): ProductName[] => {
-    const params = new URLSearchParams(location.search);
-    const productParam = params.get('product');
+    const productParam = searchParams.get('product');
     const validProductNames = Object.keys(dataProducts).map((product) => product.toLowerCase());
 
     if (!productParam) {
@@ -74,21 +75,20 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         </div>
       </section>
 
-      <StaticImage
-        src="./images/pattern-grid.png"
-        placeholder="blurred"
+      <Image
+        src="/images/examples/pattern-grid.png"
         width={660}
         height={282}
         alt="Grid Pattern"
-        className="!absolute -z-10 right-0 top-16 !hidden sm:!block w-[60%] md:w-[40%]"
+        className="absolute -z-10 right-0 top-16 hidden sm:block w-[60%] md:w-[40%]"
       />
 
-      <StaticImage
-        src="./images/mobile-grid.png"
-        placeholder="blurred"
+      <Image
+        src="/images/examples/mobile-grid.png"
         width={260}
+        height={282}
         alt="Grid Pattern"
-        className="-z-10 right-0 top-16 !absolute !block sm:!hidden"
+        className="-z-10 right-0 top-16 absolute block sm:hidden"
       />
     </>
   );

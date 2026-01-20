@@ -1,11 +1,12 @@
+'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation } from '@reach/router';
+import { usePathname } from 'next/navigation';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import Status, { StatusUrl } from '@ably/ui/core/Status';
 import cn from '@ably/ui/core/utils/cn';
-import type { PageContextType } from './Layout';
-import { useLayoutContext } from 'src/contexts/layout-context';
+import { useLayoutContext } from '@/lib/layout-context';
 import Button from '@ably/ui/core/Button';
 
 const ENABLE_FEEDBACK = false;
@@ -89,10 +90,10 @@ const customGithubPaths = {
   '/how-to/pub-sub': 'https://github.com/ably/docs/blob/main/how-tos/pub-sub/how-to.mdx',
 } as Record<string, string>;
 
-const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => {
-  const { activePage } = useLayoutContext();
-  const { frontmatter } = pageContext;
-  const location = useLocation();
+const Footer: React.FC = () => {
+  const { activePage, pageContext } = useLayoutContext();
+  const frontmatter = pageContext?.frontmatter;
+  const pathname = usePathname();
   const [feedbackMode, setFeedbackMode] = useState<FeedbackMode | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -163,7 +164,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
 
   const githubEditPath = useMemo(() => {
     let path = '#';
-    const pathName = location.pathname.replace('docs/', '');
+    const pathName = pathname.replace('docs/', '');
 
     if (customGithubPaths[pathName]) {
       path = customGithubPaths[pathName];
@@ -176,7 +177,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
     }
 
     return path;
-  }, [location.pathname, activePage.template, activePage.page.index]);
+  }, [pathname, activePage.template, activePage.page.index]);
 
   return (
     <footer className="flex flex-col my-10">

@@ -1,15 +1,19 @@
-import { Link as GatsbyLink, GatsbyLinkProps, navigate as GatsbyNavigate } from 'gatsby';
-import { safeWindow } from 'src/utilities';
+'use client';
+
+import NextLink from 'next/link';
+import { useRouter } from 'next/navigation';
+import { forwardRef, type AnchorHTMLAttributes, type ReactNode } from 'react';
 import { checkLinkIsInternal, localizeLink } from 'src/utilities/link-checks';
 
-export default function Link<TState>({ children, to, ...props }: React.PropsWithoutRef<GatsbyLinkProps<TState>>) {
+interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+  to: string;
+  children?: ReactNode;
+}
+
+const Link = forwardRef<HTMLAnchorElement, LinkProps>(({ children, to, ...props }, ref) => {
   const isInternal = checkLinkIsInternal(to);
   const isOnPage = to?.startsWith('#');
 
-  /**
-   *  Relevant page of documentation: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-link/#recommendations-for-programmatic-in-app-navigation
-   *  "If you need this (in-app navigation) behavior, you should either use an anchor tag or import the navigate helper from gatsby"
-   */
   if (isInternal && !isOnPage) {
     // Strip noreferrer from the rel if it is a local link
     const { rel } = props;
@@ -26,13 +30,13 @@ export default function Link<TState>({ children, to, ...props }: React.PropsWith
     }
 
     return (
-      <GatsbyLink to={localizeLink(to)} data-testid="link-internal" {...props}>
+      <NextLink ref={ref} href={localizeLink(to)} data-testid="link-internal" {...props}>
         {children}
-      </GatsbyLink>
+      </NextLink>
     );
   }
 
-  // add noreferrer to extenal links that open in new windows
+  // add noreferrer to external links that open in new windows
   const { target } = props;
   if (target && target === '_blank') {
     const { rel } = props;
@@ -44,30 +48,43 @@ export default function Link<TState>({ children, to, ...props }: React.PropsWith
   }
 
   return (
-    <a href={to} data-testid="link-external" {...props}>
+    <a ref={ref} href={to} data-testid="link-external" {...props}>
       {children}
     </a>
   );
-}
+});
+
+Link.displayName = 'Link';
+
+export default Link;
 
 /**
- * A thin wrapper around Gatsby's navigate that is aware of external links, and will
- * directly manipulate the location in the event of being passed an external link
+ * A wrapper around Next.js router that is aware of external links
  */
 interface NavigateOptions {
   replace?: boolean;
-  state?: Record<string, unknown>;
+  scroll?: boolean;
 }
 
-export function navigate(to: string, options: NavigateOptions = {}): Promise<void> {
-  const isInternal = checkLinkIsInternal(to);
-  const isOnPage = to?.startsWith('#');
-  const formattedTo = localizeLink(to);
+export function useNavigate() {
+  const router = useRouter();
 
-  if (isInternal && !isOnPage) {
-    return GatsbyNavigate(formattedTo, options);
-  }
+  return (to: string, options: NavigateOptions = {}): void => {
+    const isInternal = checkLinkIsInternal(to);
+    const isOnPage = to?.startsWith('#');
+    const formattedTo = localizeLink(to);
 
-  safeWindow.location.assign(formattedTo);
-  return Promise.resolve();
+    if (isInternal && !isOnPage) {
+      if (options.replace) {
+        router.replace(formattedTo, { scroll: options.scroll });
+      } else {
+        router.push(formattedTo, { scroll: options.scroll });
+      }
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.location.assign(formattedTo);
+    }
+  };
 }

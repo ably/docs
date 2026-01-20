@@ -1,12 +1,13 @@
+'use client';
+
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { useLocation } from '@reach/router';
-import { graphql, useStaticQuery } from 'gatsby';
+import { usePathname } from 'next/navigation';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { throttle } from 'es-toolkit/compat';
 import Icon from '@ably/ui/core/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
-import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
+import Logo from '@ably/ui/core/images/logo/ably-logo.svg?url';
 import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
 import { IconName } from '@ably/ui/core/Icon/types';
@@ -17,6 +18,7 @@ import Link from '../Link';
 import { InkeepSearchBar } from '../SearchBar/InkeepSearchBar';
 import { secondaryButtonClassName, iconButtonClassName, tooltipContentClassName } from './utils/styles';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { externalScriptsData } from 'lib/site-config';
 
 // Tailwind 'md' breakpoint from tailwind.config.js
 const MD_BREAKPOINT = 1040;
@@ -55,25 +57,9 @@ const helpResourcesItems = [
 ];
 
 const Header: React.FC = () => {
-  const location = useLocation();
+  const pathname = usePathname();
   const userContext = useContext(UserContext);
   const { activePage } = useLayoutContext();
-  const {
-    site: {
-      siteMetadata: { externalScriptsData },
-    },
-  } = useStaticQuery(graphql`
-    query {
-      site {
-        siteMetadata {
-          externalScriptsData {
-            inkeepSearchEnabled
-            inkeepChatEnabled
-          }
-        }
-      }
-    }
-  `);
 
   const sessionState = {
     ...userContext.sessionState,
@@ -167,7 +153,7 @@ const Header: React.FC = () => {
           options={{
             underline: false,
             flexibleTabHeight: true,
-            defaultTabIndex: location.pathname.includes('/examples') ? 1 : 0,
+            defaultTabIndex: pathname.includes('/examples') ? 1 : 0,
           }}
         />
         {isMobileMenuOpen && (

@@ -1,5 +1,8 @@
+'use client';
+
 import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Icon from '@ably/ui/core/Icon';
 import { products } from '../../data/examples';
 import Button from '@ably/ui/core/Button';
@@ -8,7 +11,6 @@ import Badge from '@ably/ui/core/Badge';
 import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks/use-on-click-outside';
-import { navigate } from 'gatsby';
 import { ProductName } from '@ably/ui/core/ProductTile/data';
 
 const ExamplesFilter = ({
@@ -20,18 +22,21 @@ const ExamplesFilter = ({
   setSelected: Dispatch<SetStateAction<SelectedFilters>>;
   handleSearch: (e: ChangeEvent<HTMLInputElement>) => void;
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const [expandFilterMenu, setExpandFilterMenu] = useState(false);
   const [localSelected, setLocalSelected] = useState<SelectedFilters>(selected);
 
   const handleSelect = useCallback((e: ChangeEvent<HTMLInputElement>, filterType: keyof SelectedFilters) => {
     setLocalSelected((prevSelected) => {
-      const params = new URLSearchParams(location.search);
+      const params = new URLSearchParams(searchParams.toString());
 
       if (e.target.value === 'all') {
         if (filterType === 'products') {
           params.delete('product');
-          navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+          router.replace(`${pathname}?${params.toString()}`);
         }
 
         return {
@@ -45,7 +50,7 @@ const ExamplesFilter = ({
         : [...prevSelected[filterType], e.target.value];
 
       if (filterType === 'products') {
-        const params = new URLSearchParams(location.search);
+        const params = new URLSearchParams(searchParams.toString());
 
         if (newSelected.length > 0) {
           params.set('product', newSelected.join(','));
@@ -53,7 +58,7 @@ const ExamplesFilter = ({
           params.delete('product');
         }
 
-        navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+        router.replace(`${pathname}?${params.toString()}`);
       }
 
       return {
@@ -61,7 +66,7 @@ const ExamplesFilter = ({
         [filterType]: Array.from(new Set(newSelected)),
       };
     });
-  }, []);
+  }, [pathname, router, searchParams]);
 
   const filters = useMemo(
     () => [
