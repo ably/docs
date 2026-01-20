@@ -99,6 +99,7 @@ const ExamplesRenderer = ({
         visibleFiles,
         autorun: true,
         autoReload: true,
+        bundlerURL: 'https://sandpack-production-366dfb2b55fc.herokuapp.com',
         classes: {
           /*
               For the calcs below:
