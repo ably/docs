@@ -276,10 +276,11 @@ const MessageSender = () => {
 func send(text: String, mediaToAttach: [JSONObject]) async throws {
     var metadata: MessageMetadata = [:]
     if !mediaToAttach.isEmpty {
+        // Convert each JSONObject to JSONValue.object, then wrap in JSONValue.array
         metadata["media"] = .array(mediaToAttach.map { .object($0) })
     }
 
-    try await room.messages.send(withParams: .init(
+    _ = try await room.messages.send(withParams: .init(
         text: text,
         metadata: metadata
     ))
@@ -290,6 +291,7 @@ func send(text: String, mediaToAttach: [JSONObject]) async throws {
 import com.ably.chat.json.*
 
 suspend fun send(text: String, mediaToAttach: List<JsonObject>) {
+    // Wrap the media list in a JsonArray for the metadata
     val metadata = if (mediaToAttach.isNotEmpty()) {
         jsonObject {
             put("media", JsonArray(mediaToAttach))
@@ -406,24 +408,19 @@ const getValidMedia = (message) => {
 import Foundation
 
 // assume IDs are 10-15 characters long and alphanumeric
-let mediaIdRegex = try! NSRegularExpression(pattern: "^[a-z0-9]{10,15}$")
+let mediaIdRegex = /^[a-z0-9]{10,15}$/
 
 func getValidMedia(message: Message) -> [JSONObject] {
-    guard case let .array(mediaArray) = message.metadata["media"] else {
+    guard let mediaArray = message.metadata["media"]?.arrayValue else {
         return []
     }
 
-    return mediaArray.compactMap { mediaValue -> JSONObject? in
-        guard case let .object(mediaObj) = mediaValue,
-              case let .string(id) = mediaObj["id"] else {
+    return mediaArray.compactMap { mediaValue in
+        guard let mediaObj = mediaValue.objectValue,
+              let id = mediaObj["id"]?.stringValue,
+              id.wholeMatch(of: mediaIdRegex) != nil else {
             return nil
         }
-
-        let range = NSRange(location: 0, length: id.utf16.count)
-        guard mediaIdRegex.firstMatch(in: id, options: [], range: range) != nil else {
-            return nil
-        }
-
         return mediaObj
     }
 }
@@ -551,10 +548,9 @@ struct MessageView: View {
             let validMedia = getValidMedia(message: message)
             if !validMedia.isEmpty {
                 VStack(spacing: 4) {
-                    ForEach(validMedia.indices, id: \.self) { index in
-                        let media = validMedia[index]
-                        if case let .string(id) = media["id"],
-                           case let .string(title) = media["title"] {
+                    ForEach(validMedia, id: \.self) { media in
+                        if let id = media["id"]?.stringValue,
+                           let title = media["title"]?.stringValue {
                             AsyncImage(url: URL(string: "https://example.com/images/\(id)")) { image in
                                 image.resizable().aspectRatio(contentMode: .fit)
                             } placeholder: {
@@ -690,18 +686,12 @@ const AddMediaToMessage = ({ message }) => {
 func addMediaToMessage(message: Message, mediaData: JSONObject) async throws {
     var newMetadata = message.metadata
 
-    var mediaArray: [JSONValue]
-    if case let .array(existingArray) = newMetadata["media"] {
-        mediaArray = existingArray
-    } else {
-        mediaArray = []
-    }
-
+    // Get existing media array or start with empty array
+    var mediaArray = newMetadata["media"]?.arrayValue ?? []
     mediaArray.append(.object(mediaData))
-
     newMetadata["media"] = .array(mediaArray)
 
-    try await room.messages.update(
+    _ = try await room.messages.update(
         withSerial: message.serial,
         params: .init(
             text: message.text,
@@ -827,18 +817,15 @@ const RemoveMediaFromMessage = ({ message }) => {
 
 ```swift
 func removeMediaFromMessage(message: Message, mediaIdToRemove: String) async throws {
-    guard case let .array(mediaArray) = message.metadata["media"],
+    guard let mediaArray = message.metadata["media"]?.arrayValue,
           !mediaArray.isEmpty else {
         // do nothing if there is no media
         return
     }
 
     let newMediaArray = mediaArray.filter { mediaValue in
-        guard case let .object(mediaObj) = mediaValue,
-              case let .string(id) = mediaObj["id"] else {
-            return true
-        }
-        return id != mediaIdToRemove
+        // Keep items that don't match the ID to remove
+        mediaValue.objectValue?["id"]?.stringValue != mediaIdToRemove
     }
 
     var newMetadata = message.metadata

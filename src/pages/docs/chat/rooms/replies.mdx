@@ -235,11 +235,10 @@ const FetchParentMessage = ({ replyData }) => {
 
 ```swift
 func fetchParentMessage(replyData: JSONObject) async throws -> Message {
-    guard case let .string(serial) = replyData["serial"] else {
+    guard let serial = replyData["serial"]?.stringValue else {
         throw NSError(domain: "ReplyError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid serial"])
     }
-    let message = try await room.messages.get(withSerial: serial)
-    return message
+    return try await room.messages.get(withSerial: serial)
 }
 ```
 
@@ -338,21 +337,33 @@ const MessageList = () => {
 ```
 
 ```swift
+// Extension to extract reply data from a message
+extension Message {
+    var replySerial: String? {
+        metadata["reply"]?.objectValue?["serial"]?.stringValue
+    }
+
+    var replyPreview: (clientId: String, text: String)? {
+        guard let replyData = metadata["reply"]?.objectValue,
+              let clientId = replyData["clientId"]?.stringValue,
+              let previewText = replyData["previewText"]?.stringValue else {
+            return nil
+        }
+        return (clientId, previewText)
+    }
+}
+
 // Subscribe to messages and handle replies
 var localMessages: [Message] = []
 
-room.messages.subscribe { event in
+for await event in room.messages.subscribe() {
     let message = event.message
 
-    if let replyMetadata = message.metadata["reply"],
-       case let .object(replyData) = replyMetadata {
-        if case let .string(replySerial) = replyData["serial"] {
-            if let parentMessage = localMessages.first(where: { $0.serial == replySerial }) {
-                print("Reply to \(parentMessage.clientID): \(parentMessage.text)")
-            } else if case let .string(replyClientId) = replyData["clientId"],
-                      case let .string(previewText) = replyData["previewText"] {
-                print("Reply to \(replyClientId): \(previewText)")
-            }
+    if let replySerial = message.replySerial {
+        if let parentMessage = localMessages.first(where: { $0.serial == replySerial }) {
+            print("Reply to \(parentMessage.clientID): \(parentMessage.text)")
+        } else if let preview = message.replyPreview {
+            print("Reply to \(preview.clientId): \(preview.text)")
         }
     }
 
