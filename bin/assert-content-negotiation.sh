@@ -140,19 +140,12 @@ run_test "/docs/nonexistent" "text/markdown" "404" "any" "404 with markdown Acce
 run_test "/llms.txt" "" "200" "any" "Non-docs paths unaffected"
 echo
 
-# Group 6: Bot Detection (User-Agent)
-echo "Group 6: Bot Detection (User-Agent)"
-echo "------------------------------------"
-run_test "/docs/channels" "" "200" "markdown" "Claude-User bot gets markdown" "Claude-User/1.0"
-run_test "/docs/channels" "" "200" "markdown" "ClaudeBot gets markdown" "Mozilla/5.0 (compatible; ClaudeBot/1.0)"
-run_test "/docs/channels" "" "200" "markdown" "PerplexityBot gets markdown" "PerplexityBot"
-run_test "/docs/channels" "" "200" "html" "Regular browser gets HTML" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-echo
-
-# Group 7: Combined Bot + Accept Header
-echo "Group 7: Combined Bot + Accept Header"
-echo "--------------------------------------"
-run_test "/docs/channels" "text/html" "200" "markdown" "Bot overrides Accept: text/html" "Claude-User/1.0"
+# Group 6: Query Parameters
+echo "Group 6: Query Parameters"
+echo "-------------------------"
+run_test "/docs/channels?foo=bar" "" "200" "html" "Query params don't affect default HTML"
+run_test "/docs/channels?foo=bar" "text/markdown" "200" "markdown" "Query params don't affect markdown negotiation"
+run_test "/docs/channels?foo=bar&baz=qux" "text/markdown" "200" "markdown" "Multiple query params work correctly"
 echo
 
 echo "================================"
