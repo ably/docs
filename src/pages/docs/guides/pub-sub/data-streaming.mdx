@@ -34,9 +34,14 @@ The following sections explore how Ably's optimization features solve real-world
 
 ## How do I reduce bandwidth and latency when data changes frequently but incrementally?
 
-An example of frequent, incremental state change is found in sports games platforms, where live match state is streamed to spectators and players as matches progress. The match state naturally grows throughout the game - starting with basic match info, then accumulating player statistics, scores, game events, and other statistics. By mid-game, the full state can be many kilobytes. Publishing the entire state with each update means transmitting increasingly large payloads repeatedly to every spectator, even though only small portions change between updates (a player's ranking shifts, a score increment or some game metric updates). This wastes massive bandwidth on redundant information, especially as the match state grows larger.
+Consider a sports games platform where live match state is streamed to spectators and players as matches progress. The match state naturally grows throughout the game, starting with basic match info, then accumulating player statistics, scores, game events, and other statistics. By mid-game, the full state can be many kilobytes.
 
-A solution is needed here that ensures all users (including those joining mid-match) receive the complete current match state, while only transmitting the changes over the wire. This should dramatically reduce bandwidth consumption as the state grows, without requiring publishers to maintain complex delta logic or consumers to implement manual state reconstruction.
+The challenge:
+- Publishing the entire state with each update means transmitting increasingly large payloads repeatedly to every spectator
+- Only small portions change between updates (a player's ranking shifts, a score increments, some game metric updates)
+- This wastes massive bandwidth on redundant information, especially as the match state grows larger
+
+The solution should ensure all users (including those joining mid-match) receive the complete current match state, while only transmitting the changes over the wire. This should dramatically reduce bandwidth consumption as the state grows, without requiring publishers to maintain complex delta logic or consumers to implement manual state reconstruction.
 
 ### Solution: Delta compression
 
@@ -46,30 +51,27 @@ Ably's delta implementation uses [VCDIFF](https://tools.ietf.org/html/rfc3284), 
 
 ### Benefits and use cases
 
-Delta compression delivers significant advantages for streaming scenarios with incremental changes, particularly on larger payloads where bandwidth savings outweigh the processing cost:
-
-* **Bandwidth reduction:** Size of each message is now proportional to the changes, not the full state, leading to substantial data savings.
-* **Reduced costs:** Lower outbound data transfer translates to reduced billing for high-volume streams.
-* **Lower latency:** Smaller payloads transit networks faster, improving end-to-end delivery time.
-* **Producer simplicity:** Publishers send complete state; Ably handles the optimization.
-* **Lossless updates:** Subscribers still receive every update, just in a more efficient format.
+Delta compression delivers significant advantages for streaming scenarios with incremental changes. Publishers simply send complete state while Ably handles the optimization, and subscribers transparently receive every update in a more efficient format. Key benefits include:
+- Message size becomes proportional to changes rather than full state, leading to substantial data savings and reduced billing
+- Smaller payloads transit networks faster, improving end-to-end delivery time
 
 [//]: # (Think it could be good to have some kind of visiual showing full message vs delta message size comparison so its not just walls of text)
 
-Delta compression is ideal for game state synchronization where match state, player positions, and inventory updates grow over time. It's equally effective for telemetry and sensor data from vehicle systems, IoT devices, and industrial monitoring with many datapoints. Live dashboards with realtime analytics where most metrics change incrementally also benefit significantly from delta compression.
+Delta compression is ideal for:
+- Game state synchronization like match state, player positions, and inventory updates that grow over time
+- Telemetry and sensor data from vehicle systems, IoT devices, and industrial monitoring with many datapoints
+- Live dashboards displaying realtime analytics where most metrics change incrementally
 
-When combined with the [persist last message](/docs/storage-history/storage#persist-last-message) rule, you can query the final complete state even after the stream ends - this can be useful for post-event analysis.
+When combined with the [persist last message](/docs/storage-history/storage#persist-last-message) rule, you can query the final complete state even after the stream ends. This can be useful for post-event analysis.
 
 ### When deltas work best
 
-Delta compression delivers maximum benefit when:
-
-* **Larger message payloads:** For larger payloads (multiple kilobytes), bandwidth savings typically outweigh the CPU cost of applying deltas on the client side. Smaller messages (under 1KB) may not benefit as much.
-* **High similarity between messages:** The more unchanged data between successive messages, the greater the compression ratio.
-* **Structured data with partial updates:** Objects where only specific fields change frequently.
-* **Growing state over time:** Scenarios where the payload naturally grows during a session, making each full transmission increasingly expensive.
-* **Bandwidth is a constraint:** Mobile networks, high-volume scenarios, or regions with expensive data transfer.
-* **Many consumers:** Bandwidth savings multiply across subscribers
+Delta compression delivers maximum benefit with larger message payloads (multiple kilobytes) where bandwidth savings typically outweigh the CPU cost of applying deltas on the client side. Smaller messages under 1KB may not benefit as much. The technique works best when:
+- There's high similarity between successive messages, as more unchanged data yields greater compression ratios
+- Structured data where only specific fields change frequently
+- The payload naturally grows during a session, making each full transmission increasingly expensive
+- Bandwidth constraints like mobile networks, high-volume scenarios, or regions with expensive data transfer amplify the benefits
+- Many consumers multiply the bandwidth savings across all subscribers
 
 Delta compression can be combined with [server-side batching](#how-do-i-manage-costs-and-stability-during-massive-bursts-of-activity) for scenarios where the rate of updates is high, helping to reduce outbound billable message cost at the cost of some increased latency.
 
@@ -77,17 +79,17 @@ Care should be taken, though, as if the delta compression ratio is low, the CPU 
 
 ### Key considerations
 
-Before implementing delta compression, consider the following:
+When implementing delta compression, assess your data patterns carefully. There is a CPU cost in applying deltas, which increases with the size of the delta. This should be weighed against the bandwidth savings, especially in power-constrained environments like mobile devices. Ably exposes both compressed and uncompressed outbound data metrics to help you monitor performance:
+- Use [application statistics](/docs/metadata-stats/stats) to infer your actual compression ratio across all channels
+- Consume stats live via the [`[meta]stats:minute`](/docs/metadata-stats/stats#live) channel to track delta performance in real-time
 
-* **Assess your data patterns:** There is a CPU cost in applying Deltas, which increases with the size of the delta. This should be weighed against the bandwidth savings, especially in power-constrained environments like mobile devices. Continually monitor your actual compression ratios in production to ensure the trade-off remains favorable.
-* **Monitor compression effectiveness:** Ably exposes both compressed and uncompressed outbound data metrics in your [application statistics](/docs/metadata-stats/stats), enabling you to infer your actual compression ratio across all channels in your app. You can consume these stats live via the [`[meta]stats:minute`](/docs/metadata-stats/stats#live) channel to track delta performance in real-time and make data-driven optimization decisions.
-* **Client compatibility:** If some clients cannot support deltas, they will receive full messages as normal.
-* **Encryption compatibility:** Delta compression is [effectively incompatible](/docs/channels/options/deltas#limitations) with channel encryption. If you need channel encryption, you'll need to choose between security and bandwidth optimization. This has no impact on transport level encryption, all messages are still sent securely over TLS by default.
-* **Historical data access:** When using [persist last message](/docs/storage-history/storage#persist-last-message), the stored message is the latest full state, not a delta. This ensures historical queries return complete data, without needing to reconstruct from deltas.
-* **Connection recovery:** After any disruption (network issues, rate limiting, server errors), the first message is always full state. Subsequent messages resume delta mode.
-* **Presence limitations:** Delta compression is not supported for presence messages and is not recommended for use on the same channel as delta-compressed messages.
+Clients that cannot support deltas will receive full messages as normal. However, delta compression is [effectively incompatible](/docs/channels/options/deltas#limitations) with channel encryption. If you need channel encryption, you'll need to choose between security and bandwidth optimization. This has no impact on transport level encryption, as all messages are still sent securely over TLS by default.
 
-For more information on the above, see [known limitations](/docs/channels/options/deltas#limitations).
+Important recovery and persistence behaviors to note:
+- When using [persist last message](/docs/storage-history/storage#persist-last-message), the stored message is the latest full state, not a delta
+- After any disruption (network issues, rate limiting, server errors), the first message is always full state, with subsequent messages resuming delta mode
+
+Delta compression is not supported for presence messages and is not recommended for use on the same channel as delta-compressed messages. For more information, see [known limitations](/docs/channels/options/deltas#limitations).
 
 ### Implementation
 
@@ -230,13 +232,17 @@ Here is a simple example illustrating the potential bandwidth savings from delta
 
 **Result: 70% bandwidth reduction**
 
-The savings increase as match state grows larger over time. This represents significant cost savings while ensuring all users - including new joiners mid-match - receive the complete current state reconstructed from deltas.
+The savings increase as match state grows larger over time. This represents significant cost savings while ensuring all users (including new joiners mid-match) receive the complete current state reconstructed from deltas.
 
 ## How do I prevent clients from being overwhelmed by stale data?
 
-Cryptocurrency trading platforms face a distribution challenge during volatile markets. Individual financial instruments can update 10+ times per second, generating large volumes of price changes. However, consumer applications typically refresh displays every second at most, meaning users never see the majority of intermediate values. Without optimization, platforms consume high bandwidth and generate many outbound messages that are immediately discarded. Mobile devices and browsers also risk being overwhelmed with unnecessary processing and rendering work for data that's never displayed.
+Cryptocurrency trading platforms face a distribution challenge during volatile markets. Individual financial instruments can update 10+ times per second, generating large volumes of price changes. However, consumer applications typically refresh displays every second at most, meaning users never see the majority of intermediate values.
 
-A solution is needed that allows publishers to continue sending high-frequency updates without modification, while controlling outbound delivery to match actual consumer needs. The system must ensure clients always receive the most current state without processing every intermediate update, reducing both infrastructure costs and client-side load. It should handle multiple independent data streams on shared channels while supporting flexible publishing rates across different data sources.
+The challenge:
+- Platforms consume high bandwidth and generate many outbound messages that are immediately discarded
+- Mobile devices and browsers risk being overwhelmed with unnecessary processing and rendering work for data that's never displayed
+
+The solution should allow publishers to continue sending high-frequency updates without modification, while controlling outbound delivery to match actual consumer needs. The system must ensure clients always receive the most current state without processing every intermediate update, reducing both infrastructure costs and client-side load. It should handle multiple independent data streams on shared channels while supporting flexible publishing rates across different data sources.
 
 ### Solution: Message conflation
 
@@ -246,17 +252,16 @@ With conflation, producers can continue publishing at high rates without modific
 
 ### Benefits and use cases
 
-Conflation can reduce outbound message count and bandwidth significantly:
-
-* **Reduced outbound messages:** Multiple messages collapse into one per time-window.
-* **Reduced bandwidth:** Redundant messages are dropped before delivery.
-* **Reduce client-side work:** Prevents overwhelming consumers with processing/rendering loads.
-* **Cost efficiency:** Fewer outbound messages reduce billable message counts.
-* **Granular control:** Publish rates can differ across conflation groups, but still be conflated on the same channel.
+Conflation can reduce outbound message count and bandwidth significantly. Multiple messages collapse into one per time-window, dropping redundant messages before delivery. This prevents overwhelming consumers with processing and rendering loads while reducing billable message counts. Key benefits:
+- Publish rates can differ across conflation groups while still being conflated on the same channel, providing granular control
+- Flexible handling of multiple independent data streams on shared channels
 
 [//]: # (Could be good here to have another visual showing messages published at mixed rates with differing conflation keys being conflated into a single batch message)
 
-Conflation is ideal for eventually consistent scenarios where only the latest state matters. Financial instruments such as stock prices, crypto values, and forex rates benefit from conflation as intermediate price changes aren't critical. Location updates in fleet tracking, ride sharing, and asset monitoring applications work well with conflation since the current position is what matters most. Similarly, sensor readings for temperature, humidity, or other measurements where the current value is more important than every historical reading are perfect candidates for conflation.
+Conflation is ideal for eventually consistent scenarios where only the latest state matters:
+- Financial instruments like stock prices, crypto values, and forex rates where intermediate price changes aren't critical
+- Location updates in fleet tracking, ride sharing, and asset monitoring where the current position is what matters most
+- Sensor readings for temperature, humidity, or other measurements where the current value is more important than every historical reading
 
 Providing consumers only need the latest state, and some latency is acceptable, conflation can dramatically reduces both costs and client load.
 
@@ -356,12 +361,14 @@ The conflation interval controls the trade-off between latency and cost savings.
 
 ### Key considerations
 
-Before implementing message conflation, consider the following:
+When implementing message conflation, understand that it discards intermediate messages. Only use this for scenarios where clients need the latest state and missing updates is acceptable, such as prices, positions, or metrics. Never use conflation for chat, transactions, or audit logs where every message matters.
 
-* **Eventual consistency only:** Conflation discards intermediate messages. Only use this for scenarios where clients need the latest state and missing updates is acceptable (prices, positions, metrics). Never use for chat, transactions, or audit logs.
-* **Conflation key design:** Choose conflation keys carefully. Messages with the same key are conflated together, so ensure your key pattern groups related updates of the same state.
-* **Time window trade-offs:** Longer intervals maximize cost savings but increase staleness. A 1-second window means users may see data up to 1 second old during high activity.
-* **Batch delivery:** Conflated messages are delivered as a batch at the end of each window. There is a maximum batch size of 200 messages; if exceeded, multiple batches are sent.
+Choose conflation keys carefully, as messages with the same key are conflated together. Important configuration decisions:
+- Ensure your key pattern groups related updates of the same state
+- Consider the time window trade-offs as longer intervals maximize cost savings but increase staleness
+- A 1-second window means users may see data up to 1 second old during high activity
+
+Conflated messages are delivered as a batch at the end of each window. There is a maximum batch size of 200 messages; if exceeded, multiple batches are sent.
 
 ### Implementation
 
@@ -429,9 +436,14 @@ The cost savings scale linearly with the number of consumers, making conflation 
 
 ## How do I manage costs and stability during massive bursts of activity?
 
-Live event platforms for sports, concerts, or conferences can face extreme traffic spikes during pivotal moments. When a goal is scored or an exciting moment occurs, thousands of users react simultaneously within seconds. In a 10,000-user room, just 10,000 reactions generate 100 million outbound messages. These burst patterns create multiple risks: unpredictable cost spikes from message volume, potential rate limit violations that could degrade service during critical moments, and the possibility of overwhelming client applications with processing demands they weren't designed to handle.
+Live event platforms for sports, concerts, or conferences can face extreme traffic spikes during pivotal moments. When a goal is scored or an exciting moment occurs, thousands of users react simultaneously within seconds. In a 10,000-user room, just 10,000 reactions generate 100 million outbound messages.
 
-A solution is needed that preserves the shared experience during high-intensity moments while ensuring sustainable costs and resource usage at scale. The system must smooth traffic spikes without losing any user contributions, protect against rate limiting during bursts, and prevent client applications from being overwhelmed with processing work. Critically, the optimization must work transparently without requiring changes to publishing or subscribing code.
+These burst patterns create multiple risks:
+- Unpredictable cost spikes from message volume
+- Potential rate limit violations that could degrade service during critical moments
+- Overwhelming client applications with processing demands they weren't designed to handle
+
+The solution should preserve the shared experience during high-intensity moments while ensuring sustainable costs and resource usage at scale. The system must smooth traffic spikes without losing any user contributions, protect against rate limiting during bursts, and prevent client applications from being overwhelmed with processing work. Critically, the optimization must work transparently without requiring changes to publishing or subscribing code.
 
 ### Solution: Server-side batching
 
@@ -441,19 +453,17 @@ Messages published during the batching window are held temporarily, then combine
 
 ### Benefits and use cases
 
-Server-side batching can greatly reduce the cost of high-throughput streaming:
-
-* **Lower costs:** Hundreds of messages become one outbound batch and each batch counts as only a single billable message.
-* **Rate limit protection:** Fewer messages reduce the likelihood of hitting throughput limits.
-* **Traffic spike resilience:** Burst patterns are smoothed through aggregation.
-* **Preserves all messages:** Unlike conflation, no messages are discarded.
-* **Guaranteed ordering:** Message order is preserved within each batch.
-* **Transparent to clients:** No code changes needed for producers or consumers.
-* **Predictable billing:** Costs scale linearly with user count rather than message volume.
+Server-side batching can greatly reduce the cost of high-throughput streaming. Hundreds of messages become one outbound batch, with each batch counting as only a single billable message. This reduces the likelihood of hitting throughput limits and smooths burst patterns through aggregation. Key advantages:
+- Unlike conflation, no messages are discarded, and message order is preserved within each batch
+- The optimization works transparently without code changes for producers or consumers
+- Creates predictable billing that scales linearly with user count rather than message volume
 
 [//]: # (Again, might be good to get a diagram or somethign in here so it feels less like a wall of text..)
 
-Server-side batching is best suited for scenarios with bursty traffic patterns where every message matters. Social feeds and reactions during live events, including likes, emoji reactions, and comments, benefit greatly from batching during high-activity moments. Chat applications with high-activity chat rooms during key moments can smooth traffic spikes while preserving all messages. Event streams and realtime activity feeds with naturally bursty traffic patterns are also ideal candidates for server-side batching.
+Server-side batching is best suited for scenarios with bursty traffic patterns where every message matters:
+- Social feeds and reactions during live events, including likes, emoji reactions, and comments during high-activity moments
+- Chat applications with high-activity chat rooms that need to smooth traffic spikes while preserving all messages
+- Event streams and realtime activity feeds with naturally bursty traffic patterns
 
 ### Configuration
 
@@ -472,15 +482,14 @@ Server-side batching is mutually exclusive with [message conflation](/docs/messa
 
 ### Key considerations
 
-Before implementing server-side batching, consider the following:
+When implementing server-side batching, understand the latency impact. Messages are delayed by the batching interval, so a 100ms interval means 0-100ms additional delay per message. Consider whether your applications can tolerate this.
 
-* **Latency impact:** Messages are delayed by the batching interval. A 100ms interval means 0-100ms additional delay per message. Can you applications tolerate this?
-* **Burst characteristics:** Batching is most effective during traffic spikes. Measure your actual burst patterns to choose optimal intervals. Steady, low-rate traffic may not benefit significantly.
-* **Batch size limits:** Each batch is limited to 200 messages or maximum data size. Higher rates may generate multiple batches per interval.
-* **Idempotency trade-off:** Messages with explicit IDs (for idempotency) are excluded from batching. If you need idempotent publishes, you cannot use server-side batching on those messages.
-* **Monitoring and alerting:** Track actual batch sizes and frequencies in production. Unexpectedly small batches may indicate misconfiguration or changing traffic patterns.
-* **Consumer processing:** Your clients should be able to handle bursts of messages arriving together. Consider client-side queuing or throttling if necessary.
-* **Mutual exclusivity with conflation:** You must choose between batching (deliver all messages) or conflation (deliver only latest). Plan channel namespaces accordingly if you need both patterns.
+Batching is most effective during traffic spikes. Measure your actual burst patterns to choose optimal intervals, as steady, low-rate traffic may not benefit significantly. Key technical constraints:
+- Each batch is limited to 200 messages or maximum data size; higher rates may generate multiple batches per interval
+- Messages with explicit IDs (for idempotency) are excluded from batching
+- You must choose between batching (deliver all messages) or conflation (deliver only latest)
+
+Track actual batch sizes and frequencies in production, as unexpectedly small batches may indicate misconfiguration or changing traffic patterns. Your clients should be able to handle bursts of messages arriving together, consider client-side queuing or throttling if necessary.
 
 ### Implementation
 
@@ -598,18 +607,17 @@ Conflation and server-side batching cannot be used on the same channel because t
 
 ## Cost optimization best practices
 
-Optimizing data streaming requires understanding your message patterns and making informed configuration choices:
+Optimizing data streaming requires understanding your message patterns and making informed configuration choices. Use [statistics](/docs/metadata-stats/stats) to understand message rates, sizes, and traffic patterns before optimizing. Key recommendations:
+- Begin with shorter intervals and adjust based on observed performance and costs
+- Balance responsiveness against cost, as users may not notice an extra 100ms of latency
+- Apply different optimization rules to different channel patterns based on their use cases using channel namespaces
 
-* **Monitor your patterns:** Use [statistics](/docs/metadata-stats/stats) to understand message rates, sizes, and traffic patterns before optimizing.
-* **Start conservatively:** Begin with shorter intervals and adjust based on observed performance and costs.
-* **Consider UX tradeoffs:** Balance responsiveness against cost - users may not notice an extra 100ms of latency.
-* **Use channel namespaces:** Apply different optimization rules to different channel patterns based on their use cases.
+You can configure rules to apply to a single channel or a group of channels using [namespaces](/docs/channels#rules). When using namespaces, all channels matching the pattern inherit the defined rules. For example:
+- Financial data might use conflation with 1000ms interval on `instruments:*` channels
+- Telemetry could use deltas on `sensors:*` channels
+- Social or chat applications could apply server-side batching with ~100ms interval on `rooms:*` channels
 
-**Example configurations with namespaces:**
-
-You can configure rules to apply to a single channel or a group of channels using [namespaces](/docs/channels#rules). When using namespaces, all channels matching the pattern inherit the defined rules. For example, financial data might use conflation with 1000ms interval on `instruments:*` channels, telemetry could use deltas on `sensors:*` channels, and social or chat applications could apply server-side batching with ~100ms interval on `rooms:*` channels.
-
-Optimization improves both performance and economics - smaller payloads and fewer messages benefit you and your users.
+Optimization improves both performance and economics. Smaller payloads and fewer messages benefit you and your users.
 
 ## Architecture and scale considerations
 
@@ -617,7 +625,11 @@ Ably's optimization features are designed to work at any scale without requiring
 
 ### Single channel with many subscribers
 
-This is the most common pattern for data streaming, and is recommended in most use-cases. Ably uses [consistent hashing](/docs/platform/architecture/platform-scalability) to distribute channel load across instances, enabling horizontal scalability to any number of channels. Connections to these channels are handled by an independently scalable layer, allowing seamless fanout to millions of subscribers per channel. Delta compression reduces bandwidth per subscriber, while conflation or server-side batching can dramatically reduce outbound message count during high activity. Message ordering is guaranteed within the channel.
+This is the most common pattern for data streaming, and is recommended in most use-cases. Ably uses [consistent hashing](/docs/platform/architecture/platform-scalability) to distribute channel load across instances, enabling horizontal scalability to any number of channels. Key characteristics:
+- Connections handled by an independently scalable layer, allowing seamless fanout to millions of subscribers per channel
+- Delta compression reduces bandwidth per subscriber
+- Conflation or server-side batching can dramatically reduce outbound message count during high activity
+- Message ordering is guaranteed within the channel
 
 If different data streams have very different optimization needs (e.g., some need conflation, others need batching), consider using separate channels or namespaces to apply appropriate rules per stream.
 
@@ -627,54 +639,43 @@ If different data streams have very different optimization needs (e.g., some nee
 
 ### Multiple channels with isolated streams
 
-For applications with independent data streams (e.g., different telemetry sources, separate instrument feeds), or very high throughput, consider using multiple channels. This approach makes it simple to isolate data since clients only attach to relevant channels. You gain the ability to apply different optimization rules per channel via [namespaces](/docs/channels#rules), and the inbound message rate of one channel does not impact others, enabling higher overall throughput.
+For applications with independent data streams (different telemetry sources, separate instrument feeds) or very high throughput, consider using multiple channels. Benefits of this approach:
+- Simple to isolate data since clients only attach to relevant channels
+- Ability to apply different optimization rules per channel via [namespaces](/docs/channels#rules)
+- Inbound message rate of one channel does not impact others, enabling higher overall throughput
 
-**Keep in mind:**
-- Message ordering is **not** guaranteed across channels.
-- Multiple channels incur an increased cost in channel minutes, where possible, consolidate related streams.
-- Unless strict access control to different streams is required, it is more efficient to multiplex related streams on a single channel and filter for events relevant to the client using [subscription filters](/docs/pub-sub/advanced#subscription-filters).
+Keep in mind the trade-offs: message ordering is not guaranteed across channels, and multiple channels incur an increased cost in channel minutes, so consolidate related streams where possible. Unless strict access control to different streams is required, it is more efficient to multiplex related streams on a single channel and filter for events relevant to the client using [subscription filters](/docs/pub-sub/advanced#subscription-filters).
 
 ### Channel namespaces for configuration
 
-Use [channel namespaces](/docs/channels#rules) to apply consistent rules across related channels. For example:
-- `telemetry:*` channels use delta compression.
-- `prices:*` channels use conflation with 1-second intervals.
-- `events:*` channels use server-side batching.
-
-This enables you to scale channel count without managing configuration individually.
+Use [channel namespaces](/docs/channels#rules) to apply consistent rules across related channels. For example, `telemetry:*` channels might use delta compression, `prices:*` channels might use conflation with 1-second intervals, and `events:*` channels might use server-side batching. This enables you to scale channel count without managing configuration individually.
 
 ## Connection management
 
-Efficient connection handling is essential for cost and performance optimization, establish connections when needed and keep them alive only for the session duration. When a channel is no longer needed, call `detach()` to avoid unnecessary outbound messages and channel minutes billing. Always call `close()` on connections when finished to avoid unnecessary billing for the [2-minute connection timeout](/docs/connect/states#connection-state-recovery). Ably SDKs automatically handle reconnection and recovery during network disruptions.
+Efficient connection handling is essential for cost and performance optimization. Establish connections when needed and keep them alive only for the session duration. Ably SDKs automatically handle reconnection and recovery during network disruptions. To avoid unnecessary billing:
+- When a channel is no longer needed, call `detach()` to avoid unnecessary outbound messages and channel minutes billing
+- Always call `close()` on connections when finished to avoid billing for the [2-minute connection timeout](/docs/connect/states#connection-state-recovery)
 
-**Realtime vs REST for publishing:**
-Choose the appropriate client type based on your publisher characteristics:
-- **Use Realtime SDK** when:
-  - Publishing messages at a very high volume.
-  - Need the lowest possible latency.
-  - Need bidirectional communication (publish and subscribe).
-  - Ordering of published messages is critical.
+Choose the appropriate client type based on your publisher characteristics. Use the Realtime SDK when:
+- Publishing messages at very high volume
+- You need the lowest possible latency
+- You need bidirectional communication (publish and subscribe)
+- Ordering of published messages is critical
 
-- **Use REST API** when:
-  - You have stateless publishers (e.g., serverless functions).
-  - Publishing from environments where maintaining persistent connections is impractical.
-  - Publishing from some authoritative backend server, or on behalf of multiple users.
-  - Batch publishing many messages to different channels in a single API call.
+Use the REST API when:
+- You have stateless publishers (serverless functions, for example)
+- Publishing from environments where maintaining persistent connections is impractical
+- Publishing from an authoritative backend server or on behalf of multiple users
+- Batch publishing many messages to different channels in a single API call
 
 ## Production checklist
 
 Before deploying data streaming optimizations to production:
-
-* Choose appropriate optimization strategy for each channel or namespace.
-* Monitor statistics to validate configuration choices, start conservatively.
-* Test client applications to ensure they handle any added latency or batching behavior.
+- Choose an appropriate optimization strategy for each channel or namespace
+- Monitor statistics to validate configuration choices
+- Start conservatively with shorter intervals
+- Test client applications to ensure they handle any added latency or batching behavior
 
 ## Next steps
 
-* Read the [Deltas documentation](/docs/channels/options/deltas) for complete implementation details.
-* Read the [Conflation documentation](/docs/messages#conflation) for configuration options.
-* Read the [Server-side batching documentation](/docs/messages/batch#server-side) for advanced usage.
-* Explore [Pub/Sub basics](/docs/pub-sub) to understand fundamental concepts.
-* Learn about [channel configuration](/docs/channels) and namespaces.
-* Review [message concepts](/docs/messages) for deeper understanding.
-* [Contact us](https://ably.com/contact?cta=enterprise_package) for enterprise-scale requirements and custom solutions.
+Read the [Deltas documentation](/docs/channels/options/deltas) for complete implementation details, the [Conflation documentation](/docs/messages#conflation) for configuration options, and the [Server-side batching documentation](/docs/messages/batch#server-side) for advanced usage. Explore [Pub/Sub basics](/docs/pub-sub) to understand fundamental concepts, learn about [channel configuration](/docs/channels) and namespaces, and review [message concepts](/docs/messages) for deeper understanding. [Contact us](https://ably.com/contact?cta=enterprise_package) for enterprise-scale requirements and custom solutions.
