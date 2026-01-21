@@ -581,6 +581,34 @@ await channel.presence.update({
 
 Presence is powerful but expensive at scale. Every enter, leave, and update event generates messages delivered to all presence subscribers. For a channel with 1000 viewers all subscribed to presence, a single user joining triggers 1000 outbound messages. If users are frequently joining and leaving, this can quickly dominate your message costs.
 
+### Scaling presence for large audiences
+
+Some scenarios require presence-like functionality at scale, in these cases, first consider how many viewers actually need to subscribe to presence updates. On a healthcare operations dashboard, while all operators might be entered into the presence set for tracking, only supervisors may need to subscribe and see the presence set. The fewer subscribers there are, the more cost-effective presence becomes.
+
+* You should also consider the throughput limitations of a channel when using presence. Regardless of how few subscribers there are, a channel is still rate limited to 50 inbound messages per second by default. If you have a high churn of presence members (many users joining/leaving frequently), you may hit this limit quickly.
+* Use occupancy for the aggregate viewer count that everyone sees, but enable full presence only for specific user groups who need to see individual identities.
+* You can also enable server-side batching on presence events via [rules](/docs/channels#rules) to reduce outbound message counts during high churn periods, helping to keep costs manageable. Server-side batching also enables much higher effective presence event rate limits, beyond the default 50 messages/second.
+
+If you are operating presence at scale, consider splitting presence into a separate channel from your main data stream. This allows you to apply different optimizations and access controls to presence without impacting the primary dashboard data, and ensure that high presence activity doesn't interfere with the integrity of your main data stream.
+
+<Code>
+  ```javascript
+  // Regular viewers: occupancy only, no presence overhead
+  const statsChannel = realtime.channels.get('match:stats', {
+  params: { occupancy: 'metrics' }
+});
+
+  // Also join a separate presence channel
+  const matchPresence = realtime.channels.get('match:presence');
+  await matchPresence.presence.enter({
+  name: user.name,
+  badge: user.badge
+});
+  ```
+</Code>
+
+This pattern ensures that match statistics remain unaffected by high presence activity, and also allows you to apply different rules (such as server-side batching to the presence channel, and delta compression to the stats channel) optimizing each for its specific use case.
+
 ### Occupancy: Counting viewers efficiently
 
 For fan engagement dashboards where you want to show viewer counts without needing to know individual identities, occupancy provides an efficient alternative. Occupancy gives you aggregate metrics about channel connections without the per-event overhead of full presence.
@@ -606,34 +634,6 @@ channel.subscribe('[meta]occupancy', (message) => {
 </Code>
 
 Occupancy updates are debounced and delivered efficiently, making them suitable for channels with thousands or millions of viewers. The overhead is minimal compared to full presence, and you still get the "15,234 people watching" social proof that enhances fan engagement experiences.
-
-### Scaling presence for large audiences
-
-Some scenarios require presence-like functionality at scale, in these cases, first consider how many viewers actually need to subscribe to presence updates. On a healthcare operations dashboard, while all operators might be entered into the presence set for tracking, only supervisors may need to subscribe and see the presence set. The fewer subscribers there are, the more cost-effective presence becomes.
-
-* You should also consider the throughput limitations of a channel when using presence. Regardless of how few subscribers there are, a channel is still rate limited to 50 inbound messages per second by default. If you have a high churn of presence members (many users joining/leaving frequently), you may hit this limit quickly.
-* Use occupancy for the aggregate viewer count that everyone sees, but enable full presence only for specific user groups who need to see individual identities.
-* You can also enable server-side batching on presence events via [rules](/docs/channels#rules) to reduce outbound message counts during high churn periods, helping to keep costs manageable. Server-side batching also enables much higher effective presence event rate limits, beyond the default 50 messages/second.
-
-If you are operating presence at scale, consider splitting presence into a separate channel from your main data stream. This allows you to apply different optimizations and access controls to presence without impacting the primary dashboard data, and ensure that high presence activity doesn't interfere with the integrity of your main data stream.
-
-<Code>
-```javascript
-// Regular viewers: occupancy only, no presence overhead
-const statsChannel = realtime.channels.get('match:stats', {
-  params: { occupancy: 'metrics' }
-});
-
-// Also join a separate presence channel
-const matchPresence = realtime.channels.get('match:presence');
-await matchPresence.presence.enter({
-  name: user.name,
-  badge: user.badge
-});
-```
-</Code>
-
-This pattern ensures that match statistics remain unaffected by high presence activity, and also allows you to apply different rules (such as server-side batching to the presence channel, and delta compression to the stats channel) optimizing each for its specific use case.
 
 ## Priced for scale
 
