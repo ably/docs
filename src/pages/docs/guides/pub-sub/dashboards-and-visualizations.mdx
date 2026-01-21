@@ -101,7 +101,7 @@ channel.subscribe('stats-update', (message) => {
 ```
 </Code>
 
-The single channel pattern maximizes cost efficiency because Ably's fanout delivers each published message to all subscribers with a single outbound message charge per subscriber. There's no duplication of data across channels, and the architecture remains simple to reason about.
+The single channel pattern maximizes cost efficiency because Ably's fanout delivers each published message to all subscribers with a single outbound message charge per subscriber. There's no duplication of data across channels, and the architecture remains simple to manage (just one channel per data stream regardless of subscriber count).
 
 ### Per-entity channels for isolation and access control
 
@@ -433,7 +433,7 @@ For healthcare applications handling Protected Health Information (PHI), Ably pr
 * All data is encrypted in transit via TLS 1.2+ and at rest with AES-256
 * Business Associate Agreements (BAAs) are available for enterprise customers
 * Comprehensive audit logging is available through integration rules
-* Regional data constrains ensure all traffic can be routed through specific geographic regions to meet data residency requirements
+* Regional data constraints ensure all traffic can be routed through specific geographic regions to meet data residency requirements
 
 When building patient monitoring dashboards, use de-identified patient IDs in channel names rather than actual patient identifiers, and ensure your tokens grant short-lived, least-privilege access.
 
@@ -468,17 +468,11 @@ realtime.connection.on('failed', () => {
 ```
 </Code>
 
-Understanding each connection state helps you provide appropriate user feedback, some examples include:
-
-* **`disconnected`**: A temporary loss of connection where the SDK is actively trying to reconnect
-* **`suspended`**: Reconnection attempts have been unsuccessful for an extended period, but the SDK will continue trying in 30-second intervals
-* **`failed`**: The connection cannot be recovered and manual intervention is required
-
 ### Message continuity after reconnection
 
 Ably maintains a 2-minute message buffer for each connection. When a client reconnects within this window, any messages published during the disconnection are automatically delivered, ensuring no data is lost during brief network interruptions.
 
-For longer disconnections, or when you need to backfill historical data, use the [history API](/docs/storage-history/history) to retrieve messages:
+For longer disconnections, or when you need to backfill historical data, use the [history API](/docs/storage-history/history) to retrieve messages. This will require the use of a [persistence](#Pairing with message persistence) rule to ensure messages are stored for retrieval.
 
 <Code>
 ```javascript
@@ -619,7 +613,7 @@ Some scenarios require presence-like functionality at scale, in these cases, fir
 
 * You should also consider the throughput limitations of a channel when using presence. Regardless of how few subscribers there are, a channel is still rate limited to 50 inbound messages per second by default. If you have a high churn of presence members (many users joining/leaving frequently), you may hit this limit quickly.
 * Use occupancy for the aggregate viewer count that everyone sees, but enable full presence only for specific user groups who need to see individual identities.
-* You can also enable server-side batching on presence events via [rules](/docs/channels#rules) to reduce outbound message counts during high churn periods, helping to keep costs manageable.
+* You can also enable server-side batching on presence events via [rules](/docs/channels#rules) to reduce outbound message counts during high churn periods, helping to keep costs manageable. Server-side batching also enables much higher effective presence event rate limits, beyond the default 50 messages/second.
 
 If you are operating presence at scale, consider splitting presence into a separate channel from your main data stream. This allows you to apply different optimizations and access controls to presence without impacting the primary dashboard data, and ensure that high presence activity doesn't interfere with the integrity of your main data stream.
 
@@ -694,7 +688,7 @@ window.addEventListener('beforeunload', () => {
 ```
 </Code>
 
-When a client disconnects abruptly without calling close(), Ably maintains the connection state for 2 minutes to enable reconnection. Calling close() explicitly releases resources immediately.
+When a client disconnects abruptly without calling `close()`, Ably maintains the connection state for 2 minutes to enable reconnection. Calling `close()` explicitly releases resources immediately.
 
 ### Selective subscriptions
 
@@ -794,37 +788,14 @@ Non-enveloped messages deliver just the raw payload, which is useful when your d
 
 Before deploying your realtime dashboard to production, verify that you've addressed these key areas:
 
-**Authentication:** Proper authentication protects your data and prevents abuse.
-
-* Use token authentication rather than API keys in client code.
-* Ensure tokens have appropriate capabilities following the principle of least privilege.
-* Set expiration times appropriate to your security requirements (shorter for sensitive dashboards, longer for public content).
-
-**Message throughput:** Understanding your message volumes ensures you stay within limits and control costs.
-
-* Verify that your throughput is within channel limits (50 messages/second by default).
-* Implement batching if your data source exceeds rate limits.
-* Choose and configure the appropriate optimization strategy: batching for burst management, conflation for latest-value scenarios, or delta compression for large payloads.
-
-**Connection handling:** Users should always understand the state of their connection and data.
-
-* Test connection state handling to ensure users see appropriate feedback during disconnections.
-* Verify that message backfill works correctly for extended outages.
-* Implement graceful degradation so the dashboard remains usable even when connectivity is impaired.
-
-**Monitoring:** Proactive monitoring helps you catch issues before they impact users or costs.
-
-* Set up monitoring for connection counts, message rates, and latency percentiles.
-* Configure budget alerts in the Ably dashboard to catch unexpected usage spikes before they become costly surprises.
+* Proper authentication protects your data and prevents abuse, use token authentication rather than API keys in client code.
+* Ensure you know your expected message rates and fanout and have optimized accordingly with batching, conflation, or delta compression.
+* Implement connection state handling and message backfill to ensure a smooth user experience during network disruptions.
+* Set up monitoring and alerting for usage spikes, connection issues, and error rates. This will help catch problems early and avoid unexpected costs.
 
 ## Next steps
 
 * Explore the [Ably Pub/Sub documentation](/docs/pub-sub) for API details.
-* Learn about [delta compression](/docs/channels/options/deltas) for bandwidth optimization.
-* Understand [server-side batching](/docs/messages/batch#server-side) for cost control.
-* Configure [message conflation](/docs/messages#conflation) for latest-value scenarios.
-* Implement [presence](/docs/presence-occupancy/presence) for collaborative dashboards.
-* Set up [occupancy](/docs/presence-occupancy/occupancy) for viewer counts.
 * Review [authentication best practices](/docs/auth/token) before going to production.
 * Learn about [connection state recovery](/docs/connect/states#connection-state-recovery) for reliable reconnection.
 * Configure [outbound streaming](/docs/platform/integrations/streaming) for analytics and long-term storage.
