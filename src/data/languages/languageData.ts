@@ -42,6 +42,9 @@ export default {
     kotlin: '1.1',
     jetpack: '1.1',
   },
+  aiTransport: {
+    javascript: '2.11',
+  },
   spaces: {
     javascript: '0.4',
     react: '0.4',

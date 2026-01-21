@@ -37,7 +37,7 @@ const UserIndicator = ({ user }: { user: string }) => {
 
 const getDependencies = (id: string, products: string[], activeLanguage: LanguageKey) => {
   return {
-    ably: '~2.16.0',
+    ably: '~2.17.0',
     nanoid: '^5.0.7',
     minifaker: '1.34.1',
     'franken-ui': '^2.0.0',
@@ -99,6 +99,7 @@ const ExamplesRenderer = ({
         visibleFiles,
         autorun: true,
         autoReload: true,
+        bundlerURL: 'https://sandpack-production-366dfb2b55fc.herokuapp.com',
         classes: {
           /*
               For the calcs below:

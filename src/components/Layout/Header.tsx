@@ -41,10 +41,9 @@ const helpResourcesItems = [
     label: 'Support',
   },
   {
-    href: '/sdks',
+    href: '/docs/sdks',
     icon: 'icon-gui-cube-outline' as IconName,
     label: 'SDKs',
-    external: true,
   },
   {
     href: 'https://ably.com',
