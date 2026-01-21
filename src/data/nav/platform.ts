@@ -125,6 +125,15 @@ export default {
           name: 'Limits',
         },
         {
+          name: 'Pricing examples',
+          pages: [
+            {
+              link: '/docs/platform/pricing/examples/ai-chatbot',
+              name: 'AI support chatbot',
+            },
+          ],
+        },
+        {
           link: '/docs/platform/pricing/faqs',
           name: 'Pricing FAQs',
         },

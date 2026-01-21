@@ -39,7 +39,11 @@ export default {
     javascript: '1.1',
     react: '1.1',
     swift: '1.0',
-    kotlin: '1.0',
+    kotlin: '1.1',
+    jetpack: '1.1',
+  },
+  aiTransport: {
+    javascript: '2.11',
   },
   spaces: {
     javascript: '0.4',

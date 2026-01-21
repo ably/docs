@@ -1,4 +1,12 @@
-import { chatNavData, liveObjectsNavData, liveSyncNavData, platformNavData, pubsubNavData, spacesNavData } from './nav';
+import {
+  aiTransportNavData,
+  chatNavData,
+  liveObjectsNavData,
+  liveSyncNavData,
+  platformNavData,
+  pubsubNavData,
+  spacesNavData,
+} from './nav';
 import { languageData } from './languages';
 import { PageData, ProductData } from './types';
 import homepageContentData from './content/homepage';
@@ -15,6 +23,10 @@ export const productData = {
   chat: {
     nav: chatNavData,
     languages: languageData.chat,
+  },
+  aiTransport: {
+    nav: aiTransportNavData,
+    languages: languageData.aiTransport,
   },
   spaces: {
     nav: spacesNavData,
