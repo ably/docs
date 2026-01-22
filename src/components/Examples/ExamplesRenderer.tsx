@@ -10,6 +10,8 @@ import SegmentedControl from '@ably/ui/core/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
 import cn from '@ably/ui/core/utils/cn';
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
+// Shared tsconfig for proper ES2020+ transpilation in Sandpack
+import examplesTsConfig from '../../../examples/tsconfig.json';
 
 type ExamplesRendererProps = {
   example: ExampleWithContent;
@@ -34,6 +36,9 @@ const UserIndicator = ({ user }: { user: string }) => {
     </div>
   );
 };
+
+// Stringify the imported tsconfig for Sandpack (removes comments, include/exclude which aren't needed)
+const SANDPACK_TSCONFIG = JSON.stringify({ compilerOptions: examplesTsConfig.compilerOptions }, null, 2);
 
 const getDependencies = (id: string, products: string[], activeLanguage: LanguageKey) => {
   return {
@@ -87,11 +92,14 @@ const ExamplesRenderer = ({
 
   return (
     <SandpackProvider
-      files={languageFiles}
+      files={{
+        ...languageFiles,
+        '/tsconfig.json': { code: SANDPACK_TSCONFIG, hidden: true },
+      }}
       customSetup={{
         dependencies,
         devDependencies: {
-          typescript: '^4.0.0',
+          typescript: '^5.0.0',
         },
         environment: activeLanguage === 'react' ? 'create-react-app' : 'parcel',
       }}
