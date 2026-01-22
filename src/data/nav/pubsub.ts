@@ -240,6 +240,15 @@ export default {
           index: true,
         },
         {
+          name: 'Getting started',
+          pages: [
+            {
+              name: 'APNs',
+              link: '/docs/push/getting-started/apns',
+            },
+          ],
+        },
+        {
           name: 'Configure and activate',
           pages: [
             {

@@ -1,0 +1,1142 @@
+---
+title: "Getting started: Push Notifications in Swift"
+meta_description: "Get started with Ably Push Notifications in Swift. Learn how to register for push notifications, activate push on your client, handle incoming notifications, and send push messages."
+meta_keywords: "Push Notifications Swift, Ably Push, APNs, iOS Push, Swift push notifications, Ably Push Notifications guide, realtime push Swift, push notification example, Ably tutorial Swift, device registration, push messaging"
+---
+
+This guide will get you started with Ably Push Notifications in a new SwiftUI application.
+
+You'll learn how to set up your `AppDelegate` to manage push notifications, register devices with Ably, send push notifications, subscribe to channel-based push, handle incoming notifications, and implement location-based push notifications.
+
+## Prerequisites <a id="prerequisites"/>
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
+3. Your API key will need the `publish` and `subscribe` capabilities. For sending push notifications from your app, you'll also need the `push-admin` capability.
+4. Install [Xcode](https://developer.apple.com/xcode/).
+5. You'll need a real iOS device to test push notifications (the simulator doesn't support APNs).
+6. Set up Apple Push Notification service (APNs) certificates through the [Apple Developer Portal](https://developer.apple.com/).
+
+### Set up APNs certificates <a id="setup-apns"/>
+
+To enable push notifications, you need to configure APNs on Apple's developer portal:
+
+1. Go to [Apple Developer Portal](https://developer.apple.com/account/resources/certificates/list).
+2. Create an App ID for your application (if you don't have one already).
+3. Enable the Push Notifications capability for your App ID.
+4. Create an APNs certificate and download it.
+5. In the Ably dashboard, navigate to your app's **Notifications** tab.
+6. Scroll to the **Push Notifications Setup** section and select **Configure Push**.
+7. Follow the instructions to upload your APNs certificate.
+
+### Create a Swift project with Xcode <a id="prerequisites-create-project"/>
+
+Create a new iOS project with SwiftUI. For detailed instructions, refer to the [Apple Developer documentation](https://developer.apple.com/documentation/swiftui).
+
+1. Create a new iOS project in Xcode.
+2. Select **App** as the template
+3. Name the project **PushTutorial** and set the bundle identifier (such as `your.company.PushTutorial`)
+4. Set the minimum iOS deployment target to iOS 15.0 or higher
+5. Select SwiftUI as the interface and Swift as the language
+6. Add the Ably SDK dependency to your project:
+
+   - In Xcode, go to **File > Add Package Dependencies**
+   - Enter the repository URL: `https://github.com/ably/ably-cocoa`
+   - Select the latest version and add it to your target
+
+Update your project settings:
+
+1. Select your project in Xcode's Project Navigator.
+2. Select the target for your app.
+3. Go to the **Signing & Capabilities** tab.
+4. Make sure you've selected your development team and that a provisioning profile has been created.
+5. Add the **Push Notifications** capability by clicking **+ Capability**.
+
+All code can be added directly to your `ContentView.swift` and `AppDelegate.swift` files.
+
+## Step 1: Setting up Ably <a id="step-1"/>
+
+Create `AppDelegate.swift` file and add the `AppDelegate` class which should conform to the following protocols: `UIApplicationDelegate`, `ARTPushRegistererDelegate`, `UNUserNotificationCenterDelegate`, and `CLLocationManagerDelegate`.
+
+Set Ably realtime client, notification center, and location manager in your
+`application:didFinishLaunchingWithOptions` delegate method as shown below:
+
+<Code>
+```swift
+import Ably
+import UIKit
+import CoreLocation
+import UserNotifications
+
+class AppDelegate: NSObject, UIApplicationDelegate, ARTPushRegistererDelegate, UNUserNotificationCenterDelegate, CLLocationManagerDelegate {
+
+    // MARK: - Properties
+    var realtime: ARTRealtime!
+    var locationManager: CLLocationManager!
+
+    var defaultDeviceToken: String?
+    var locationDeviceToken: String?
+
+    var activatePushCallback: ((String, ARTErrorInfo?) -> ())?
+    var activateLocationPushCallback: ((String, ARTErrorInfo?) -> ())?
+    var locationGrantedCallback: ((Bool) -> ())?
+
+    // MARK: - UIApplicationDelegate Methods
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Initialize Ably Realtime client with push registerer delegate
+        let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
+        clientOptions.clientId = "push-tutorial-client"
+        clientOptions.pushRegistererDelegate = self
+        realtime = ARTRealtime(options: clientOptions)
+
+        // Set up notification delegate
+        UNUserNotificationCenter.current().delegate = self
+
+        // Setup location manager for location-based push
+        locationManager = CLLocationManager()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+
+        return true
+    }
+}
+```
+</Code>
+
+Here you also have some properties defined to manage device tokens and callbacks for UI which we'll use later.
+
+## Step 2: Setting up push notifications <a id="step-2"/>
+
+To send and receive push notifications you need to provide `ably-cocoa` with the device token received
+from Apple in the `application:didRegisterForRemoteNotificationsWithDeviceToken` delegate method.
+You also need to request notification permissions from the user and register your device with Ably.
+To handle registration results, you'll implement the `ARTPushRegistererDelegate` methods.
+Getting device details is also useful to confirm that your device is registered correctly.
+
+Append the following code to your `AppDelegate` class:
+
+<Code>
+```swift
+func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    defaultDeviceToken = deviceToken.map { String(format: "%02x", UInt($0)) }.joined() // Convert device token data to a hex string
+    print("Device Token registered: \(defaultDeviceToken!)")
+    // Use Ably's global ARTPush method to register the device token with Ably
+    ARTPush.didRegisterForRemoteNotifications(withDeviceToken: deviceToken, realtime: realtime)
+}
+
+func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    print("Failed to register for remote notifications: \(error.localizedDescription)")
+    // Use Ably's global ARTPush method to handle registration failure
+    ARTPush.didFailToRegisterForRemoteNotificationsWithError(error, realtime: realtime)
+}
+
+// MARK: - Push Notifications Methods
+
+/// Request notification permissions from user
+func requestUserNotificationAuthorization() {
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        DispatchQueue.main.async {
+            if granted {
+                print("Notification permissions granted")
+            } else if let error = error {
+                print("Notification permission error: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+/// Activate push notifications
+func activatePushNotifications(_ callback: @escaping (String, ARTErrorInfo?) -> ()) {
+    activatePushCallback = callback
+    // Request notification permissions
+    requestUserNotificationAuthorization()
+    // Activate push notifications with Ably
+    realtime.push.activate()
+    print("Activating push notifications...")
+}
+
+/// Deactivate push notifications
+func deactivatePush() {
+    realtime.push.deactivate()
+    print("Deactivating push notifications...")
+}
+
+/// Get current device registration details
+func getDeviceDetails(_ callback: @escaping (ARTDeviceDetails?, ARTErrorInfo?) -> ()) {
+    realtime.push.admin.deviceRegistrations.get(realtime.device.id, callback: callback)
+}
+
+// MARK: - ARTPushRegistererDelegate Methods
+
+func didActivateAblyPush(_ error: ARTErrorInfo?) {
+    print("Push activation: \(error?.localizedDescription ?? "Success")")
+    if let defaultDeviceToken {
+        // Notify UI about activation result
+        activatePushCallback?(defaultDeviceToken, error)
+    }
+}
+
+func didDeactivateAblyPush(_ error: ARTErrorInfo?) {
+    print("Push deactivation: \(error?.localizedDescription ?? "Success")")
+}
+```
+</Code>
+
+## Step 3: Receiving push notifications <a id="step-3"/>
+
+Use `UNUserNotificationCenterDelegate` methods to receive push notifications.
+You've set the notification center delegate in the `application:didFinishLaunchingWithOptions` method.
+
+Add these methods to your `AppDelegate` class:
+
+<Code>
+```swift
+// MARK: - UNUserNotificationCenterDelegate Methods
+
+/// Handle notification when app is in foreground
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                          willPresent notification: UNNotification,
+                          withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    let userInfo = notification.request.content.userInfo
+    print("Notification received in foreground: \(userInfo)")
+
+    // Display notification with banner, sound, and badge
+    completionHandler([.banner, .sound, .badge])
+}
+
+/// Handle notification when user taps on it
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                          didReceive response: UNNotificationResponse,
+                          withCompletionHandler completionHandler: @escaping () -> Void) {
+    let userInfo = response.notification.request.content.userInfo
+    print("Notification tapped: \(userInfo)")
+
+    completionHandler()
+}
+```
+</Code>
+
+To receive messages on the channel as push notifications, you need to subscribe to the push notifications
+in the channel first:
+
+<Code>
+```swift
+// MARK: - Subscribe to Channels
+
+/// Subscribe to a channel for push notifications
+func subscribeToChannel(_ channelName: String) {
+    let channel = realtime.channels.get(channelName)
+
+    channel.push.subscribeDevice { error in
+        if let error = error {
+            print("Error subscribing to channel push: \(error.localizedDescription)")
+        } else {
+            print("Subscribed to push notifications on channel: \(channelName)")
+        }
+    }
+}
+
+/// Unsubscribe from a channel
+func unsubscribeFromChannel(_ channelName: String) {
+    let channel = realtime.channels.get(channelName)
+
+    channel.push.unsubscribeDevice { error in
+        if let error = error {
+            print("Error unsubscribing from channel push: \(error.localizedDescription)")
+        } else {
+            print("Unsubscribed from push notifications on channel: \(channelName)")
+        }
+    }
+}
+```
+</Code>
+
+To test this code, you can send push notifications from the Ably dashboard or using the API (see the next step).
+
+Alternatively, you can use Ably CLI to send push notifications.
+First, [install](https://github.com/ably/cli) Ably CLI.
+Then, use the following command to send a push notification using a client ID (or a device ID):
+
+<Code>
+```shell
+ably push publish --client-id push-tutorial-client \
+  --title "Test push" \
+  --body "Hello from CLI!" \
+  --data '{"foo":"bar","baz":"qux"}'
+```
+</Code>
+
+Or to a channel:
+
+<Code>
+```shell
+ably channels publish --api-key "{{API_KEY}}" exampleChannel1 '{"data":{"foo":"bar","baz":"qux"},"extras":{"push":{"notification":{"title":"Test push","body":"Hello from CLI!"}}}}'
+```
+</Code>
+
+You need to login to the Ably CLI before running this command:
+
+<Code>
+```shell
+ably login
+```
+</Code>
+
+
+## Step 4: Sending push notifications <a id="step-4"/>
+
+In order to send push notifications from the app you need to add `push-admin` capability for your API Key
+in the Ably dashboard. Usually, push notifications are sent from your backend server, but for demonstration
+purposes you can send them directly from the app using the Ably Realtime client's Push Admin API.
+
+Add the following methods to your `AppDelegate` class:
+
+<Code>
+```swift
+// MARK: - Send Push Notifications
+
+/// Send push notification to a specific device ID
+func sendPushToDevice() {
+    let recipient = [
+        "deviceId": realtime.device.id
+    ]
+    let data = [
+        "notification": [
+            "title": "Push Tutorial",
+            "body": "Hello from device ID!"
+        ],
+        "data": [
+            "foo": "bar",
+            "baz": "qux"
+        ]
+    ]
+    realtime.push.admin.publish(recipient, data: data) { error in
+        print("Publish result: \(error?.localizedDescription ?? "Success")")
+    }
+}
+
+/// Send push notification to a specific client ID
+func sendPushToClientId() {
+    let recipient = [
+        "clientId": realtime.auth.clientId ?? "push-tutorial-client"
+    ]
+    let data = [
+        "notification": [
+            "title": "Push Tutorial",
+            "body": "Hello from client ID!"
+        ],
+        "data": [
+            "foo": "bar",
+            "baz": "qux"
+        ]
+    ]
+    realtime.push.admin.publish(recipient, data: data) { error in
+        print("Publish result: \(error?.localizedDescription ?? "Success")")
+    }
+}
+```
+</Code>
+
+You can also send push notifications by publishing a message with a `push` message's `extras` field to a specific channel:
+<Code>
+```swift
+/// Send push notification to a specific channel by publishing a message with a push extras field
+func sendPushToChannel(_ channelName: String) {
+    let message = ARTMessage(name: "example", data: "Hello from channel!")
+    message.extras = [
+        "push": [
+            "notification": [
+                "title": "Channel Push",
+                "body": "Sent push to \(channelName)"
+            ],
+            "data": [
+                "foo": "bar",
+                "baz": "qux"
+            ]
+        ]
+    ] as any ARTJsonCompatible
+
+    realtime.channels.get(channelName).publish([message]) { error in
+        if let error {
+            print("Error sending push to \(channelName) with error: \(error.localizedDescription)")
+        } else {
+            print("Sent push to \(channelName)")
+        }
+    }
+}
+```
+</Code>
+
+You don't need admin capabilities to send push notifications to a channel.
+
+## Step 5: Location pushes <a id="step-5"/>
+
+Starting from iOS 15 you can efficiently receive location requests as push notifications.
+For that you need to apply for the special entitlement on the [Apple Developer Portal](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_location_push).
+
+Add `Location (when in use)`, `Location (Always)`, `Location Push Service Extension`, and
+`Push Notifications` capabilities to the **Signing & Capabilities** tab in the Xcode project target settings.
+
+Add `Location Push Service Extension` target as described at the [Apple Developer Portal](https://developer.apple.com/documentation/CoreLocation/creating-a-location-push-service-extension).
+For simplicity, use **Automatically manage signing**, so all needed identifiers are created for you by
+Xcode (with XC prefix in their display name). Your Location Push Service Extension should have a bundle
+identifier of your app with a suffix of extension's product name (e.g., `the.company.TheApp.TheExtension`).
+
+Add these methods to your `AppDelegate` class:
+
+<Code>
+```swift
+// MARK: - Location push methods
+
+/// Enable location push monitoring
+func enableLocationPush(grantedCallback: @escaping (Bool) -> (), tokenCallback: @escaping (String, ARTErrorInfo?) -> ()) {
+    // Store callbacks since location permission request is asynchronous
+    locationGrantedCallback = grantedCallback
+    activateLocationPushCallback = tokenCallback
+
+    switch locationManager.authorizationStatus {
+    case .authorizedAlways:
+        // Location permissions already granted
+        locationGrantedCallback?(true)
+        // Activate location push monitoring
+        activateLocationPush()
+        print("Location push enabled")
+    case .notDetermined:
+        // Request location permissions from user with 'Always' authorization needed for location pushes
+        locationManager.requestAlwaysAuthorization()
+    case .denied, .restricted, .authorizedWhenInUse:
+        locationGrantedCallback?(false)
+        print("Location permission denied or restricted")
+    @unknown default:
+        break
+    }
+}
+
+/// Disable location push monitoring
+func disableLocationPush() {
+    locationManager?.stopUpdatingLocation()
+    print("Location push disabled")
+}
+
+/// Activate location push monitoring
+func activateLocationPush() {
+    print("Starting monitoring location pushes...")
+    locationManager.startMonitoringLocationPushes { deviceToken, error in
+        guard error == nil else {
+            return ARTPush.didFailToRegisterForLocationNotificationsWithError(error!, realtime: self.realtime)
+        }
+        if let deviceToken {
+            // Convert device token data to a hex string
+            self.locationDeviceToken = deviceToken.map { String(format: "%02x", UInt($0)) }.joined()
+            // Provide Ably with location device token
+            ARTPush.didRegisterForLocationNotifications(withDeviceToken: deviceToken, realtime: self.realtime)
+            print("Location push activated with device token: \(self.locationDeviceToken!)")
+        }
+    }
+}
+
+// MARK: - CLLocationManagerDelegate Methods
+
+func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    switch manager.authorizationStatus {
+    case .authorizedAlways:
+        // Location permissions granted, activate location push monitoring
+        locationGrantedCallback?(true)
+        // Activate location push monitoring
+        activateLocationPush()
+        print("Location services always authorized.")
+    case .notDetermined, .authorizedWhenInUse, .restricted, .denied:
+        // Inform UI that location permissions were not granted
+        locationGrantedCallback?(false)
+        print("Location services unavailable for location pushes.")
+        break
+    default:
+        break
+    }
+}
+```
+</Code>
+
+Also add this in your `ARTPushRegistererDelegate` section.
+It will be called after `ARTPush.didRegisterForLocationNotifications(withDeviceToken:realtime:)` completes:
+
+<Code>
+```swift
+func didUpdateAblyPush(_ error: ARTErrorInfo?) {
+    print("Push update: \(error?.localizedDescription ?? "Success")")
+    if let locationDeviceToken {
+        // Notify UI about activation result
+        activateLocationPushCallback?(locationDeviceToken, error)
+    }
+}
+```
+</Code>
+
+### Receiving location pushes <a id="step-5-receiving"/>
+
+You can't display notifications received by your location push extension directly in the app (since the system runs the extension independently from your app).
+So you need to exchange information between the app and extension through files.
+
+Add the `App Groups` capability to both your app and extension. Find your app's `App ID` on the development portal and enable `Location Push Service Extension` setting in the **Additional Capabilities** tab.
+Make sure both your app's identifier and location push extension's identifier use the same `App Group`.
+
+Replace the contents of the default `LocationPushService.swift` in your extension target with the following code:
+
+<Code>
+```swift
+import CoreLocation
+
+struct LocationPushEvent: Codable {
+    var id: UUID
+    var receivedAt: Date
+    var jsonPayload: Data
+}
+
+class LocationPushService: NSObject, CLLocationPushServiceExtension, CLLocationManagerDelegate {
+
+    var completion: (() -> Void)?
+    var locationManager: CLLocationManager!
+
+    func didReceiveLocationPushPayload(_ payload: [String : Any], completion: @escaping () -> Void) {
+        recordPushPayload(payload)
+
+        self.completion = completion
+        self.locationManager = CLLocationManager()
+        self.locationManager.delegate = self
+        self.locationManager.requestLocation()
+    }
+
+    /**
+     * This method is used to exchange information between the app and the extension.
+     * This gives a user, who testing location pushes without access to the debug console, to see actual notifications in the `LocationPushEventsView`.
+     */
+    private func recordPushPayload(_ payload: [String : Any]) {
+        guard let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.\(Bundle.main.bundleIdentifier!)") else {
+            return print("App Groups were not configured properly. Check 'Signing & Capabilities' tab of the project settings.")
+        }
+
+        let dataFileURL = sharedContainerURL.appendingPathComponent("dataFile")
+
+        let readCoordinator = NSFileCoordinator()
+        var readError: NSError? = nil
+        var data: Data? = nil
+        readCoordinator.coordinate(readingItemAt: dataFileURL, error: &readError) { url in
+            if FileManager.default.fileExists(atPath: url.path) {
+                data = FileManager.default.contents(atPath: url.path)!
+            }
+        }
+
+        guard readError == nil else {
+            return
+        }
+
+        let event = LocationPushEvent(id: UUID(), receivedAt: Date(), jsonPayload: try! JSONSerialization.data(withJSONObject: payload))
+        var events: [LocationPushEvent] = []
+
+        if let data {
+            events = try! JSONDecoder().decode([LocationPushEvent].self, from: data)
+            events.append(event)
+        } else {
+            events = [event]
+        }
+
+        let newData = try! JSONEncoder().encode(events)
+
+        let writeCoordinator = NSFileCoordinator()
+        var writeError: NSError? = nil
+        writeCoordinator.coordinate(writingItemAt: dataFileURL, error: &writeError) { url in
+            try! newData.write(to: url)
+        }
+    }
+
+    func serviceExtensionWillTerminate() {
+        // Called just before the extension will be terminated by the system.
+        self.completion?()
+    }
+
+    // MARK: - CLLocationManagerDelegate methods
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        // Process the location(s) as needed
+        print("Locations received: \(locations)")
+        self.completion?()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Location manager failed: \(error)")
+        self.completion?()
+    }
+}
+```
+</Code>
+
+<Aside data-type='note'>
+Usually, you don't need to display location push notifications directly in the app.
+Instead, you would handle location updates in the extension (`locationManager(_:didUpdateLocations:)`) and perform necessary actions based on the received location data.
+</Aside>
+
+## Step 6: Displaying the results <a id="step-6"/>
+
+Now, lets complete our `ContentView` to display all the results of everything we added above.
+First, in your `PushTutorialApp.swift`, add `@UIApplicationDelegateAdaptor` wrapped `appDelegate` property
+to your app `@main` struct and pass it to the `ContentView`:
+
+<Code>
+```swift
+import SwiftUI
+
+@main
+struct PushTutorialApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView(appDelegate: appDelegate)
+        }
+    }
+}
+```
+</Code>
+
+Then, update your `ContentView.swift` to accept the `appDelegate` and display a few sections:
+
+<Code>
+```swift
+import Ably
+import SwiftUI
+
+struct ContentView: View {
+    let appDelegate: AppDelegate
+
+    @State private var statusMessage = "Ready to start"
+    @State private var selectedChannel = "exampleChannel1"
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Status Section
+                StatusSection(message: $statusMessage)
+                .padding()
+
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Setup Section
+                        SetupPushSection(appDelegate: appDelegate, statusMessage: $statusMessage)
+
+                        // Send Push Section
+                        SendPushSection(appDelegate: appDelegate, statusMessage: $statusMessage, selectedChannel: $selectedChannel)
+
+                        // Subscribe to Channel Section
+                        ChannelSection(appDelegate: appDelegate, statusMessage: $statusMessage, selectedChannel: $selectedChannel)
+
+                        // Location Push Section
+                        LocationPushSection(appDelegate: appDelegate, statusMessage: $statusMessage)
+                    }
+                    .padding()
+                }
+            }
+            .navigationTitle("Push Tutorial")
+        }
+    }
+}
+```
+</Code>
+
+Each section is implemented as a separate SwiftUI `View` struct for better organization (you can add them at the bottom of the same `ContentView.swift` file):
+
+<Code>
+```swift
+// MARK: - Status Section
+struct StatusSection: View {
+    @Binding var message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Status")
+                .font(.headline)
+
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(8)
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+}
+
+// MARK: - Setup Section
+struct SetupPushSection: View {
+    let appDelegate: AppDelegate
+    @Binding var statusMessage: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Setup")
+                .font(.headline)
+
+            VStack(spacing: 10) {
+                Button(action: {
+                    appDelegate.activatePushNotifications { deviceToken, error in
+                        if let error = error {
+                            statusMessage = "Push activation failed: \(error.localizedDescription)"
+                        } else {
+                            statusMessage = "Push notifications activated with device token: \(deviceToken)"
+                        }
+                    }
+                    statusMessage = "Activating push notifications..."
+                }) {
+                    HStack {
+                        Image(systemName: "checkmark.circle")
+                        Text("Activate Push")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+
+                Button(action: {
+                    appDelegate.deactivatePush()
+                    statusMessage = "Push notifications deactivated"
+                }) {
+                    HStack {
+                        Image(systemName: "xmark.circle")
+                        Text("Deactivate Push")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+
+                Button(action: {
+                    appDelegate.getDeviceDetails { details, error in
+                        if let details = details {
+                            print("Device details: \(details)")
+                            statusMessage = """
+                            Device ID: \(details.id)
+                            Client ID: \(details.clientId ?? "n/a")
+                            Platform: \(details.platform)
+                            Form Factor: \(details.formFactor)
+                            """
+                        } else {
+                            statusMessage = "Failed to retrieve device details: \(error?.localizedDescription ?? "Unknown error")"
+                        }
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                        Text("Get Device Details")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+}
+
+// MARK: - Send Push Section
+
+func titleForChannel(_ name: String) -> String {
+    let titles = [
+        "exampleChannel1": "Channel 1",
+        "exampleChannel2": "Channel 2"
+    ]
+    return titles[name] ?? name
+}
+
+struct SendPushSection: View {
+    let appDelegate: AppDelegate
+    @Binding var statusMessage: String
+    @Binding var selectedChannel: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Send Push Notifications")
+                .font(.headline)
+
+            VStack(spacing: 10) {
+                Button(action: {
+                    appDelegate.sendPushToDevice()
+                    statusMessage = "Sending push to device ID..."
+                }) {
+                    HStack {
+                        Image(systemName: "phone.badge.checkmark")
+                        Text("Send Push to Device ID")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.purple)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+
+                Button(action: {
+                    appDelegate.sendPushToClientId()
+                    statusMessage = "Sending push to client ID..."
+                }) {
+                    HStack {
+                        Image(systemName: "person.crop.circle.badge.checkmark")
+                        Text("Send Push to Client ID")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.orange)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+
+                HStack(spacing: 8) {
+                    Menu {
+                        Button(titleForChannel("exampleChannel1")) {
+                            selectedChannel = "exampleChannel1"
+                        }
+                        Button(titleForChannel("exampleChannel2")) {
+                            selectedChannel = "exampleChannel2"
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                            Text(titleForChannel(selectedChannel))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(8)
+                    }
+
+                    Button(action: {
+                        appDelegate.sendPushToChannel(selectedChannel)
+                        statusMessage = "Sending push to channel: \(selectedChannel)..."
+                    }) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Send")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.cyan)
+                        .foregroundStyle(.white)
+                        .cornerRadius(8)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+}
+
+// MARK: - Channel Section
+struct ChannelSection: View {
+    let appDelegate: AppDelegate
+    @Binding var statusMessage: String
+    @Binding var selectedChannel: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Channel Subscription")
+                .font(.headline)
+
+            VStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    Menu {
+                        Button(titleForChannel("exampleChannel1")) {
+                            selectedChannel = "exampleChannel1"
+                        }
+                        Button(titleForChannel("exampleChannel2")) {
+                            selectedChannel = "exampleChannel2"
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                            Text(titleForChannel(selectedChannel))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(8)
+                    }
+
+                    Button(action: {
+                        appDelegate.subscribeToChannel(selectedChannel)
+                        statusMessage = "Subscribed to: \(titleForChannel(selectedChannel))"
+                    }) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Subscribe")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.indigo)
+                        .foregroundStyle(.white)
+                        .cornerRadius(8)
+                    }
+                }
+
+                Button(action: {
+                    appDelegate.unsubscribeFromChannel(selectedChannel)
+                    statusMessage = "Unsubscribed from: \(titleForChannel(selectedChannel))"
+                }) {
+                    HStack {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Unsubscribe from \(titleForChannel(selectedChannel))")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.gray)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+}
+
+// MARK: - Location Push Section
+struct LocationPushSection: View {
+    let appDelegate: AppDelegate
+    @Binding var statusMessage: String
+    @State var isLocationPushEnabled = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Location Push")
+                .font(.headline)
+
+            VStack(spacing: 10) {
+                Button(action: {
+                    appDelegate.enableLocationPush { granted in
+                        if granted {
+                            isLocationPushEnabled = true
+                            statusMessage = "Location push authorization granted."
+                        } else {
+                            isLocationPushEnabled = false
+                            statusMessage = "Location push authorization denied or restricted."
+                        }
+                    } tokenCallback: { deviceToken, error in
+                        if let error = error {
+                            isLocationPushEnabled = false
+                            statusMessage = "Location push activation failed: \(error.localizedDescription)"
+                        } else {
+                            statusMessage = "Location push notifications activated with device token: \(deviceToken)"
+                        }
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "mappin.circle.fill")
+                        Text("Enable Location Push")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+
+                Button(action: {
+                    appDelegate.disableLocationPush()
+                    isLocationPushEnabled = false
+                    statusMessage = "Location push disabled"
+                }) {
+                    HStack {
+                        Image(systemName: "mappin.circle")
+                        Text("Disable Location Push")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.gray)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+
+                HStack {
+                    Image(systemName: isLocationPushEnabled ? "checkmark.circle.fill" : "xmark.circle")
+                    Text(isLocationPushEnabled ? "Location Push: Enabled" : "Location Push: Disabled")
+                    Spacer()
+                }
+                .font(.caption)
+                .foregroundStyle(isLocationPushEnabled ? .green : .gray)
+                .padding(8)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(6)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+}
+```
+</Code>
+
+You might also want to view recorded location push events in your app.
+Create a new SwiftUI view `LocationPushEventsView.swift` with this content:
+
+<Code>
+```swift
+import SwiftUI
+import Combine
+
+struct LocationPushEvent: Identifiable, Codable {
+    var id: UUID
+    var receivedAt: Date
+    var jsonPayload: Data
+}
+
+class DataLoader: NSObject, NSFilePresenter, ObservableObject {
+    var presentedItemOperationQueue: OperationQueue = .main
+    var notificationObservers: [Any] = []
+
+    @Published private(set) var events: [LocationPushEvent] = []
+
+    override init() {
+        super.init()
+        loadEvents()
+
+        let didEnterBackgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { [weak self] _ in
+            self?.tearDownCoordinator()
+        }
+        notificationObservers.append(didEnterBackgroundObserver)
+
+        let willEnterForegroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil) { [weak self] _ in
+            self?.setUpCoordinator()
+            self?.loadEvents()
+        }
+        notificationObservers.append(willEnterForegroundObserver)
+    }
+
+    func setUpCoordinator() {
+        print("set up coordinator")
+        NSFileCoordinator.addFilePresenter(self)
+    }
+
+    func tearDownCoordinator() {
+        print("tear down coordinator")
+        NSFileCoordinator.removeFilePresenter(self)
+    }
+
+    deinit {
+        print("deinit DataLoader")
+        for observer in notificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    func loadEvents() {
+        guard let dataFileURL = presentedItemURL else {
+            return print("App Groups were not configured properly. Check 'Signing & Capabilities' tab of the project settings.")
+        }
+
+        let readCoordinator = NSFileCoordinator()
+        var readError: NSError? = nil
+        var data: Data? = nil
+        readCoordinator.coordinate(readingItemAt: dataFileURL, error: &readError) { url in
+            if FileManager.default.fileExists(atPath: url.path) {
+                data = FileManager.default.contents(atPath: url.path)!
+            }
+        }
+
+        guard readError == nil else {
+            return
+        }
+
+        if let data {
+            events = try! JSONDecoder().decode([LocationPushEvent].self, from: data)
+        } else {
+            events = []
+        }
+    }
+
+    var presentedItemURL: URL? {
+        let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.\(Bundle.main.bundleIdentifier!).AblyLocationPush")
+
+        return sharedContainerURL?.appendingPathComponent("dataFile")
+    }
+
+    func presentedItemDidChange() {
+        loadEvents()
+    }
+}
+
+struct LocationPushEventsView: View {
+    @StateObject private var dataLoader = DataLoader()
+
+    var body: some View {
+        return List(dataLoader.events.sorted { $0.receivedAt > $1.receivedAt }) { event in
+            VStack(alignment: .leading) {
+                Text("Received at: \(event.receivedAt.ISO8601Format())")
+                Text("Payload: \(payloadDescription(for: event))")
+            }
+        }
+        .navigationTitle("Location push events")
+        .onAppear { dataLoader.setUpCoordinator() }
+        .onDisappear { dataLoader.tearDownCoordinator() }
+    }
+
+    private func payloadDescription(for event: LocationPushEvent) -> String {
+        return String(data: event.jsonPayload, encoding: .utf8)!
+    }
+}
+```
+</Code>
+
+`DataLoader` loads data recorded by the location push extension and updates the view when new data is available.
+Add a button to the `Location Push Section` view to navigate to this new view:
+
+<Code>
+```swift
+NavigationLink(destination: LocationPushEventsView()) {
+    HStack {
+        Image(systemName: "list.clipboard.fill")
+        Text("Location Push Events")
+    }
+    .frame(maxWidth: .infinity)
+    .padding()
+    .background(Color.teal)
+    .foregroundStyle(.white)
+    .cornerRadius(8)
+}
+```
+</Code>
+
+Once you run the app on a real device, you should be able to activate push notifications and see the status updates in the UI.
+
+Check our GitHub repository for the complete push example: [AblyPushExample](https://github.com/ably/ably-cocoa/tree/main/Examples/AblyPush)
+
+## Next steps <a id="next-steps"/>
+
+Continue to explore the documentation with Swift as the selected language:
+
+* Check our push example: [AblyPushExample](https://github.com/ably/ably-cocoa/tree/main/Examples/AblyPush)
+* Understand [token authentication](/docs/auth/token) before going to production.
+* Explore [push notification administration](/docs/push/admin) for managing devices and subscriptions.
+* Learn about [channel rules](/docs/push/channel-rules) for channel-based push notifications.
+* Read more about the [Push Admin API](/docs/api/realtime-sdk?lang=swift#push-admin).
+* Check out the [Push Notifications](/docs/push) documentation for advanced use cases.
+
+You can also explore the [Ably SDK for Swift](https://github.com/ably/ably-cocoa) on GitHub, or visit the [API references](/docs/api/realtime-sdk?lang=swift) for additional functionality.
