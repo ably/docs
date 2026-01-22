@@ -93,12 +93,20 @@ export default {
           link: '/docs/guides/ai-transport/openai-message-per-response',
         },
         {
+          name: 'OpenAI citations',
+          link: '/docs/guides/ai-transport/openai-citations',
+        },
+        {
           name: 'Anthropic token streaming - message per token',
           link: '/docs/guides/ai-transport/anthropic-message-per-token',
         },
         {
           name: 'Anthropic token streaming - message per response',
           link: '/docs/guides/ai-transport/anthropic-message-per-response',
+        },
+        {
+          name: 'Anthropic citations',
+          link: '/docs/guides/ai-transport/anthropic-citations',
         },
       ],
     },
