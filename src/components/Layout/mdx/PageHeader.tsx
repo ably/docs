@@ -26,7 +26,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
 
   const llmLinks = useMemo(() => {
-    const prompt = `Tell me more about ${product ? productData[product]?.nav.name : 'Ably'}'s '${page.name}' feature from https://ably.com${page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
+    const docUrl = `https://ably.com${page.link}.md`;
+    const prompt = `Fetch the documentation from ${docUrl} and tell me more about ${product ? productData[product]?.nav.name : 'Ably'}'s '${page.name}' feature${language ? ` for ${languageInfo[language]?.label}` : ''}`;
     const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
     const claudePath = `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
 
