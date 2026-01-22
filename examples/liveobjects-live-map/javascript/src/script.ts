@@ -55,7 +55,7 @@ function renderAllTasks(tasks: PathObject<LiveMap<Tasks>>) {
   if (tasksDiv) {
     tasksDiv.innerHTML = '';
   }
-  for (const [taskId] of Array.from(tasks.entries())) {
+  for (const [taskId] of tasks.entries()) {
     const title = tasks.get(taskId).value();
     if (title) {
       createTaskDiv(taskId, title, tasks);
@@ -133,7 +133,7 @@ function addEventListenersToButtons(tasks: PathObject<LiveMap<Tasks>>) {
   removeAllTasksDiv?.addEventListener('click', async () => {
     // Use batch to remove all tasks atomically
     tasks.batch((ctx) => {
-      for (const [taskId] of Array.from(ctx.entries())) {
+      for (const [taskId] of ctx.entries()) {
         ctx.remove(taskId);
       }
     });
