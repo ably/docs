@@ -79,7 +79,7 @@ For a notification center, clients typically need subscribe-only access to their
 
 ### Creating a token
 
-The following example shows how to generate a JWT that grants subscribe access to a specific inbox channel. It also includes the `clientId` to identify the client:
+The following example shows how to generate a JWT that grants the necessary capabilities for a notification center client, including subscribe access to inbox channels, push-subscribe for device activation, and the `clientId` to identify the client:
 
 <Code>
 ```javascript
@@ -97,8 +97,8 @@ const claims = {
     "iat": currentTime,
     "exp": currentTime + 3600, // Token expires in 1 hour
     "x-ably-capability": JSON.stringify({
-        "inbox:client123": ["subscribe", "history"], // Inbox subscribe
-        "inbox:general": ["subscribe"] // Optional: general broadcast channel
+        "inbox:client123": ["subscribe", "history", "push-subscribe"], // Inbox access
+        "inbox:general": ["subscribe", "history", "push-subscribe"] // Optional: general broadcast channel
     }),
     "x-ably-clientId": "client123" // Identify the client
 }
@@ -113,6 +113,10 @@ console.log('Inbox JWT:', token);
 ```
 </Code>
 
+* The `subscribe` capability allows clients to receive message sent to either their personal inbox channel or the general broadcast channel.
+* The `push-subscribe` capability allows clients to activate their devices for push notifications and manage their own push channel subscriptions. This is required for device activation.
+* The `history` capability allows clients to retrieve data associated with a notification they might have missed while offline. Message persistence must be enabled to use history.
+
 ### Best practices
 
 Key security considerations:
@@ -124,9 +128,13 @@ Key security considerations:
 * Use wildcard patterns in capabilities (like `inbox:*`) sparingly. Always scope tokens to the specific channels a client needs access to.
 
 ## Publishing notifications from your backend
-Your backend is responsible for processing notification requests and publishing them to Ably inbox channels. Ably provides some methods for backends to publish notifications:
+Your backend is responsible for processing notification requests and publishing them to Ably. For the notification center pattern, you have two main publishing approaches: publishing to inbox channels for realtime delivery (with optional push notifications for offline users), or sending push notifications directly to users via their `clientId`.
 
-### REST API publishing
+### Publishing to inbox channels
+
+Publishing to inbox channels delivers notifications in realtime to connected clients. You can optionally include push notification payloads in the `extras.push` field to ensure offline users also receive the notification via push.
+
+#### REST API publishing
 
 The simplest approach is to use Ably's [REST API](/docs/api/rest-api) directly from your backend. All Ably SDKs provide REST client libraries for various languages (JavaScript, Python, Go, Java, Ruby, and more).
 
@@ -141,14 +149,27 @@ const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
 
 // Publish a notification to a specific user's inbox
 const inbox = ably.channels.get('inbox:user123');
-await inbox.publish('notification', {
-    type: 'friend-request',
-    fromUserId: 'user456',
-    fromUserName: 'Jane Doe',
-    timestamp: Date.now()
+await inbox.publish({
+    name: 'notification',
+    data: {
+        type: 'friend-request',
+        fromUserId: 'user456',
+        fromUserName: 'Jane Doe',
+        timestamp: Date.now()
+    },
+    extras: {
+        push: {
+            notification: {
+                title: 'New Friend Request',
+                body: 'Jane Doe sent you a friend request'
+            }
+        }
+    }
 });
 ```
 </Code>
+
+Including the `extras.push` field ensures that if the user is offline or the app is closed, they'll receive a push notification. Connected clients receive the message in realtime through their channel subscription.
 
 #### Batch publishing
 
@@ -163,11 +184,33 @@ const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
 const specs = [
     {
         channel: 'inbox:user123',
-        messages: [{ name: 'notification', data: { type: 'system-alert', message: 'Server maintenance scheduled' } }]
+        messages: [{
+            name: 'notification',
+            data: { type: 'system-alert', message: 'Server maintenance scheduled' },
+            extras: {
+                push: {
+                    notification: {
+                        title: 'System Alert',
+                        body: 'Server maintenance scheduled'
+                    }
+                }
+            }
+        }]
     },
     {
         channel: 'inbox:user456',
-        messages: [{ name: 'notification', data: { type: 'system-alert', message: 'Server maintenance scheduled' } }]
+        messages: [{
+            name: 'notification',
+            data: { type: 'system-alert', message: 'Server maintenance scheduled' },
+            extras: {
+                push: {
+                    notification: {
+                        title: 'System Alert',
+                        body: 'Server maintenance scheduled'
+                    }
+                }
+            }
+        }]
     },
     // ... up to 100 channels per request
 ];
@@ -178,15 +221,11 @@ await ably.request('post', '/messages', null, specs, null);
 
 ### Kafka Connector publishing
 
-You can also publish directly from your existing Kafka infrastructure through [Ably's Kafka Connector](/docs/platform/integrations/kafka-connector). This allows your backend to produce messages to Kafka topics, which are then automatically published to Ably channels based on your [configured mappings](docs/platform/integrations/inbound/kafka-connector#mapping).
-
-The Kafka Connector supports dynamic channel routing, allowing you to determine the target Ably channel based on Kafka message attributes like topic, partition, key, or custom headers.
+You can also publish directly from your existing Kafka infrastructure through [Ably's Kafka Connector](/docs/platform/integrations/kafka-connector). This allows your backend to produce messages to Kafka topics, which are then automatically published to Ably channels based on your [configured mappings](docs/platform/integrations/inbound/kafka-connector#mapping). The Kafka Connector supports dynamic channel routing, allowing you to determine the target Ably channel based on Kafka message attributes like topic, partition, key, or custom headers.
 
 #### Publishing via Kafka
 
-Ably channels are very lightweight, and it would be typical to have one inbox channel per client. To route messages to the correct inbox channel, you can use the Kafka message key or headers to specify the target client ID.
-
-For example, you could define a channel mapping such as `inbox:${key}` to route messages to the appropriate inbox based on the Kafka message key.
+To route messages to the correct inbox channel, you can use the Kafka message key or headers to specify the target client ID. For example, you could define a channel mapping such as `inbox:${key}` to route messages to the appropriate inbox based on the Kafka message key. To include push notification payloads for offline users, add a `com.ably.extras.push` header to your Kafka message with the push notification details as a JSON string.
 
 <Code>
 ```javascript
@@ -200,21 +239,58 @@ const kafka = new Kafka({
 const producer = kafka.producer();
 await producer.connect();
 
-// Publish notification - will be routed to inbox:client123
+// Publish notification with push payload - will be routed to inbox:client123
 await producer.send({
     topic: 'notifications',
     messages: [{
         key: 'client123',
         value: JSON.stringify({
             type: 'friend-request',
-            fromUserId: 'client123',
+            fromUserId: 'client456',
             fromUserName: 'Jane Doe',
             timestamp: Date.now()
-        })
+        }),
+        headers: {
+            'com.ably.extras.push': JSON.stringify({
+                notification: {
+                    title: 'New Friend Request',
+                    body: 'Jane Doe sent you a friend request'
+                }
+            })
+        }
     }]
 });
 ```
 </Code>
+
+The Kafka Connector will automatically include the push payload from the `com.ably.extras.push` header as `extras.push` in the published Ably message, ensuring offline users receive push notifications.
+
+### Direct push publishing
+
+For notifications that only need to be delivered as push (without realtime channel delivery), you can publish push notifications directly to users via their `clientId`. This approach is useful when you want to send a notification exclusively as a push alert without publishing to inbox channels.
+
+<Code>
+```javascript
+const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+// Send push notification directly to a user (all their devices)
+await ably.push.admin.publish(
+    { clientId: 'user123' },
+    {
+        notification: {
+            title: 'New Friend Request',
+            body: 'Jane Doe sent you a friend request'
+        },
+        data: {
+            type: 'friend-request',
+            fromUserId: 'user456'
+        }
+    }
+);
+```
+</Code>
+
+Direct push publishing is most useful when notifications don't need to appear in a realtime feed or when you want to send different content to push vs. in-app notifications. For most notification center use cases, publishing to channels with `extras.push` is recommended because it provides both realtime delivery and push notifications with a single publish.
 
 ### Choosing your publishing approach
 
@@ -224,11 +300,7 @@ The right approach depends on your infrastructure and ordering requirements.
 
 Ably's Rest API is the simplest option and is recommended for most use cases. It's built into all Ably SDKs for ease of use and requires no additional infrastructure. Each publish is a synchronous HTTP request, and multiple requests can be batched together to reduce API calls.
 
-When using the REST API, and making concurrent publish requests, ordering is not guaranteed. If you're publishing via the batch publish endpoint, messages within a single batch maintain order, but batches themselves may be processed out of order. This is a consequence of HTTP's stateless nature and network variability.
-
-To maintain ordering when using the REST API:
-* Publish related notifications sequentially rather than concurrently.
-* Use [idempotency keys](/docs/platform/architecture/idempotency) to prevent duplicate processing if retries occur.
+When using the REST API and making concurrent publish requests, ordering is not guaranteed. If you're publishing via the batch publish endpoint, messages within a single batch maintain order, but batches themselves may be processed out of order. This is a consequence of HTTP's stateless nature and network variability. To maintain ordering, publish related notifications sequentially rather than concurrently, and use [idempotency keys](/docs/platform/architecture/idempotency) to prevent duplicate processing if retries occur.
 
 #### Kafka Connector
 
