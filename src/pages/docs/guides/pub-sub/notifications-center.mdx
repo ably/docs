@@ -63,7 +63,7 @@ Iterate through the list of target clients and publish to each client's inbox ch
 **Option 2: General broadcast channel**
 Create a shared channel where all clients subscribe. Notifications published to this channel reach all subscribers.
 
-The general broadcast channel is more cost-effective for system-wide notifications at any frequency. You pay per message published and per user receiving it. With a general channel, you publish once (1 inbound message) instead of once per recipient (N inbound messages), resulting in approximately 50% message cost savings. The additional cost of maintaining one extra active channel is negligible.
+The general broadcast channel is typically more cost-effective, especially for system-wide notifications, at any frequency. You pay per message published and per user receiving it. With a general channel, you publish once (1 inbound message) instead of once per recipient (N inbound messages). The additional cost of maintaining one extra active channel is usually negligible compared to the savings on message costs.
 
 See the [cost optimization section](#cost-optimization) for detailed calculations.
 
@@ -126,7 +126,6 @@ Message persistence must be enabled to use history - see [message history docume
 * **Restrict channel access:** Use wildcard patterns in capabilities (like `inbox:*`) sparingly. Always scope tokens to the specific channels a client needs access to.
 
 ## Publishing notifications from your backend
-
 Your backend is responsible for processing notification requests and publishing them to Ably inbox channels. Ably provides some methods for backends to publish notifications:
 
 ### REST API publishing
@@ -341,83 +340,64 @@ Use a hybrid approach with both individual inboxes and a general channel:
 
 ## Handling offline notifications <a id="offline-notifications"/>
 
-Clients may not always be online when a notification arrives. Ably provides multiple mechanisms to ensure they receive important notifications:
+When users aren't actively connected to your application, push notifications ensure they still receive important alerts. Push notifications are delivered through platform-specific services (APNs for iOS, FCM for Android, Web Push for browsers) and can reach users even when your app isn't running.
+
+### Push notifications
+
+Push notifications are the primary mechanism for delivering notifications to offline or inactive users. Ably provides a unified API for sending push notifications across all platforms, abstracting away the complexity of managing separate integrations with APNs, FCM, and Web Push.
+
+#### Delivery approaches
+
+Ably supports two delivery models for push notifications, each suited to different use cases:
+
+**Direct publishing:** Send notifications directly to specific users or devices using `clientId` or `deviceId`. This approach works best for transactional notifications like order confirmations, account alerts, or direct messages. Direct publishing targets individual recipients without requiring channel subscriptions. See the [direct publishing documentation](/docs/push/publish#direct-publishing) for implementation details.
+
+**Channel-based publishing:** Publish notifications to channels where users have subscribed their devices. This approach is ideal for topic-based notifications like news categories, sports scores, or group messages. Devices subscribe to relevant channels, and Ably efficiently delivers notifications to all subscribers. Channel-based delivery provides approximately 50% cost savings compared to direct publishing when sending the same notification to many users. See the [channel-based publishing documentation](/docs/push/publish#via-channels) for implementation details.
+
+Most applications use both approaches: channel-based for optional notification categories users can subscribe to, and direct publishing for critical user-specific alerts.
+
+#### Device activation
+
+Before devices can receive push notifications, they must be activated with Ably. Ably supports both [client-side activation](/docs/push/configure/device#client-side-activation) (where the device registers itself) and [server-side activation](/docs/push/configure/device#server-side-activation) (where your backend manages registration). Client-side activation is simpler and suitable for most use cases, while server-side activation provides more control and is useful when migrating from other push providers or when using FCM for all platforms.
+
+#### Multi-platform considerations
+
+Each platform has different capabilities and payload formats. Ably provides a [unified payload structure](/docs/push/publish#payload) that works across all platforms, with support for [platform-specific overrides](/docs/push/publish#platform-specific-payloads) when you need to use features unique to iOS, Android, or web.
+
+For a comprehensive guide to implementing push notifications at scale, including device management, channel design, security considerations, and delivery monitoring, see the [push notifications guide](/docs/guides/pubsub/push-notifications).
 
 ### Temporary disconnections
 
-Ably stores messages by default for 2 minutes to support short-term [history](/docs/storage-history/storage) and automatic connection recovery. Ably's [resume feature](/docs/platform/architecture/connection-recovery#why) allows clients to reconnect and receive any messages they missed during a temporary disconnection. It is enabled by default in all Ably SDKs and handled automatically.
+For users who are actively connected to your application but experience brief network interruptions, Ably's automatic connection recovery handles reconnection seamlessly. Ably stores messages by default for 2 minutes to support short-term [history](/docs/storage-history/storage), and the [resume feature](/docs/platform/architecture/connection-recovery#why) allows clients to automatically receive any messages they missed during a temporary disconnection. This is enabled by default in all Ably SDKs and requires no additional implementation.
 
-### Longer-term message history
+### Confirming notification delivery
 
-If longer retention is required, you can enable this using a rule to [persist all messages](/docs/storage-history/storage#all-message-persistence) for a particular channel or namespace.
-This defaults to 24 hours, but can be extended for some plans. Speak to [Ably customer support](https://ably.com/contact) to discuss your requirements.
-
-When clients come online, they can retrieve missed notifications from their inbox. If notfications need to be handled idempotently, messages have a [`message.id`](/docs/api/realtime-sdk/types#message) field that can be tracked client-side to avoid processing duplicates.
-
-Server-side tracking is also possible with [message annotations](/docs/messages/annotations), and can be used to mark messages as "read" or "delivered". This same process can also be used as a means to accurately track message acknowledgment from recipient clients.
-
-#### Tracking via message ID
-
-Each message has a unique [`id`](/docs/api/realtime-sdk/types#message) assigned by Ably. Clients can track which messages they've processed by storing the last message ID. When reconnecting, they can query history to retrieve any missed notifications.
-
-<Code>
-```javascript
-const inbox = ably.channels.get('inbox:client456');
-
-// Query history for messages since a specific timestamp
-const historyPage = await inbox.history({
-    start: lastProcessedTimestamp,
-    limit: 100,
-    untilAttach: true
-});
-
-// Process messages until you find the last one you've seen
-for (const message of historyPage.items) {
-    if (message.id === lastProcessedId) {
-        break;
-    }
-    handleNotification(message.data);
-}
-```
-</Code>
-
-History queries can be paginated if needed, allowing you to retrieve larger sets of missed notifications across multiple requests.
-
-#### Tracking via message annotations
+For critical notifications delivered over channels where you need confirmation that specific users have received them, [message annotations](/docs/messages/annotations) provide a mechanism to track acknowledgment.
 
 [Message annotations](/docs/messages/annotations) enable clients to mark messages with metadata such as "read" or "delivered" receipts. Annotating a message will mutate the original, and this change is persisted by Ably – on querying history, clients can see which messages have been marked without needing to track individual message IDs.
 
 The act of annotating a message will result in a new annotation type message being published to the same channel. As such, it can also be used to track if a message has been acknowledged by a client in realtime, backed by all the same reliability and delivery guarantees as any other message.
 
-##### Enable annotations
+#### Enable annotations
 
-To use annotations, you must first enable them on your inbox channel namespace. Follow the instructions in the [message annotations documentation](/docs/messages/annotations#enable) to configure the *Message annotations, updates, and deletes* rule for your inbox namespace.
+To use annotations, enable them on your inbox channel namespace by following the instructions in the [message annotations documentation](/docs/messages/annotations#enable) to configure the *Message annotations, updates, and deletes* rule.
 
-##### Configure capabilities
+#### Configure capabilities
 
-Annotations are controlled by specific [capabilities](/docs/auth/capabilities) that must be included in your client JWT tokens:
+Include the `annotation-publish` capability in your client JWT tokens to allow clients to publish annotations. Your backend should subscribe to annotation summaries (using the standard `subscribe` capability) to track which messages have been acknowledged.
 
-* **`annotation-publish`:** Required for clients to publish annotations (such as marking messages as "delivered" or "read")
-* **`subscribe`:** Required to receive annotation summaries (aggregated views of annotations applied to a message, with a small delay)
-* **`annotation-subscribe`:** Required to subscribe to individual annotation events (no delay, but higher message rates)
+#### Publishing annotations
 
-If you only require annotations for client-side tracking of message delivery/read status, you can include the additional `annotation-publish` in your clients' capability set when generating a token.
-
-For message acknowledgment tracking, it is recommended to use annotation summaries (with the `subscribe` capability) rather than subscribing to individual annotation events, as this reduces message volume and cost.
-
-##### Publishing annotations
-
-Messages delivered to clients on a channel with annotations enabled also include a `serial` field. This unique identifier is used to reference the specific message when annotating it.
+When a client receives a notification on a channel with annotations enabled, the message includes a `serial` field. Use this unique identifier to annotate the message:
 
 <Code>
 ```javascript
 const inbox = ably.channels.get('inbox:client456');
-// Mark a notification as delivered when received
+
 await inbox.subscribe('notification', async (message) => {
-    // Display the notification
     handleNotification(message.data);
 
-    // Publish a "delivered" annotation
+    // Mark as delivered
     await inbox.annotations.publish(message.serial, {
         type: 'receipts:flag.v1',
         name: 'delivered'
@@ -426,24 +406,20 @@ await inbox.subscribe('notification', async (message) => {
 ```
 </Code>
 
-##### Receiving annotation summaries
+#### Receiving annotation summaries
 
-To track which messages have been acknowledged, subscribe to annotation summaries on the inbox channel:
+Your backend can subscribe to annotation summaries to track acknowledgment:
 
 <Code>
 ```javascript
 const inbox = ably.channels.get('inbox:client456');
 
-// Subscribe to annotation summaries
 await inbox.subscribe((message) => {
     if (message.action === 'message.summary') {
         const summary = message.annotations.summary;
 
         if (summary['receipts:flag.v1']) {
             const { delivered, read } = summary['receipts:flag.v1'];
-            console.log(`Message ${message.serial}: ${delivered?.total || 0} delivered, ${read?.total || 0} read`);
-
-            // Update your tracking system
             updateDeliveryStatus(message.serial, {
                 delivered: delivered?.clientIds || [],
                 read: read?.clientIds || []
@@ -454,48 +430,28 @@ await inbox.subscribe((message) => {
 ```
 </Code>
 
-Annotations are automatically included when [querying history](/docs/messages/annotations#annotation-summaries), so you can see which historical messages have been marked as read without additional tracking infrastructure.
-
 <Aside data-type='important'>
-Message annotations are not suitable for general broadcast channels or scenarios with high fanout. When many clients annotate the same message simultaneously (for example, thousands of clients marking a broadcast notification as "delivered"), the volume of annotation messages can exceed [channel rate limits](/docs/platform/pricing/limits#channels), causing many annotations to be rejected.
-
-For this reason, annotations work best with individual inbox channels where each client annotates only their own messages.
+Message annotations are not suitable for general broadcast channels or high fanout scenarios. When many clients annotate the same message simultaneously (such as thousands of clients marking a broadcast notification as "delivered"), the volume of annotation messages can exceed [channel rate limits](/docs/platform/pricing/limits#channels), causing rejections. Annotations work best with individual inbox channels where each client annotates only their own messages.
 </Aside>
-
-### Push notifications for critical alerts
-
-For user-facing applications where notifications require attention even when the app is not running, push notifications can be used. These are particularly useful for social interactions, time-sensitive alerts, or critical updates that users should act upon immediately.
-
-Ably provides native support for push notifications through integration with [Apple Push Notification Service (APNs)](/docs/push/configure/device) and [Firebase Cloud Messaging (FCM)](/docs/push/configure/device). This enables your processing pipeline to send notifications directly to users' devices, ensuring delivery even when they're offline.
-
-For detailed information on configuring and using push notifications with Ably, including device registration, notification payloads, and platform-specific setup, see the [push notifications guide](/docs/guides/pubsub/push-notifications).
-
-### Best practices for offline handling
-
-* **Enable history on inbox channels** to allow users to retrieve missed notifications
-* **Set appropriate history retention** based on your use case (2 minutes to 1 year)
-* **Use push notifications for critical alerts** that require immediate user attention
-* **Consider notification priorities** - not all notifications need push delivery
-* **Export notifications** to external systems for auditing or compliance, or if long-term storage is required beyond Ably's retention limits.
 
 ## Production-ready checklist
 
 Before launching your notification center, review these key points:
 
 * **Authentication:** Use JWT authentication for all client-side communication with short TTLs (1-4 hours max).
-* **Capabilities:** Apply the principle of least privilege - clients should only have subscribe access to their own inbox channels.
-* **Rate limiting:** Implement rate limiting in your backend to help prevent abuse.
+* **Capabilities:** Apply the principle of least privilege. Clients should only have subscribe access to their own inbox channels.
+* **Push notifications:** Configure push notification delivery for offline users. Set up APNs, FCM, or Web Push credentials and implement device activation.
+* **Rate limiting:** Implement rate limiting in your backend to prevent abuse.
 * **Scalability:** Ensure your backend can scale horizontally to handle request and publishing load.
 * **Cost monitoring:** Set up billing alerts and monitor usage patterns to optimize costs.
-* **Offline handling:** Enable message history on inbox channels and consider push notifications for critical alerts.
 
 ## Next steps
 
-* Read the [JWT authentication documentation](/docs/auth/token) for detailed auth implementation.
-* Review the [REST API documentation](/docs/api/rest-api) for publishing to Ably from your backend.
-* Explore the [Kafka Connector](/docs/platform/integrations/kafka-connector) for high-throughput scenarios.
-* Learn about [push notifications](/docs/push) to handle offline delivery.
+* Read the [push notifications guide](/docs/guides/pubsub/push-notifications) for a comprehensive guide to implementing push at scale.
+* Review the [JWT authentication documentation](/docs/auth/token) for detailed auth implementation.
+* Explore the [REST API documentation](/docs/api/rest-api) for publishing to Ably from your backend.
 * Review the [batch publish API](/docs/api/rest-api#batch-publish) for efficient multi-channel publishing.
-* Understand [message history](/docs/channels/history) for retrieving missed notifications.
+* Learn about the [Kafka Connector](/docs/platform/integrations/kafka-connector) for high-throughput scenarios.
+* Understand [message annotations](/docs/messages/annotations) for tracking notification acknowledgment.
 * Check the [pricing page](/pricing) to understand costs at your scale.
 * Try the [pub/sub getting started guide](/docs/getting-started) to build a proof of concept.
