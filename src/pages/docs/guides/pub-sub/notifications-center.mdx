@@ -281,91 +281,57 @@ Understanding the cost implications of different architectural decisions helps y
 
 ### Individual inboxes vs general channel
 
-Ably's pricing includes two main components relevant to notifications:
+Ably's pricing includes three main components relevant to notifications:
 
-* **Channel attachments:** Priced per channel minute. When a client subscribes to a channel, that channel is "attached" for as long as the client remains subscribed.
+* **Channels:** Priced per million minutes of channel activity. A channel is active from when the first client attaches until approximately one minute after the last client detaches and the last message was published. The number of clients attached to a channel does not affect channel minute costs.
+* **Connections:** Priced per million minutes of connection time. Each client connection to Ably contributes to connection minutes.
 * **Messages:** Priced per message. Each message published and delivered counts toward your usage.
 
 #### Scenario: System-wide notification
 
-Assume you want to send a notification to 10,000 clients. Let's compare the costs:
+Assume you have 10,000 users who each connect for an average of 4 hours per day. Let's compare the costs of broadcasting notifications using individual inboxes versus a general channel.
 
-**Option 1: Individual inboxes**
+Both options share the same baseline costs:
 
-* Publish to 10,000 individual inbox channels (using [batch publish](/docs/api/rest-api#batch-publish) to reduce API calls)
-* Each channel publish counts as a separate inbound message
-* Each client receives 1 message
-* Cost: 10,000 inbound messages + 10,000 outbound messages = **20,000 messages**
+* **Connection minutes:** 10,000 connections × 240 minutes/day × 30 days = 72,000,000 connection minutes/month
+* **Inbox channel minutes:** 10,000 channels × 240 minutes/day × 30 days = 72,000,000 channel minutes/month
+* **Baseline cost:** (72M + 72M) × ($1.00 / 1,000,000) = **$144/month**
+
+**Option 1: Broadcast via individual inboxes**
+
+Publish to 10,000 individual inbox channels using [batch publish](/docs/api/rest-api#batch-publish). Each channel publish counts as a separate inbound message, and each client receives 1 outbound message.
 
 If you send this notification once per day:
-* Monthly messages: 20,000 × 30 = **600,000 messages/month**
-* No additional channel attachment costs (clients are already attached to their inboxes)
+* Messages: 20,000 × 30 = **600,000 messages/month**
+* Message cost: 600,000 × ($2.50 / 1,000,000) = **$1.50/month**
+* **Total: $144 (baseline) + $1.50 (messages) = $145.50/month**
 
-**Option 2: General broadcast channel**
+**Option 2: Broadcast via general channel**
 
-* Publish 1 notification to the general channel
-* 10,000 clients are subscribed to the general channel
-* Cost: 1 inbound message + 10,000 outbound messages = **10,001 messages**
-* Plus: Channel attachment cost for 10,000 clients subscribed to the general channel
+Publish 1 notification to a shared general channel where all 10,000 clients are subscribed. This adds one additional channel to your baseline.
 
-If clients are connected for an average of 4 hours per day:
-* Channel minutes per client per day: 4 × 60 = 240 minutes
-* Total channel minutes per month: 10,000 clients × 240 minutes × 30 days = **72,000,000 channel minutes/month**
-
-#### Cost comparison
-
-Using Ably's pricing (check current [pricing page](/pricing) for exact rates):
-
-We will assume an approximate cost per million messages of $2.50, and a cost per million channel minutes of $1.00.
-
-**Individual inboxes (1 notification/day):**
-* 600,000 messages/month
-* No extra channel costs (inbox channels needed anyway)
-* **Estimated cost:** 600,000 messages × ($2.50 / 1,000,000) = **$1.50/month**
-
-**General channel (1 notification/day):**
-* ~300,000 messages/month (half the message cost)
-* 72 million channel minutes/month (significant channel attachment cost)
-* **Estimated cost:**
-  * Messages: 300,000 × ($2.50 / 1,000,000) = $0.75
-  * Channel minutes: 72,000,000 × ($1.00 / 1,000,000) = $72.00
-  * **Total: $72.75/month**
-
-For this scenario, individual inboxes are significantly more cost-effective.
-
-#### The crossover point
-
-For infrequent broadcasts (daily or less), the general channel's message savings are offset by its channel attachment costs. As notification frequency increases, the message cost differential becomes more significant.
-
-Example with just 100 notifications per day:
-
-**Individual inboxes:**
-* Messages: 20,000 × 100 × 30 = **60,000,000 messages/month**
-* **Estimated cost:** 60,000,000 × ($2.50 / 1,000,000) = **$150/month**
-
-**General channel:**
-* Messages: 10,001 × 100 × 30 = **30,003,000 messages/month** (half the messages)
-* Channel minutes: **72,000,000 channel minutes/month** (same channel cost)
-* **Estimated cost:**
-  * Messages: 30,003,000 × ($2.50 / 1,000,000) = $75.01
-  * Channel minutes: 72,000,000 × ($1.00 / 1,000,000) = $72.00
-  * **Total: $147.01/month**
-
-At 100 notifications per day, the general channel pattern is already cheaper, and the savings grow with frequency:
-
-| Notifications per day | Individual inboxes | General channel | Cost difference |
-|-----------------------|-------------------|-----------------|-----------------|
-| 100 | $150.00 | $147.01 | -$2.99 (2% cheaper) |
-| 200 | $300.00 | $222.02 | -$77.98 (26% cheaper) |
-| 400 | $600.00 | $372.04 | -$227.96 (38% cheaper) |
-| 800 | $1,200.00 | $672.08 | -$527.92 (44% cheaper) |
-
-Individual inbox costs scale linearly with notification frequency (doubling notifications doubles the cost), while the general channel's primary cost (channel minutes at $72/month) remains constant regardless of notification frequency. This makes the general channel increasingly attractive as broadcast frequency grows and message costs dominate.
+If you send this notification once per day:
+* Additional channel minutes: 1 channel × 240 minutes/day × 30 days = 7,200 channel minutes/month
+* Channel cost: 7,200 × ($1.00 / 1,000,000) = **$0.0072/month** (negligible)
+* Messages: 10,001 × 30 = **300,030 messages/month**
+* Message cost: 300,030 × ($2.50 / 1,000,000) = **$0.75/month**
+* **Total: $144 (baseline) + $0.0072 (general channel) + $0.75 (messages) = $144.76/month**
 
 #### Recommendation
 
-* **Use individual inboxes** for targeted notifications or when broadcast notifications are rare.
-* **Use a hybrid approach** with both individual inboxes for targeted notifications and a general channel for high-frequency system-wide broadcasts.
+The baseline costs ($144/month for connections and inbox channels) are the same regardless of which broadcast approach you choose. The decision comes down to the incremental costs of broadcasting.
+
+For the scenario above (1 notification/day):
+
+**Individual inboxes:** $1.50/month in message costs
+**General channel:** $0.76/month ($0.75 messages + $0.0072 channel)
+
+The general channel saves approximately 50% on broadcast message costs by requiring only one inbound message per broadcast instead of one per recipient. The additional channel cost is negligible (less than $0.01/month), making this the clear choice for system-wide notifications at any frequency.
+
+Use a hybrid approach with both individual inboxes and a general channel:
+
+* Individual inboxes for targeted notifications (user-specific alerts, direct messages, personalized updates)
+* General broadcast channel for system-wide notifications (announcements, maintenance alerts, global updates)
 
 ### Other cost optimizations
 
