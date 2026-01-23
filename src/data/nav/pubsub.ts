@@ -195,7 +195,7 @@ export default {
           link: '/docs/messages/annotations',
         },
         {
-          name: 'Updates and deletes',
+          name: 'Updates, deletes and appends',
           link: '/docs/messages/updates-deletes',
         },
       ],

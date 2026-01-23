@@ -34,31 +34,114 @@ interface FrontMatterAttributes {
 
 /**
  * Remove import and export statements from content
- * Handles both single-line and multi-line statements
+ * Uses a line-by-line parser that only removes import/export from the top of the file,
+ * preserving import/export statements in code blocks later in the file
  */
 function removeImportExportStatements(content: string): string {
-  let result = content;
+  const lines = content.split('\n');
+  const result: string[] = [];
+  let isInTopImportExportSection = true;
+  let inMultiLineStatement: 'none' | 'import' | 'export' | 'export-function' = 'none';
+  let braceDepth = 0;
 
-  // Remove import statements (single and multi-line)
-  result = result
-    .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
-    .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '');
+  for (const line of lines) {
+    if (!isInTopImportExportSection) {
+      // Once we're past the import/export section, keep everything
+      result.push(line);
+      continue;
+    }
 
-  // Remove export statements
-  // Handle: export { foo, bar }; (single and multi-line)
-  result = result
-    .replace(/^export\s+\{[\s\S]*?\}\s*;?\s*$/gm, '')
-    .replace(/^export\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"];?\s*$/gm, '');
+    const trimmed = line.trim();
 
-  // Handle: export default Component; or export const foo = 'bar';
-  result = result.replace(/^export\s+(default|const|let|var)\s+.*$/gm, '');
+    // Handle blank lines - skip them while in import/export section
+    if (trimmed === '') {
+      continue;
+    }
 
-  // Handle: export function/class declarations (multi-line)
-  // Match from 'export function/class' until the closing brace
-  result = result.replace(/^export\s+(function|class)\s+\w+[\s\S]*?\n\}/gm, '');
+    // Check if we're continuing a multi-line statement
+    if (inMultiLineStatement !== 'none') {
+      if (inMultiLineStatement === 'export-function' || inMultiLineStatement === 'export') {
+        // For any export with braces (functions, classes, arrow functions, etc.), track brace depth
+        if (braceDepth > 0) {
+          // Count opening and closing braces
+          const openBraces = (line.match(/\{/g) || []).length;
+          const closeBraces = (line.match(/\}/g) || []).length;
+          braceDepth += openBraces - closeBraces;
 
-  // Clean up extra blank lines left behind
-  return result.replace(/\n\n\n+/g, '\n\n');
+          // If we've closed all braces, we're done with this statement
+          if (braceDepth === 0) {
+            inMultiLineStatement = 'none';
+          }
+        } else {
+          // No braces being tracked, look for semicolon or closing brace to end
+          if (line.includes(';') || (line.includes('}') && !line.includes('{'))) {
+            inMultiLineStatement = 'none';
+          }
+        }
+      } else {
+        // For regular import statements, look for semicolon or closing brace
+        if (line.includes(';') || (line.includes('}') && !line.includes('{'))) {
+          inMultiLineStatement = 'none';
+        }
+      }
+      continue;
+    }
+
+    // Check if line starts an import statement
+    if (trimmed.startsWith('import ')) {
+      // Detect if it's a complete single-line import or incomplete multi-line
+      const hasFrom = trimmed.includes(' from ');
+      const endsWithQuote = trimmed.match(/['"][;]?\s*$/);
+      const hasSemicolon = trimmed.includes(';');
+      const isSideEffectImport = trimmed.match(/^import\s+['"]/);
+
+      // Complete cases:
+      // 1. Has semicolon
+      // 2. Has 'from' and ends with quote (with or without semicolon)
+      // 3. Is a side-effect import: import 'foo' or import "foo" (with or without semicolon)
+      if (!hasSemicolon && hasFrom && !endsWithQuote) {
+        // Incomplete: multi-line import like "import {" without closing
+        inMultiLineStatement = 'import';
+      } else if (!hasSemicolon && !hasFrom && !isSideEffectImport) {
+        // Incomplete: just "import" or "import {" at start of multi-line
+        // (but not side-effect imports which are complete)
+        inMultiLineStatement = 'import';
+      }
+      // Otherwise it's complete
+      continue;
+    }
+
+    // Check if line starts an export statement
+    if (trimmed.startsWith('export ')) {
+      // Detect export function/class (multi-line with braces)
+      if (trimmed.match(/^export\s+(function|class)\s+/)) {
+        inMultiLineStatement = 'export-function';
+        // Count braces on this line
+        const openBraces = (line.match(/\{/g) || []).length;
+        const closeBraces = (line.match(/\}/g) || []).length;
+        braceDepth = openBraces - closeBraces;
+        // Check if it's all on one line (rare but possible)
+        if (braceDepth === 0 && line.includes('}')) {
+          inMultiLineStatement = 'none';
+        }
+      } else if (!line.includes(';') && line.includes('{') && !line.includes('}')) {
+        // Multi-line export with braces (arrow functions, objects, etc.)
+        inMultiLineStatement = 'export';
+        // Initialize brace depth tracking
+        const openBraces = (line.match(/\{/g) || []).length;
+        const closeBraces = (line.match(/\}/g) || []).length;
+        braceDepth = openBraces - closeBraces;
+      }
+      // Otherwise it's complete (has semicolon, or no braces)
+      continue;
+    }
+
+    // First non-import/export line - we're done with the section
+    isInTopImportExportSection = false;
+    result.push(line);
+  }
+
+  return result.join('\n');
 }
 
 /**
