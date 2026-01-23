@@ -105,6 +105,10 @@ export default {
           link: '/docs/guides/ai-transport/vercel-message-per-token',
         },
         {
+          name: 'Vercel AI SDK token streaming - message per response',
+          link: '/docs/guides/ai-transport/vercel-message-per-response',
+        },
+        {
           name: 'LangGraph token streaming - message per token',
           link: '/docs/guides/ai-transport/lang-graph-message-per-token',
         },
