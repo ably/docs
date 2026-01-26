@@ -23,101 +23,53 @@ type AsideProps = PropsWithChildren<{
   attribs: { 'data-type': string; className?: string };
 }>;
 
-const renderImportantAside = () => (
-  <>
-    <span className={`${leftSideElement} ${pitfallElement}`}>&nbsp;</span>
-    <strong className={tipTitleElement}>
-      <Icon name="icon-gui-exclamation-triangle-micro" size="1rem" additionalCSS="mr-3" />
-      <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Important</span>
-    </strong>
-  </>
-);
-
-const renderFurtherReadingAside = () => (
-  <>
-    <span className={`${leftSideElement} ${furtherReadingElement}`}>&nbsp;</span>
-    <strong className={tipTitleElement}>
-      <Icon name="icon-gui-resources" size="1rem" additionalCSS="mr-3" />
-      <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Further Reading</span>
-    </strong>
-  </>
-);
-
-const renderEvidenceAside = () => (
-  <>
-    <span className={`${leftSideElement}`} style={{ backgroundColor: '#FF5416' }}>
-      &nbsp;
-    </span>
-    <strong className={tipTitleElement}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: '12px' }}>
-        <path
-          d="M2 8H14M8 2L14 8L8 14"
-          stroke="#FF5416"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Evidence</span>
-    </strong>
-  </>
-);
-
-const renderVersioningAside = (attribs: { 'data-type': string; className?: string }) => (
-  <span
-    className={versioningTitleElement}
-    style={{
-      backgroundColor: versioningColors[attribs['data-type']].bg,
-      color: versioningColors[attribs['data-type']].text,
-    }}
-  >
-    {attribs['data-type']}
-  </span>
-);
-
-const renderNoteAside = () => (
-  <>
-    <span className={`${leftSideElement} ${noteElement}`}>&nbsp;</span>
-    <strong className={tipTitleElement}>
-      <Icon name="icon-gui-document-text-micro" size="1rem" additionalCSS="mr-3" />
-      <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Note</span>
-    </strong>
-  </>
-);
-
 const Aside = ({ children, attribs }: AsideProps) => {
-  const dataType = attribs?.['data-type'];
-  const isVersioningInfo = Boolean(dataType && Object.keys(versioningColors).includes(dataType));
-
-  const renderAsideContent = () => {
-    if (!attribs) {
-      return renderNoteAside();
-    }
-
-    if (dataType === 'important') {
-      return renderImportantAside();
-    }
-    if (dataType === 'further-reading') {
-      return renderFurtherReadingAside();
-    }
-    if (dataType === 'evidence') {
-      return renderEvidenceAside();
-    }
-    if (isVersioningInfo) {
-      return renderVersioningAside(attribs);
-    }
-
-    return renderNoteAside();
-  };
+  const isVersioningInfo: boolean = Object.keys(versioningColors).includes(attribs?.[`data-type`] ?? '');
 
   return (
-    <aside className={`${!isVersioningInfo && inlineGridParagraph} ${attribs?.className ?? ''}`}>
-      {renderAsideContent()}
+    <aside className={`${!isVersioningInfo && inlineGridParagraph} ${attribs?.className}`}>
+      {attribs && attribs[`data-type`] === `important` ? (
+        <>
+          <span className={`${leftSideElement} ${pitfallElement}`}>&nbsp;</span>
+          <strong className={tipTitleElement}>
+            <Icon name="icon-gui-exclamation-triangle-micro" size="1rem" additionalCSS="mr-3" />
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Important</span>
+          </strong>
+        </>
+      ) : attribs && attribs[`data-type`] === `further-reading` ? (
+        <>
+          <span className={`${leftSideElement} ${furtherReadingElement}`}>&nbsp;</span>
+          <strong className={tipTitleElement}>
+            <Icon name="icon-gui-resources" size="1rem" additionalCSS="mr-3" />
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Further Reading</span>
+          </strong>
+        </>
+      ) : attribs && isVersioningInfo ? (
+        <>
+          <span
+            className={versioningTitleElement}
+            style={{
+              backgroundColor: versioningColors[attribs[`data-type`]].bg,
+              color: versioningColors[attribs[`data-type`]].text,
+            }}
+          >
+            {attribs[`data-type`]}
+          </span>
+        </>
+      ) : (
+        <>
+          <span className={`${leftSideElement} ${noteElement}`}>&nbsp;</span>
+          <strong className={tipTitleElement}>
+            <Icon name="icon-gui-document-text-micro" size="1rem" additionalCSS="mr-3" />
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Note</span>
+          </strong>
+        </>
+      )}
 
       <div
         className={isVersioningInfo ? versioningContainer : inlineContentContainer}
         style={{
-          borderLeftColor: isVersioningInfo && dataType ? versioningColors[dataType].bg : '',
+          borderLeftColor: attribs && isVersioningInfo ? versioningColors[attribs[`data-type`]].bg : '',
         }}
       >
         {children}
