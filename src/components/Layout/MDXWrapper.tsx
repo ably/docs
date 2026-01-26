@@ -21,6 +21,7 @@ import Table from './mdx/Table';
 import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
 import Admonition from './mdx/Admonition';
+import { Banner } from '../blocks/banners';
 
 import { Frontmatter, PageContextType } from './Layout';
 import { ActivePage } from './utils/nav';
@@ -274,6 +275,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
         <MarkdownProvider
           components={{
             If,
+            Banner,
             Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
             Aside: Admonition,
             Table,
