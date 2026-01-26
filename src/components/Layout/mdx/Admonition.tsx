@@ -2,14 +2,12 @@ import React from 'react';
 import cn from '@ably/ui/core/utils/cn';
 import Aside from '../../blocks/dividers/Aside';
 
-const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'public-preview', 'evidence'];
+const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'public-preview'];
 
-type AdmonitionVariant = 'neutral' | 'note' | 'further-reading' | 'important' | 'warning' | 'banner';
-type LegacyAdmonitionType = 'new' | 'updated' | 'experimental' | 'public-preview' | 'evidence';
+type AdmonitionVariant = 'neutral' | 'note' | 'further-reading' | 'important' | 'warning' | 'usp';
 
 interface AdmonitionProps extends React.HTMLAttributes<HTMLElement> {
-  'data-type'?: AdmonitionVariant | LegacyAdmonitionType;
-  headline?: string;
+  'data-type'?: AdmonitionVariant;
 }
 
 const admonitionConfig: Record<
@@ -46,43 +44,36 @@ const admonitionConfig: Record<
     backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
     title: 'Warning',
   },
-  banner: {
-    borderColor: 'border-l-[#FF5416]',
-    backgroundColor: 'bg-transparent',
-    title: '',
+  usp: {
+    borderColor: 'border-l-orange-600 dark:border-l-orange-600',
+    backgroundColor: '',
+    title: '', // USP callouts don't use a title prefix - the content includes the headline
   },
 };
 
-const Admonition: React.FC<AdmonitionProps> = ({
-  'data-type': dataType = 'note',
-  headline,
-  children,
-  className,
-  ...rest
-}) => {
+const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note', children, className, ...rest }) => {
   // For 'new', 'updated', 'experimental' types, we use the older Aside component instead of the newer Admonitions component
   if (LEGACY_ADMONITION_TYPES.includes(dataType)) {
     return <Aside attribs={{ 'data-type': dataType }}>{children}</Aside>;
   }
 
-  const { borderColor, backgroundColor, title } = admonitionConfig[dataType as AdmonitionVariant];
+  const { borderColor, backgroundColor, title } = admonitionConfig[dataType];
 
-  // Special handling for banner variant
-  if (dataType === 'banner') {
+  // USP callouts have a different structure - no title prefix, content includes the headline
+  if (dataType === 'usp') {
     return (
       <aside
         {...rest}
         data-type={dataType}
         className={cn(
-          'border-l-[1px] px-6 py-1 my-6 rounded-r-lg w-full gap-1',
+          'border-l px-6 py-3.5 my-4 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
           borderColor,
           backgroundColor,
           className,
         )}
       >
-        <div className="flex-1 mt-1.5 mb-0">
-          {headline && <span className="text-base font-bold text-neutral-1300 mb-3 block">{headline}</span>}
-          <div className="ui-text-p2 text-neutral-1000">{children}</div>
+        <div className="ui-text-p3 [&>p:first-child]:ui-text-p1 [&>p:first-child]:font-bold [&>p:first-child]:text-neutral-1300 [&>p:first-child]:mb-2 [&>*:last-child]:mb-0">
+          {children}
         </div>
       </aside>
     );
