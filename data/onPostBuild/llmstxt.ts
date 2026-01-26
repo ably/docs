@@ -117,6 +117,12 @@ const categorizePage = (slug: string): { category: string; subcategory?: string 
 
     // LiveSync
     livesync: { category: 'LiveSync' },
+
+    // AI Transport
+    'ai-transport': { category: 'AI Transport' },
+
+    // General - FAQs
+    faq: { category: 'General', subcategory: 'FAQs' },
   };
 
   // Try to match two-part path first (e.g., "platform/account"), then single part (e.g., "platform")
@@ -276,7 +282,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   const serializedPages = [LLMS_TXT_PREAMBLE];
 
   // Define the order of categories
-  const categoryOrder = ['Platform', 'Pub/Sub', 'Chat', 'Spaces', 'LiveObjects', 'LiveSync', 'General'];
+  const categoryOrder = ['Platform', 'Pub/Sub', 'Chat', 'Spaces', 'LiveObjects', 'LiveSync', 'AI Transport', 'General'];
 
   // Sort categories by defined order
   const sortedCategories = Object.keys(categoryStructure).sort((a, b) => {
