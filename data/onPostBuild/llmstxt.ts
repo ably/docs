@@ -1,7 +1,6 @@
 import { GatsbyNode } from 'gatsby';
 import * as path from 'path';
 import * as fs from 'fs';
-import languageInfo from '../../src/data/languages/languageInfo';
 
 /**
  * This script is used to create a file called llms.txt that contains a list of all the pages in the site.
@@ -21,45 +20,11 @@ const LLMS_TXT_PREAMBLE = `# Ably Documentation
 
 const REPORTER_PREFIX = 'onPostBuild:';
 
-// Valid languages for URL generation (matching your requirements)
-const VALID_LANGUAGES = [
-  'javascript',
-  'nodejs',
-  'csharp',
-  'flutter',
-  'java',
-  'objc',
-  'php',
-  'python',
-  'ruby',
-  'swift',
-  'go',
-  'kotlin',
-  'react',
-];
-
-// Function to get the display label for a language
-const getLanguageLabel = (languageKey: string): string => {
-  return languageInfo[languageKey as keyof typeof languageInfo]?.label || languageKey;
-};
-
 interface DocumentQueryResult {
   site: {
     siteMetadata: {
       siteUrl: string;
     };
-  };
-  allFileHtml: {
-    edges: {
-      node: {
-        slug: string;
-        meta: {
-          title: string;
-          meta_description: string;
-          languages?: string[];
-        };
-      };
-    }[];
   };
   allMdx: {
     nodes: {
@@ -70,9 +35,6 @@ interface DocumentQueryResult {
       frontmatter: {
         title?: string;
         meta_description?: string;
-      };
-      internal: {
-        contentFilePath?: string;
       };
     }[];
   };
@@ -96,7 +58,6 @@ interface CategoryStructure {
     pages?: Array<{
       slug: string;
       meta: { title: string; meta_description: string };
-      languages: string[];
     }>;
     subcategories: {
       [subcategory: string]: {
@@ -104,7 +65,6 @@ interface CategoryStructure {
         pages: Array<{
           slug: string;
           meta: { title: string; meta_description: string };
-          languages: string[];
         }>;
       };
     };
@@ -207,67 +167,12 @@ const categorizePage = (slug: string): { category: string; subcategory?: string 
   return { category: 'General', subcategory: 'Documentation' };
 };
 
-// Function to extract code element classes from an MDX file
-const extractCodeLanguages = async (filePath: string): Promise<Set<string>> => {
-  try {
-    // Check if the file exists
-    if (!fs.existsSync(filePath)) {
-      return new Set();
-    }
-
-    // Read the file content
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-
-    // Find all instances of code blocks with language specifiers (```language or ```prefix_language)
-    const codeBlockRegex = /```(\w+)/g;
-    let match;
-    const languages = new Set<string>();
-
-    while ((match = codeBlockRegex.exec(fileContent)) !== null) {
-      if (match[1] && match[1].trim()) {
-        const codeBlockLang = match[1].trim();
-
-        // Handle prefixed languages like realtime_javascript, rest_javascript, etc.
-        // Extract the language part after the underscore
-        if (codeBlockLang.includes('_')) {
-          const parts = codeBlockLang.split('_');
-          // Take the last part as the language (e.g., 'javascript' from 'realtime_javascript')
-          const language = parts[parts.length - 1];
-          if (language) {
-            languages.add(language);
-          }
-        } else {
-          // Add the language as-is if it doesn't have an underscore
-          languages.add(codeBlockLang);
-        }
-      }
-    }
-    return languages;
-  } catch (error) {
-    console.error(`Error extracting code element classes from ${filePath}:`, error);
-    return new Set();
-  }
-};
-
 export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter, basePath }) => {
   const query = `
     query {
       site {
         siteMetadata {
           siteUrl
-        }
-      }
-
-      allFileHtml {
-        edges {
-          node {
-            slug
-            meta {
-              title
-              meta_description
-              languages
-            }
-          }
         }
       }
 
@@ -282,9 +187,6 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
           frontmatter {
             title
             meta_description
-          }
-          internal {
-            contentFilePath
           }
         }
       }
@@ -309,38 +211,30 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     throw new Error('Site URL not found.');
   }
 
-  // Process MDX pages (allMdx) and extract languages from files
-  const pages = await Promise.all(
-    queryRecords.allMdx.nodes
-      .filter((node) => {
-        // Only include pages from docs directory that have the required frontmatter
-        return (
-          node.parent.relativeDirectory.startsWith('docs') &&
-          node.frontmatter?.title &&
-          node.frontmatter?.meta_description
-        );
-      })
-      .map(async (node) => {
-        // Create slug from parent file info - remove 'docs/' prefix since it's already in relativeDirectory
-        const slug = (
-          node.parent.relativeDirectory + (node.parent.name === 'index' ? '' : `/${node.parent.name}`)
-        ).replace(/^docs\//, '');
+  // Process MDX pages (allMdx)
+  const pages = queryRecords.allMdx.nodes
+    .filter((node) => {
+      // Only include pages from docs directory that have the required frontmatter
+      return (
+        node.parent.relativeDirectory.startsWith('docs') &&
+        node.frontmatter?.title &&
+        node.frontmatter?.meta_description
+      );
+    })
+    .map((node) => {
+      // Create slug from parent file info - remove 'docs/' prefix since it's already in relativeDirectory
+      const slug = (
+        node.parent.relativeDirectory + (node.parent.name === 'index' ? '' : `/${node.parent.name}`)
+      ).replace(/^docs\//, '');
 
-        // Extract valid languages from the file content
-        const filePath = node.internal.contentFilePath || '';
-        const detectedLanguages = await extractCodeLanguages(filePath);
-        const languages = Array.from(detectedLanguages).filter((lang) => VALID_LANGUAGES.includes(lang));
-
-        return {
-          slug,
-          meta: {
-            title: node.frontmatter.title!,
-            meta_description: node.frontmatter.meta_description!,
-          },
-          languages,
-        };
-      }),
-  );
+      return {
+        slug,
+        meta: {
+          title: node.frontmatter.title!,
+          meta_description: node.frontmatter.meta_description!,
+        },
+      };
+    });
 
   reporter.info(`${REPORTER_PREFIX} Found ${pages.length} pages to place into llms.txt`);
 
@@ -401,49 +295,25 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   });
 
   // Helper function to serialize pages
+  // Note: We only generate the base .md URL since the markdown endpoint returns
+  // the same content regardless of language parameter - all language code snippets
+  // are included in the single markdown file.
   const serializePages = (
-    pages: Array<{ slug: string; meta: { title: string; meta_description: string }; languages: string[] }>,
+    pages: Array<{ slug: string; meta: { title: string; meta_description: string } }>,
   ) => {
     for (const page of pages) {
-      const { slug, meta, languages } = page;
+      const { slug, meta } = page;
       const { title, meta_description } = meta;
 
       try {
         const baseUrl = prefixPath({ url: `/docs/${slug}.md`, siteUrl, pathPrefix: basePath });
         const safeTitle = escapeMarkdown(title);
 
-        // Generate base page entry (without language parameter)
+        // Generate base page entry only (no language-specific variants needed)
+        // The markdown file contains all language code snippets
         const baseLink = `[${safeTitle}](${baseUrl})`;
         const baseLine = `- ${[baseLink, meta_description].join(': ')}`;
         serializedPages.push(baseLine);
-
-        // Generate language-specific entries if the page has multiple languages
-        // Skip language variants that match the page's primary language (e.g., skip ?lang=go for /getting-started/go)
-        // Only generate language variants if there are 2 or more languages
-        if (languages && languages.length > 1) {
-          // Extract the last part of the slug to check if it matches a language
-          const slugParts = slug.split('/');
-          const slugLastPart = slugParts[slugParts.length - 1];
-
-          // Map slug names to their corresponding language codes
-          const slugToLangMap: Record<string, string> = {
-            dotnet: 'csharp',
-            'objective-c': 'objc',
-          };
-
-          // Get the primary language for this page (either direct match or mapped)
-          const primaryLanguage = slugToLangMap[slugLastPart] || slugLastPart;
-
-          for (const language of languages) {
-            // Skip if the language matches the page's primary language
-            if (language !== primaryLanguage) {
-              const langUrl = `${baseUrl}?lang=${language}`;
-              const langLink = `[${safeTitle} (${getLanguageLabel(language)})](${langUrl})`;
-              const langLine = `- ${[langLink, meta_description].join(': ')}`;
-              serializedPages.push(langLine);
-            }
-          }
-        }
       } catch (err) {
         reporter.panic(`${REPORTER_PREFIX} Error serializing pages`, err as Error);
       }
