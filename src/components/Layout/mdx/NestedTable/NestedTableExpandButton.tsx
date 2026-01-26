@@ -12,6 +12,7 @@ export const NestedTableExpandButton: React.FC<NestedTableExpandButtonProps> = (
     <button
       type="button"
       onClick={onClick}
+      aria-expanded={expanded}
       className={cn(
         'text-sm font-medium transition-colors',
         'flex items-center gap-1.5',
