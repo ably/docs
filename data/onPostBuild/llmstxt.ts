@@ -409,7 +409,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       const { title, meta_description } = meta;
 
       try {
-        const baseUrl = prefixPath({ url: `/docs/${slug}`, siteUrl, pathPrefix: basePath });
+        const baseUrl = prefixPath({ url: `/docs/${slug}.md`, siteUrl, pathPrefix: basePath });
         const safeTitle = escapeMarkdown(title);
 
         // Generate base page entry (without language parameter)
