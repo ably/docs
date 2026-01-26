@@ -4,9 +4,9 @@ meta_description: "Implement human approval workflows for AI agent tool calls us
 meta_keywords: "AI, human in the loop, HITL, Anthropic, Claude, tool use, approval workflow, AI transport, Ably, realtime, RBAC"
 ---
 
-This guide shows you how to implement a human-in-the-loop (HITL) approval workflow for AI agent tool calls using Anthropic's Claude and Ably. The agent requests human approval before executing sensitive operations, with role-based access control to verify approvers have sufficient permissions.
+This guide shows you how to implement a human-in-the-loop (HITL) approval workflow for AI agent tool calls using Anthropic and Ably. The agent requests human approval before executing sensitive operations, with role-based access control to verify approvers have sufficient permissions.
 
-Using Ably for HITL workflows enables reliable, realtime communication between Claude-powered agents and human approvers. The request-response pattern ensures approval requests are delivered and decisions are processed with proper authorization checks.
+When the model calls a tool that requires human approval, the tool implementation itself handles the approval check before executing. Rather than executing immediately, the tool publishes an `approval-request` message to an Ably channel, waits for an `approval-response` from a human approver, verifies the approver has the required role using [claims embedded in their JWT token](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims), and only then executes the action. The model calls the tool as normal, and the approval logic lives inside the tool's implementation.
 
 <Aside data-type="further-reading">
 To learn more about human-in-the-loop patterns and verification strategies, see the [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) documentation.
@@ -55,7 +55,7 @@ export ABLY_API_KEY="your_ably_api_key_here"
 
 ## Step 1: Initialize the agent <a id="step-1"/>
 
-Set up the agent that will call Claude and request human approval for sensitive operations. This example uses a `publish_blog_post` tool that requires authorization before execution.
+Set up the agent that will call Anthropic and request human approval for sensitive operations. This example uses a `publish_blog_post` tool that requires authorization before execution.
 
 Initialize the Anthropic and Ably clients, and create a channel for communication between the agent and human approvers.
 
@@ -101,7 +101,7 @@ Tools that modify data, access sensitive resources, or perform actions with busi
 
 ## Step 2: Request human approval <a id="step-2"/>
 
-When Claude returns a tool use block, publish an approval request to the channel and wait for a human decision. The tool use ID is passed in the message headers to correlate requests with responses.
+When the model returns a tool use block, publish an approval request to the channel and wait for a human decision. The tool use ID is passed in the message headers to correlate requests with responses.
 
 Add the approval request function to `agent.mjs`:
 
@@ -194,7 +194,7 @@ async function subscribeApprovalResponses() {
 ```
 </Code>
 
-The `message.extras.userClaim` contains the role embedded in the approver's JWT token, providing a trusted source for authorization decisions. This ensures only users with sufficient privileges can approve sensitive operations.
+The `message.extras.userClaim` contains the role embedded in the approver's JWT token, providing a trusted source for authorization decisions. See [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) for details on embedding claims in tokens. This ensures only users with sufficient privileges can approve sensitive operations.
 
 ## Step 4: Process tool calls <a id="step-4"/>
 
@@ -206,6 +206,9 @@ Add the tool processing function to `agent.mjs`:
 ```javascript
 async function processToolUse(toolUse) {
   if (toolUse.name === 'publish_blog_post') {
+    // requestHumanApproval returns a promise that resolves when the human
+    // approves the tool use, or rejects if the human explicitly rejects
+    // the tool call or the approver's role is insufficient.
     await requestHumanApproval(toolUse);
     return await publishBlogPost(toolUse.input);
   }
@@ -218,7 +221,7 @@ The function awaits approval before executing. If the approver rejects or has in
 
 ## Step 5: Run the agent <a id="step-5"/>
 
-Create the main agent loop that sends prompts to Claude and processes any tool use blocks that require approval.
+Create the main agent loop that sends prompts to the model and processes any tool use blocks that require approval.
 
 Add the agent runner to `agent.mjs`:
 
@@ -397,7 +400,7 @@ node client.mjs
 
 With the server, client, and agent running, the workflow proceeds as follows:
 
-1. The agent sends a prompt to Claude that triggers a tool use
+1. The agent sends a prompt to the model that triggers a tool use
 2. The agent publishes an approval request to the channel
 3. The client displays the request and prompts the user
 4. The user approves or rejects the request

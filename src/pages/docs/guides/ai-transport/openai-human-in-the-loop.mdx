@@ -6,7 +6,7 @@ meta_keywords: "AI, human in the loop, HITL, OpenAI, tool calls, approval workfl
 
 This guide shows you how to implement a human-in-the-loop (HITL) approval workflow for AI agent tool calls using OpenAI and Ably. The agent requests human approval before executing sensitive operations, with role-based access control to verify approvers have sufficient permissions.
 
-Using Ably for HITL workflows enables reliable, realtime communication between AI agents and human approvers. The request-response pattern ensures approval requests are delivered and decisions are processed with proper authorization checks.
+When the model calls a tool that requires human approval, the tool implementation itself handles the approval check before executing. Rather than executing immediately, the tool publishes an `approval-request` message to an Ably channel, waits for an `approval-response` from a human approver, verifies the approver has the required role using [claims embedded in their JWT token](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims), and only then executes the action. The model calls the tool as normal, and the approval logic lives inside the tool's implementation.
 
 <Aside data-type="further-reading">
 To learn more about human-in-the-loop patterns and verification strategies, see the [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) documentation.
@@ -192,7 +192,7 @@ async function subscribeApprovalResponses() {
 ```
 </Code>
 
-The `message.extras.userClaim` contains the role embedded in the approver's JWT token, providing a trusted source for authorization decisions. This ensures only users with sufficient privileges can approve sensitive operations.
+The `message.extras.userClaim` contains the role embedded in the approver's JWT token, providing a trusted source for authorization decisions. See [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) for details on embedding claims in tokens. This ensures only users with sufficient privileges can approve sensitive operations.
 
 ## Step 4: Process tool calls <a id="step-4"/>
 
@@ -204,6 +204,9 @@ Add the tool processing function to `agent.mjs`:
 ```javascript
 async function processToolCall(toolCall) {
   if (toolCall.name === 'publish_blog_post') {
+    // requestHumanApproval returns a promise that resolves when the human
+    // approves the tool call, or rejects if the human explicitly rejects
+    // the tool call or the approver's role is insufficient.
     await requestHumanApproval(toolCall);
     return await publishBlogPost(toolCall.arguments);
   }
