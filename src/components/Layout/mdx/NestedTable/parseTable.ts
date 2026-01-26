@@ -205,10 +205,10 @@ export function parseTableChildren(children: ReactNode): TableProperty[] {
       const descriptionCell = cells[2] as ReactElement<{ children?: ReactNode }>;
       const typeCell = cells[3] as ReactElement<{ children?: ReactNode }>;
 
-      const name = extractText(nameCell.props.children);
-      const requiredText = extractText(requiredCell.props.children).toLowerCase();
-      const description = descriptionCell.props.children;
-      const { type, typeReference } = extractTypeInfo(typeCell.props.children);
+      const name = extractText(nameCell?.props?.children);
+      const requiredText = extractText(requiredCell?.props?.children).toLowerCase();
+      const description = descriptionCell?.props?.children;
+      const { type, typeReference } = extractTypeInfo(typeCell?.props?.children);
 
       properties.push({
         name: name.trim(),
@@ -223,9 +223,9 @@ export function parseTableChildren(children: ReactNode): TableProperty[] {
       const descriptionCell = cells[1] as ReactElement<{ children?: ReactNode }>;
       const typeCell = cells[2] as ReactElement<{ children?: ReactNode }>;
 
-      const name = extractText(nameCell.props.children);
-      const description = descriptionCell.props.children;
-      const { type, typeReference } = extractTypeInfo(typeCell.props.children);
+      const name = extractText(nameCell?.props?.children);
+      const description = descriptionCell?.props?.children;
+      const { type, typeReference } = extractTypeInfo(typeCell?.props?.children);
 
       properties.push({
         name: name.trim(),
@@ -238,8 +238,8 @@ export function parseTableChildren(children: ReactNode): TableProperty[] {
       const nameCell = cells[0] as ReactElement<{ children?: ReactNode }>;
       const descriptionCell = cells[1] as ReactElement<{ children?: ReactNode }>;
 
-      const name = extractText(nameCell.props.children);
-      const description = descriptionCell.props.children;
+      const name = extractText(nameCell?.props?.children);
+      const description = descriptionCell?.props?.children;
 
       properties.push({
         name: name.trim(),
