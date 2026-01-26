@@ -18,6 +18,8 @@ interface NestedTableContextType {
   registryVersion: number;
   // Register a table in the registry
   register: (id: string, data: TableData) => void;
+  // Unregister a table from the registry
+  unregister: (id: string) => void;
   // Look up a table by ID
   lookup: (id: string) => TableData | undefined;
   // Toggle expanded state for a path
@@ -68,6 +70,13 @@ export const NestedTableProvider: React.FC<NestedTableProviderProps> = ({ childr
     }
   }, []);
 
+  const unregister = useCallback((id: string) => {
+    if (registryRef.current.has(id)) {
+      registryRef.current.delete(id);
+      setRegistryVersion((v) => v + 1);
+    }
+  }, []);
+
   const lookup = useCallback((id: string): TableData | undefined => {
     return registryRef.current.get(id);
   }, []);
@@ -96,6 +105,7 @@ export const NestedTableProvider: React.FC<NestedTableProviderProps> = ({ childr
       value={{
         registryVersion,
         register,
+        unregister,
         lookup,
         toggleExpanded,
         isExpanded,

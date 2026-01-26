@@ -14,7 +14,7 @@ interface NestedTableProps {
 
 // The component that uses the nested table context
 const NestedTableWithContext: React.FC<NestedTableProps> = ({ id, hidden = false, children, className }) => {
-  const { register } = useNestedTable();
+  const { register, unregister } = useNestedTable();
 
   // Parse the table children to extract properties
   const parsedProperties = useMemo(() => {
@@ -33,7 +33,13 @@ const NestedTableWithContext: React.FC<NestedTableProps> = ({ id, hidden = false
       };
       register(id, tableData);
     }
-  }, [id, parsedProperties, register]);
+    // Cleanup: unregister when component unmounts
+    return () => {
+      if (id) {
+        unregister(id);
+      }
+    };
+  }, [id, parsedProperties, register, unregister]);
 
   // If no id, render as standard table
   if (!id) {
