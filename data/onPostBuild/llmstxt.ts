@@ -165,6 +165,11 @@ const categorizePage = (slug: string): { category: string; subcategory?: string 
     return { category: 'Platform', subcategory: 'Control API' };
   }
 
+  // Special handling for guides/ai-transport - route to AI Transport category with Guides subcategory
+  if (firstPart === 'guides' && secondPart === 'ai-transport') {
+    return { category: 'AI Transport', subcategory: 'Guides' };
+  }
+
   if (categoryMap[firstPart]) {
     return categoryMap[firstPart];
   }
