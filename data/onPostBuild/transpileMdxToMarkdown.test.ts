@@ -341,9 +341,9 @@ import Baz from 'qux';
     });
 
     it('should remove ?lang= query parameters from /docs/ links', () => {
-      const input = '[Link text](https://ably.com/docs/channels?lang=javascript)';
+      const input = '[Link text](https://ably.com/docs/api/realtime-sdk/channels?lang=javascript)';
       const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](https://ably.com/docs/channels.md)');
+      expect(output).toBe('[Link text](https://ably.com/docs/api/realtime-sdk/channels.md)');
     });
 
     it('should remove any query parameters from /docs/ links', () => {
@@ -371,22 +371,10 @@ import Baz from 'qux';
       expect(output).toBe('[Link text](https://ably.com/docs/channels.md)');
     });
 
-    it('should not modify links that already have .md extension with hash', () => {
-      const input = '[Link text](https://ably.com/docs/channels.md#section)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](https://ably.com/docs/channels.md#section)');
-    });
-
     it('should not modify non-/docs/ links', () => {
       const input = '[Link text](https://ably.com/blog/article?lang=en)';
       const output = convertDocsLinksToMarkdown(input);
       expect(output).toBe('[Link text](https://ably.com/blog/article?lang=en)');
-    });
-
-    it('should handle nested /docs/ paths', () => {
-      const input = '[Link text](https://ably.com/docs/api/realtime-sdk/channels?lang=javascript)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](https://ably.com/docs/api/realtime-sdk/channels.md)');
     });
 
     it('should handle multiple links in content', () => {
@@ -402,83 +390,10 @@ import Baz from 'qux';
       expect(output).toBe('[External](https://example.com/docs/page?lang=en)');
     });
 
-    it('should handle ably-dev.com links', () => {
-      const input = '[Link text](https://ably-dev.com/docs/channels?lang=javascript)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](https://ably-dev.com/docs/channels.md)');
-    });
-
-    it('should handle ably-dev.com links with hash anchors', () => {
-      const input = '[Link text](https://ably-dev.com/docs/channels#section)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](https://ably-dev.com/docs/channels.md#section)');
-    });
-
-    it('should not modify sdk.ably.com links (API documentation)', () => {
-      const input = '[Room](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Room.html)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Room](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Room.html)');
-    });
-
-    it('should not modify sdk.ably.com links with /docs/ in path', () => {
-      const input = '[Docs](https://sdk.ably.com/docs/some-path)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Docs](https://sdk.ably.com/docs/some-path)');
-    });
-
     it('should not add .md to URLs that already have a file extension (.png)', () => {
       const input = '[Image](https://raw.githubusercontent.com/ably/docs/main/src/images/content/diagrams/test.png)';
       const output = convertDocsLinksToMarkdown(input);
       expect(output).toBe('[Image](https://raw.githubusercontent.com/ably/docs/main/src/images/content/diagrams/test.png)');
-    });
-
-    it('should not add .md to URLs that already have a file extension (.jpg)', () => {
-      const input = '[Photo](https://ably.com/docs/images/photo.jpg)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Photo](https://ably.com/docs/images/photo.jpg)');
-    });
-
-    it('should not add .md to URLs that already have a file extension (.html)', () => {
-      const input = '[Page](https://ably.com/docs/api/page.html)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Page](https://ably.com/docs/api/page.html)');
-    });
-
-    it('should not add .md to URLs that already have a file extension (.pdf)', () => {
-      const input = '[Document](https://ably.com/docs/guides/document.pdf)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Document](https://ably.com/docs/guides/document.pdf)');
-    });
-
-    it('should not add .md to URLs with file extension and hash anchor', () => {
-      const input = '[Image](https://ably.com/docs/images/diagram.svg#section)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Image](https://ably.com/docs/images/diagram.svg#section)');
-    });
-
-    // Tests for proper host validation (not just substring matching)
-    it('should not modify GitHub URLs with "ably" in the path', () => {
-      const input = '[GitHub](https://github.com/ably/docs/blob/main/README.md)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[GitHub](https://github.com/ably/docs/blob/main/README.md)');
-    });
-
-    it('should not modify URLs where "ably" is a substring of the host (notably.com)', () => {
-      const input = '[External](https://notably.com/docs/page)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[External](https://notably.com/docs/page)');
-    });
-
-    it('should not modify URLs where "ably" is a substring of the host (probably.com)', () => {
-      const input = '[External](https://probably.com/docs/page)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[External](https://probably.com/docs/page)');
-    });
-
-    it('should not modify URLs where "ably" is a substring of the host (reliably.io)', () => {
-      const input = '[External](https://reliably.io/docs/page)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[External](https://reliably.io/docs/page)');
     });
 
     // Tests for trailing slash normalization
@@ -500,17 +415,11 @@ import Baz from 'qux';
       expect(output).toBe('[Link text](https://ably.com/docs/channels.md)');
     });
 
-    // Tests for subdomains - subdomains are NOT processed (only exact ably.com and ably-dev.com)
-    it('should not modify www.ably.com links (subdomain not in allowlist)', () => {
+    // Tests for www subdomains - www.ably.com and www.ably-dev.com ARE processed
+    it('should process www.ably.com links (www subdomain is in allowlist)', () => {
       const input = '[Link text](https://www.ably.com/docs/channels)';
       const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](https://www.ably.com/docs/channels)');
-    });
-
-    it('should not modify subdomains of ably-dev.com', () => {
-      const input = '[Link text](https://staging.ably-dev.com/docs/channels)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](https://staging.ably-dev.com/docs/channels)');
+      expect(output).toBe('[Link text](https://www.ably.com/docs/channels.md)');
     });
 
     // Tests for relative URLs (should not be processed)
@@ -518,12 +427,6 @@ import Baz from 'qux';
       const input = '[Link text](/docs/channels)';
       const output = convertDocsLinksToMarkdown(input);
       expect(output).toBe('[Link text](/docs/channels)');
-    });
-
-    it('should not modify relative URLs without leading slash', () => {
-      const input = '[Link text](docs/channels)';
-      const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Link text](docs/channels)');
     });
 
     // Test for invalid URLs

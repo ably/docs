@@ -330,6 +330,10 @@ function convertImagePathsToGitHub(content: string): string {
  * Preserves: Non-Ably /docs/ links, sdk.ably.com links (API docs), already .md links
  */
 function convertDocsLinksToMarkdown(content: string): string {
+
+  // Allowed hostnames for docs link conversion (exact matches only)
+  const ALLOWED_DOCS_HOSTNAMES = ['ably.com', 'www.ably.com', 'ably-dev.com', 'www.ably-dev.com'];
+
   // Match markdown links: [text](url)
   return content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
     // Only process absolute URLs with http/https
@@ -346,8 +350,8 @@ function convertDocsLinksToMarkdown(content: string): string {
       return match;
     }
 
-    // Only process URLs from allowed Ably domains, e.g. ably.com, ably-dev.com
-    if (parsedUrl.hostname !== 'ably.com' && parsedUrl.hostname !== 'ably-dev.com') {
+    // Only process URLs from allowed Ably domains (ably.com, www.ably.com, ably-dev.com, www.ably-dev.com)
+    if (!ALLOWED_DOCS_HOSTNAMES.includes(parsedUrl.hostname)) {
       return match;
     }
 
