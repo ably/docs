@@ -100,6 +100,10 @@ export default {
           name: 'Anthropic token streaming - message per response',
           link: '/docs/guides/ai-transport/anthropic-message-per-response',
         },
+        {
+          name: 'Vercel AI SDK token streaming - message per token',
+          link: '/docs/guides/ai-transport/vercel-message-per-token',
+        },
       ],
     },
   ],

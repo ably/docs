@@ -26,7 +26,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
 
   const llmLinks = useMemo(() => {
-    const prompt = `Tell me more about ${product ? productData[product]?.nav.name : 'Ably'}'s '${page.name}' feature from https://ably.com${page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
+    const docUrl = `https://ably.com${page.link}.md`;
+    const prompt = `Fetch the documentation from ${docUrl} and tell me more about ${product ? productData[product]?.nav.name : 'Ably'}'s '${page.name}' feature${language ? ` for ${languageInfo[language]?.label}` : ''}`;
     const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
     const claudePath = `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
 
@@ -53,6 +54,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
       try {
         const response = await fetch(`${location.pathname}.md`, {
           signal: abortController.signal,
+          headers: { Accept: 'text/markdown' },
         });
 
         if (!isMounted) {
@@ -60,12 +62,29 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
         }
 
         if (!response.ok) {
+          // 404 is expected in development mode where markdown files aren't generated
+          if (response.status === 404) {
+            setMarkdownContent(null);
+            return;
+          }
           throw new Error(`Failed to fetch markdown: ${response.status} ${response.statusText}`);
         }
 
-        const contentType = response.headers.get('Content-Type');
-        if (!contentType || !contentType.includes('text/markdown')) {
-          throw new Error(`Invalid content type: expected text/markdown, got ${contentType}`);
+        const contentType = response.headers.get('Content-Type')?.toLowerCase() || '';
+        const isMarkdownType =
+          contentType.includes('text/markdown') ||
+          contentType.includes('application/markdown') ||
+          contentType.includes('text/plain');
+
+        // Only reject if it's explicitly something else (like text/html or application/json)
+        if (contentType && !isMarkdownType) {
+          if (contentType.includes('text/html') || contentType.includes('application/json')) {
+            throw new Error(`Received ${contentType} response instead of markdown for ${location.pathname}.md`);
+          }
+          // For other content types, log a warning but still accept the content
+          console.warn(
+            `Markdown fetch: unexpected content type "${contentType}" for ${location.pathname}.md, accepting anyway`,
+          );
         }
 
         const content = await response.text();
@@ -79,7 +98,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
         if (!isMounted || (error instanceof Error && error.name === 'AbortError')) {
           return;
         }
-        console.error('Failed to fetch markdown:', error);
+        // Don't log 404 errors - they're expected in development mode
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('404')) {
+          // Log detailed error information for debugging (except 404s)
+          console.error(`Failed to fetch markdown for ${location.pathname}:`, {
+            error: errorMessage,
+            path: `${location.pathname}.md`,
+            errorType: error instanceof Error ? error.name : typeof error,
+          });
+        }
         setMarkdownContent(null);
       }
     };

@@ -32,22 +32,30 @@ Human-in-the-loop authorization follows a request-approval pattern over Ably cha
 
 ## Request human approval <a id="request"/>
 
-When an agent identifies an action requiring human oversight, it publishes a request to the channel. The request should include sufficient context for the approver to make an informed decision. The `requestId` enables correlation between requests and responses when handling multiple concurrent approval flows.
+When an agent identifies an action requiring human oversight, it publishes a request to the channel. The request should include sufficient context for the approver to make an informed decision. The `toolCallId` in the message [extras](/docs/messages#properties) enables correlation between requests and responses when handling multiple concurrent approval flows.
+
+The agent stores each pending request in some local state before publishing. When an approval response arrives, the agent uses the `toolCallId` to retrieve the original tool call details, verify the approver's permissions for that specific action, execute the tool if approved, and resolve the pending approval.
 
 <Code>
 ```javascript
-const channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}');
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+const pendingApprovals = new Map();
 
 async function requestHumanApproval(toolCall) {
-  const requestId = crypto.randomUUID();
+  pendingApprovals.set(toolCall.id, { toolCall });
 
-  await channel.publish('approval-request', {
-    requestId: requestId,
-    action: toolCall.name,
-    parameters: toolCall.parameters
+  await channel.publish({
+    name: 'approval-request',
+    data: {
+      name: toolCall.name,
+      arguments: toolCall.arguments
+    },
+    extras: {
+      headers: {
+        toolCallId: toolCall.id
+      }
+    }
   });
-
-  return requestId;
 }
 ```
 </Code>
@@ -58,7 +66,7 @@ Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on 
 
 ## Review and decide <a id="review"/>
 
-Authorized humans subscribe to approval requests on the conversation channel and publish their decisions. The `requestId` correlates the response with the original request.
+Authorized humans subscribe to approval requests on the conversation channel and publish their decisions. The `toolCallId` correlates the response with the original request.
 
 Use [identified clients](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-identity) or [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) to establish a verified identity or role for the approver. For example, when a user [authenticates with Ably](/docs/ai-transport/sessions-identity/identifying-users-and-agents#authenticating), embed their identity and role in the JWT:
 
@@ -79,25 +87,40 @@ For more information about establishing verified identities and roles, see [Iden
 
 <Code>
 ```javascript
-const channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}');
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
 
 await channel.subscribe('approval-request', (message) => {
   const request = message.data;
+  const toolCallId = message.extras?.headers?.toolCallId;
   // Display request for human review
-  displayApprovalUI(request);
+  displayApprovalUI(request, toolCallId);
 });
 
-async function approve(requestId) {
-  await channel.publish('approval-response', {
-    requestId: requestId,
-    decision: 'approved'
+async function approve(toolCallId) {
+  await channel.publish({
+    name: 'approval-response',
+    data: {
+      decision: 'approved'
+    },
+    extras: {
+      headers: {
+        toolCallId: toolCallId
+      }
+    }
   });
 }
 
-async function reject(requestId) {
-  await channel.publish('approval-response', {
-    requestId: requestId,
-    decision: 'rejected'
+async function reject(toolCallId) {
+  await channel.publish({
+    name: 'approval-response',
+    data: {
+      decision: 'rejected'
+    },
+    extras: {
+      headers: {
+        toolCallId: toolCallId
+      }
+    }
   });
 }
 ```
@@ -109,7 +132,7 @@ Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` in 
 
 ## Process the decision <a id="process"/>
 
-The agent listens for human decisions and acts accordingly. When a response arrives, the agent retrieves the pending request using the `requestId`, verifies that the user is permitted to approve that specific action, and either executes the action or handles the rejection.
+The agent listens for human decisions and acts accordingly. When a response arrives, the agent retrieves the pending request using the `toolCallId`, verifies that the user is permitted to approve that specific action, and either executes the action or handles the rejection.
 
 <Aside data-type="note">
 For audit trails, use [integration rules](/docs/integrations) to stream approval messages to external systems.
@@ -117,7 +140,7 @@ For audit trails, use [integration rules](/docs/integrations) to stream approval
 
 ### Verify by user identity <a id="verify-identity"/>
 
-Use the `clientId` to identify the approver and look up their permissions in your database or user management system. This approach is useful when permissions are managed externally or change frequently.
+Use the `clientId` to identify the approver and look up their permissions in your database or access control system. This approach is useful when permissions are managed externally or change frequently.
 
 <Aside data-type="note">
 This approach requires the user to authenticate as an [identified client](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-identity) with a verified `clientId`.
@@ -129,11 +152,12 @@ const pendingApprovals = new Map();
 
 await channel.subscribe('approval-response', async (message) => {
   const response = message.data;
-  const pending = pendingApprovals.get(response.requestId);
+  const toolCallId = message.extras?.headers?.toolCallId;
+  const pending = pendingApprovals.get(toolCallId);
 
   if (!pending) return;
 
-  // The clientId is verified by Ably - this is the trusted approver identity
+  // The clientId is the trusted approver identity
   const approverId = message.clientId;
 
   // Look up user-specific permissions from your database
@@ -151,7 +175,7 @@ await channel.subscribe('approval-response', async (message) => {
     console.log(`Action rejected by ${approverId}`);
   }
 
-  pendingApprovals.delete(response.requestId);
+  pendingApprovals.delete(toolCallId);
 });
 ```
 </Code>
@@ -164,11 +188,15 @@ Use [user claims](/docs/auth/capabilities#custom-restrictions-on-channels-) to e
 This approach uses [authenticated claims for users](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) to embed custom claims in JWTs that represent user roles or attributes.
 </Aside>
 
-Different actions may require different authorization levels - for example, a user might approve low-value purchases, a manager might approve purchases up to a certain limit, while an admin can approve any purchase amount. When an approval arrives, compare the approver's role against the minimum required role for that action type:
+Different actions may require different authorization levels. For example, an editor might be able to create drafts for review, but only a publisher or admin can approve publishing a blog post. Define approval policies that map tool names to minimum required roles, and when an approval arrives, compare the approver's role against the required role for that action type:
 
 <Code>
 ```javascript
-const roleHierarchy = ['user', 'manager', 'admin'];
+const roleHierarchy = ['editor', 'publisher', 'admin'];
+
+const approvalPolicies = {
+  publish_blog_post: 'publisher'
+};
 
 function canApprove(approverRole, requiredRole) {
   const approverLevel = roleHierarchy.indexOf(approverRole);
@@ -180,15 +208,19 @@ function canApprove(approverRole, requiredRole) {
 // When processing approval response
 await channel.subscribe('approval-response', async (message) => {
   const response = message.data;
-  const pending = pendingApprovals.get(response.requestId);
+  const toolCallId = message.extras?.headers?.toolCallId;
+  const pending = pendingApprovals.get(toolCallId);
+
+  if (!pending) return;
+
   const policy = approvalPolicies[pending.toolCall.name];
 
   // Get the trusted role from the JWT claim
   const approverRole = message.extras?.userClaim;
 
   // Verify the approver's role meets the minimum required role for this action
-  if (!canApprove(approverRole, policy.minRole)) {
-    console.log(`Approver role '${approverRole}' insufficient for required '${policy.minRole}'`);
+  if (!canApprove(approverRole, policy)) {
+    console.log(`Approver role '${approverRole}' insufficient: minimum required role is '${policy}'`);
     return;
   }
 
@@ -199,7 +231,7 @@ await channel.subscribe('approval-response', async (message) => {
     console.log(`Action rejected by role ${approverRole}`);
   }
 
-  pendingApprovals.delete(response.requestId);
+  pendingApprovals.delete(toolCallId);
 });
 ```
 </Code>
