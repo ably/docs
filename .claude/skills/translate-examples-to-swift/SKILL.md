@@ -51,7 +51,43 @@ For example, in the example given above, we can see that the following must exis
     - from the surrounding context, you can infer that this is an `AsyncIterable` whose elements have a user-provided type that has shape `{ type: string, text: string }`
     - the equivalent in Swift could be an `any AsyncSequence<(type: String, text: String), Never>` using a tuple with labeled elements
 
-TODO: before this, we need to tell it how to actually create a Swift project and add Ably to it and import it.
+### Setting up the Swift test harness
+
+Create a Swift package with ably-cocoa as a dependency:
+
+1. Create the package:
+   ```bash
+   mkdir SwiftTestHarness && cd SwiftTestHarness
+   swift package init --type executable
+   ```
+
+2. Update `Package.swift`:
+   ```swift
+   // swift-tools-version: 6.0
+   import PackageDescription
+
+   let package = Package(
+       name: "SwiftTestHarness",
+       platforms: [
+           .macOS(.v15)  // Required for modern Swift features like typed AsyncSequence
+       ],
+       dependencies: [
+           .package(url: "https://github.com/ably/ably-cocoa", from: "1.2.0")
+       ],
+       targets: [
+           .executableTarget(
+               name: "SwiftTestHarness",
+               dependencies: [
+                   .product(name: "Ably", package: "ably-cocoa")
+               ]
+           ),
+       ]
+   )
+   ```
+
+3. Put your test harness code in `Sources/SwiftTestHarness/SwiftTestHarness.swift` with `import Ably` at the top.
+
+4. Build with `swift build` to verify compilation.
 
 ### Providing context via parameters vs stub type declarations
 
