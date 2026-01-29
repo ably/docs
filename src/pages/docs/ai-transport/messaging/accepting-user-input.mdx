@@ -52,6 +52,20 @@ claims = {
 Map<String, String> claims = new HashMap<>();
 claims.put("x-ably-clientId", "user-123");
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-1
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+let claims = [
+    "x-ably-clientId": "user-123"
+]
+```
+{/* --- end example code --- */}
 </Code>
 
 The `clientId` is automatically attached to every message the user publishes, so agents can trust this identity.
@@ -91,6 +105,32 @@ channel.subscribe("user-input", message -> {
     processAndRespond(channel, text, promptId, userId);
 });
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-2
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example_accepting_user_input_2(
+    channel: ARTRealtimeChannel,
+    processAndRespond: @escaping (_ channel: ARTRealtimeChannel, _ text: String, _ promptID: String, _ userID: String) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+channel.subscribe("user-input") { message in
+    guard let userID = message.clientId else { return }
+    // promptId is a user-generated UUID for correlating responses
+    guard let data = message.data as? [String: Any],
+          let promptID = data["promptId"] as? String,
+          let text = data["text"] as? String else {
+        return
+    }
+
+    print("Received prompt from user \(userID)")
+    processAndRespond(channel, text, promptID, userID)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ### Verify by role <a id="verify-role"/>
@@ -114,6 +154,20 @@ claims = {
 Map<String, String> claims = new HashMap<>();
 claims.put("ably.channel.*", "user");
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-3
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+let claims = [
+    "ably.channel.*": "user"
+]
+```
+{/* --- end example code --- */}
 </Code>
 
 The user claim is automatically attached to every message the user publishes, so agents can trust this role information.
@@ -164,6 +218,36 @@ channel.subscribe("user-input", message -> {
     processAndRespond(channel, text, promptId);
 });
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-4
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example_accepting_user_input_4(
+    channel: ARTRealtimeChannel,
+    processAndRespond: @escaping (_ channel: ARTRealtimeChannel, _ text: String, _ promptID: String) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+channel.subscribe("user-input") { message in
+    let role = (try? message.extras?.toJSON())?["userClaim"] as? String
+    // promptId is a user-generated UUID for correlating responses
+    guard let data = message.data as? [String: Any],
+          let promptID = data["promptId"] as? String,
+          let text = data["text"] as? String else {
+        return
+    }
+
+    guard role == "user" else {
+        print("Ignoring message from non-user")
+        return
+    }
+
+    processAndRespond(channel, text, promptID)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ## Publish user input <a id="publish"/>
@@ -204,6 +288,24 @@ data.addProperty("promptId", promptId);
 data.addProperty("text", "What is the weather like today?");
 channel.publish("user-input", data);
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-5
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example_accepting_user_input_5(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+let promptID = UUID().uuidString
+channel.publish("user-input", data: [
+    "promptId": promptID,
+    "text": "What is the weather like today?"
+])
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -270,6 +372,37 @@ channel.subscribe("user-input", message -> {
     processAndRespond(channel, text, promptId);
 });
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-6
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example_accepting_user_input_6(
+    processAndRespond: @escaping (_ channel: ARTRealtimeChannel, _ text: String, _ promptID: String) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+import Ably
+
+let ably = ARTRealtime(key: "{{API_KEY}}")
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe("user-input") { message in
+    guard let data = message.data as? [String: Any],
+          let promptID = data["promptId"] as? String,
+          let text = data["text"] as? String else {
+        return
+    }
+    guard let userID = message.clientId else { return }
+
+    print("Received prompt from \(userID): \(text)")
+
+    // Process the prompt and generate a response
+    processAndRespond(channel, text, promptID)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -334,6 +467,42 @@ void processAndRespond(Channel channel, String prompt, String promptId) {
     channel.publish(message);
 }
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-7
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example_accepting_user_input_7(
+    channel: ARTRealtimeChannel,
+    generateAIResponse: @Sendable @escaping (_ prompt: String) async throws -> String
+) {
+    // --- example code starts here ---
+*/}
+```swift
+func processAndRespond(channel: ARTRealtimeChannel, prompt: String, promptID: String) async throws {
+    // Generate the response (e.g., call your AI model)
+    let response = try await generateAIResponse(prompt)
+
+    // Publish the response with the promptId for correlation
+    let message = ARTMessage(name: "agent-response", data: response)
+    message.extras = [
+        "headers": [
+            "promptId": promptID
+        ]
+    ] as ARTJsonCompatible
+
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        channel.publish([message]) { _, error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume()
+            }
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 The user's client can then match responses to their original prompts:
@@ -415,6 +584,51 @@ channel.subscribe("agent-response", message -> {
     }
 });
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-8
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+@MainActor
+func example_accepting_user_input_8(channel: ARTRealtimeChannel) {
+    // --- example code starts here ---
+*/}
+```swift
+var pendingPrompts: [String: String] = [:]
+
+// Send a prompt and track it
+func sendPrompt(text: String) async throws -> String {
+    let promptID = UUID().uuidString
+    pendingPrompts[promptID] = text
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        channel.publish("user-input", data: ["promptId": promptID, "text": text]) { error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume()
+            }
+        }
+    }
+    return promptID
+}
+
+// Handle responses
+channel.subscribe("agent-response") { message in
+    MainActor.assumeIsolated {
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let promptID = headers["promptId"] as? String else {
+            return
+        }
+
+        if let originalPrompt = pendingPrompts[promptID] {
+            print("Response for \"\(originalPrompt)\": \(message.data ?? "")")
+            pendingPrompts.removeValue(forKey: promptID)
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -515,6 +729,67 @@ void streamResponse(Channel channel, String prompt, String promptId) throws Exce
     }
 }
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-9
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example_accepting_user_input_9(
+    channel: ARTRealtimeChannel,
+    generateTokens: @Sendable @escaping (_ prompt: String) -> any AsyncSequence<String, Never> & Sendable
+) {
+    // --- example code starts here ---
+*/}
+```swift
+func streamResponse(channel: ARTRealtimeChannel, prompt: String, promptID: String) async throws {
+    // Create initial message for message-per-response pattern
+    let initialMessage = ARTMessage(name: "agent-response", data: "")
+    initialMessage.extras = [
+        "headers": [
+            "promptId": promptID
+        ]
+    ] as ARTJsonCompatible
+
+    let msgSerial: String = try await withCheckedThrowingContinuation { continuation in
+        channel.publish([initialMessage]) { publishResult, error in
+            if let error {
+                continuation.resume(throwing: error)
+                return
+            }
+
+            guard let serial = publishResult?.serials.first?.value else {
+                continuation.resume(throwing: NSError(domain: "ExampleDomain", code: 0, userInfo: [NSLocalizedDescriptionKey: "No serial returned"]))
+                return
+            }
+
+            continuation.resume(returning: serial)
+        }
+    }
+
+    // Stream tokens by appending to the message
+    for await token in generateTokens(prompt) {
+        let messageToAppend = ARTMessage()
+        messageToAppend.serial = msgSerial
+        messageToAppend.data = token
+        messageToAppend.extras = [
+            "headers": [
+                "promptId": promptID
+            ]
+        ] as ARTJsonCompatible
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -592,4 +867,42 @@ channel.subscribe("user-input", message -> {
     }
 });
 ```
+
+{/* Swift example test harness
+ID: accepting-user-input-10
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+@MainActor
+func example_accepting_user_input_10(
+    channel: ARTRealtimeChannel,
+    streamResponse: @escaping @MainActor (_ channel: ARTRealtimeChannel, _ text: String, _ promptID: String) async -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent handling multiple concurrent prompts
+var activeRequests: [String: (userID: String, text: String)] = [:]
+
+channel.subscribe("user-input") { message in
+    MainActor.assumeIsolated {
+        guard let data = message.data as? [String: Any],
+              let promptID = data["promptId"] as? String,
+              let text = data["text"] as? String else {
+            return
+        }
+        guard let userID = message.clientId else { return }
+
+        // Track active request
+        activeRequests[promptID] = (userID: userID, text: text)
+
+        Task { @MainActor in
+            defer {
+                activeRequests.removeValue(forKey: promptID)
+            }
+            await streamResponse(channel, text, promptID)
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>

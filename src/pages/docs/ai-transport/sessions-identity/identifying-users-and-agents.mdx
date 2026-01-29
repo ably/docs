@@ -43,6 +43,7 @@ function authenticateUser(req, res, next) {
 function getJWTClaims(userId) {
   // Returns an empty payload, so the token
   // inherits the capabilities of the signing key.
+  // The exp and iat claims are added automatically by jwt.sign().
   return {};
 }
 
@@ -171,6 +172,96 @@ public class AuthServer {
     }
 }
 ```
+
+{/* Swift example test harness (Vapor + JWT)
+ID: identifying-users-and-agents-1
+To verify: create a Swift package with Vapor and JWT dependencies (see below), paste the example code, run `swift build`
+
+Dependencies (Package.swift):
+  .package(url: "https://github.com/vapor/vapor", from: "4.0.0")
+  .package(url: "https://github.com/vapor/jwt", from: "5.0.0")
+
+This is a top-level server program. The full code is verified as a standalone Vapor application.
+*/}
+```swift
+// Server code
+import Vapor
+import JWT
+
+struct AblyJWTPayload: JWTPayload {
+    var expiration: ExpirationClaim
+    var issuedAt: IssuedAtClaim
+
+    enum CodingKeys: String, CodingKey {
+        case expiration = "exp"
+        case issuedAt = "iat"
+    }
+
+    // Required by the JWTPayload protocol. Left empty because this server
+    // only signs tokens; verification is performed by Ably's servers.
+    func verify(using algorithm: some JWTAlgorithm) async throws {}
+}
+
+// Storage key for the authenticated user ID.
+struct UserIDKey: StorageKey {
+    typealias Value = String
+}
+
+// Mock authentication middleware.
+// This should be replaced with your actual authentication logic.
+struct AuthenticateUser: AsyncMiddleware {
+    func respond(to request: Request, chainingTo next: any AsyncResponder) async throws -> Response {
+        // Assign a mock user ID for demonstration
+        request.storage[UserIDKey.self] = "user123"
+        return try await next.respond(to: request)
+    }
+}
+
+// Return the claims payload to embed in the signed JWT.
+func getJWTClaims(userID: String) -> AblyJWTPayload {
+    // Returns a payload with only the standard exp and iat claims, so the
+    // token inherits the capabilities of the signing key.
+    let now = Date()
+    return AblyJWTPayload(
+        expiration: .init(value: now.addingTimeInterval(3600)),
+        issuedAt: .init(value: now)
+    )
+}
+
+let app = try await Application.make()
+
+let keyParts = "{{API_KEY}}".split(separator: ":")
+let keyName = String(keyParts[0])
+let keySecret = String(keyParts[1])
+
+// Register the HMAC-SHA256 signing key.
+await app.jwt.keys.add(
+    hmac: HMACKey(from: keySecret),
+    digestAlgorithm: .sha256,
+    kid: JWKIdentifier(string: keyName)
+)
+
+// Define an auth endpoint used by the client to obtain a signed JWT
+// which it can use to authenticate with the Ably service.
+app.grouped(AuthenticateUser()).get("api", "auth", "token") { req async throws -> Response in
+    let userID = req.storage[UserIDKey.self]!
+
+    // Sign a JWT using the secret part of the Ably API key.
+    let token = try await req.jwt.sign(
+        getJWTClaims(userID: userID),
+        kid: JWKIdentifier(string: keyName)
+    )
+
+    let response = Response(status: .ok, body: .init(string: token))
+    response.headers.contentType = .init(type: "application", subType: "jwt")
+    return response
+}
+
+app.http.server.configuration.port = 3001
+
+try await app.execute()
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="important">
@@ -240,6 +331,36 @@ ably.connection.on(ConnectionState.connected, state -> {
     System.out.println("Connected to Ably");
 });
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-2
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let options = ARTClientOptions()
+options.authCallback = { tokenParams, callback in
+    Task {
+        do {
+            let url = URL(string: "/api/auth/token")!
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let token = String(data: data, encoding: .utf8)!
+            callback(token as ARTTokenDetailsCompatible, nil)
+        } catch {
+            callback(nil, error)
+        }
+    }
+}
+let ably = ARTRealtime(options: options)
+
+ably.connection.on(.connected) { stateChange in
+    print("Connected to Ably")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ## Authenticating agents <a id="authenticating-agents"/>
@@ -280,6 +401,23 @@ ably.connection.on(ConnectionState.connected, state -> {
     System.out.println("Connected to Ably");
 });
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-3
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let ably = ARTRealtime(key: "{{API_KEY}}")
+
+ably.connection.on(.connected) { stateChange in
+    print("Connected to Ably")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="important">
@@ -365,6 +503,59 @@ private static Map<String, Object> getJWTClaims(String userId) {
     return claims;
 }
 ```
+
+{/* Swift example test harness (Vapor + JWT)
+ID: identifying-users-and-agents-4
+To verify: create a Swift package with Vapor and JWT dependencies (see below), paste the example code, run `swift build`
+
+Dependencies (Package.swift):
+  .package(url: "https://github.com/vapor/vapor", from: "4.0.0")
+  .package(url: "https://github.com/vapor/jwt", from: "5.0.0")
+
+import Vapor
+import JWT
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+// Server code
+import Foundation
+
+struct AblyJWTPayload: JWTPayload {
+    var expiration: ExpirationClaim
+    var issuedAt: IssuedAtClaim
+    var ablyCapability: String
+
+    enum CodingKeys: String, CodingKey {
+        case expiration = "exp"
+        case issuedAt = "iat"
+        case ablyCapability = "x-ably-capability"
+    }
+
+    // Required by the JWTPayload protocol. Left empty because this server
+    // only signs tokens; verification is performed by Ably's servers.
+    func verify(using algorithm: some JWTAlgorithm) async throws {}
+}
+
+func getJWTClaims(userID: String) -> AblyJWTPayload {
+    let orgID = "acme" // Mock organization ID for demonstration
+    let capabilities: [String: [String]] = [
+        // The user can publish and subscribe to channels within the organization,
+        // that is, any channel matching `org:acme:*`.
+        "org:\(orgID):*": ["publish", "subscribe"],
+        // The user can only subscribe to the `announcements` channel.
+        "announcements": ["subscribe"],
+    ]
+    let now = Date()
+    return AblyJWTPayload(
+        expiration: .init(value: now.addingTimeInterval(3600)),
+        issuedAt: .init(value: now),
+        ablyCapability: String(data: try! JSONSerialization.data(withJSONObject: capabilities), encoding: .utf8)!
+    )
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 When a client authenticates with this token, Ably enforces these capabilities server-side. Any attempt to perform unauthorized operations will be rejected. For example, a client with the capabilities above can publish to channels prefixed with `org:acme:`, but an attempt to publish to a channel prefixed with `org:foobar:` will fail with error code [`40160`](/docs/platform/errors/codes#40160):
@@ -406,6 +597,35 @@ Channel announcementsChannel = ably.channels.get("announcements");
 announcementsChannel.publish("prompt", "What is the weather like today?"); // fails
 announcementsChannel.subscribe(msg -> System.out.println(msg)); // succeeds
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-5
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let acmeChannel = ably.channels.get("org:acme:{{RANDOM_CHANNEL_NAME}}")
+acmeChannel.publish("prompt", data: "What is the weather like today?") { error in
+    // succeeds
+}
+
+let foobarChannel = ably.channels.get("org:foobar:{{RANDOM_CHANNEL_NAME}}")
+foobarChannel.publish("prompt", data: "What is the weather like today?") { error in
+    // fails
+}
+
+let announcementsChannel = ably.channels.get("announcements")
+announcementsChannel.publish("prompt", data: "What is the weather like today?") { error in
+    // fails
+}
+announcementsChannel.subscribe { message in
+    print(message) // succeeds
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -469,6 +689,33 @@ Channel otherChannel = ably.channels.get("org:acme:other:{{RANDOM_CHANNEL_NAME}}
 otherChannel.subscribe(msg -> System.out.println(msg)); // fails
 otherChannel.publish("update", "It's raining in London"); // fails
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-6
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let weatherChannel = ably.channels.get("org:acme:weather:{{RANDOM_CHANNEL_NAME}}")
+weatherChannel.subscribe { message in
+    print(message) // succeeds
+}
+weatherChannel.publish("update", data: "It's raining in London") { error in
+    // succeeds
+}
+
+let otherChannel = ably.channels.get("org:acme:other:{{RANDOM_CHANNEL_NAME}}")
+otherChannel.subscribe { message in
+    print(message) // fails
+}
+otherChannel.publish("update", data: "It's raining in London") { error in
+    // fails
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="important">
@@ -527,6 +774,54 @@ private static Map<String, Object> getJWTClaims(String userId) {
     return claims;
 }
 ```
+
+{/* Swift example test harness (Vapor + JWT)
+ID: identifying-users-and-agents-7
+To verify: create a Swift package with Vapor and JWT dependencies (see below), paste the example code, run `swift build`
+
+Dependencies (Package.swift):
+  .package(url: "https://github.com/vapor/vapor", from: "4.0.0")
+  .package(url: "https://github.com/vapor/jwt", from: "5.0.0")
+
+import Vapor
+import JWT
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+// Server code
+
+struct AblyJWTPayload: JWTPayload {
+    var expiration: ExpirationClaim
+    var issuedAt: IssuedAtClaim
+    var ablyClientID: String
+
+    enum CodingKeys: String, CodingKey {
+        case expiration = "exp"
+        case issuedAt = "iat"
+        case ablyClientID = "x-ably-clientId"
+    }
+
+    // Required by the JWTPayload protocol. Left empty because this server
+    // only signs tokens; verification is performed by Ably's servers.
+    func verify(using algorithm: some JWTAlgorithm) async throws {}
+}
+
+// Return the claims payload to embed in the signed JWT.
+func getJWTClaims(userID: String) -> AblyJWTPayload {
+    // Returns a payload with the `x-ably-clientId` claim, which ensures
+    // that the user's ID appears as the `clientId` on all messages
+    // published by the client using this token.
+    let now = Date()
+    return AblyJWTPayload(
+        expiration: .init(value: now.addingTimeInterval(3600)),
+        issuedAt: .init(value: now),
+        ablyClientID: userID
+    )
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 When a client authenticates using this token, Ably's servers automatically attach the `clientId` specified in the token to every message the user publishes:
@@ -554,6 +849,22 @@ Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
 // Publish a message - the clientId is automatically attached
 channel.publish("prompt", "What is the weather like today?");
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-8
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Publish a message - the clientId is automatically attached
+channel.publish("prompt", data: "What is the weather like today?")
+```
+{/* --- end example code --- */}
 </Code>
 
 Agents can then access this verified identity to identify the sender:
@@ -602,6 +913,29 @@ channel.subscribe("prompt", message -> {
     System.out.println("Prompt: " + prompt);
 });
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-9
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Subscribe to messages from clients
+channel.subscribe("prompt") { message in
+    // Access the verified clientId from the message
+    guard let userID = message.clientId else { return }
+    let prompt = message.data
+
+    print("Received message from user: \(userID)")
+    print("Prompt:", prompt as Any)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 The `clientId` in the message can be trusted, so agents can use this identity to make decisions about what actions the user can take. For example, agents can check user permissions before executing tool calls, route messages to appropriate AI models based on subscription tiers, or maintain per-user conversation history and context.
@@ -643,6 +977,22 @@ options.clientId = "weather-agent";
 
 AblyRealtime ably = new AblyRealtime(options);
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-10
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let options = ARTClientOptions(key: "{{API_KEY}}")
+// Specify an identity for this agent
+options.clientId = "weather-agent"
+let ably = ARTRealtime(options: options)
+```
+{/* --- end example code --- */}
 </Code>
 
 When subscribers receive messages, they can use the `clientId` to determine which agent published the message:
@@ -678,6 +1028,25 @@ channel.subscribe(message -> {
     }
 });
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-11
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe { message in
+    if message.clientId == "weather-agent" {
+        print("Weather agent response:", message.data as Any)
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -746,6 +1115,59 @@ private static Map<String, Object> getJWTClaims(String userId) {
     return claims;
 }
 ```
+
+{/* Swift example test harness (Vapor + JWT)
+ID: identifying-users-and-agents-12
+To verify: create a Swift package with Vapor and JWT dependencies (see below), paste the example code, run `swift build`
+
+Dependencies (Package.swift):
+  .package(url: "https://github.com/vapor/vapor", from: "4.0.0")
+  .package(url: "https://github.com/vapor/jwt", from: "5.0.0")
+
+import Vapor
+import JWT
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+// Server code
+
+struct AblyJWTPayload: JWTPayload {
+    var expiration: ExpirationClaim
+    var issuedAt: IssuedAtClaim
+    var channelOrgAcme: String
+    var channelWildcard: String
+
+    enum CodingKeys: String, CodingKey {
+        case expiration = "exp"
+        case issuedAt = "iat"
+        case channelOrgAcme = "ably.channel.org:acme:*"
+        case channelWildcard = "ably.channel.*"
+    }
+
+    // Required by the JWTPayload protocol. Left empty because this server
+    // only signs tokens; verification is performed by Ably's servers.
+    func verify(using algorithm: some JWTAlgorithm) async throws {}
+}
+
+// Return the claims payload to embed in the signed JWT.
+func getJWTClaims(userID: String) -> AblyJWTPayload {
+    // Returns a payload with `ably.channel.*` claims, which ensures that
+    // the most specific claim appears as the `message.extras.userClaim`
+    // on all messages published by the client using this token.
+    let now = Date()
+    return AblyJWTPayload(
+        expiration: .init(value: now.addingTimeInterval(3600)),
+        issuedAt: .init(value: now),
+        // The user is an editor on all acme channels.
+        channelOrgAcme: "editor",
+        // The user is a guest on all other channels.
+        channelWildcard: "guest"
+    )
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 When a client authenticates with a JWT containing `ably.channel.*` claims, Ably automatically includes the most specific matching claim value in the `message.extras.userClaim` field on messages published by the client:
@@ -788,6 +1210,27 @@ channel.subscribe("prompt", message -> {
     System.out.println("Message from user with role: " + role);
 });
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-13
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let channel = ably.channels.get("org:acme:{{RANDOM_CHANNEL_NAME}}")
+
+// Subscribe to user prompts
+channel.subscribe("prompt") { message in
+    // Access the user's role from the user claim in message extras
+    let role = (try? message.extras?.toJSON())?["userClaim"]
+
+    print("Message from user with role: \(String(describing: role))")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 The `message.extras.userClaim` in the message can be trusted, so agents can rely on this information to make decisions about what actions the user can take. For example, an agent could allow users with an "editor" role to execute tool calls that modify documents, while restricting users with a "guest" role to read-only operations.
@@ -865,6 +1308,31 @@ extras.add("headers", headers);
 
 channel.publish(new Message("update", "It's raining in London", new MessageExtras(extras)));
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-14
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let options = ARTClientOptions(key: "{{API_KEY}}")
+options.clientId = "weather-agent"
+let ably = ARTRealtime(options: options)
+
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+let message = ARTMessage(name: "update", data: "It's raining in London")
+message.extras = [
+    "headers": [
+        "model": "gpt-4"
+    ]
+] as ARTJsonCompatible
+channel.publish([message])
+```
+{/* --- end example code --- */}
 </Code>
 
 Clients and other agents can access this metadata when messages are received:
@@ -904,4 +1372,24 @@ channel.subscribe(message -> {
     }
 });
 ```
+
+{/* Swift example test harness
+ID: identifying-users-and-agents-15
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(ably: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe { message in
+    if message.clientId == "weather-agent" {
+        let model = ((try? message.extras?.toJSON())?["headers"] as? [String: Any])?["model"]
+        print("Response from weather agent using \(String(describing: model)):", message.data as Any)
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>

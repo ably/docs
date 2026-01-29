@@ -133,6 +133,43 @@ for (Event event : stream) {
     }
 }
 ```
+
+{/* Swift example test harness
+ID: chain-of-thought-1
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(
+    realtime: ARTRealtime,
+    stream: any AsyncSequence<(type: String, text: String, responseID: String), Never> & Sendable
+) async {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+for await event in stream {
+    if event.type == "reasoning" {
+        // Publish reasoning messages
+        let message = ARTMessage(name: "reasoning", data: event.text)
+        message.extras = [
+            "headers": [
+                "responseId": event.responseID
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message])
+    } else if event.type == "message" {
+        // Publish model output messages
+        let message = ARTMessage(name: "message", data: event.text)
+        message.extras = [
+            "headers": [
+                "responseId": event.responseID
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message])
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -257,6 +294,52 @@ channel.subscribe(message -> {
     System.out.println("Response " + responseId + ": " + response);
 });
 ```
+
+{/* Swift example test harness
+ID: chain-of-thought-2
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+@MainActor
+func example(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID, each containing reasoning messages and final response
+var responses: [String: (reasoning: [String], message: String)] = [:]
+
+// Subscribe to all events on the channel
+channel.subscribe { message in
+    MainActor.assumeIsolated {
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else {
+            print("Message missing responseId")
+            return
+        }
+
+        // Initialize response object if needed
+        if responses[responseID] == nil {
+            responses[responseID] = (reasoning: [], message: "")
+        }
+
+        // Handle each message type
+        switch message.name {
+        case "message":
+            responses[responseID]!.message = message.data as? String ?? ""
+        case "reasoning":
+            responses[responseID]!.reasoning.append(message.data as? String ?? "")
+        default:
+            break
+        }
+
+        // Display the reasoning and response for this turn
+        print("Response \(responseID): \(responses[responseID]!)")
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="further-reading">
@@ -403,6 +486,57 @@ for (Event event : stream) {
     }
 }
 ```
+
+{/* Swift example test harness
+ID: chain-of-thought-3
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+enum StreamEvent {
+    case start(responseID: String)
+    case reasoning(text: String, responseID: String)
+    case message(text: String, responseID: String)
+}
+
+func example(
+    realtime: ARTRealtime,
+    stream: any AsyncSequence<StreamEvent, Never> & Sendable
+) async {
+    // --- example code starts here ---
+*/}
+```swift
+let conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+for await event in stream {
+    switch event {
+    case .start(let responseID):
+        // Publish response start control message
+        let msg = ARTMessage()
+        msg.name = "start"
+        msg.extras = [
+            "headers": [
+                "responseId": responseID
+            ]
+        ] as ARTJsonCompatible
+        conversationChannel.publish([msg])
+    case .reasoning(let text, let responseID):
+        // Publish reasoning to separate reasoning channel
+        let reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:\(responseID)")
+
+        let msg = ARTMessage(name: "reasoning", data: text)
+        reasoningChannel.publish([msg])
+    case .message(let text, let responseID):
+        // Publish model output to main channel
+        let msg = ARTMessage(name: "message", data: text)
+        msg.extras = [
+            "headers": [
+                "responseId": responseID
+            ]
+        ] as ARTJsonCompatible
+        conversationChannel.publish([msg])
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -540,6 +674,58 @@ void onClickViewReasoning(String responseId) {
     });
 }
 ```
+
+{/* Swift example test harness
+ID: chain-of-thought-4
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+@MainActor
+func example(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID
+var responses: [String: String] = [:]
+
+// Subscribe to all messages on the main channel
+conversationChannel.subscribe { message in
+    MainActor.assumeIsolated {
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else {
+            print("Message missing responseId")
+            return
+        }
+
+        // Handle response start control message
+        if message.name == "start" {
+            responses[responseID] = ""
+        }
+
+        // Handle model output message
+        if message.name == "message" {
+            responses[responseID] = message.data as? String ?? ""
+        }
+    }
+}
+
+// Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+func onClickViewReasoning(responseID: String) {
+    // Derive reasoning channel name from responseId and
+    // use rewind to retrieve historical reasoning
+    let channelOptions = ARTRealtimeChannelOptions()
+    channelOptions.params = ["rewind": "2m"]
+    let reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:\(responseID)", options: channelOptions)
+
+    // Subscribe to reasoning messages
+    reasoningChannel.subscribe { message in
+        print("[Reasoning]: \(message.data ?? "")")
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="further-reading">
