@@ -75,6 +75,22 @@ data.addProperty("prompt", "Analyze last quarter's sales data and generate a rep
 data.addProperty("notifyOnComplete", true);
 channel.publish("request", data);
 ```
+{/*
+Swift test harness:
+func example(ably: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+// Client code
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Request notification when the current task finishes
+channel.publish("request", data: [
+    "prompt": "Analyze last quarter's sales data and generate a report",
+    "notifyOnComplete": true
+] as [String: Any])
+```
 </Code>
 
 The agent reads this flag and stores the preference for the duration of the task:
@@ -110,6 +126,25 @@ channel.subscribe("request", message -> {
     // Begin processing the task...
 });
 ```
+{/*
+Swift test harness:
+func example(channel: ARTRealtimeChannel) {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+var notifyUserOnComplete = false
+
+channel.subscribe("request") { message in
+    MainActor.assumeIsolated {
+        if let data = message.data as? [String: Any] {
+            notifyUserOnComplete = data["notifyOnComplete"] as? Bool == true
+        }
+        // Begin processing the task...
+    }
+}
+```
 </Code>
 
 ### App-wide opt-in <a id="app-wide"/>
@@ -138,6 +173,20 @@ boolean shouldNotifyUser(String userId) {
     // Check the user's notification preference from your application's settings
     UserSettings userSettings = getUserSettings(userId);
     return userSettings.isPushNotificationsEnabled();
+}
+```
+{/*
+Swift test harness:
+func example(getUserSettings: @escaping (String) async -> UserSettings) {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+func shouldNotifyUser(withID userID: String) async -> Bool {
+    // Check the user's notification preference from your application's settings
+    let userSettings = await getUserSettings(userID)
+    return userSettings.pushNotificationsEnabled
 }
 ```
 </Code>
@@ -192,6 +241,39 @@ void onTaskComplete(Channel channel, String userId, JsonObject result) throws Ab
 
     if (!userIsOnline) {
         sendPushNotification(userId, channel.name, result);
+    }
+}
+```
+{/*
+Swift test harness:
+func example(
+    channel: ARTRealtimeChannel,
+    userID: String,
+    result: [String: Any],
+    sendPushNotification: @escaping (String, String, [String: Any]) -> Void
+) {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+func onTaskComplete(channel: ARTRealtimeChannel, userID: String, result: [String: Any]) {
+    // Always publish results to the channel for history and connected clients
+    channel.publish("result", data: result)
+
+    // If user is offline, also send a push notification
+    channel.presence.get { members, error in
+        if let error {
+            print("Error fetching presence: \(error)")
+            return
+        }
+
+        guard let members else { return }
+        let userIsOnline = members.contains { $0.clientId == userID }
+
+        if !userIsOnline {
+            sendPushNotification(userID, channel.name, result)
+        }
     }
 }
 ```
@@ -256,6 +338,31 @@ boolean shouldSendPush(Channel channel, String userId) throws AblyException {
     return false;
 }
 ```
+{/*
+Swift test harness:
+func example(channel: ARTRealtimeChannel, userID: String) {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+func shouldSendPush(channel: ARTRealtimeChannel, userID: String) async -> Bool {
+    await withCheckedContinuation { continuation in
+        channel.presence.get { members, error in
+            let userDevices = (members ?? []).filter { $0.clientId == userID }
+
+            if userDevices.isEmpty {
+                // User is completely offline, send push notification
+                continuation.resume(returning: true)
+            } else {
+                // User has at least one active device, no push needed
+                // Results will be delivered via the channel
+                continuation.resume(returning: false)
+            }
+        }
+    }
+}
+```
 </Code>
 
 ## Send a push notification <a id="send"/>
@@ -315,6 +422,31 @@ JsonObject payload = JsonUtils.object()
     .toJson();
 
 ably.push.admin.publish(new Param[]{new Param("clientId", "user-123")}, payload);
+```
+{/*
+Swift test harness:
+func example(ably: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+let recipient: [String: Any] = [
+    "clientId": "user-123"
+]
+
+let data: [String: Any] = [
+    "notification": [
+        "title": "Task complete",
+        "body": "Your sales report is ready to view"
+    ],
+    "data": [
+        "channelName": "session-abc-123",
+        "type": "task-complete"
+    ]
+]
+
+ably.push.admin.publish(recipient, data: data, callback: nil)
 ```
 </Code>
 
@@ -383,6 +515,30 @@ JsonObject payload = JsonUtils.object()
 
 ably.push.admin.publish(new Param[]{new Param("clientId", userId)}, payload);
 ```
+{/*
+Swift test harness:
+func example(ably: ARTRealtime, userID: String, channel: ARTRealtimeChannel) {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+let recipient: [String: Any] = ["clientId": userID]
+
+let data: [String: Any] = [
+    "notification": [
+        "title": "Research complete",
+        "body": "Your market analysis is ready"
+    ],
+    "data": [
+        "channelName": channel.name,
+        "sessionId": "session-abc-123",
+        "action": "view-results"
+    ]
+]
+
+ably.push.admin.publish(recipient, data: data, callback: nil)
+```
 </Code>
 
 On the client side, read the `data` fields when handling the notification to navigate to the correct session:
@@ -411,6 +567,25 @@ void onNotificationTap(Intent intent) {
     String sessionId = intent.getStringExtra("sessionId");
     // Navigate to the session and reattach to the channel
     navigateToSession(sessionId, channelName);
+}
+```
+{/*
+Swift test harness:
+struct ExamplePushNotification {
+    let data: [String: String]
+}
+
+func example(navigateToSession: @escaping (String, String) -> Void) {
+    // insert example code here
+}
+*/}
+```swift
+// Client code - handling a push notification tap
+func onNotificationTap(_ notification: ExamplePushNotification) {
+    guard let channelName = notification.data["channelName"],
+          let sessionID = notification.data["sessionId"] else { return }
+    // Navigate to the session and reattach to the channel
+    navigateToSession(sessionID, channelName)
 }
 ```
 </Code>
@@ -477,5 +652,38 @@ JsonObject payload = JsonUtils.object()
     .toJson();
 
 ably.push.admin.publish(new Param[]{new Param("clientId", userId)}, payload);
+```
+{/*
+Swift test harness:
+func example(
+    ably: ARTRealtime,
+    userID: String,
+    channel: ARTRealtimeChannel,
+    sessionID: String,
+    result: [String: Any],
+    generateSummary: @escaping ([String: Any]) -> String
+) {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+let summary = generateSummary(result)
+
+let recipient: [String: Any] = ["clientId": userID]
+
+let data: [String: Any] = [
+    "notification": [
+        "title": "Report ready",
+        "body": summary  // For example: "Q4 sales report: revenue up 12%, 3 action items identified"
+    ],
+    "data": [
+        "channelName": channel.name,
+        "sessionId": sessionID,
+        "action": "view-results"
+    ]
+]
+
+ably.push.admin.publish(recipient, data: data, callback: nil)
 ```
 </Code>

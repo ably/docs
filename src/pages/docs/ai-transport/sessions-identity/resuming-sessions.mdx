@@ -240,6 +240,96 @@ for (Message message : missedMessages) {
     saveLastProcessedTimestamp(message.timestamp);
 }
 ```
+
+{/*
+Swift test harness:
+func example(
+    loadChannelName: @escaping @Sendable () async throws -> String,
+    loadLastProcessedTimestamp: @escaping @Sendable () async throws -> Date,
+    processMessage: @escaping @Sendable (ARTMessage) -> Void,
+    saveLastProcessedTimestamp: @escaping @Sendable (Date) -> Void
+) async throws {
+    // insert example code here
+}
+*/}
+```swift
+// Agent code
+let options = ARTClientOptions(key: ProcessInfo.processInfo.environment["ABLY_API_KEY"]!)
+options.clientId = "agent:assistant"
+let ably = ARTRealtime(options: options)
+
+// Load persisted session state
+let channelName = try await loadChannelName()
+let lastProcessedTimestamp = try await loadLastProcessedTimestamp()
+
+// Use a channel in a namespace with persistence enabled
+// to access more than 2 minutes of message history
+let channel = ably.channels.get(channelName)
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe("prompt") { message in
+    // Process the live message
+    processMessage(message)
+
+    // Persist the timestamp after successful processing
+    if let timestamp = message.timestamp {
+        saveLastProcessedTimestamp(timestamp)
+    }
+}
+
+// Fetch history from the attachment point back to the last checkpoint
+let query = ARTRealtimeHistoryQuery()
+query.untilAttach = true
+query.start = lastProcessedTimestamp
+
+do {
+    try channel.history(query) { page, historyError in
+        if let historyError = historyError {
+            print("Error fetching history: \(historyError.message)")
+            return
+        }
+
+        // Collect all pages then process messages oldest-to-newest
+        func collectPages(
+            _ currentPage: ARTPaginatedResult<ARTMessage>?,
+            accumulated: [ARTMessage]
+        ) {
+            guard let currentPage = currentPage else {
+                // Process messages oldest-to-newest
+                for message in accumulated {
+                    processMessage(message)
+
+                    // Persist the timestamp after successful processing
+                    if let timestamp = message.timestamp {
+                        saveLastProcessedTimestamp(timestamp)
+                    }
+                }
+                return
+            }
+
+            // Prepend reversed items to build oldest-to-newest order
+            let updated = Array(currentPage.items.reversed()) + accumulated
+
+            // Move to next page if available
+            if currentPage.hasNext {
+                currentPage.next { nextPage, nextError in
+                    if let nextError = nextError {
+                        print("Error fetching next page: \(nextError.message)")
+                        return
+                    }
+                    collectPages(nextPage, accumulated: updated)
+                }
+            } else {
+                collectPages(nil, accumulated: updated)
+            }
+        }
+
+        collectPages(page, accumulated: [])
+    }
+} catch {
+    print("Error initiating history request: \(error.localizedDescription)")
+}
+```
 </Code>
 
 <Aside data-type="note">

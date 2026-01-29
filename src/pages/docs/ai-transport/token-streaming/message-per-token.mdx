@@ -30,6 +30,16 @@ channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
 ```java
 Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
 ```
+
+{/*
+Swift test harness:
+func example(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+```
 </Code>
 
 When publishing tokens, don't await the `channel.publish()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each publish would unnecessarily slow down your token stream. Messages are still published in the order that `publish()` is called, so delivery order is not affected.
@@ -75,6 +85,39 @@ for (Event event : stream) {
 for (Event event : stream) {
     if (event.getType().equals("token")) {
         channel.publish("token", event.getText()).get(); // blocking call
+    }
+}
+```
+
+{/*
+Swift test harness:
+func example(
+    channel: ARTRealtimeChannel,
+    stream: any AsyncSequence<(type: String, text: String), Never> & Sendable
+) async throws {
+    // insert example code here
+}
+*/}
+```swift
+// ✅ Do this - publish without callback for maximum throughput
+for await event in stream {
+    if event.type == "token" {
+        channel.publish("token", data: event.text)
+    }
+}
+
+// ❌ Don't do this - waiting for each publish reduces throughput
+for await event in stream {
+    if event.type == "token" {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            channel.publish("token", data: event.text) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
     }
 }
 ```
@@ -177,6 +220,63 @@ if (failed) {
     channel.publish("response-complete", fullResponse.toString());
 }
 ```
+
+{/*
+Swift test harness:
+func example(
+    channel: ARTRealtimeChannel,
+    stream: any AsyncSequence<(type: String, text: String), Never> & Sendable
+) async throws {
+    // insert example code here
+}
+*/}
+```swift
+// Track the full response for recovery
+var fullResponse = ""
+
+// Track all publish operations and check for failures
+let failed = await withTaskGroup(of: Bool.self) { group in
+    for await event in stream {
+        if event.type == "token" {
+            fullResponse += event.text
+
+            let text = event.text
+            group.addTask {
+                do {
+                    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                        channel.publish("token", data: text) { error in
+                            if let error {
+                                continuation.resume(throwing: error)
+                            } else {
+                                continuation.resume()
+                            }
+                        }
+                    }
+                    return false
+                } catch {
+                    return true // This publish failed
+                }
+            }
+        }
+    }
+
+    // Check for any failures after the stream completes
+    return await group.contains(true)
+}
+
+if failed {
+    // Publish the complete response as a recovery message
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        channel.publish("response-complete", data: fullResponse) { error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume()
+            }
+        }
+    }
+}
+```
 </Code>
 
 If any publish fails, publish a new message with a different event type (such as `response-complete`) containing the full response. Subscribers should handle this event by replacing any tokens they have accumulated for that response:
@@ -227,6 +327,31 @@ channel.subscribe("response-complete", message -> {
     response.setLength(0);
     response.append((String) message.data);
 });
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(channel: ARTRealtimeChannel) {
+    // insert example code here
+}
+*/}
+```swift
+var response = ""
+
+// Handle individual tokens
+channel.subscribe("token") { message in
+    MainActor.assumeIsolated {
+        response += message.data as? String ?? ""
+    }
+}
+
+// Handle recovery message that replaces all previous tokens
+channel.subscribe("response-complete") { message in
+    MainActor.assumeIsolated {
+        response = message.data as? String ?? ""
+    }
+}
 ```
 </Code>
 
@@ -279,6 +404,26 @@ for (Event event : stream) {
     }
 }
 ```
+
+{/*
+Swift test harness:
+func example(
+    realtime: ARTRealtime,
+    stream: any AsyncSequence<(type: String, text: String), Never> & Sendable
+) async {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like { type: 'token', text: 'Hello' }
+for await event in stream {
+    if event.type == "token" {
+        channel.publish("token", data: event.text)
+    }
+}
+```
 </Code>
 
 #### Subscribe to tokens
@@ -311,6 +456,22 @@ channel.subscribe("token", message -> {
     String token = (String) message.data;
     System.out.println(token); // log each token as it arrives
 });
+```
+
+{/*
+Swift test harness:
+func example(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Subscribe to token messages
+channel.subscribe("token") { message in
+    let token = message.data as? String
+    print(token ?? "") // log each token as it arrives
+}
 ```
 </Code>
 
@@ -369,6 +530,32 @@ for (Event event : stream) {
         extras.add("headers", headers);
 
         channel.publish(new Message("token", event.getText(), new MessageExtras(extras)));
+    }
+}
+```
+
+{/*
+Swift test harness:
+func example(
+    realtime: ARTRealtime,
+    stream: any AsyncSequence<(type: String, text: String, responseId: String), Never> & Sendable
+) async {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like { type: 'token', text: 'Hello', responseId: 'resp_abc123' }
+for await event in stream {
+    if event.type == "token" {
+        let message = ARTMessage(name: "token", data: event.text)
+        message.extras = [
+            "headers": [
+                "responseId": event.responseId
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message])
     }
 }
 ```
@@ -448,6 +635,40 @@ channel.subscribe("token", message -> {
     // Append token to response
     responses.put(responseId, responses.get(responseId) + token);
 });
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID
+var responses: [String: String] = [:]
+
+channel.subscribe("token") { message in
+    MainActor.assumeIsolated {
+        guard let token = message.data as? String else { return }
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else {
+            print("Token missing responseId")
+            return
+        }
+
+        // Create an empty response
+        if responses[responseID] == nil {
+            responses[responseID] = ""
+        }
+
+        // Append token to response
+        responses[responseID] = responses[responseID]! + token
+    }
+}
 ```
 </Code>
 
@@ -568,6 +789,59 @@ for (Event event : stream) {
     }
 }
 ```
+
+{/*
+Swift test harness:
+enum StreamEvent: Sendable {
+    case messageStart(responseID: String)
+    case messageDelta(text: String, responseID: String)
+    case messageStop(responseID: String)
+}
+
+func example(
+    realtime: ARTRealtime,
+    stream: any AsyncSequence<StreamEvent, Never> & Sendable
+) async {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+for await event in stream {
+    switch event {
+    case .messageStart(let responseID):
+        // Publish response start
+        let message = ARTMessage()
+        message.name = "start"
+        message.extras = [
+            "headers": [
+                "responseId": responseID
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message])
+    case .messageDelta(let text, let responseID):
+        // Publish tokens
+        let message = ARTMessage(name: "token", data: text)
+        message.extras = [
+            "headers": [
+                "responseId": responseID
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message])
+    case .messageStop(let responseID):
+        // Publish response stop
+        let message = ARTMessage()
+        message.name = "stop"
+        message.extras = [
+            "headers": [
+                "responseId": responseID
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message])
+    }
+}
+```
 </Code>
 
 #### Subscribe to tokens
@@ -662,6 +936,53 @@ channel.subscribe("stop", message -> {
     System.out.println("Response complete: " + finalText);
 });
 ```
+
+{/*
+Swift test harness:
+@MainActor
+func example(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+var responses: [String: String] = [:]
+
+// Handle response start
+channel.subscribe("start") { message in
+    MainActor.assumeIsolated {
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else { return }
+        responses[responseID] = ""
+    }
+}
+
+// Handle tokens
+channel.subscribe("token") { message in
+    MainActor.assumeIsolated {
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else { return }
+        guard let token = message.data as? String else { return }
+
+        let currentText = responses[responseID] ?? ""
+        responses[responseID] = currentText + token
+    }
+}
+
+// Handle response stop
+channel.subscribe("stop") { message in
+    MainActor.assumeIsolated {
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else { return }
+        let finalText = responses[responseID]
+        print("Response complete: \(finalText ?? "")")
+    }
+}
+```
 </Code>
 
 ## Client hydration <a id="hydration"/>
@@ -724,6 +1045,28 @@ channel.subscribe("token", message -> {
     // Process tokens from both recent history and live stream
     System.out.println("Token received: " + token);
 });
+```
+
+{/*
+Swift test harness:
+func example(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+// Use rewind to receive recent historical messages
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.params = ["rewind": "2m"] // or rewind: "100" for message count
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options: channelOptions)
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+channel.subscribe("token") { message in
+    let token = message.data as? String
+
+    // Process tokens from both recent history and live stream
+    print("Token received: \(token ?? "")")
+}
 ```
 </Code>
 
@@ -820,6 +1163,72 @@ while (page != null) {
     // Move to next page if available
     page = page.hasNext() ? page.next() : null;
 }
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+let channel = realtime.channels.get("persisted:{{RANDOM_CHANNEL_NAME}}")
+
+var response = ""
+
+// Paginate backwards through history
+func processPage(_ page: ARTPaginatedResult<ARTMessage>?) {
+    guard let page = page else { return }
+
+    // Messages are newest-first, so prepend them to response
+    for message in page.items {
+        response = (message.data as? String ?? "") + response
+    }
+
+    // Move to next page if available
+    if page.hasNext {
+        page.next { nextPage, error in
+            if error == nil {
+                MainActor.assumeIsolated {
+                    processPage(nextPage)
+                }
+            }
+        }
+    }
+}
+
+// Subscribe to live messages and fetch history after attach
+channel.subscribe("token", onAttach: { error in
+    if let error {
+        print("Error attaching: \(error)")
+        return
+    }
+
+    MainActor.assumeIsolated {
+        // Fetch history up until the point of attachment
+        let params = ARTRealtimeHistoryQuery()
+        params.untilAttach = true
+
+        do {
+            try channel.history(params) { page, error in
+                if error == nil {
+                    MainActor.assumeIsolated {
+                        processPage(page)
+                    }
+                }
+            }
+        } catch {
+            print("Error fetching history: \(error)")
+        }
+    }
+}, callback: { message in
+    MainActor.assumeIsolated {
+        // Append the token to the end of the response
+        response += (message.data as? String ?? "")
+    }
+})
 ```
 </Code>
 
@@ -941,6 +1350,56 @@ channel.subscribe("token", message -> {
     // Append tokens for new responses
     inProgressResponses.put(responseId, inProgressResponses.get(responseId) + token);
 });
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(
+    realtime: ARTRealtime,
+    loadResponsesFromDatabase: () -> (has: (String) -> Bool, Void)
+) {
+    // insert example code here
+}
+*/}
+```swift
+// Load completed responses from database
+let completedResponses = loadResponsesFromDatabase()
+
+// Use rewind to receive recent historical messages
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.params = ["rewind": "2m"]
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options: channelOptions)
+
+// Track in progress responses by ID
+var inProgressResponses: [String: String] = [:]
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+channel.subscribe("token") { message in
+    MainActor.assumeIsolated {
+        guard let token = message.data as? String else { return }
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else {
+            print("Token missing responseId")
+            return
+        }
+
+        // Skip tokens for responses already hydrated from database
+        if completedResponses.has(responseID) {
+            return
+        }
+
+        // Create an empty in-progress response
+        if inProgressResponses[responseID] == nil {
+            inProgressResponses[responseID] = ""
+        }
+
+        // Append tokens for new responses
+        inProgressResponses[responseID] = inProgressResponses[responseID]! + token
+    }
+}
 ```
 </Code>
 
@@ -1131,6 +1590,103 @@ while (page != null && !done) {
 
     // Move to next page if available
     page = page.hasNext() ? page.next() : null;
+}
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(
+    realtime: ARTRealtime,
+    completedResponses: (has: (String) -> Bool, Void)
+) {
+    // insert example code here
+}
+*/}
+```swift
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+let channel = realtime.channels.get("persisted:{{RANDOM_CHANNEL_NAME}}")
+
+// Track in progress responses by ID
+var inProgressResponses: [String: String] = [:]
+
+// Subscribe to live tokens (implicitly attaches)
+channel.subscribe("token") { message in
+    MainActor.assumeIsolated {
+        guard let token = message.data as? String else { return }
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else {
+            print("Token missing responseId")
+            return
+        }
+
+        // Skip tokens for responses already hydrated from database
+        if completedResponses.has(responseID) {
+            return
+        }
+
+        // Create an empty in-progress response
+        if inProgressResponses[responseID] == nil {
+            inProgressResponses[responseID] = ""
+        }
+
+        // Append live tokens for in-progress responses
+        inProgressResponses[responseID] = inProgressResponses[responseID]! + token
+    }
+}
+
+// Paginate backwards through history until we encounter a hydrated response
+let params = ARTRealtimeHistoryQuery()
+params.untilAttach = true
+
+func processPage(_ page: ARTPaginatedResult<ARTMessage>?) {
+    guard let page = page else { return }
+
+    // Messages are newest-first, so prepend them to response
+    for message in page.items {
+        let token = message.data as? String ?? ""
+        guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+              let headers = extras["headers"] as? [String: Any],
+              let responseID = headers["responseId"] as? String else { continue }
+
+        // Stop when we reach a response already loaded from database
+        if completedResponses.has(responseID) {
+            return
+        }
+
+        // Create an empty in-progress response
+        if inProgressResponses[responseID] == nil {
+            inProgressResponses[responseID] = ""
+        }
+
+        // Prepend historical tokens for in-progress responses
+        inProgressResponses[responseID] = token + (inProgressResponses[responseID] ?? "")
+    }
+
+    // Move to next page if available
+    if page.hasNext {
+        page.next { nextPage, error in
+            if error == nil {
+                MainActor.assumeIsolated {
+                    processPage(nextPage)
+                }
+            }
+        }
+    }
+
+}
+
+do {
+    try channel.history(params) { page, error in
+        if error == nil {
+            MainActor.assumeIsolated {
+                processPage(page)
+            }
+        }
+    }
+} catch {
+    print("Error fetching history: \(error)")
 }
 ```
 </Code>
