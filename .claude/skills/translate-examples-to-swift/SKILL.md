@@ -163,12 +163,17 @@ func customTypesScope() {
 ## 4. Use the test harness to verify the translated code
 
 1. Inside the test harness directory, run `swift build`.
-2. If the compilation succeeds, the translated code can be considered correct; there is nothing else to do.
-3. If the compilation fails, analyse the compilation failures. If you know how to fix the compilation failures, then modify the translated code and try building again. If you do not know how to fix the compilation failures, then seek input from the user as to how to proceed. When reporting back to the user, provide the following information:
-  - the original JavaScript code
-  - the location of the original JavaScript code
-  - the translated code and the test harness code into which it was inserted (make it clear which is which)
-  - the compilation failure and any ideas you have about what's going on
+2. If the compilation succeeds, the translated code can be considered correct; proceed to step 5.
+3. If the compilation fails, analyse the compilation failures. There are two possible causes:
+   - **Missing context in the test harness**: The original JavaScript code assumed something exists (a type, a function, a variable) that the test harness doesn't provide. In this case, add the missing context to the test harness and try again. Do NOT modify the translated code to work around missing context.
+   - **Mistranslation**: The translated Swift code is incorrect (wrong method names, wrong syntax, incorrect API usage). In this case, fix the translation and try again.
+4. If you cannot determine the cause of the compilation failure or do not know how to fix it, seek input from the user. When reporting back to the user, provide:
+   - the original JavaScript code
+   - the location of the original JavaScript code
+   - the translated code and the test harness code into which it was inserted (make it clear which is which)
+   - the compilation failure and any ideas you have about what's going on
+
+**Important**: The code that ends up in the documentation must be exactly the code inside the `example()` function body that was verified to compile. Do not insert different code into the documentation than what was tested.
 
 ## 5. Report back to the user
 
