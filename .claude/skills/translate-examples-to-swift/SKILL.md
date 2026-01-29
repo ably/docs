@@ -49,24 +49,73 @@ For example, in the example given above, we can see that the following must exis
     - the equivalent in ably-cocoa is an `ARTRealtimeChannel`
 - a stream of events (the `stream` variable)
     - from the surrounding context, you can infer that this is an `AsyncIterable` whose elements have a user-provided type that has shape `{ type: string, text: string }`
-    - the equivalent in Swift could be an `any AsyncSequence<UserElement, Never>`, where `UserElement` is a struct with `type` and `text` properties, both of type `String`
+    - the equivalent in Swift could be an `any AsyncSequence<(type: String, text: String), Never>` using a tuple with labeled elements
 
 TODO: before this, we need to tell it how to actually create a Swift project and add Ably to it and import it.
 
-In order to avoid needing to set up all of these variables in the test file (since it may not be obvious how to initialize them), create a Swift function that accepts the surrounding context as an argument:
+### Providing context via parameters vs stub type declarations
+
+The goal is to make everything the original JavaScript code assumes exists available in scope. The easiest way to do this is to pass things as parameters to the `example()` function, spelling their types using function types, tuples, and existentials.
+
+**Use parameters** (the default) when the type only needs to exist in the function signature—i.e., the translated code uses values of that type but doesn't need to spell the type name itself.
+
+For example, if the JavaScript code calls `loadResponsesFromDatabase()` which returns an object with a `latest()` method and a `has()` method, you can spell this as a parameter:
 
 ```swift
-// A top-level function that encapsulates all the context needed for this example. We use a unique identifier in the name in case later on we wish to use the same test harness for multiple examples (for efficiency).
+func example(
+    loadResponsesFromDatabase: () -> (
+        latest: () -> (timestamp: Date, Void),
+        has: (String) -> Bool
+    ),
+    channel: ARTRealtimeChannel
+) {
+    let completedResponses = loadResponsesFromDatabase()
+    let latestTimestamp = completedResponses.latest().timestamp
+    if completedResponses.has(responseId) { ... }
+}
+```
+
+**Use stub type declarations** (in the enclosing scope) when the translated code itself needs to reference the type name—for type annotations, instantiation, or type inference hints. For example:
+
+```swift
+// Stub type declaration needed because the translated code references `ResponseData` by name
+struct ResponseData {
+    var timestamp: Date
+}
+
+func example(...) {
+    // The type name `ResponseData` appears in the translated code
+    let responses: [String: ResponseData] = [:]
+    ...
+}
+```
+
+The key question is: does the type name appear *inside* the translated code, or only in the harness's function signature?
+
+When stub type declarations are needed, wrap them in an enclosing function to provide scope. Use a unique identifier in the function name in case you later want to use the same test harness for multiple examples (for efficiency):
+
+```swift
 func exampleContext_7EEA145D_060F_4DAD_BFBF_1A4CC28856E8() {
-    struct UserElement {
-        var type: String
-        var text: String
+    // Stub type declaration needed because translated code references `ResponseData` by name
+    struct ResponseData {
+        var timestamp: Date
     }
 
-    // The body of this function is the translation of the example.
-    func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<UserElement, Never>) async throws {
-        // TODO: fill in with translation of example (to come in next step)
+    func example(...) {
+        let responses: [String: ResponseData] = [:]  // type name appears in translated code
+        ...
     }
+}
+```
+
+### Putting it together
+
+For the running example (which doesn't need stub type declarations), create a simple function:
+
+```swift
+// The body of this function is the translation of the example.
+func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
+    // TODO: fill in with translation of example (to come in next step)
 }
 ```
 
@@ -120,40 +169,31 @@ channel.publish("response", data: "") { publishResult, error in
 Insert the translated code from step 2 into the test harness from step 1:
 
 ```swift
-// A top-level function that provides the scope for any custom types.
-func customTypesScope() {
-    struct UserElement {
-        var type: String
-        var text: String
-    }
+func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable) async throws {
+    // Publish initial message and capture the serial for appending tokens
+    channel.publish("response", data: "") { publishResult, error in
+        if let error {
+            print("Error publishing message: \(error)")
+            return
+        }
 
-    // The body of this function is the translation of the example.
-    func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<UserElement, Never> & Sendable) async throws {
-        // Publish initial message and capture the serial for appending tokens
-        channel.publish("response", data: "") { publishResult, error in
-            if let error {
-                print("Error publishing message: \(error)")
-                return
-            }
+        let msgSerial = publishResult!.serials[0].value!
 
-            let msgSerial = publishResult!.serials[0].value!
+        Task {
+            // Example: stream returns events like { type: 'token', text: 'Hello' }
+            for await event in stream {
+              // Append each token as it arrives
+              if (event.type == "token") {
+                  let messageToAppend = ARTMessage()
+                  messageToAppend.serial = msgSerial
+                  messageToAppend.data = event.text
 
-            Task {
-                // Example: stream returns events like { type: 'token', text: 'Hello' }
-                for await event in stream {
-                  // Append each token as it arrives
-                  if (event.type == "token") {
-                      let messageToAppend = ARTMessage()
-                      messageToAppend.serial = msgSerial
-                      messageToAppend.data = event.text
-
-                      channel.append(messageToAppend, operation: nil, params: nil) { _, error in
-                          if let error {
-                              print("Error appending to message: \(error)")
-                          }
+                  channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+                      if let error {
+                          print("Error appending to message: \(error)")
                       }
                   }
-                }
+              }
             }
         }
     }
