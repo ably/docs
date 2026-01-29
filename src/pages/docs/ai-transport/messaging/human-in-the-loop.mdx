@@ -58,6 +58,38 @@ async function requestHumanApproval(toolCall) {
   });
 }
 ```
+```python
+import uuid
+
+channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+async def request_human_approval(tool_call):
+    request_id = str(uuid.uuid4())
+
+    await channel.publish('approval-request', {
+        'requestId': request_id,
+        'action': tool_call['name'],
+        'parameters': tool_call['parameters']
+    })
+
+    return request_id
+```
+```java
+Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+String requestHumanApproval(ToolCall toolCall) {
+    String requestId = UUID.randomUUID().toString();
+
+    JsonObject data = new JsonObject();
+    data.addProperty("requestId", requestId);
+    data.addProperty("action", toolCall.getName());
+    data.add("parameters", toolCall.getParameters());
+
+    channel.publish("approval-request", data);
+
+    return requestId;
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -76,6 +108,17 @@ const claims = {
   'x-ably-clientId': 'user-123',
   'ably.channel.*': 'user'
 };
+```
+```python
+claims = {
+    'x-ably-clientId': 'user-123',
+    'ably.channel.*': 'user'
+}
+```
+```java
+Map<String, String> claims = new HashMap<>();
+claims.put("x-ably-clientId", "user-123");
+claims.put("ably.channel.*", "user");
 ```
 </Code>
 
@@ -122,6 +165,51 @@ async function reject(toolCallId) {
       }
     }
   });
+}
+```
+```python
+channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+def on_approval_request(message):
+    request = message.data
+    # Display request for human review
+    display_approval_ui(request)
+
+await channel.subscribe('approval-request', on_approval_request)
+
+async def approve(request_id):
+    await channel.publish('approval-response', {
+        'requestId': request_id,
+        'decision': 'approved'
+    })
+
+async def reject(request_id):
+    await channel.publish('approval-response', {
+        'requestId': request_id,
+        'decision': 'rejected'
+    })
+```
+```java
+Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+channel.subscribe("approval-request", message -> {
+    JsonObject request = (JsonObject) message.data;
+    // Display request for human review
+    displayApprovalUI(request);
+});
+
+void approve(String requestId) {
+    JsonObject data = new JsonObject();
+    data.addProperty("requestId", requestId);
+    data.addProperty("decision", "approved");
+    channel.publish("approval-response", data);
+}
+
+void reject(String requestId) {
+    JsonObject data = new JsonObject();
+    data.addProperty("requestId", requestId);
+    data.addProperty("decision", "rejected");
+    channel.publish("approval-response", data);
 }
 ```
 </Code>
@@ -178,6 +266,66 @@ await channel.subscribe('approval-response', async (message) => {
   pendingApprovals.delete(toolCallId);
 });
 ```
+```python
+pending_approvals = {}
+
+async def on_approval_response(message):
+    response = message.data
+    pending = pending_approvals.get(response['requestId'])
+
+    if not pending:
+        return
+
+    # The clientId is verified by Ably - this is the trusted approver identity
+    approver_id = message.client_id
+
+    # Look up user-specific permissions from your database
+    user_permissions = await get_user_permissions(approver_id)
+
+    if not user_permissions.can_approve(pending['toolCall']['name']):
+        print(f"User {approver_id} not authorized to approve {pending['toolCall']['name']}")
+        return
+
+    if response['decision'] == 'approved':
+        result = await execute_tool_call(pending['toolCall'])
+        print(f"Action approved by {approver_id}")
+    else:
+        print(f"Action rejected by {approver_id}")
+
+    del pending_approvals[response['requestId']]
+
+await channel.subscribe('approval-response', on_approval_response)
+```
+```java
+Map<String, PendingApproval> pendingApprovals = new ConcurrentHashMap<>();
+
+channel.subscribe("approval-response", message -> {
+    JsonObject response = (JsonObject) message.data;
+    PendingApproval pending = pendingApprovals.get(response.get("requestId").getAsString());
+
+    if (pending == null) return;
+
+    // The clientId is verified by Ably - this is the trusted approver identity
+    String approverId = message.clientId;
+
+    // Look up user-specific permissions from your database
+    UserPermissions userPermissions = getUserPermissions(approverId);
+
+    if (!userPermissions.canApprove(pending.getToolCall().getName())) {
+        System.out.println("User " + approverId + " not authorized to approve " + pending.getToolCall().getName());
+        return;
+    }
+
+    if (response.get("decision").getAsString().equals("approved")) {
+        Object result = executeToolCall(pending.getToolCall());
+        System.out.println("Action approved by " + approverId);
+    } else {
+        System.out.println("Action rejected by " + approverId);
+    }
+
+    pendingApprovals.remove(response.get("requestId").getAsString());
+});
+```
 </Code>
 
 ### Verify by role <a id="verify-role"/>
@@ -232,6 +380,74 @@ await channel.subscribe('approval-response', async (message) => {
   }
 
   pendingApprovals.delete(toolCallId);
+});
+```
+```python
+role_hierarchy = ['user', 'manager', 'admin']
+
+def can_approve(approver_role, required_role):
+    approver_level = role_hierarchy.index(approver_role)
+    required_level = role_hierarchy.index(required_role)
+
+    return approver_level >= required_level
+
+# When processing approval response
+async def on_approval_response(message):
+    response = message.data
+    pending = pending_approvals.get(response['requestId'])
+    policy = approval_policies[pending['toolCall']['name']]
+
+    # Get the trusted role from the JWT claim
+    approver_role = message.extras.get('userClaim')
+
+    # Verify the approver's role meets the minimum required role for this action
+    if not can_approve(approver_role, policy['minRole']):
+        print(f"Approver role '{approver_role}' insufficient for required '{policy['minRole']}'")
+        return
+
+    if response['decision'] == 'approved':
+        result = await execute_tool_call(pending['toolCall'])
+        print(f"Action approved by role {approver_role}")
+    else:
+        print(f"Action rejected by role {approver_role}")
+
+    del pending_approvals[response['requestId']]
+
+await channel.subscribe('approval-response', on_approval_response)
+```
+```java
+String[] roleHierarchy = {"user", "manager", "admin"};
+
+boolean canApprove(String approverRole, String requiredRole) {
+    int approverLevel = Arrays.asList(roleHierarchy).indexOf(approverRole);
+    int requiredLevel = Arrays.asList(roleHierarchy).indexOf(requiredRole);
+
+    return approverLevel >= requiredLevel;
+}
+
+// When processing approval response
+channel.subscribe("approval-response", message -> {
+    JsonObject response = (JsonObject) message.data;
+    PendingApproval pending = pendingApprovals.get(response.get("requestId").getAsString());
+    ApprovalPolicy policy = approvalPolicies.get(pending.getToolCall().getName());
+
+    // Get the trusted role from the JWT claim
+    String approverRole = message.extras.get("userClaim").getAsString();
+
+    // Verify the approver's role meets the minimum required role for this action
+    if (!canApprove(approverRole, policy.getMinRole())) {
+        System.out.println("Approver role '" + approverRole + "' insufficient for required '" + policy.getMinRole() + "'");
+        return;
+    }
+
+    if (response.get("decision").getAsString().equals("approved")) {
+        Object result = executeToolCall(pending.getToolCall());
+        System.out.println("Action approved by role " + approverRole);
+    } else {
+        System.out.println("Action rejected by role " + approverRole);
+    }
+
+    pendingApprovals.remove(response.get("requestId").getAsString());
 });
 ```
 </Code>
