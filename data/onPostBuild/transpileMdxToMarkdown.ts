@@ -324,6 +324,68 @@ function convertImagePathsToGitHub(content: string): string {
 }
 
 /**
+ * Convert Ably /docs/ links to use .md extension and remove ?lang= query parameters
+ * This is needed for LLM-friendly markdown files where all links should point to .md files
+ * Converts: [text](https://ably.com/docs/channels?lang=javascript) → [text](https://ably.com/docs/channels.md)
+ * Preserves: Non-Ably /docs/ links, sdk.ably.com links (API docs), already .md links
+ */
+function convertDocsLinksToMarkdown(content: string): string {
+
+  // Allowed hostnames for docs link conversion (exact matches only)
+  const ALLOWED_DOCS_HOSTNAMES = ['ably.com', 'www.ably.com', 'ably-dev.com', 'www.ably-dev.com'];
+
+  // Match markdown links: [text](url)
+  return content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+    // Only process absolute URLs with http/https
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return match;
+    }
+
+    // Parse the URL to properly validate the host
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      // Invalid URL, return as-is
+      return match;
+    }
+
+    // Only process URLs from allowed Ably domains (ably.com, www.ably.com, ably-dev.com, www.ably-dev.com)
+    if (!ALLOWED_DOCS_HOSTNAMES.includes(parsedUrl.hostname)) {
+      return match;
+    }
+
+    // Only process /docs/ paths
+    if (!parsedUrl.pathname.startsWith('/docs/')) {
+      return match;
+    }
+
+    // Don't process if already has .md extension
+    if (parsedUrl.pathname.match(/\.md$/)) {
+      return match;
+    }
+
+    // Don't add .md if URL already has a file extension (e.g., .png, .jpg, .html, .pdf, etc.)
+    // This prevents converting image/file URLs like test.png to test.png.md
+    if (parsedUrl.pathname.match(/\.[a-zA-Z0-9]{2,5}$/)) {
+      return match;
+    }
+
+    // Normalize the path: remove trailing slash before adding .md
+    let normalizedPath = parsedUrl.pathname;
+    if (normalizedPath.endsWith('/')) {
+      normalizedPath = normalizedPath.slice(0, -1);
+    }
+
+    // Build the new URL with .md extension
+    // Remove query parameters (including ?lang=) but preserve hash for semantic context
+    const newUrl = `${parsedUrl.protocol}//${parsedUrl.host}${normalizedPath}.md${parsedUrl.hash}`;
+
+    return `[${linkText}](${newUrl})`;
+  });
+}
+
+/**
  * Convert relative URLs to absolute URLs using the main website domain
  * Converts: [text](/docs/channels) → [text](https://ably.com/docs/channels)
  * Preserves: External URLs (http://, https://), hash-only links (#anchor)
@@ -422,10 +484,13 @@ function transformMdxToMarkdown(
   // Stage 7: Convert relative URLs to absolute URLs
   content = convertRelativeUrls(content, siteUrl);
 
-  // Stage 8: Replace template variables
+  // Stage 8: Convert /docs/ links to .md extension and remove ?lang= params
+  content = convertDocsLinksToMarkdown(content);
+
+  // Stage 9: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 9: Prepend title as markdown heading
+  // Stage 10: Prepend title as markdown heading
   const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
   return { content: finalContent, title, intro };
@@ -544,6 +609,7 @@ export {
   removeAnchorTags,
   removeJsxComments,
   convertImagePathsToGitHub,
+  convertDocsLinksToMarkdown,
   convertRelativeUrls,
   replaceTemplateVariables,
   calculateOutputPath,
