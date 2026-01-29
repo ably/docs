@@ -3,11 +3,27 @@ title: Operations
 meta_description: "Learn how objects are updated by operations in Ably LiveObjects."
 ---
 
-<Aside data-type='experimental'>
-LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+<If lang="javascript">
+  <Aside data-type='public-preview'>
+  LiveObjects JavaScript is in Public Preview. We are committed to supporting the LiveObjects Javascript API and welcome adoption and feedback.
 
-**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
-</Aside>
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="swift">
+  <Aside data-type='experimental'>
+  LiveObjects Swift is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="java">
+  <Aside data-type='experimental'>
+  LiveObjects Java is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
 
 LiveObjects operations define how object data is updated and synchronized across multiple clients.
 
@@ -15,11 +31,11 @@ When you create or update an object, the change is expressed as an _operation_ t
 
 This document explains the key concepts you need to know when working with operations.
 
-## Operation Types <a id="operation-types"/>
+## Operation types <a id="operation-types"/>
 
 Each object type supports specific operations that modify the object's data.
 
-### LiveMap Operations <a id="livemap"/>
+### LiveMap operations <a id="livemap"/>
 
 [LiveMap](/docs/liveobjects/map) supports the following operations:
 
@@ -30,11 +46,8 @@ The value of an entry in a `LiveMap` instance can be a [primitive type](/docs/li
 
 <Code>
 ```javascript
-// Set a value for a key
-await map.set('username', 'alice');
-
-// Remove a key
-await map.remove('username');
+await myObject.get('user').set('username', 'alice');
+await myObject.get('user').remove('status');
 ```
 
 ```swift
@@ -54,7 +67,7 @@ map.remove("username");
 ```
 </Code>
 
-### LiveCounter Operations <a id="livecounter"/>
+### LiveCounter operations <a id="livecounter"/>
 
 [LiveCounter](/docs/liveobjects/counter) supports the following operations:
 
@@ -69,11 +82,8 @@ The `decrement` operation is just syntactic sugar for `increment` with a negativ
 
 <Code>
 ```javascript
-// Increment counter by 5
-await counter.increment(5);
-
-// Decrement counter by 2
-await counter.decrement(2);
+await myObject.get('visits').increment(5);
+await myObject.get('score').decrement(2);
 ```
 
 ```swift
@@ -93,24 +103,47 @@ counter.decrement(2);
 ```
 </Code>
 
-### Create Operations <a id="create-operations"/>
+### Create operations <a id="create-operations"/>
 
 Create operations are used to instantiate new objects of a given type.
 
-A create operation can optionally specify an initial value for the object.
+<If lang="javascript">
+Use `LiveMap.create()` and `LiveCounter.create()` to create new objects. These methods create special value types that can be assigned directly to paths:
 
 <Code>
 ```javascript
-// Create a map with initial values
-const userMap = await channel.objects.createMap({
+// Create and assign a map with initial values
+await myObject.set('user', LiveMap.create({
   username: 'alice',
   status: 'online'
-});
+}));
 
-// Create a counter with initial value
-const scoreCounter = await channel.objects.createCounter(100);
+// Create and assign a counter with initial value
+await myObject.set('score', LiveCounter.create(100));
+
+// Create nested structures
+await myObject.set('profile', LiveMap.create({
+  name: 'Alice',
+  score: LiveCounter.create(0),
+  settings: LiveMap.create({
+    theme: 'dark',
+    notifications: true
+  })
+}));
 ```
+</Code>
 
+When a create operation is processed, an [object ID](/docs/liveobjects/concepts/objects#object-ids) is automatically generated for the new object instance.
+
+<Aside data-type='note'>
+Objects created with `LiveMap.create()` and `LiveCounter.create()` are automatically [reachable](/docs/liveobjects/concepts/objects#reachability) when you assign them to a path. You don't need to worry about [orphaned objects](/docs/liveobjects/lifecycle#objects-deleted) unless you explicitly remove them from the tree and you have retained an `Instance` for the now-unreachable object.
+</Aside>
+</If>
+
+<If lang="swift,java">
+A create operation can optionally specify an initial value for the object.
+
+<Code>
 ```swift
 // Create a map with initial values
 let userMap = try await channel.objects.createMap(entries: [
@@ -138,19 +171,31 @@ LiveCounter scoreCounter = channel.getObjects().createCounter(100);
 When a create operation is processed, an [object ID](/docs/liveobjects/concepts/objects#object-ids) for the new object instance is automatically generated for the object.
 
 <Aside data-type='important'>
-Newly created objects are not automatically [reachable](/docs/liveobjects/concepts/objects#reachability) from the root object. You must explicitly add them to the object tree to prevent garbage collection.
+Newly created objects are not automatically [reachable](/docs/liveobjects/concepts/objects#reachability) from the <If lang="javascript">channel object</If><If lang="swift,java">root object</If>. You must explicitly add them to the object tree to prevent garbage collection.
 </Aside>
+</If>
 
 ## Object IDs <a id="object-ids"/>
 
 Every operation is expressed relative to a specific object instance, identified by its [object ID](/docs/liveobjects/concepts/objects#object-ids), which determines which object the operation is applied to.
 
+<If lang="javascript">
+When using a `PathObject`, the specific object instance at the given path is evaluated at the time a method is called that updates the object. The client library will then publish an operation targeting the resolved object.
+</If>
+
 When using a client library object IDs are handled automatically, allowing you work directly with object references:
 
 <Code>
 ```javascript
-// The published operation targets the object ID of the `userMap` object instance
-await userMap.set('username', 'alice');
+// The published operation targets the object ID of the object at 'user'
+await myObject.get('user').set('username', 'alice');
+
+// Get the specific instance and its ID
+const userInstance = myObject.get('user').instance();
+if (userInstance) {
+  console.log('Object ID:', userInstance.id());
+  await userInstance.set('username', 'alice');
+}
 ```
 
 ```swift
@@ -164,20 +209,10 @@ userMap.set("username", LiveMapValue.of("alice"));
 ```
 </Code>
 
+<If lang="swift,java">
 Therefore it is important that you obtain an up-to-date object instance before performing operations on an object. For example, you can [subscribe](/docs/liveobjects/map#subscribe-data) to a `LiveMap` instance to ensure you always have an up-to-date reference to any child objects in the map:
 
 <Code>
-```javascript
-const root = await channel.objects.getRoot();
-
-let myCounter = root.get('myCounter');
-root.subscribe(() => { myCounter = root.get('myCounter'); });
-
-// before incrementing, ensure we have an up-to-date object reference if
-// the counter instance at the 'myCounter' key in the root map changes
-await myCounter.increment(1);
-```
-
 { /* We can't map the JS example directly because Swift concurrency prevents us from mutating local variables in the way that the JS example does, so I tried to show how we might need to handle this scenario in a real-world app where things are isolated to the main actor. But it's long and ugly. */ }
 ```swift
 struct MyView: View {
@@ -232,8 +267,9 @@ root.subscribe((mapUpdate) -> {
 myCounter.increment(1);
 ```
 </Code>
+</If>
 
-In the [REST API](/docs/liveobjects/rest-api-usage#updating-objects-by-id), this relationship is made explicit:
+In the [REST API](/docs/liveobjects/rest-api-usage#updating-objects-by-id), the relationship between operations and object IDs is made explicit:
 
 <Code>
 ```shell
@@ -249,7 +285,9 @@ curl -X POST https://main.realtime.ably.net/channels/my-channel/objects \
 ```
 </Code>
 
-## Batch Operations <a id="batch-operations"/>
+<If lang="javascript">
+
+## Batch operations <a id="batch-operations"/>
 
 [Batch operations](/docs/liveobjects/batch) can be used to batch a set of operations together:
 
@@ -257,3 +295,48 @@ curl -X POST https://main.realtime.ably.net/channels/my-channel/objects \
 * All operations in the batch either succeed together or fail together
 * Operations in a batch are sent as a single message
 * No operations from other clients can be interleaved within a batch
+
+## Object message properties <a id="properties"/>
+
+Each operation is carried by an `ObjectMessage`, which is surfaced in [subscriptions](/docs/liveobjects/concepts/path-object#subscribe) and provides metadata about the operation and who performed it.
+
+### ObjectMessage <a id="object-message"/>
+
+The following are the properties of an `ObjectMessage`:
+
+| Property | Description |
+|----------|-------------|
+| **id** | Unique ID assigned by Ably to this object message |
+| **clientId** | The [ID of the client](/docs/auth/identified-clients) that published this operation |
+| **connectionId** | The ID of the connection used to publish this operation |
+| **timestamp** | The timestamp of when the object message was received by Ably, as milliseconds since the Unix epoch |
+| **channel** | The name of the channel the object message was published to |
+| **operation** | An [`ObjectOperation`](#object-operation) describing the operation that was applied |
+| **serial** | An opaque string that uniquely identifies this object message |
+| **serialTimestamp** | A timestamp derived from the `serial` field |
+| **siteCode** | An opaque string that uniquely identifies the Ably site the object message was published to |
+| **extras** | A JSON object of arbitrary key-value pairs that may contain metadata, and/or ancillary payloads. Valid payloads include `headers` |
+
+### ObjectOperation <a id="object-operation"/>
+
+The `operation` field of an `ObjectMessage` contains an `ObjectOperation` with the following properties:
+
+| Property | Description |
+|----------|-------------|
+| **action** | The operation action. One of: `'map.create'`, `'map.set'`, `'map.remove'`, `'counter.create'`, `'counter.inc'`, or `'object.delete'` |
+| **objectId** | The ID of the object the operation was applied to |
+| **mapOp** | Present for map mutation operations (`'map.set'`, `'map.remove'`). Contains `key` (the key that was modified) and optionally `data` (an `ObjectData` representing the value assigned to the key, present only for `'map.set'` operations) |
+| **counterOp** | Present for counter increment operations (`'counter.inc'`). Contains `amount` (the value added to the counter) |
+| **map** | Present for `'map.create'` operations. Defines the initial value of the map object with optional `semantics` (conflict-resolution strategy) and `entries` (initial key-value pairs) |
+| **counter** | Present for `'counter.create'` operations. Defines the initial value of the counter object with optional `count` (initial counter value) |
+
+#### ObjectData
+
+The `data` field in `mapOp` is an `ObjectData` object that represents the value assigned to a map key. It has the following properties:
+
+| Property | Description |
+|----------|-------------|
+| **objectId** | A reference to another object (such as a `LiveMap` or `LiveCounter`) by its object ID. Present when the value is a LiveObject |
+| **value** | A decoded primitive value (string, number, boolean, JSON-serializable object or array, or binary data). Present when the value is a primitive type |
+
+</If>

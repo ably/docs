@@ -2,7 +2,6 @@ import React from 'react';
 import { useLocation } from '@reach/router';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom/extend-expect';
 import LeftSidebar from './LeftSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
 

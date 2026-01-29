@@ -2,7 +2,7 @@
 
 These are technical writing guidelines that should be used for Ably's developer documentation.
 
-This guide does not cover the details of marking up content source. See the [documentation formatting guide](https://github.com/ably/docs/blob/main/content/client-lib-development-guide/documentation-formatting-guide.textile) for the latest details on how to markup source content.
+This guide does not cover the details of marking up content source. See the [CONTRIBUTING.md](CONTRIBUTING.md) guide for details on content formatting.
 
 Some of the benefits of using this style guide are:
 
@@ -206,6 +206,21 @@ There are some exceptions: for example, the names of products, the titles of sta
 
 So, unless there is a good reason not to, use sentence case (first letter is capitalized).
 
+## Heading forms
+
+Use imperative form for headings.
+
+The imperative form is direct and action-oriented, making it clear what the developer needs to do.
+
+Examples:
+
+* *Imperative (preferred):* Configure the API client
+* *Gerund (avoid):* Configuring the API client
+* *Imperative (preferred):* Install the SDK
+* *Gerund (avoid):* Installing the SDK
+
+The only exception is FAQ-style content where the heading is phrased as a question. In all other cases, use the imperative form.
+
 ## Bulleted lists
 
 This is an example of a bulleted list:
@@ -220,6 +235,7 @@ Note the following points:
 * The list should always have a piece of text introducing the list followed by a colon, and then a blank line.
 * Each sentence in the list is terminated by a full-stop (period).
 * If each item in the list is a single word, a terminating period is not required.
+* Do not use bold formatting for prefixes in bullet points (for example, avoid patterns like "**Feature name:** description"), as this is a common indicator of AI-generated content.
 
 ## Codeblocks
 
@@ -229,6 +245,8 @@ When inserting example code in the text:
 * Break the text before a codeblock with a colon, not a period (which is a hard stop in the mind of the reader, rather than a continuation).
 * There should *not* be a space before the colon.
 * Place a blank line after the colon and before the code block.
+* All headings must be followed by introductory text. Never place a code block, list, or other content immediately after a heading without explanatory text first.
+* For JavaScript and TypeScript code, prefer single quotes over double quotes for strings (excluding JSON, which must use double quotes per the specification).
 
 ## Acronyms
 
@@ -258,6 +276,16 @@ Make sure you write the correct case for product names:
 * JavaScript not Javascript
 * GitHub not Github
 * macOS not Mac OS
+
+## Avoid AI-generated content fingerprints
+
+Technical documentation should maintain a natural, human writing style and avoid patterns commonly associated with AI-generated content:
+
+* Do not use em-dashes (—) in technical writing. Prefer standard hyphens (-) or restructure the sentence for better clarity.
+* Avoid bold prefixes in bullet points (for example, patterns like "**Feature:** Description" or "**Benefits:** Details"). This formatting style is a telltale sign of AI-generated content.
+* Avoid formulaic patterns and overly structured prose that may appear mechanical or template-driven.
+
+These guidelines help ensure documentation feels authentic and professionally written while maintaining readability and clarity.
 
 ## Other considerations
 

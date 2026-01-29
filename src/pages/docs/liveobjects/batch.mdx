@@ -3,141 +3,271 @@ title: Batch operations
 meta_description: "Group multiple objects operations into a single channel message to apply grouped operations atomically and improve performance."
 ---
 
-<Aside data-type='experimental'>
-LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+<If lang="javascript">
+  <Aside data-type='public-preview'>
+  LiveObjects JavaScript is in Public Preview. We are committed to supporting the LiveObjects Javascript API and welcome adoption and feedback.
 
-**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="swift">
+  <Aside data-type='experimental'>
+  LiveObjects Swift is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="java">
+  <Aside data-type='experimental'>
+  LiveObjects Java is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+
+<Aside data-type="note">
+Batch operations are only currently only supported in LiveObjects JavaScript. Support for Swift and Java is coming soon.
 </Aside>
 
-The Batching API in LiveObjects enables multiple updates to be grouped into a single channel message and applied atomically. It ensures that all operations in a batch either succeed together or are discarded entirely. Batching operations is essential when multiple related updates to channel objects must be applied as a single atomic unit, for example, when application logic depends on multiple objects being updated simultaneously. Without batching, if one operation succeeds while another fails, your application state could become inconsistent.
+Batch operations allow multiple updates to be grouped into a single channel message and applied atomically. It ensures that all operations in a batch either succeed together or are discarded entirely. Batching is essential when multiple related updates to channel objects must be applied as a single atomic unit, for example, when application logic depends on multiple objects being updated simultaneously. Batching ensures that all operations in the batch either succeed or fail together.
 
-Note that this differs from ["Message batching"](/docs/messages/batch), the native Pub/Sub messages feature. The LiveObjects Batching API is a separate API specifically designed to enable you to group object operations into a single channel message, ensuring that the Ably system guarantees the atomicity of the applied changes.
+<Aside data-type="note">
+Batch operations are different from ["Message batching"](/docs/messages/batch), which is a server-side feature of [Pub/Sub](/docs/basics).
+</Aside>
 
-Batching also provides cost efficiency: all operations in a batch are sent as one channel message and billed as such, regardless of how many individual operations are included (up to the message size limit).
+## Create a batch context <a id="create"/>
 
-## Create batch context <a id="create"/>
+To batch object operations together, use the `batch()` method on a [PathObject](/docs/liveobjects/concepts/path-object) or [Instance](/docs/liveobjects/concepts/instance). This method accepts a callback function that receives a batch context that allows you to construct operations. Ably publishes these operations together as a single channel message. If an error occurs publishing the batched operations, all operations are discarded, preventing partial updates and ensuring atomicity.
 
-To batch object operations together, use the `channel.objects.batch()` method. This method accepts a callback function, which is provided with a batch context object. The batch context object provides a synchronous API to work with objects on a channel that stores operations inside the batch instead of applying them immediately.
+Call `batch()` on a `PathObject` to group operations on that path:
 
-Using the batch context ensures that operations are grouped and sent in a single channel message after the batch callback function has run. This guarantees that all changes are applied atomically by both the server and all clients.
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+// Batch multiple operations on the channel object
+await myObject.batch((ctx) => {
+  ctx.set('foo', 'bar');
+  ctx.set('baz', 42);
+  ctx.remove('oldKey');
+});
+
+// Batch operations on a nested path
+await myObject.get('settings').batch((ctx) => {
+  ctx.set('theme', 'dark');
+  ctx.set('fontSize', 14);
+  ctx.set('notifications', true);
+});
+
+// Batch operations on a counter
+await myObject.get('visits').batch((ctx) => {
+  ctx.increment(5);
+  ctx.increment(3);
+  ctx.decrement(2);
+});
+```
+</Code>
+
+<Aside data-type="note">
+When you call `batch()` on a `PathObject`, the path is resolved to its underlying instance, and the batch context operates on that resolved instance.
+</Aside>
+
+You can only call `batch()` on an `PathObject` whose path resolves to a `LiveMap` or `LiveCounter` instance:
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+try {
+  // Call batch() on 'username', which resolves to a string value
+  await myObject.get('username').batch((ctx) => {});
+} catch (err) {
+  // Error 92007: Cannot batch operations on a non-LiveObject at path: username
+}
+```
+</Code>
+
+You can also call `batch()` on an `Instance` to batch operations on that specific object:
+
+<Code>
+```javascript
+const settingsInstance = myObject.get('settings').instance();
+
+if (settingsInstance) {
+  await settingsInstance.batch((ctx) => {
+    ctx.set('theme', 'dark');
+    ctx.set('fontSize', 14);
+    ctx.remove('oldSetting');
+  });
+}
+```
+</Code>
+
+## Create objects in a batch <a id="create-objects"/>
+
+You can create new objects inside a batch using `LiveMap.create()` and `LiveCounter.create()`. This allows you to atomically create and assign multiple objects in a single operation:
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+await myObject.batch((ctx) => {
+  // Create and assign multiple objects atomically
+  ctx.set('user', LiveMap.create({
+    name: 'Alice',
+    score: LiveCounter.create(0),
+    settings: LiveMap.create({
+      theme: 'dark',
+      notifications: true
+    })
+  }));
+
+  ctx.set('visits', LiveCounter.create(0));
+  ctx.set('reactions', LiveMap.create({
+    likes: 0,
+    hearts: 0
+  }));
+});
+```
+</Code>
+
+Creating objects inside a batch ensures that all objects are created and assigned as a single atomic operation, preventing inconsistent intermediate states.
+
+## Navigate a batch context <a id="navigate"/>
+
+Navigate to nested objects using the `get()` method on the batch context. Navigating a batch context with `get()` has the same behaviour as navigating an [`Instance`](/docs/liveobjects/concepts/instance#navigate):
+
+<Code>
+```javascript
+await myObject.batch((ctx) => {
+  // Navigate to nested paths and perform operations
+  ctx.get('settings')?.set('theme', 'dark');
+  ctx.get('settings')?.get('preferences')?.set('language', 'en');
+
+  // Increment a nested LiveCounter instance
+  ctx.get('visits')?.increment(5);
+});
+```
+</Code>
+
+
+## Cancel a batch <a id="cancel"/>
+
+To explicitly cancel a batch before it is applied, throw an error inside the batch function. This prevents any queued operations from being applied:
+
+<Code>
+```javascript
+try {
+  await myObject.batch((ctx) => {
+    // Cancel the entire batch if a required value is missing
+    const value = ctx.get('visits')?.value();
+    if (value === undefined) {
+      throw new Error('visits key is missing');
+    }
+
+    // Will not be applied if visits is missing
+    ctx.set('lastSeen', Date.now());
+  });
+} catch (err) {
+  // Batch operations not applied if visits is missing
+}
+```
+</Code>
+
+## Understand batch context behavior <a id="context"/>
+
+The batch context has the same API as [Instance](/docs/liveobjects/concepts/instance), except for `batch()` itself, but all mutation methods are synchronous and queue operations instead of sending them immediately. After the callback completes, all queued operations are sent together in a single channel message.
 
 <Aside data-type='important'>
-The batch callback function must be synchronous because the batch method sends the grouped operations as soon as the callback function completes. If you need to perform asynchronous operations (such as fetching data to do operations inside a batch), do so outside the callback function before calling `channel.objects.batch()`.
+The batch callback function must be synchronous because the batch method sends the grouped operations as soon as the callback function completes. If you need to perform asynchronous operations (such as fetching data), do so outside the callback function before calling `batch()`.
 </Aside>
 
 <Code>
 ```javascript
-await channel.objects.batch((ctx) => {
-  const root = ctx.getRoot();
-
-  root.set('foo', 'bar');
-  root.set('baz', 42);
-
-  const counter = root.get('counter');
-  counter.increment(5);
-
-  // Batched operations are sent to the Ably system when the batch callback has run.
-});
+try {
+  await myObject.batch((ctx) => {
+    // These operations are synchronous and queued
+    ctx.get('settings')?.set('theme', 'dark');
+    ctx.get('visits')?.increment();
+  });
+  // All operations published successfully
+} catch (err) {
+  // Failed to publish operations, none of them were published
+}
 ```
 </Code>
-
-If an error occurs within the batch, all operations are discarded, preventing partial updates and ensuring atomicity.
-
-### Batch context object <a id="context"/>
-
-The batch context provides a synchronous API for objects operations inside the batch callback. It mirrors the asynchronous API found on `channel.objects`, including [LiveCounter](/docs/liveobjects/counter) and [LiveMap](/docs/liveobjects/map).
-
-To access the batch API, call `BatchContext.getRoot()`, which synchronously returns a wrapper around the [root](/docs/liveobjects/concepts/objects#root-object) object instance. This wrapper enables you to access and modify objects within a batch.
 
 <Aside data-type='note'>
-Although the batch context provides a synchronous API, updates to objects are only applied _after_ the batch callback function has run and changes have been echoed back to the client, just like regular mutation operations.
+Although the batch context provides a synchronous API, updates to objects are only applied _after_ the batch callback function has run and changes have been echoed back to the client, like regular mutation operations.
 </Aside>
 
+Since the batch callback is synchronous, you can read current values inside a batch context without intermediate updates from other clients being applied between reads:
+
 <Code>
 ```javascript
-await channel.objects.batch((ctx) => {
-  // Note: .getRoot() call on a batch context is synchronous.
-  // The returned root object is a special wrapper around a regular LiveMap instance,
-  // providing a synchronous mutation API.
-  const root = ctx.getRoot();
-
-  // Mutation operations like LiveMap.set and LiveCounter.increment
-  // are synchronous inside the batch and queue operations instead of applying them immediately.
-  root.set('foo', 'bar');
-  root.remove('baz');
-
-  // Access other objects through the root object from the BatchContext.getRoot() method.
-  const counter = root.get('counter');
-  counter.increment(5);
+await myObject.batch((ctx) => {
+  ctx.get('settings')?.get('theme')?.value(); // "dark"
+  // no updates will be applied during execution of the batch callback
+  ctx.get('settings')?.get('theme')?.value(); // "dark"
 });
 ```
 </Code>
 
-You cannot create new objects using the batch context. If you need to create new objects and add them to the channel as part of an atomic batch operation to guarantee atomicity, you must first create them using the regular `channel.objects` API. Once the objects have been created, you can then assign them to the object tree inside a batch function.
+Operations on a batch context are not applied until they are all published, so you cannot read back data written inside the batch context callback:
 
 <Code>
 ```javascript
-// First, create new objects outside the batch context
-const counter = await channel.objects.createCounter();
-const map = await channel.objects.createMap();
+await myObject.batch((ctx) => {
+  // Get the value at the time batch() was called
+  ctx.get('settings')?.get('theme')?.value(); // "dark"
 
-// Then, use a batch to assign them atomically to the channel objects
-await channel.objects.batch((ctx) => {
-  const root = ctx.getRoot();
-  root.set('counter', counter);
-  root.set('map', map);
+  // Update the value
+  ctx.get('settings')?.set('theme', 'light');
+
+  // The previous update will not be applied until the batch
+  // callback completes, so the new value cannot be read back
+  ctx.get('settings')?.get('theme')?.value(); // "dark"
 });
 ```
 </Code>
 
-### When to batch operations <a id="use-cases"/>
-
-Usually, you don't need to use batching for objects operations. It is only useful in situations where a group of operations must be applied together to maintain consistency in application state, or when there are multiple mutation operations that you might want to apply at the same time to improve the UI experience.
-
-For example, in a task dashboard application, you might want to remove all tasks on a board in a single operation to prevent excessive UI updates that the user would otherwise experience.
+The batch context object cannot be used outside the callback function. Attempting to do so results in an error:
 
 <Code>
 ```javascript
-await channel.objects.batch((ctx) => {
-  const root = ctx.getRoot();
-  const tasks = root.get('tasks');
-
-  for (const key of tasks.keys()) {
-    tasks.remove(key);
-  }
+let context;
+await myObject.batch((ctx) => {
+  context = ctx;
+  ctx.set('foo', 'bar');
 });
+
+// Calling any methods outside the batch callback will throw an error
+try {
+  context.set('baz', 42);
+} catch (error) {
+  // Error: Batch is closed
+}
 ```
 </Code>
 
-## Cancel batch operation <a id="cancel"/>
-
-To explicitly cancel a batch before it is applied, throw an error inside the batch function. This prevents any queued operations from being applied.
+When a batch operation is applied, the subscription is notified synchronously and sequentially for each operation included in the batch:
 
 <Code>
 ```javascript
-await channel.objects.batch((ctx) => {
-  const root = ctx.getRoot();
-  root.set('foo', 'bar');
-
-  // Throwing an error prevents any queued operations from being applied.
-  throw new Error('Cancel batch');
-});
-```
-</Code>
-
-### Batch API cannot be used outside the callback function <a id="closed"/>
-
-The Batch API provided by the batch context object cannot be used outside the callback function. Attempting to do so results in an error. This applies both to `BatchContext.getRoot()` and any object instances retrieved from it.
-
-<Code>
-```javascript
-let root;
-await channel.objects.batch((ctx) => {
-  root = ctx.getRoot();
+// Subscribe to the channel object
+myObject.subscribe(({ object, message }) => {
+  console.log("Update:", message?.operation.action, message?.operation?.mapOp.key);
 });
 
-// Calling any Batch API methods outside the batch callback
-// will throw an Error: Batch is closed.
-root.set('foo', 'bar');
+// Perform a batch operation
+await myObject.batch((ctx) => {
+  ctx.set('foo', 'bar');
+  ctx.set('baz', 42);
+  ctx.set('qux', 'hello');
+});
+
+// Update: map.set foo
+// Update: map.set baz
+// Update: map.set qux
 ```
 </Code>

@@ -27,7 +27,9 @@ async function main() {
   // Regular messages will be received as message.create events.
   getChannel().subscribe((message) => {
     if (!hasSerial(message)) {
-      console.error('Received message without serial (this indicates that you need to enable the "Annotations, updates, and deletes" feature in channel rules)');
+      console.error(
+        'Received message without serial (this indicates that you need to enable the "Annotations, updates, deletes, and appends" feature in channel rules)',
+      );
       return;
     }
     if (message.action === 'message.summary') {

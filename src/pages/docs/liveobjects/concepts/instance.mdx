@@ -1,0 +1,498 @@
+---
+title: Instance
+meta_description: "Learn about Instance, a reference to a specific LiveObject instance for direct manipulation"
+---
+
+<If lang="javascript">
+  <Aside data-type='public-preview'>
+  LiveObjects JavaScript is in Public Preview. We are committed to supporting the LiveObjects Javascript API and welcome adoption and feedback.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="swift">
+  <Aside data-type='experimental'>
+  LiveObjects Swift is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="java">
+  <Aside data-type='experimental'>
+  LiveObjects Java is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+
+`Instance` provides a reference to a specific LiveObject instance (such as a `LiveMap` or `LiveCounter`) that you can manipulate directly. Unlike [PathObject](/docs/liveobjects/concepts/path-object), which operates on paths that resolve dynamically at runtime, an `Instance` is bound to a specific object instance identified by its object ID.
+
+An `Instance` represents a specific object instance within the channel object. When you call methods on an `Instance`, they operate on that specific instance regardless of where it exists in the structure or whether it has been moved.
+
+<Aside data-type='note'>
+`Instance` is currently only available in the JavaScript SDK. Support in the Swift and Java SDKs is coming soon.
+
+See the [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/counter) documentation for SDK-specific examples.
+</Aside>
+
+## Get an Instance <a id="get"/>
+
+Obtain an `Instance` from a `PathObject` using the `instance()` method:
+
+<Code>
+```javascript
+// Get a PathObject for the channel object
+const myObject = await channel.object.get();
+
+// Get the specific Instance of a LiveCounter located at the 'visits' key
+const visits = myObject.get('visits').instance();
+console.log(counterInstance?.id); // e.g. counter:abc123@1234567890
+console.log(counterInstance?.value()); // e.g. 5
+```
+</Code>
+
+The `instance()` method returns `undefined` if no object exists at that path.
+
+Once you have an `Instance`, it references a specific object by its ID. This means operations target that exact object:
+
+<Code>
+```javascript
+// Obtain an Instance for a LiveCounter
+const visits = myObject.get('visits').instance();
+
+// Increment the specific LiveCounter instance
+await visits?.increment(5);
+```
+</Code>
+
+An `Instance` references a specific object by its ID rather than by location.
+
+## Type inference <a id="typing"/>
+
+When using TypeScript, you can provide type parameters to `instance()` to get rich type inference:
+
+<Code>
+```javascript
+import { type Instance, LiveCounter, LiveMap } from 'ably/liveobjects';
+
+type Settings = {
+  theme: string;
+  notifications: boolean;
+};
+
+type MyObject = {
+  visits: LiveCounter;
+  settings: LiveMap<Settings>;
+};
+
+const myObject = await channel.object.get<MyObject>();
+
+// TypeScript knows 'visits' is a LiveCounter
+const visits: Instance<LiveCounter> | undefined = myObject.get('visits').instance();
+if (visits) {
+  await visits.increment(1); // Type-safe
+}
+
+// TypeScript knows the shape of 'settings'
+const settings: Instance<LiveMap<Settings>> | undefined = myObject.get('settings').instance();
+if (settings) {
+  const theme = settings.get('theme');
+  console.log(theme?.value()); // Returns string | undefined
+}
+```
+</Code>
+
+See the [Typing documentation](/docs/liveobjects/typing) for more details on type safety.
+
+## Navigate an Instance <a id="navigate"/>
+
+For `LiveMap` instances, use the `get(key)` method to navigate to a child value:
+
+<Aside data-type="note">
+Unlike `PathObject`, the `get(key)` method on an `Instance` can return `undefined` if the entry doesn't exist, if the object at that location has been deleted, or if the current instance is not a `LiveMap`.
+</Aside>
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+// Obtain an instance
+const settings = myObject.get('settings').instance();
+console.log(settings?.id); // e.g. "map:abc123@1234567890"
+
+// Chain get() calls for deeper navigation
+// get() may return undefined at any point if the instance
+// is not a LiveMap or the accessed entry does not exist
+const color = settings?.get('theme')?.get('color');
+console.log(color?.value()); // e.g. blue
+```
+</Code>
+
+The `id` getter returns the [object ID](/docs/liveobjects/concepts/objects#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).
+
+## Access data <a id="access"/>
+
+Use the `get(key)` method to access a value from a `LiveMap` instance. The returned `Instance` represents whatever exists at that entry. What you can do with that `Instance` depends on whether the entry contains a primitive value, a `LiveCounter`, or a nested `LiveMap`.
+
+### Read values
+
+When an entry contains a primitive value or `LiveCounter` stored directly in the `LiveMap`, use the `value()` method to get the current value:
+
+<Code>
+```javascript
+// Get an instance
+const user = myObject.get('user').instance();
+
+// Get the value of an entry containing a primitive
+const username = user?.get('username');
+console.log('Username:', username?.value()); // e.g. "alice"
+
+// Get the value of the LiveCounter stored in 'visits'
+const visits = user?.get('visits');
+console.log(visits?.value()); // e.g. 5
+```
+</Code>
+
+If the entry doesn't exist, `get()` returns undefined:
+
+<Code>
+```javascript
+const user = myObject.get('user').instance();
+if (user) {
+  // Get an entry that doesn't exist on the instance
+  console.log(user.get('nonexistent')); // undefined
+}
+```
+</Code>
+
+If the entry exists, but does not contain a primitive or a `LiveCounter` instance, `value()` returns `undefined`:
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+// Set an entry that contains a nested LiveMap
+await myObject.set('settings', LiveMap.create({ theme: 'dark' }));
+
+// Calling value() on a LiveMap returns undefined
+const settings = myObject.get('settings').instance();
+console.log(settings?.value()); // undefined - it's a LiveMap, not a primitive or LiveCounter
+```
+</Code>
+
+### Enumerate collections
+
+For `LiveMap` instances, you can iterate over the entries, keys, and values:
+
+<Code>
+```javascript
+const settings = myObject.get('settings').instance();
+
+if (settings) {
+  // Iterate over key-value pairs.
+  // Each key is a string, and the value is an Instance for the entry.
+  for (const [key, value] of settings.entries()) {
+    console.log(`${key}:`, value.value());
+  }
+
+  // Iterate over keys only
+  for (const key of settings.keys()) {
+    console.log('Key:', key);
+  }
+
+  // Iterate over values
+  for (const value of settings.values()) {
+    console.log('Value:', value.value());
+  }
+}
+```
+</Code>
+
+Collection methods return empty iterators if the instance is not a `LiveMap`:
+
+<Code>
+```javascript
+const visits = myObject.get('visits').instance(); // This is a LiveCounter, not a LiveMap
+
+if (visits) {
+  for (const [key, value] of visits.entries()) {
+    // This loop doesn't execute - entries() returns empty iterator
+  }
+}
+```
+</Code>
+
+### Get the size of a collection
+
+Use the `size()` method to get the number of entries in a `LiveMap`:
+
+<Code>
+```javascript
+const settings = myObject.get('settings').instance();
+
+// Get the number of entries
+console.log(settings?.size());
+```
+</Code>
+
+The `size()` method returns `undefined` if the instance is not a `LiveMap`:
+
+<Code>
+```javascript
+const visits = myObject.get('visits').instance(); // This is a LiveCounter, not a LiveMap
+console.log(visits?.size()); // undefined
+```
+</Code>
+
+### Get a compact object
+
+The `compact()` method returns a JavaScript object representation of the instance:
+
+<Code>
+```javascript
+const settingsInstance = myObject.get('settings').instance();
+
+if (settingsInstance) {
+  const compact = settingsInstance.compact();
+  console.log(compact);
+  // {
+  //   theme: { color: 'dark', fontSize: 14 },
+  //   notifications: true
+  // }
+}
+
+const counterInstance = myObject.get('visits').instance();
+if (counterInstance) {
+  console.log(counterInstance.compact()); // Just the number, e.g., 42
+}
+```
+</Code>
+
+Binary data in the channel object (such as `ArrayBuffer`/`Uint8Array` in browser environments, or `Buffer` in Node.js) is preserved as typed arrays in the returned object.
+
+If the instance contains cyclic references, these are preserved in the returned data structure:
+
+<Code>
+```javascript
+// Imagine a LiveMap instance has this structure:
+// user (LiveMap)
+//   ├─ profile -> references user (creates cycle)
+//   └─ name: "Alice"
+
+const userInstance = myObject.get('user').instance();
+if (userInstance) {
+  // When you call compact(), cyclic references are preserved as actual JS references
+  const compacted = userInstance.compact();
+  console.log(compacted.profile === compacted); // true - actual cyclic reference
+
+  // You can navigate the cycle
+  console.log(compacted.profile.profile.name); // "Alice"
+
+  // This will throw an error because cycles can't be serialized
+  JSON.stringify(compacted); // ❌ TypeError: cyclic object value
+}
+```
+</Code>
+
+It is possible for the value returned from `compact()` to contain cyclic references, so it is not safe to serialize this value with `JSON.stringify()`.
+
+Use the `compactJson()` method to obtain a value that can be safely passed to `JSON.stringify()`:
+
+<Code>
+```javascript
+// Example: Using the same cyclic structure from before
+// user (LiveMap)
+//   ├─ profile -> references user (creates cycle)
+//   └─ name: "Alice"
+
+const userInstance = myObject.get('user').instance();
+if (userInstance) {
+  // compactJson() breaks cycles, making it safe to serialize
+  const compactJson = userInstance.compactJson();
+  console.log(compactJson);
+
+  // This can be safely serialized as the
+  // cycle is broken via an objectId reference
+  console.log(JSON.stringify(compactJson));
+  // {
+  //   "profile": { "objectId": "map:abc123@1234567890" },
+  //   "name": "Alice"
+  // }
+}
+```
+</Code>
+
+Binary data in the channel object are serialized as base64-encoded strings by `compactJson()`:
+
+<Code>
+```javascript
+const mapInstance = myObject.instance();
+
+if (mapInstance) {
+  // Store binary data in the LiveMap
+  const binaryData = new TextEncoder().encode("world");
+  await mapInstance.set('hello', binaryData);
+
+  // compactJson() converts binary data to base64 strings
+  const compactJson = mapInstance.compactJson();
+  console.log(compactJson.hello); // "d29ybGQ=" (base64 encoded)
+}
+```
+</Code>
+
+## Update data <a id="update"/>
+
+`Instance` provides mutation methods that operate on the specific instance. The specific methods available depend on the type of the instance:
+
+- For `LiveMap` instances, you can use methods like `set()` and `remove()`. See the [LiveMap documentation](/docs/liveobjects/map) for details on these methods.
+- For `LiveCounter` instances, you can use methods like `increment()` and `decrement()`. See the [LiveCounter documentation](/docs/liveobjects/counter) for details on these methods.
+
+When you call a method on an `Instance`, it directly updates that specific instance.
+
+<Code>
+```javascript
+// Update a LiveMap instance
+const settings = myObject.get('settings').instance();
+await settings?.set('theme', 'dark');
+await settings?.remove('oldSetting');
+
+// Update a LiveCounter instance
+const visits = myObject.get('visits').instance();
+await visits?.increment(5);
+await visits?.decrement(2);
+```
+</Code>
+
+<Aside data-type='important'>
+If you call a method that doesn't match the type of the underlying instance, an error is thrown. For example, calling `increment()` on a `LiveMap` instance, calling `set()` on a `LiveCounter` instance, or calling any mutation method on a primitive value will result in an error.
+</Aside>
+
+### Batch multiple updates
+
+The `batch(callback)` method groups multiple mutations into a single message. The `ctx` parameter is the batch context for the specific instance:
+
+<Code>
+```javascript
+const settings = myObject.get('settings').instance();
+await settings?.batch((ctx) => {
+  ctx.set('theme', 'dark');
+  ctx.get('preferences')?.set('language', 'en');
+  ctx.get('volume')?.increment(5);
+});
+```
+</Code>
+
+See the [Batch operations documentation](/docs/liveobjects/batch) for more details on batching.
+
+## Subscribe to changes <a id="subscribe"/>
+
+Use the `subscribe()` method to be notified when the instance is updated:
+
+<Code>
+```javascript
+const visits = myObject.get('visits').instance();
+
+if (visits) {
+  const { unsubscribe } = visits.subscribe(() => {
+    console.log('Visits updated');
+  });
+
+  // Later, stop listening to changes
+  unsubscribe();
+}
+```
+</Code>
+
+Alternatively, use the `subscribeIterator()` method for an async iterator syntax:
+
+<Code>
+```javascript
+const visits = myObject.get('visits').instance();
+
+if (visits) {
+  for await (const _ of visits.subscribeIterator()) {
+    console.log('Visits updated');
+
+    if (someCondition) {
+      break; // Unsubscribes
+    }
+  }
+}
+```
+</Code>
+
+<Aside data-type='important'>
+The `subscribe()` and `subscribeIterator()` methods are only available on `LiveMap` and `LiveCounter` instances. To subscribe to a specific entry in a `LiveMap`, regardless of the type of the entry's value, [subscribe](/docs/liveobjects/concepts/path-object#subscribe) through a `PathObject` instead.
+</Aside>
+
+`Instance` subscriptions observe a specific object instance rather than a location. If the instance is moved to a different location within the channel object, the subscription continues to observe the same instance.
+
+When an object instance is deleted after becoming [unreachable](/docs/liveobjects/concepts/objects?lang=javascript#reachability), subscriptions to that instance are automatically unsubscribed after one final notification:
+
+<Code>
+```javascript
+const visits = myObject.get('visits').instance();
+
+if (visits) {
+  visits.subscribe(({ object, message }) => {
+    if (message?.operation.action === 'object.delete') {
+      console.log('visits counter was deleted');
+      // This listener is automatically unsubscribed after this call
+    }
+  });
+
+  // Make the LiveCounter stored in visits unreachable.
+  // It will eventually be deleted.
+  await myObject.remove('visits');
+}
+```
+</Code>
+
+### Determine what changed
+
+The subscription receives an argument with information about the update:
+
+- The `object` field contains an `Instance` representing the same object instance you called `subscribe()` on
+- The `message` field contains the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made.
+
+<Code>
+```javascript
+const visits = myObject.get('visits').instance();
+
+if (visits) {
+  visits.subscribe(({ object, message }) => {
+    console.log('New value:', object.value());
+    console.log('Updated by:', message?.clientId);
+    console.log('Operation:', message?.operation.action);
+    console.log(object.id === visits.id); // true
+  });
+}
+```
+</Code>
+
+### Updates to nested objects
+
+Instance subscriptions only observe changes to the specific instance that is subscribed. If an update is made to a nested child object, that is not surfaced on an instance subscription:
+
+<Code>
+```javascript
+const settings = myObject.get('settings').instance();
+
+if (settings) {
+  // Subscribe to the settings LiveMap instance
+  settings.subscribe(({ object }) => {
+    console.log('Settings LiveMap updated');
+  });
+
+  // This triggers the subscription (direct change to settings)
+  await settings.set('theme', 'dark');
+
+  // This does NOT trigger the subscription (change to nested object)
+  await settings.get('preferences')?.set('language', 'en');
+}
+```
+</Code>
+
+<Aside data-type='note'>
+To observe changes at all nested levels, use a [`PathObject`](/docs/liveobjects/concepts/path-object#subscribe) subscription instead, which supports deep subscriptions through the `depth` option.
+</Aside>

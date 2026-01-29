@@ -4,6 +4,26 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
+    id: 'ai-transport-message-per-token',
+    name: 'Message per token streaming',
+    description: 'Stream AI responses token-by-token using the message-per-token pattern.',
+    products: ['ai_transport'],
+    layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'src/llm.ts', 'src/agent.ts', 'App.tsx', 'llm.ts', 'agent.ts', 'index.tsx'],
+    metaTitle: 'Build AI message-per-token streaming with Ably AI Transport',
+    metaDescription: `Stream AI-generated tokens in realtime using the message-per-token pattern with Ably's AI Transport. Implement scalable token streaming with low latency.`,
+  },
+  {
+    id: 'ai-transport-message-per-response',
+    name: 'Message per response streaming',
+    description: 'Stream AI responses by appending tokens to a single message using the message-per-response pattern.',
+    products: ['ai_transport'],
+    layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'src/llm.ts', 'src/agent.ts', 'App.tsx', 'llm.ts', 'agent.ts', 'index.tsx'],
+    metaTitle: 'Build AI message-per-response streaming with Ably AI Transport',
+    metaDescription: `Stream AI-generated tokens by appending them to a single message using Ably AI Transport. Each response appears as one compacted message in channel history.`,
+  },
+  {
     id: 'chat-presence',
     name: 'Chat presence',
     description: 'Show online/offline status of users in a chat application.',
@@ -93,7 +113,7 @@ export const examples: Example[] = [
     products: ['liveobjects'],
     languages: ['javascript'],
     layout: 'double-horizontal',
-    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    visibleFiles: ['src/script.ts', 'index.tsx'],
     metaTitle: `Build a live counter with Ably’s LiveObjects`,
     metaDescription: `Use Ably’s LiveObjects to synchronize numerical values in realtime with a LiveCounter. Power data synchronization at scale for votes, reaction counts, game stats, and more.`,
   },
@@ -104,7 +124,7 @@ export const examples: Example[] = [
     products: ['liveobjects'],
     languages: ['javascript'],
     layout: 'double-horizontal',
-    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    visibleFiles: ['src/script.ts', 'index.tsx'],
     metaTitle: `Build a live map with Ably’s LiveObjects`,
     metaDescription: `Use Ably’s LiveObjects to synchronize key/value data in realtime with a LiveMap. Build dynamic, collaborative apps with reliable, low-latency synchronization at scale.`,
   },
@@ -286,6 +306,9 @@ export const products = {
   },
   spaces: {
     label: 'Spaces',
+  },
+  ai_transport: {
+    label: 'AI Transport',
   },
 };
 

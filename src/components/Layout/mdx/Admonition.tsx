@@ -1,11 +1,10 @@
 import React from 'react';
 import cn from '@ably/ui/core/utils/cn';
-import Aside from 'src/components/blocks/dividers/Aside';
-import { HtmlComponentPropsData } from 'src/components/html-component-props';
+import Aside from '../../blocks/dividers/Aside';
 
-const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'see-evidence'];
+const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'see-evidence', 'public-preview'];
 
-type AdmonitionVariant = 'neutral' | 'note' | 'further-reading' | 'important' | 'warning';
+type AdmonitionVariant = 'neutral' | 'note' | 'further-reading' | 'important' | 'warning' | 'usp';
 
 interface AdmonitionProps extends React.HTMLAttributes<HTMLElement> {
   'data-type'?: AdmonitionVariant;
@@ -35,24 +34,50 @@ const admonitionConfig: Record<
     title: 'Further reading',
   },
   important: {
-    borderColor: 'border-l-orange-500 dark:border-l-orange-600',
-    backgroundColor: 'bg-orange-100 dark:bg-orange-1000',
+    borderColor: 'border-l-yellow-500 dark:border-l-yellow-500',
+    backgroundColor: 'bg-yellow-100 dark:bg-yellow-900',
     title: 'Important',
   },
+  // Unused for now, but available for another type if needed in future.
   warning: {
     borderColor: 'border-l-yellow-500 dark:border-l-yellow-400',
     backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
     title: 'Warning',
+  },
+  usp: {
+    borderColor: 'border-l-orange-600 dark:border-l-orange-600',
+    backgroundColor: '',
+    title: '', // USP callouts don't use a title prefix - the content includes the headline
   },
 };
 
 const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note', children, className, ...rest }) => {
   // For 'new', 'updated', 'experimental' types, we use the older Aside component instead of the newer Admonitions component
   if (LEGACY_ADMONITION_TYPES.includes(dataType)) {
-    return <Aside attribs={{ 'data-type': dataType }} data={(<>{children}</>) as unknown as HtmlComponentPropsData} />;
+    return <Aside attribs={{ 'data-type': dataType }}>{children}</Aside>;
   }
 
   const { borderColor, backgroundColor, title } = admonitionConfig[dataType];
+
+  // USP callouts have a different structure - no title prefix, content includes the headline
+  if (dataType === 'usp') {
+    return (
+      <aside
+        {...rest}
+        data-type={dataType}
+        className={cn(
+          'border-l px-6 py-3.5 my-4 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
+          borderColor,
+          backgroundColor,
+          className,
+        )}
+      >
+        <div className="ui-text-p3 [&>p:first-child]:ui-text-p1 [&>p:first-child]:font-bold [&>p:first-child]:text-neutral-1300 [&>p:first-child]:mb-2 [&>*:last-child]:mb-0">
+          {children}
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside

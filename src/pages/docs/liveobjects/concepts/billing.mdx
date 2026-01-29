@@ -1,0 +1,178 @@
+---
+title: Billing
+meta_description: "Understand how LiveObjects operations contribute to your Ably usage and billing."
+---
+
+<If lang="javascript">
+  <Aside data-type='public-preview'>
+  LiveObjects JavaScript is in Public Preview. We are committed to supporting the LiveObjects Javascript API and welcome adoption and feedback.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="swift">
+  <Aside data-type='experimental'>
+  LiveObjects Swift is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="java">
+  <Aside data-type='experimental'>
+  LiveObjects Java is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+
+LiveObjects operations are billed as messages. This page explains how different LiveObjects operations contribute to your Ably usage.
+
+<Aside data-type="further-reading">
+For general information about Ably pricing and billing, see [Pricing](/docs/platform/pricing).
+</Aside>
+
+## Message counting <a id="message-counting"/>
+
+Each operation is sent as an [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties). Ably bills for each outbound message sent from a client, and for each inbound message delivered to each client.
+
+When a client performs an operation (such as setting a value on a `LiveMap` or incrementing a `LiveCounter`), this generates an outbound message. When that operation is broadcast to other connected clients, each client receives an inbound message.
+
+For example, if 5 clients are connected to a channel and one client increments a counter:
+
+- 1 outbound message (from the client performing the increment)
+- 5 inbound messages (one delivered to each of the 5 connected clients, including the client that sent it)
+
+<If lang="javascript">
+
+## LiveMap operations <a id="livemap-operations"/>
+
+Removing a key and setting a primitive value always sends one message:
+
+<Code>
+```javascript
+// One message
+await myObject.get('settings').set('theme', 'dark');
+
+// One message
+await myObject.get('settings').remove('theme');
+```
+</Code>
+
+Creating a shallow `LiveMap` sends two messages: one to create the new `LiveMap` object, and one to assign it to the target object:
+
+<Code>
+```javascript
+// Two messages: create map + assign to 'settings'
+await myObject.set('settings', LiveMap.create({
+  shallow: 'data'
+}));
+```
+</Code>
+
+Nested `LiveMap` or `LiveCounter` objects each generate their own creation messages:
+
+<Code>
+```javascript
+// Four messages:
+// - create visits counter
+// - create stats map
+// - create settings map
+// - assign to 'settings'
+await myObject.set('settings', LiveMap.create({
+  stats: LiveMap.create({
+    visits: LiveCounter.create()
+  })
+}));
+```
+</Code>
+
+Batch operations result in a message for each operation included in the batch:
+
+<Code>
+```javascript
+// Four messages
+await myObject.get('settings').batch((ctx) => {
+  ctx.set('theme', 'dark');
+  ctx.set('fontSize', 14);
+  ctx.set('notifications', true);
+  ctx.remove('oldSetting');
+});
+```
+</Code>
+
+## LiveCounter operations <a id="livecounter-operations"/>
+
+Incrementing and decrementing a counter always sends one message:
+
+<Code>
+```javascript
+// One message
+await myObject.get('visits').increment(5);
+
+// One message
+await myObject.get('visits').decrement(3);
+```
+</Code>
+
+Creating a `LiveCounter` sends two messages: one to create the new `LiveCounter` object, and one to assign it to the target object:
+
+<Code>
+```javascript
+// Two messages: create counter + assign to 'visits'
+await myObject.set('visits', LiveCounter.create(0));
+```
+</Code>
+
+Creating a counter nested within a `LiveMap` also generates messages for the parent map:
+
+<Code>
+```javascript
+// Four messages:
+// - create visits counter
+// - create stats map
+// - create settings map
+// - assign to 'settings'
+await myObject.set('settings', LiveMap.create({
+  stats: LiveMap.create({
+    visits: LiveCounter.create(0)
+  })
+}));
+```
+</Code>
+
+Batch operations result in a message for each operation included in the batch:
+
+<Code>
+```javascript
+// Three messages
+await myObject.get('visits').batch((ctx) => {
+  ctx.increment(5);
+  ctx.increment(3);
+  ctx.decrement(2);
+});
+```
+</Code>
+
+</If>
+
+## Synchronization <a id="synchronization"/>
+
+During initial synchronization and resynchronization, each object on the channel is sent as a message.
+
+For example, if a channel contains 10 objects (such as `LiveMap` and `LiveCounter` instances), a client attaching to the channel will receive 10 messages during synchronization.
+
+Similarly, if a client becomes disconnected and needs to resynchronize, it will receive messages for each object that needs to be synchronized.
+
+Only [reachable](/docs/liveobjects/concepts/objects#reachability) objects are counted. Ably may send [tombstone](/docs/liveobjects/concepts/objects#tombstones) objects to the client, but these will not count towards your usage.
+
+## Subscriptions <a id="subscriptions"/>
+
+Subscribing to updates does not affect the number of messages received by a client. Any client attached to a channel with the `object-subscribe` capability automatically receives all object messages for that channel. Subscribing to updates on an object adds a listener that is called whenever the client receives updates for that object.
+
+## REST API <a id="rest-api"/>
+
+The [LiveObjects REST API](/docs/liveobjects/rest-api-usage) also counts messages for operations performed.
+
+When fetching objects via the REST API, each instance of an [object type](/docs/liveobjects/concepts/objects#object-types) included in the response is counted as one message.
+
+Each operation published via the REST API counts as one message. When creating objects using the `path` field, the server constructs two messages (a create operation and a `MAP_SET` operation to assign it).

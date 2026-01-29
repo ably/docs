@@ -66,7 +66,6 @@ const sessionTracker = (
     gtmContainerId,
     headwayAccountId,
     inkeepChatEnabled,
-    inkeepSearchEnabled,
     inkeepApiKey,
     insightsEnabled,
   }: ExternalScriptsData = {},

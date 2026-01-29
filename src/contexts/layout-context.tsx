@@ -1,4 +1,4 @@
-import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 import { useLocation } from '@reach/router';
 import { stripSdkType } from '@ably/ui/core/CodeSnippet/languages';
 import { ActivePage, determineActivePage, PageTemplate } from 'src/components/Layout/utils/nav';
@@ -47,40 +47,11 @@ const determineActiveLanguage = (
   return DEFAULT_LANGUAGE;
 };
 
-// Function to get languages from DOM (for Textile pages)
-const getLanguagesFromDOM = (): LanguageKey[] => {
-  const languageBlocks = document.querySelectorAll('.docs-language-navigation');
-
-  if (languageBlocks.length > 0) {
-    const languagesSet = new Set<LanguageKey>();
-
-    languageBlocks.forEach((element) => {
-      const languages = element.getAttribute('data-languages');
-      if (languages) {
-        languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
-      }
-    });
-
-    return Array.from(languagesSet);
-  }
-
-  return [];
-};
-
 export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageContextType }>> = ({
   children,
   pageContext,
 }) => {
   const location = useLocation();
-  const [domLanguages, setDomLanguages] = useState<LanguageKey[]>([]);
-
-  // Effect to update DOM languages after render
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const languages = getLanguagesFromDOM();
-      setDomLanguages(languages);
-    }
-  }, [location.pathname]); // Re-run when the path changes
 
   const activePage = useMemo(() => {
     const activePageData = determineActivePage(productData, location.pathname);
@@ -89,9 +60,7 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
     if (activePageData?.page.languages) {
       languages = activePageData.page.languages; // Use language overrides from the nav data first if possible
     } else if (pageContext?.languages) {
-      languages = Array.from(new Set(pageContext.languages.map(stripSdkType))) as LanguageKey[]; // Use pageContext languages if available, this is generated for MDX pages
-    } else if (domLanguages.length > 0) {
-      languages = domLanguages; // Use languages from the DOM if available, this is for Textile pages
+      languages = Array.from(new Set(pageContext.languages.map(stripSdkType))) as LanguageKey[];
     }
 
     const language = determineActiveLanguage(languages, location.search, activePageData?.product ?? null);
@@ -102,9 +71,9 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
       languages,
       language: languages.includes(language) ? language : null,
       product: activePageData?.product ?? null,
-      template: (pageContext?.layout?.mdx ? 'mdx' : 'textile') as PageTemplate,
+      template: 'mdx' as PageTemplate,
     };
-  }, [location.pathname, location.search, pageContext?.languages, domLanguages, pageContext?.layout?.mdx]);
+  }, [location.pathname, location.search, pageContext?.languages]);
 
   return (
     <LayoutContext.Provider

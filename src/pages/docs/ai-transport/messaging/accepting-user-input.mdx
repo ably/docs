@@ -1,0 +1,268 @@
+---
+title: "User input"
+meta_description: "Enable users to send prompts to AI agents over Ably with verified identity and message correlation."
+meta_keywords: "user input, AI prompts, message correlation, identified clients, clientId, agent messaging"
+---
+
+User input enables users to send prompts and requests to AI agents over Ably channels. The agent subscribes to a channel to receive user messages, processes them, and sends responses back. This pattern uses [Ably Pub/Sub](/docs/basics) for realtime, bi-directional communication between users and agents.
+
+User input works alongside [token streaming](/docs/ai-transport/token-streaming) patterns to create complete conversational AI experiences. While token streaming handles agent-to-user output, user input handles user-to-agent prompts.
+
+## How it works <a id="how-it-works"/>
+
+User input follows a channel-based pattern where both users and agents connect to a shared channel:
+
+1. The agent subscribes to the channel to listen for user messages.
+2. The user publishes a message containing their prompt.
+3. The agent receives the message, processes it, and generates a response.
+4. The agent publishes the response back to the channel, correlating it to the original input.
+
+This decoupled approach means agents don't need to manage persistent connections to individual users. Instead, they subscribe to channels and respond to messages as they arrive.
+
+<Aside data-type="further-reading">
+Learn more about channel-based communication in [channel-oriented sessions](/docs/ai-transport/sessions-identity#connection-oriented-vs-channel-oriented-sessions).
+</Aside>
+
+## Identify the user <a id="identify-user"/>
+
+Agents need to verify that incoming messages are from legitimate users. Use [identified clients](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-identity) or [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) to establish a verified identity or role for the user.
+
+<Aside data-type="further-reading">
+For more information about establishing verified identities and roles, see [Identifying users and agents](/docs/ai-transport/sessions-identity/identifying-users-and-agents).
+</Aside>
+
+### Verify by user identity <a id="verify-identity"/>
+
+Use the `clientId` to identify the user who sent a message. This enables personalized responses, per-user rate limiting, or looking up user-specific preferences from your database.
+
+When a user [authenticates with Ably](/docs/ai-transport/sessions-identity/identifying-users-and-agents#authenticating), embed their identity in the JWT:
+
+<Code>
+```javascript
+const claims = {
+  'x-ably-clientId': 'user-123'
+};
+```
+</Code>
+
+The `clientId` is automatically attached to every message the user publishes, so agents can trust this identity.
+
+<Code>
+```javascript
+await channel.subscribe('user-input', (message) => {
+  const userId = message.clientId;
+  // promptId is a user-generated UUID for correlating responses
+  const { promptId, text } = message.data;
+
+  console.log(`Received prompt from user ${userId}`);
+  processAndRespond(channel, text, promptId, userId);
+});
+```
+</Code>
+
+### Verify by role <a id="verify-role"/>
+
+Use [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) to verify that a message comes from a user rather than another agent sharing the channel. This is useful when the agent needs to distinguish message sources without needing the specific user identity.
+
+When a user [authenticates with Ably](/docs/ai-transport/sessions-identity/identifying-users-and-agents#authenticating), embed their role in the JWT:
+
+<Code>
+```javascript
+const claims = {
+  'ably.channel.*': 'user'
+};
+```
+</Code>
+
+The user claim is automatically attached to every message the user publishes, so agents can trust this role information.
+
+<Code>
+```javascript
+await channel.subscribe('user-input', (message) => {
+  const role = message.extras?.userClaim;
+  // promptId is a user-generated UUID for correlating responses
+  const { promptId, text } = message.data;
+
+  if (role !== 'user') {
+    console.log('Ignoring message from non-user');
+    return;
+  }
+
+  processAndRespond(channel, text, promptId);
+});
+```
+</Code>
+
+## Publish user input <a id="publish"/>
+
+Users publish messages to the channel to send prompts to the agent. Generate a unique `promptId` for each message to correlate agent responses back to the original prompt.
+
+<Code>
+```javascript
+const channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+const promptId = crypto.randomUUID();
+await channel.publish('user-input', {
+  promptId: promptId,
+  text: 'What is the weather like today?'
+});
+```
+</Code>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` to prevent the publishing client from receiving its own message, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo). When disabled, update your UI to reflect user input immediately upon sending rather than waiting for the echoed message.
+</Aside>
+
+## Subscribe to user input <a id="subscribe"/>
+
+The agent subscribes to a channel to receive messages from users. When a user publishes a message to the channel, the agent receives it through the subscription callback.
+
+The following example demonstrates an agent subscribing to receive user input:
+
+<Code>
+```javascript
+const Ably = require('ably');
+
+const ably = new Ably.Realtime({ key: '{{API_KEY}}' });
+const channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+await channel.subscribe('user-input', (message) => {
+  const { promptId, text } = message.data;
+  const userId = message.clientId;
+
+  console.log(`Received prompt from ${userId}: ${text}`);
+
+  // Process the prompt and generate a response
+  processAndRespond(channel, text, promptId);
+});
+```
+</Code>
+
+<Aside data-type="note">
+The agent can use `message.clientId` to identify which user sent the prompt. This is a verified identity when using [identified clients](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-identity).
+</Aside>
+
+## Publish agent responses <a id="publish-agent-responses"/>
+
+When the agent sends a response, it includes the `promptId` from the original input so users know which prompt the response relates to. This is especially important when users send multiple prompts in quick succession or when responses are streamed.
+
+Use the `extras.headers` field to include the `promptId` in agent responses:
+
+<Code>
+```javascript
+async function processAndRespond(channel, prompt, promptId) {
+  // Generate the response (e.g., call your AI model)
+  const response = await generateAIResponse(prompt);
+
+  // Publish the response with the promptId for correlation
+  await channel.publish({
+    name: 'agent-response',
+    data: response,
+    extras: {
+      headers: {
+        promptId: promptId
+      }
+    }
+  });
+}
+```
+</Code>
+
+The user's client can then match responses to their original prompts:
+
+<Code>
+```javascript
+const pendingPrompts = new Map();
+
+// Send a prompt and track it
+async function sendPrompt(text) {
+  const promptId = crypto.randomUUID();
+  pendingPrompts.set(promptId, { text });
+  await channel.publish('user-input', { promptId, text });
+  return promptId;
+}
+
+// Handle responses
+await channel.subscribe('agent-response', (message) => {
+  const promptId = message.extras?.headers?.promptId;
+
+  if (promptId && pendingPrompts.has(promptId)) {
+    const originalPrompt = pendingPrompts.get(promptId);
+    console.log(`Response for "${originalPrompt.text}": ${message.data}`);
+    pendingPrompts.delete(promptId);
+  }
+});
+```
+</Code>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own responses, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+## Stream responses <a id="stream"/>
+
+For longer AI responses, you'll typically want to stream tokens back to the user rather than waiting for the complete response. The `promptId` correlation allows users to associate streamed tokens with their original prompt.
+
+When streaming tokens using [message-per-response](/docs/ai-transport/token-streaming/message-per-response) or [message-per-token](/docs/ai-transport/token-streaming/message-per-token) patterns, include the `promptId` in the message extras:
+
+<Code>
+```javascript
+async function streamResponse(channel, prompt, promptId) {
+  // Create initial message for message-per-response pattern
+  const message = await channel.publish({
+    name: 'agent-response',
+    data: '',
+    extras: {
+      headers: {
+        promptId: promptId
+      }
+    }
+  });
+
+  // Stream tokens by appending to the message
+  for await (const token of generateTokens(prompt)) {
+    await channel.appendMessage({
+      serial: message.serial,
+      data: token,
+      extras: {
+        headers: {
+          promptId: promptId
+        }
+      }
+    });
+  }
+}
+```
+</Code>
+
+<Aside data-type="note">
+When appending tokens, include the `extras` with all headers to preserve them on the message. If you omit `extras` from an append operation, any existing headers will be removed. See token streaming with the [message per response](/docs/ai-transport/token-streaming/message-per-response) pattern for more details.
+</Aside>
+
+## Handle multiple concurrent prompts <a id="concurrent"/>
+
+Users may send multiple prompts before receiving responses, especially during long-running AI operations. The correlation pattern ensures responses are matched to the correct prompts:
+
+<Code>
+```javascript
+// Agent handling multiple concurrent prompts
+const activeRequests = new Map();
+
+await channel.subscribe('user-input', async (message) => {
+  const { promptId, text } = message.data;
+  const userId = message.clientId;
+
+  // Track active request
+  activeRequests.set(promptId, {
+    userId,
+    text,
+  });
+
+  try {
+    await streamResponse(channel, text, promptId);
+  } finally {
+    activeRequests.delete(promptId);
+  }
+});
+```
+</Code>

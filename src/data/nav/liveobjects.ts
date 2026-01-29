@@ -12,6 +12,7 @@ export default {
       name: 'About LiveObjects',
       link: '/docs/liveobjects',
       index: true,
+      languages: ['javascript', 'swift', 'java'],
     },
     {
       name: 'Getting started',
@@ -38,12 +39,26 @@ export default {
           link: '/docs/liveobjects/concepts/objects',
         },
         {
+          name: 'PathObject',
+          link: '/docs/liveobjects/concepts/path-object',
+        },
+        {
+          name: 'Instance',
+          link: '/docs/liveobjects/concepts/instance',
+        },
+        {
           name: 'Operations',
           link: '/docs/liveobjects/concepts/operations',
         },
         {
           name: 'Synchronization',
           link: '/docs/liveobjects/concepts/synchronization',
+          languages: ['javascript', 'swift', 'java'],
+        },
+        {
+          name: 'Billing',
+          link: '/docs/liveobjects/concepts/billing',
+          languages: ['javascript', 'swift', 'java'],
         },
       ],
     },
@@ -76,17 +91,16 @@ export default {
           link: '/docs/liveobjects/typing',
         },
         {
-          name: 'Using the REST API',
-          link: '/docs/liveobjects/rest-api-usage',
-          languages: ['javascript'],
-        },
-        {
           name: 'Inband objects',
           link: '/docs/liveobjects/inband-objects',
         },
         {
           name: 'Object storage',
           link: '/docs/liveobjects/storage',
+        },
+        {
+          name: 'Using the REST API',
+          link: '/docs/liveobjects/rest-api-usage',
         },
       ],
     },

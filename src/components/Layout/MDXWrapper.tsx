@@ -13,7 +13,7 @@ import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
-import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
+import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
@@ -29,6 +29,7 @@ import { MarkdownProvider } from '../Markdown';
 
 import Article from '../Article';
 import { Head, StructuredData } from '../Head';
+import { getMarkdownUrl } from '../../utilities/llm-urls';
 
 import UserContext from 'src/contexts/user-context';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -105,7 +106,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
   // Check if this code block contains only a single utility language
   const utilityLanguageOverride = useMemo(() => {
     // Utility languages that should be shown without warning (like JSON)
-    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql'];
+    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql', 'json'];
 
     const childrenArray = React.Children.toArray(processedChildren);
 
@@ -183,6 +184,9 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl(location.pathname);
 
+  // Generate markdown URL for noscript fallback (uses shared utility for consistent URL handling)
+  const markdownUrl = getMarkdownUrl(canonical);
+
   // Generate JSON-LD structured data for SEO
   const structuredData: StructuredData | undefined = useMemo(() => {
     if (!activePage.languages || activePage.languages.length <= 1) {
@@ -236,6 +240,36 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
         keywords={keywords}
         structuredData={structuredData}
       />
+      {/* Fallback for non-JS clients (LLMs, bots, screen readers with JS disabled) */}
+      <noscript>
+        <div
+          style={{
+            padding: '1rem',
+            margin: '1rem',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            backgroundColor: '#f9f9f9',
+          }}
+        >
+          <p>
+            <strong>Looking for machine-readable content?</strong>
+          </p>
+          <ul>
+            <li>
+              <a href={markdownUrl}>View this page as Markdown</a>
+            </li>
+            <li>
+              <a href="/llms.txt">Browse all documentation pages (llms.txt)</a>
+            </li>
+          </ul>
+          <p>
+            <em>
+              Tip: Request pages with <code>Accept: text/markdown</code> header or use a recognized LLM user agent to
+              receive markdown directly.
+            </em>
+          </p>
+        </div>
+      </noscript>
       <Article>
         <MarkdownProvider
           components={{
