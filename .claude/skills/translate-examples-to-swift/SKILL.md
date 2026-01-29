@@ -123,12 +123,22 @@ Now **confirm that the test harness builds cleanly**: `swift build`.
 
 ## 2. Translate the JavaScript code
 
-TODO: what guidance should we give it for how to translate the JS code?
-TODO: explain where the Sendable came from
-
 Now translate the JavaScript code to Swift, using your knowledge of ably-js and ably-cocoa.
 
-Guidance:
+### Looking up API details
+
+When you need to look up specific API details (method signatures, parameter types, return types), consult the auto-generated SDK documentation:
+
+- **JavaScript SDK**: https://ably.com/docs/sdk/js/v2.0 (to understand what you're translating FROM)
+- **Swift/Cocoa SDK**: https://ably.com/docs/sdk/cocoa/v1.2/ (to understand what you're translating TO)
+
+Note that some items may not appear in the auto-generated docs. If you can't find something, check existing Swift examples in this repository for reference.
+
+### Looking up translation patterns
+
+For examples of how JavaScript code is typically translated to Swift (e.g., how callbacks are structured, how async/await becomes completion handlers), look at existing Swift examples in this documentation repository. For example, `src/pages/docs/messages/updates-deletes.mdx` contains Swift examples alongside JavaScript that demonstrate common patterns.
+
+### Guidance
 
 - Keep the translated code as close to the original JavaScript as possible; don't make material changes without good reason
 
