@@ -24,13 +24,14 @@ for await (const event of stream) {
 
 We wish to generate equivalent Swift example code to be inserted alongside the JavaScript example, and to be sure that this code is correct; in particular, that it compiles.
 
-In order to generate the Swift example code, there are four steps:
+In order to generate the Swift example code, there are six steps:
 
 1. Generate a Swift test harness
 2. Translate the JavaScript code
 3. Insert the translated code into the test harness
 4. Use the test harness to verify the translated code
-5. Report back to the user
+5. Insert the translated code into the documentation
+6. Report back to the user
 
 Detailed instructions for each of these steps are given below.
 
@@ -261,7 +262,34 @@ func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: Strin
 
 **Important**: The code that ends up in the documentation must be exactly the code inside the `example()` function body that was verified to compile. Do not insert different code into the documentation than what was tested.
 
-## 5. Report back to the user
+## 5. Insert the translated code into the documentation
+
+Insert the verified Swift code into the documentation file, within the same `<Code>` block as the JavaScript example. Include the test harness context as a JSX comment:
+
+```mdx
+<Code>
+```javascript
+// original JavaScript code
+```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+// translated Swift code goes here
+```
+{/* --- end example code --- */}
+</Code>
+```
+
+The test harness comment documents the function signature and context required to compile the example. This enables:
+- **Reviewers** to verify the translation compiles correctly
+- **Future editors** to modify the Swift code and test compilation without having to reverse-engineer what context was originally used
+
+## 6. Report back to the user
 
 Report back to the user, explaining:
 
