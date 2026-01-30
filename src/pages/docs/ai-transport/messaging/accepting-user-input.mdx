@@ -43,6 +43,15 @@ const claims = {
   'x-ably-clientId': 'user-123'
 };
 ```
+```python
+claims = {
+    'x-ably-clientId': 'user-123'
+}
+```
+```java
+Map<String, String> claims = new HashMap<>();
+claims.put("x-ably-clientId", "user-123");
+```
 </Code>
 
 The `clientId` is automatically attached to every message the user publishes, so agents can trust this identity.
@@ -58,6 +67,30 @@ await channel.subscribe('user-input', (message) => {
   processAndRespond(channel, text, promptId, userId);
 });
 ```
+```python
+def on_user_input(message):
+    user_id = message.client_id
+    # promptId is a user-generated UUID for correlating responses
+    prompt_id = message.data['promptId']
+    text = message.data['text']
+
+    print(f'Received prompt from user {user_id}')
+    process_and_respond(channel, text, prompt_id, user_id)
+
+await channel.subscribe('user-input', on_user_input)
+```
+```java
+channel.subscribe("user-input", message -> {
+    String userId = message.clientId;
+    // promptId is a user-generated UUID for correlating responses
+    JsonObject data = (JsonObject) message.data;
+    String promptId = data.get("promptId").getAsString();
+    String text = data.get("text").getAsString();
+
+    System.out.println("Received prompt from user " + userId);
+    processAndRespond(channel, text, promptId, userId);
+});
+```
 </Code>
 
 ### Verify by role <a id="verify-role"/>
@@ -71,6 +104,15 @@ When a user [authenticates with Ably](/docs/ai-transport/sessions-identity/ident
 const claims = {
   'ably.channel.*': 'user'
 };
+```
+```python
+claims = {
+    'ably.channel.*': 'user'
+}
+```
+```java
+Map<String, String> claims = new HashMap<>();
+claims.put("ably.channel.*", "user");
 ```
 </Code>
 
@@ -91,6 +133,37 @@ await channel.subscribe('user-input', (message) => {
   processAndRespond(channel, text, promptId);
 });
 ```
+```python
+def on_user_input(message):
+    role = message.extras.get('userClaim')
+    # promptId is a user-generated UUID for correlating responses
+    prompt_id = message.data['promptId']
+    text = message.data['text']
+
+    if role != 'user':
+        print('Ignoring message from non-user')
+        return
+
+    process_and_respond(channel, text, prompt_id)
+
+await channel.subscribe('user-input', on_user_input)
+```
+```java
+channel.subscribe("user-input", message -> {
+    String role = message.extras.get("userClaim").getAsString();
+    // promptId is a user-generated UUID for correlating responses
+    JsonObject data = (JsonObject) message.data;
+    String promptId = data.get("promptId").getAsString();
+    String text = data.get("text").getAsString();
+
+    if (!role.equals("user")) {
+        System.out.println("Ignoring message from non-user");
+        return;
+    }
+
+    processAndRespond(channel, text, promptId);
+});
+```
 </Code>
 
 ## Publish user input <a id="publish"/>
@@ -106,6 +179,30 @@ await channel.publish('user-input', {
   promptId: promptId,
   text: 'What is the weather like today?'
 });
+```
+```python
+import uuid
+
+channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+prompt_id = str(uuid.uuid4())
+message = Message(
+    name='user-input',
+    data={
+        'promptId': prompt_id,
+        'text': 'What is the weather like today?'
+    }
+)
+await channel.publish(message)
+```
+```java
+Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+String promptId = UUID.randomUUID().toString();
+JsonObject data = new JsonObject();
+data.addProperty("promptId", promptId);
+data.addProperty("text", "What is the weather like today?");
+channel.publish("user-input", data);
 ```
 </Code>
 
@@ -134,6 +231,43 @@ await channel.subscribe('user-input', (message) => {
 
   // Process the prompt and generate a response
   processAndRespond(channel, text, promptId);
+});
+```
+```python
+from ably import AblyRealtime
+
+ably = AblyRealtime(key='{{API_KEY}}')
+channel = ably.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+def on_user_input(message):
+    prompt_id = message.data['promptId']
+    text = message.data['text']
+    user_id = message.client_id
+
+    print(f'Received prompt from {user_id}: {text}')
+
+    # Process the prompt and generate a response
+    process_and_respond(channel, text, prompt_id)
+
+await channel.subscribe('user-input', on_user_input)
+```
+```java
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+
+AblyRealtime ably = new AblyRealtime("{{API_KEY}}");
+Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+channel.subscribe("user-input", message -> {
+    JsonObject data = (JsonObject) message.data;
+    String promptId = data.get("promptId").getAsString();
+    String text = data.get("text").getAsString();
+    String userId = message.clientId;
+
+    System.out.println("Received prompt from " + userId + ": " + text);
+
+    // Process the prompt and generate a response
+    processAndRespond(channel, text, promptId);
 });
 ```
 </Code>
@@ -166,6 +300,40 @@ async function processAndRespond(channel, prompt, promptId) {
   });
 }
 ```
+```python
+async def process_and_respond(channel, prompt, prompt_id):
+    # Generate the response (e.g., call your AI model)
+    response = await generate_ai_response(prompt)
+
+    message = Message(
+        name='agent-response',
+        data=response,
+        extras={
+            'headers': {
+                'promptId': prompt_id
+            }
+        }
+    )
+
+    # Publish the response with the promptId for correlation
+    await channel.publish(message)
+```
+```java
+void processAndRespond(Channel channel, String prompt, String promptId) {
+    // Generate the response (e.g., call your AI model)
+    String response = generateAIResponse(prompt);
+
+    // Publish the response with the promptId for correlation
+    JsonObject extras = new JsonObject();
+    JsonObject headers = new JsonObject();
+    headers.addProperty("promptId", promptId);
+    extras.add("headers", headers);
+
+    Message message = new Message("agent-response", response, new MessageExtras(extras));
+
+    channel.publish(message);
+}
+```
 </Code>
 
 The user's client can then match responses to their original prompts:
@@ -191,6 +359,60 @@ await channel.subscribe('agent-response', (message) => {
     console.log(`Response for "${originalPrompt.text}": ${message.data}`);
     pendingPrompts.delete(promptId);
   }
+});
+```
+```python
+import uuid
+
+pending_prompts = {}
+
+# Send a prompt and track it
+async def send_prompt(text):
+    prompt_id = str(uuid.uuid4())
+    pending_prompts[prompt_id] = {'text': text}
+    message = Message(name='user-input', data={'promptId': prompt_id, 'text': text})
+    await channel.publish(message)
+    return prompt_id
+
+# Handle responses
+def on_agent_response(message):
+    prompt_id = message.extras.get('headers', {}).get('promptId')
+
+    if prompt_id and prompt_id in pending_prompts:
+        original_prompt = pending_prompts[prompt_id]
+        print(f'Response for "{original_prompt["text"]}": {message.data}')
+        del pending_prompts[prompt_id]
+
+await channel.subscribe('agent-response', on_agent_response)
+```
+```java
+Map<String, Map<String, String>> pendingPrompts = new ConcurrentHashMap<>();
+
+// Send a prompt and track it
+String sendPrompt(String text) {
+    String promptId = UUID.randomUUID().toString();
+    Map<String, String> promptData = new HashMap<>();
+    promptData.put("text", text);
+    pendingPrompts.put(promptId, promptData);
+
+    JsonObject data = new JsonObject();
+    data.addProperty("promptId", promptId);
+    data.addProperty("text", text);
+    channel.publish("user-input", data);
+
+    return promptId;
+}
+
+// Handle responses
+channel.subscribe("agent-response", message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers");
+    String promptId = headers != null ? headers.get("promptId").getAsString() : null;
+
+    if (promptId != null && pendingPrompts.containsKey(promptId)) {
+        Map<String, String> originalPrompt = pendingPrompts.get(promptId);
+        System.out.println("Response for \"" + originalPrompt.get("text") + "\": " + message.data);
+        pendingPrompts.remove(promptId);
+    }
 });
 ```
 </Code>
@@ -233,6 +455,66 @@ async function streamResponse(channel, prompt, promptId) {
   }
 }
 ```
+```python
+async def stream_response(channel, prompt, prompt_id):
+    # Create initial message for message-per-response pattern
+    message = Message(
+        name='agent-response',
+        data='',
+        extras={
+            'headers': {
+                'promptId': prompt_id
+            }
+        }
+    )
+    result = await channel.publish(message)
+    message_serial = result.serials[0]
+
+    # Stream tokens by appending to the message
+    async for token in generate_tokens(prompt):
+        await channel.append_message(
+            serial=message_serial,
+            data=token,
+            extras={
+                'headers': {
+                    'promptId': prompt_id
+                }
+            }
+        )
+```
+```java
+void streamResponse(Channel channel, String prompt, String promptId) throws Exception {
+    // Create initial message for message-per-response pattern
+    JsonObject extras = new JsonObject();
+    JsonObject headers = new JsonObject();
+    headers.addProperty("promptId", promptId);
+    extras.add("headers", headers);
+
+    CompletableFuture<PublishResult> publishFuture = new CompletableFuture<>();
+    channel.publish("agent-response", "", extras, new Callback<PublishResult>() {
+        @Override
+        public void onSuccess(PublishResult result) {
+            publishFuture.complete(result);
+        }
+
+        @Override
+        public void onError(ErrorInfo reason) {
+            publishFuture.completeExceptionally(AblyException.fromErrorInfo(reason));
+        }
+    });
+    String messageSerial = publishFuture.get().serials[0];
+
+    // Stream tokens by appending to the message
+    for (String token : generateTokens(prompt)) {
+        JsonObject appendExtras = new JsonObject();
+        JsonObject appendHeaders = new JsonObject();
+        appendHeaders.addProperty("promptId", promptId);
+        appendExtras.add("headers", appendHeaders);
+
+        channel.appendMessage(messageSerial, token, appendExtras);
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -263,6 +545,51 @@ await channel.subscribe('user-input', async (message) => {
   } finally {
     activeRequests.delete(promptId);
   }
+});
+```
+```python
+# Agent handling multiple concurrent prompts
+active_requests = {}
+
+async def on_user_input(message):
+    prompt_id = message.data['promptId']
+    text = message.data['text']
+    user_id = message.client_id
+
+    # Track active request
+    active_requests[prompt_id] = {
+        'userId': user_id,
+        'text': text,
+    }
+
+    try:
+        await stream_response(channel, text, prompt_id)
+    finally:
+        del active_requests[prompt_id]
+
+await channel.subscribe('user-input', on_user_input)
+```
+```java
+// Agent handling multiple concurrent prompts
+Map<String, Map<String, String>> activeRequests = new ConcurrentHashMap<>();
+
+channel.subscribe("user-input", message -> {
+    JsonObject data = (JsonObject) message.data;
+    String promptId = data.get("promptId").getAsString();
+    String text = data.get("text").getAsString();
+    String userId = message.clientId;
+
+    // Track active request
+    Map<String, String> requestData = new HashMap<>();
+    requestData.put("userId", userId);
+    requestData.put("text", text);
+    activeRequests.put(promptId, requestData);
+
+    try {
+        streamResponse(channel, text, promptId);
+    } finally {
+        activeRequests.remove(promptId);
+    }
 });
 ```
 </Code>

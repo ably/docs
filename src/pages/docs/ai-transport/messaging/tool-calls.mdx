@@ -84,6 +84,103 @@ for await (const event of stream) {
   }
 }
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like:
+# { 'type': 'tool_call', 'name': 'get_weather', 'args': '{"location":"San Francisco"}', 'toolCallId': 'tool_123', 'responseId': 'resp_abc123' }
+# { 'type': 'tool_result', 'name': 'get_weather', 'result': '{"temp":72,"conditions":"sunny"}', 'toolCallId': 'tool_123', 'responseId': 'resp_abc123' }
+# { 'type': 'message', 'text': 'The weather in San Francisco is 72°F and sunny.', 'responseId': 'resp_abc123' }
+
+async for event in stream:
+    if event['type'] == 'tool_call':
+        # Publish tool call arguments
+        message = Message(
+            name='tool_call',
+            data={
+                'name': event['name'],
+                'args': event['args']
+            },
+            extras={
+                'headers': {
+                    'responseId': event['responseId'],
+                    'toolCallId': event['toolCallId']
+                }
+            }
+        )
+        await channel.publish(message)
+    elif event['type'] == 'tool_result':
+        # Publish tool call results
+        message = Message(
+            name='tool_result',
+            data={
+                'name': event['name'],
+                'result': event['result']
+            },
+            extras={
+                'headers': {
+                    'responseId': event['responseId'],
+                    'toolCallId': event['toolCallId']
+                }
+            }
+        )
+        await channel.publish(message)
+    elif event['type'] == 'message':
+        # Publish model output messages
+        message = Message(
+            name='message',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+        await channel.publish(message)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like:
+// { type: 'tool_call', name: 'get_weather', args: '{"location":"San Francisco"}', toolCallId: 'tool_123', responseId: 'resp_abc123' }
+// { type: 'tool_result', name: 'get_weather', result: '{"temp":72,"conditions":"sunny"}', toolCallId: 'tool_123', responseId: 'resp_abc123' }
+// { type: 'message', text: 'The weather in San Francisco is 72°F and sunny.', responseId: 'resp_abc123' }
+
+for (Event event : stream) {
+    JsonObject extras = new JsonObject();
+    JsonObject headers = new JsonObject();
+
+    if (event.getType().equals("tool_call")) {
+        // Publish tool call arguments
+        JsonObject data = new JsonObject();
+        data.addProperty("name", event.getName());
+        data.addProperty("args", event.getArgs());
+
+        headers.addProperty("responseId", event.getResponseId());
+        headers.addProperty("toolCallId", event.getToolCallId());
+        extras.add("headers", headers);
+
+        channel.publish(new Message("tool_call", data, new MessageExtras(extras)));
+    } else if (event.getType().equals("tool_result")) {
+        // Publish tool call results
+        JsonObject data = new JsonObject();
+        data.addProperty("name", event.getName());
+        data.addProperty("result", event.getResult());
+
+        headers.addProperty("responseId", event.getResponseId());
+        headers.addProperty("toolCallId", event.getToolCallId());
+        extras.add("headers", headers);
+
+        channel.publish(new Message("tool_result", data, new MessageExtras(extras)));
+    } else if (event.getType().equals("message")) {
+        // Publish model output messages
+        headers.addProperty("responseId", event.getResponseId());
+        extras.add("headers", headers);
+
+        channel.publish(new Message("message", event.getText(), new MessageExtras(extras)));
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -155,6 +252,96 @@ await channel.subscribe((message) => {
   console.log(`Response ${responseId}:`, response);
 });
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by ID, each containing tool calls and final response
+responses = {}
+
+# Subscribe to all events on the channel
+def on_message(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Message missing responseId')
+        return
+
+    # Initialize response object if needed
+    if response_id not in responses:
+        responses[response_id] = {
+            'toolCalls': {},
+            'message': ''
+        }
+
+    response = responses[response_id]
+
+    # Handle each message type
+    if message.name == 'message':
+        response['message'] = message.data
+    elif message.name == 'tool_call':
+        tool_call_id = message.extras.get('headers', {}).get('toolCallId')
+        response['toolCalls'][tool_call_id] = {
+            'name': message.data['name'],
+            'args': message.data['args']
+        }
+    elif message.name == 'tool_result':
+        result_tool_call_id = message.extras.get('headers', {}).get('toolCallId')
+        tool_call = response['toolCalls'].get(result_tool_call_id)
+        if tool_call:
+            tool_call['result'] = message.data['result']
+
+    # Display the tool calls and response for this turn
+    print(f'Response {response_id}:', response)
+
+await channel.subscribe(on_message)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by ID, each containing tool calls and final response
+Map<String, Response> responses = new ConcurrentHashMap<>();
+
+// Subscribe to all events on the channel
+channel.subscribe(message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Message missing responseId");
+        return;
+    }
+
+    // Initialize response object if needed
+    responses.putIfAbsent(responseId, new Response());
+    Response response = responses.get(responseId);
+
+    // Handle each message type
+    switch (message.name) {
+        case "message":
+            response.setMessage((String) message.data);
+            break;
+        case "tool_call":
+            String toolCallId = headers.get("toolCallId").getAsString();
+            JsonObject data = (JsonObject) message.data;
+            ToolCall toolCall = new ToolCall();
+            toolCall.setName(data.get("name").getAsString());
+            toolCall.setArgs(data.get("args").getAsString());
+            response.getToolCalls().put(toolCallId, toolCall);
+            break;
+        case "tool_result":
+            String resultToolCallId = headers.get("toolCallId").getAsString();
+            ToolCall existingToolCall = response.getToolCalls().get(resultToolCallId);
+            if (existingToolCall != null) {
+                JsonObject resultData = (JsonObject) message.data;
+                existingToolCall.setResult(resultData.get("result").getAsString());
+            }
+            break;
+    }
+
+    // Display the tool calls and response for this turn
+    System.out.println("Response " + responseId + ": " + response);
+});
+```
 </Code>
 
 <Aside data-type="further-reading">
@@ -183,6 +370,45 @@ await channel.subscribe((message) => {
     const result = JSON.parse(message.data.result);
     renderWeatherCard(result);
   }
+});
+```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+def on_message(message):
+    # Render component when tool is invoked
+    if message.name == 'tool_call' and message.data['name'] == 'get_weather':
+        args = json.loads(message.data['args'])
+        render_weather_card({'location': args['location'], 'loading': True})
+
+    # Update component with results
+    if message.name == 'tool_result' and message.data['name'] == 'get_weather':
+        result = json.loads(message.data['result'])
+        render_weather_card(result)
+
+await channel.subscribe(on_message)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+channel.subscribe(message -> {
+    // Render component when tool is invoked
+    if (message.name.equals("tool_call")) {
+        JsonObject data = (JsonObject) message.data;
+        if (data.get("name").getAsString().equals("get_weather")) {
+            JsonObject args = JsonParser.parseString(data.get("args").getAsString()).getAsJsonObject();
+            renderWeatherCard(args.get("location").getAsString(), true);
+        }
+    }
+
+    // Update component with results
+    if (message.name.equals("tool_result")) {
+        JsonObject data = (JsonObject) message.data;
+        if (data.get("name").getAsString().equals("get_weather")) {
+            JsonObject result = JsonParser.parseString(data.get("result").getAsString()).getAsJsonObject();
+            renderWeatherCard(result);
+        }
+    }
 });
 ```
 </Code>
@@ -237,6 +463,68 @@ await channel.subscribe('tool_call', async (message) => {
   }
 });
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+async def on_tool_call(message):
+    name = message.data['name']
+    args = message.data.get('args')
+    headers = message.extras.get('headers', {})
+    response_id = headers.get('responseId')
+    tool_call_id = headers.get('toolCallId')
+
+    if name == 'get_location':
+        result = await get_geolocation_position()
+        message = Message(
+            name='tool_result',
+            data={
+                'name': name,
+                'result': {
+                    'lat': result['coords']['latitude'],
+                    'lng': result['coords']['longitude']
+                }
+            },
+            extras={
+                'headers': {
+                    'responseId': response_id,
+                    'toolCallId': tool_call_id
+                }
+            }
+        )
+        await channel.publish(message)
+
+await channel.subscribe('tool_call', on_tool_call)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+channel.subscribe("tool_call", message -> {
+    JsonObject data = (JsonObject) message.data;
+    String name = data.get("name").getAsString();
+    JsonObject headers = message.extras.asJsonObject().get("headers");
+    String responseId = headers.get("responseId").getAsString();
+    String toolCallId = headers.get("toolCallId").getAsString();
+
+    if (name.equals("get_location")) {
+        GeolocationPosition result = getGeolocationPosition();
+
+        JsonObject resultData = new JsonObject();
+        resultData.addProperty("name", name);
+        JsonObject resultValue = new JsonObject();
+        resultValue.addProperty("lat", result.getCoords().getLatitude());
+        resultValue.addProperty("lng", result.getCoords().getLongitude());
+        resultData.add("result", resultValue);
+
+        JsonObject resultExtras = new JsonObject();
+        JsonObject resultHeaders = new JsonObject();
+        resultHeaders.addProperty("responseId", responseId);
+        resultHeaders.addProperty("toolCallId", toolCallId);
+        resultExtras.add("headers", resultHeaders);
+
+        channel.publish(new Message("tool_result", resultData, new MessageExtras(resultExtras)));
+    }
+});
+```
 </Code>
 
 <Aside data-type="note">
@@ -263,6 +551,43 @@ await channel.subscribe('tool_result', (message) => {
   processResult(pending.responseId, toolCallId, result);
 
   pendingToolCalls.delete(toolCallId);
+});
+```
+```python
+pending_tool_calls = {}
+
+def on_tool_result(message):
+    tool_call_id = message.data.get('toolCallId')
+    result = message.data.get('result')
+    pending = pending_tool_calls.get(tool_call_id)
+
+    if not pending:
+        return
+
+    # Pass result back to the AI model to continue the conversation
+    process_result(pending['responseId'], tool_call_id, result)
+
+    del pending_tool_calls[tool_call_id]
+
+await channel.subscribe('tool_result', on_tool_result)
+```
+```java
+Map<String, PendingToolCall> pendingToolCalls = new ConcurrentHashMap<>();
+
+channel.subscribe("tool_result", message -> {
+    JsonObject data = (JsonObject) message.data;
+    String toolCallId = data.get("toolCallId").getAsString();
+    JsonObject result = data.get("result").getAsJsonObject();
+    PendingToolCall pending = pendingToolCalls.get(toolCallId);
+
+    if (pending == null) {
+        return;
+    }
+
+    // Pass result back to the AI model to continue the conversation
+    processResult(pending.getResponseId(), toolCallId, result);
+
+    pendingToolCalls.remove(toolCallId);
 });
 ```
 </Code>

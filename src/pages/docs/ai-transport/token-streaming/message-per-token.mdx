@@ -24,6 +24,12 @@ Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retri
 ```javascript
 const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+```
 </Code>
 
 When publishing tokens, don't await the `channel.publish()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each publish would unnecessarily slow down your token stream. Messages are still published in the order that `publish()` is called, so delivery order is not affected.
@@ -42,6 +48,34 @@ for await (const event of stream) {
   if (event.type === 'token') {
     await channel.publish('token', event.text);
   }
+}
+```
+```python
+# ✅ Do this - publish without await for maximum throughput
+async for event in stream:
+    if event['type'] == 'token':
+        message = Message(name='token', data=event['text'])
+        channel.publish(message)
+
+# ❌ Don't do this - awaiting each publish reduces throughput
+async for event in stream:
+    if event['type'] == 'token':
+        message = Message(name='token', data=event['text'])
+        await channel.publish(message)
+```
+```java
+// ✅ Do this - publish without blocking for maximum throughput
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        channel.publish("token", event.getText());
+    }
+}
+
+// ❌ Don't do this - blocking on each publish reduces throughput
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        channel.publish("token", event.getText()).get(); // blocking call
+    }
 }
 ```
 </Code>
@@ -77,6 +111,24 @@ for await (const event of stream) {
   }
 }
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like { 'type': 'token', 'text': 'Hello' }
+async for event in stream:
+    if event['type'] == 'token':
+        channel.publish('token', event['text'])
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like { type: 'token', text: 'Hello' }
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        channel.publish("token", event.getText());
+    }
+}
+```
 </Code>
 
 #### Subscribe to tokens
@@ -89,6 +141,25 @@ const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
 await channel.subscribe('token', (message) => {
   const token = message.data;
   console.log(token); // log each token as it arrives
+});
+```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Subscribe to token messages
+def on_token(message):
+    token = message.data
+    print(token)  # log each token as it arrives
+
+await channel.subscribe('token', on_token)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Subscribe to token messages
+channel.subscribe("token", message -> {
+    String token = (String) message.data;
+    System.out.println(token); // log each token as it arrives
 });
 ```
 </Code>
@@ -120,6 +191,37 @@ for await (const event of stream) {
   }
 }
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like { 'type': 'token', 'text': 'Hello', 'responseId': 'resp_abc123' }
+async for event in stream:
+    if event['type'] == 'token':
+        channel.publish(
+            name='token',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like { type: 'token', text: 'Hello', responseId: 'resp_abc123' }
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        JsonObject extras = new JsonObject();
+        JsonObject headers = new JsonObject();
+        headers.addProperty("responseId", event.getResponseId());
+        extras.add("headers", headers);
+
+        channel.publish(new Message("token", event.getText(), new MessageExtras(extras)));
+    }
+}
+```
 </Code>
 
 #### Subscribe to tokens
@@ -149,6 +251,52 @@ await channel.subscribe('token', (message) => {
 
   // Append token to response
   responses.set(responseId, responses.get(responseId) + token);
+});
+```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by ID
+responses = {}
+
+def on_token(message):
+    token = message.data
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Token missing responseId')
+        return
+
+    # Create an empty response
+    if response_id not in responses:
+        responses[response_id] = ''
+
+    # Append token to response
+    responses[response_id] += token
+
+await channel.subscribe('token', on_token)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by ID
+Map<String, String> responses = new ConcurrentHashMap<>();
+
+channel.subscribe("token", message -> {
+    String token = (String) message.data;
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Token missing responseId");
+        return;
+    }
+
+    // Create an empty response
+    responses.putIfAbsent(responseId, "");
+
+    // Append token to response
+    responses.put(responseId, responses.get(responseId) + token);
 });
 ```
 </Code>
@@ -203,6 +351,73 @@ for await (const event of stream) {
   }
 }
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like:
+# { 'type': 'message_start', 'responseId': 'resp_abc123' }
+# { 'type': 'message_delta', 'responseId': 'resp_abc123', 'text': 'Hello' }
+# { 'type': 'message_stop', 'responseId': 'resp_abc123' }
+
+async for event in stream:
+    if event['type'] == 'message_start':
+        # Publish response start
+        channel.publish(
+            name='start',
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+    elif event['type'] == 'message_delta':
+        # Publish tokens
+        channel.publish(
+            name='token',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+    elif event['type'] == 'message_stop':
+        # Publish response stop
+        channel.publish(
+            name='stop',
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like:
+// { type: 'message_start', responseId: 'resp_abc123' }
+// { type: 'message_delta', responseId: 'resp_abc123', text: 'Hello' }
+// { type: 'message_stop', responseId: 'resp_abc123' }
+
+for (Event event : stream) {
+    JsonObject extras = new JsonObject();
+    JsonObject headers = new JsonObject();
+    headers.addProperty("responseId", event.getResponseId());
+    extras.add("headers", headers);
+
+    if (event.getType().equals("message_start")) {
+        // Publish response start
+        channel.publish(new Message("start", null, new MessageExtras(extras)));
+    } else if (event.getType().equals("message_delta")) {
+        // Publish tokens
+        channel.publish(new Message("token", event.getText(), new MessageExtras(extras)));
+    } else if (event.getType().equals("message_stop")) {
+        // Publish response stop
+        channel.publish(new Message("stop", null, new MessageExtras(extras)));
+    }
+}
+```
 </Code>
 
 #### Subscribe to tokens
@@ -237,6 +452,66 @@ await channel.subscribe('stop', (message) => {
   console.log('Response complete:', finalText);
 });
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+responses = {}
+
+# Handle response start
+def on_start(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+    responses[response_id] = ''
+
+await channel.subscribe('start', on_start)
+
+# Handle tokens
+def on_token(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+    token = message.data
+
+    current_text = responses.get(response_id, '')
+    responses[response_id] = current_text + token
+
+await channel.subscribe('token', on_token)
+
+# Handle response stop
+def on_stop(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+    final_text = responses.get(response_id)
+    print('Response complete:', final_text)
+
+await channel.subscribe('stop', on_stop)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+Map<String, String> responses = new ConcurrentHashMap<>();
+
+// Handle response start
+channel.subscribe("start", message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers.get("responseId").getAsString();
+    responses.put(responseId, "");
+});
+
+// Handle tokens
+channel.subscribe("token", message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers.get("responseId").getAsString();
+    String token = (String) message.data;
+
+    String currentText = responses.getOrDefault(responseId, "");
+    responses.put(responseId, currentText + token);
+});
+
+// Handle response stop
+channel.subscribe("stop", message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers.get("responseId").getAsString();
+    String finalText = responses.get(responseId);
+    System.out.println("Response complete: " + finalText);
+});
+```
 </Code>
 
 ## Client hydration <a id="hydration"/>
@@ -269,6 +544,35 @@ await channel.subscribe('token', (message) => {
 
   // Process tokens from both recent history and live stream
   console.log('Token received:', token);
+});
+```
+```python
+# Use rewind to receive recent historical messages
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', params={'rewind': '2m'})  # or rewind: 100 for message count
+
+# Subscribe to receive both recent historical and live messages,
+# which are delivered in order to the subscription
+def on_token(message):
+    token = message.data
+
+    # Process tokens from both recent history and live stream
+    print('Token received:', token)
+
+await channel.subscribe('token', on_token)
+```
+```java
+// Use rewind to receive recent historical messages
+ChannelOptions options = new ChannelOptions();
+options.params = Map.of("rewind", "2m"); // or rewind: 100 for message count
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options);
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+channel.subscribe("token", message -> {
+    String token = (String) message.data;
+
+    // Process tokens from both recent history and live stream
+    System.out.println("Token received: " + token);
 });
 ```
 </Code>
@@ -313,6 +617,58 @@ while (page) {
 
   // Move to next page if available
   page = page.hasNext() ? await page.next() : null;
+}
+```
+```python
+# Use a channel in a namespace called 'persisted', which has persistence enabled
+channel = realtime.channels.get('persisted:{{RANDOM_CHANNEL_NAME}}')
+
+response = ''
+
+# Subscribe to live messages (implicitly attaches the channel)
+def on_token(message):
+    global response
+    # Append the token to the end of the response
+    response += message.data
+
+await channel.subscribe('token', on_token)
+
+# Fetch history up until the point of attachment
+page = await channel.history(until_attach=True)
+
+# Paginate backwards through history
+while page:
+    # Messages are newest-first, so prepend them to response
+    for message in page.items:
+        response = message.data + response
+
+    # Move to next page if available
+    page = await page.next() if page.has_next() else None
+```
+```java
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+Channel channel = realtime.channels.get("persisted:{{RANDOM_CHANNEL_NAME}}");
+
+StringBuilder response = new StringBuilder();
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe("token", message -> {
+    // Append the token to the end of the response
+    response.append((String) message.data);
+});
+
+// Fetch history up until the point of attachment
+PaginatedResult<Message> page = channel.history(new Param("untilAttach", "true"));
+
+// Paginate backwards through history
+while (page != null) {
+    // Messages are newest-first, so prepend them to response
+    for (Message message : page.items()) {
+        response.insert(0, (String) message.data);
+    }
+
+    // Move to next page if available
+    page = page.hasNext() ? page.next() : null;
 }
 ```
 </Code>
@@ -365,6 +721,75 @@ await channel.subscribe('token', (message) => {
 
   // Append tokens for new responses
   inProgressResponses.set(responseId, inProgressResponses.get(responseId) + token);
+});
+```
+```python
+# Load completed responses from database
+completed_responses = await load_responses_from_database()
+
+# Use rewind to receive recent historical messages
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', params={'rewind': '2m'})
+
+# Track in progress responses by ID
+in_progress_responses = {}
+
+# Subscribe to receive both recent historical and live messages,
+# which are delivered in order to the subscription
+def on_token(message):
+    token = message.data
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Token missing responseId')
+        return
+
+    # Skip tokens for responses already hydrated from database
+    if response_id in completed_responses:
+        return
+
+    # Create an empty in-progress response
+    if response_id not in in_progress_responses:
+        in_progress_responses[response_id] = ''
+
+    # Append tokens for new responses
+    in_progress_responses[response_id] += token
+
+await channel.subscribe('token', on_token)
+```
+```java
+// Load completed responses from database
+Set<String> completedResponses = loadResponsesFromDatabase();
+
+// Use rewind to receive recent historical messages
+ChannelOptions options = new ChannelOptions();
+options.params = Map.of("rewind", "2m");
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options);
+
+// Track in progress responses by ID
+Map<String, String> inProgressResponses = new ConcurrentHashMap<>();
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+channel.subscribe("token", message -> {
+    String token = (String) message.data;
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Token missing responseId");
+        return;
+    }
+
+    // Skip tokens for responses already hydrated from database
+    if (completedResponses.contains(responseId)) {
+        return;
+    }
+
+    // Create an empty in-progress response
+    inProgressResponses.putIfAbsent(responseId, "");
+
+    // Append tokens for new responses
+    inProgressResponses.put(responseId, inProgressResponses.get(responseId) + token);
 });
 ```
 </Code>
@@ -436,6 +861,126 @@ while (page && !done) {
 
   // Move to next page if available
   page = page.hasNext() ? await page.next() : null;
+}
+```
+```python
+# Load completed responses from database
+completed_responses = await load_responses_from_database()
+
+# Use a channel in a namespace called 'persisted', which has persistence enabled
+channel = realtime.channels.get('persisted:{{RANDOM_CHANNEL_NAME}}')
+
+# Track in progress responses by ID
+in_progress_responses = {}
+
+# Subscribe to live tokens (implicitly attaches)
+def on_token(message):
+    token = message.data
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Token missing responseId')
+        return
+
+    # Skip tokens for responses already hydrated from database
+    if response_id in completed_responses:
+        return
+
+    # Create an empty in-progress response
+    if response_id not in in_progress_responses:
+        in_progress_responses[response_id] = ''
+
+    # Append live tokens for in-progress responses
+    in_progress_responses[response_id] += token
+
+await channel.subscribe('token', on_token)
+
+# Paginate backwards through history until we encounter a hydrated response
+page = await channel.history(until_attach=True)
+
+# Paginate backwards through history
+done = False
+while page and not done:
+    # Messages are newest-first, so prepend them to response
+    for message in page.items:
+        token = message.data
+        response_id = message.extras.get('headers', {}).get('responseId')
+
+        # Stop when we reach a response already loaded from database
+        if response_id in completed_responses:
+            done = True
+            break
+
+        # Create an empty in-progress response
+        if response_id not in in_progress_responses:
+            in_progress_responses[response_id] = ''
+
+        # Prepend historical tokens for in-progress responses
+        in_progress_responses[response_id] = token + in_progress_responses[response_id]
+
+    # Move to next page if available
+    page = await page.next() if page.has_next() else None
+```
+```java
+// Load completed responses from database
+Set<String> completedResponses = loadResponsesFromDatabase();
+
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+Channel channel = realtime.channels.get("persisted:{{RANDOM_CHANNEL_NAME}}");
+
+// Track in progress responses by ID
+Map<String, String> inProgressResponses = new ConcurrentHashMap<>();
+
+// Subscribe to live tokens (implicitly attaches)
+channel.subscribe("token", message -> {
+    String token = (String) message.data;
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Token missing responseId");
+        return;
+    }
+
+    // Skip tokens for responses already hydrated from database
+    if (completedResponses.contains(responseId)) {
+        return;
+    }
+
+    // Create an empty in-progress response
+    inProgressResponses.putIfAbsent(responseId, "");
+
+    // Append live tokens for in-progress responses
+    inProgressResponses.put(responseId, inProgressResponses.get(responseId) + token);
+});
+
+// Paginate backwards through history until we encounter a hydrated response
+PaginatedResult<Message> page = channel.history(new Param("untilAttach", "true"));
+
+// Paginate backwards through history
+boolean done = false;
+while (page != null && !done) {
+    // Messages are newest-first, so prepend them to response
+    for (Message message : page.items()) {
+        String token = (String) message.data;
+        JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+        String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+        // Stop when we reach a response already loaded from database
+        if (completedResponses.contains(responseId)) {
+            done = true;
+            break;
+        }
+
+        // Create an empty in-progress response
+        inProgressResponses.putIfAbsent(responseId, "");
+
+        // Prepend historical tokens for in-progress responses
+        inProgressResponses.put(responseId, token + inProgressResponses.get(responseId));
+    }
+
+    // Move to next page if available
+    page = page.hasNext() ? page.next() : null;
 }
 ```
 </Code>

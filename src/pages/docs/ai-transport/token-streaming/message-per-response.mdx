@@ -53,6 +53,12 @@ Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retri
 ```javascript
 const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
 ```
+```python
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+```
+```java
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+```
 </Code>
 
 To start streaming an AI response, publish the initial message. The message is identified by a server-assigned identifier called a [`serial`](/docs/messages#properties). Use the `serial` to append each subsequent token to the message as it arrives from the AI model:
@@ -68,6 +74,42 @@ for await (const event of stream) {
   if (event.type === 'token') {
     channel.appendMessage({ serial: msgSerial, data: event.text });
   }
+}
+```
+```python
+# Publish initial message and capture the serial for appending tokens
+message = Message(name='response', data='')
+result = await channel.publish(message)
+msg_serial = result.serials[0]
+
+# Example: stream returns events like { 'type': 'token', 'text': 'Hello' }
+async for event in stream:
+    # Append each token as it arrives
+    if event['type'] == 'token':
+        channel.append_message(serial=msg_serial, data=event['text'])
+```
+```java
+// Publish initial message and capture the serial for appending tokens
+CompletableFuture<PublishResult> publishFuture = new CompletableFuture<>();
+channel.publish("response", "", new Callback<PublishResult>() {
+    @Override
+    public void onSuccess(PublishResult result) {
+        publishFuture.complete(result);
+    }
+
+    @Override
+    public void onError(ErrorInfo reason) {
+        publishFuture.completeExceptionally(AblyException.fromErrorInfo(reason));
+    }
+});
+String msgSerial = publishFuture.get().serials[0];
+
+// Example: stream returns events like { type: 'token', text: 'Hello' }
+for (Event event : stream) {
+    // Append each token as it arrives
+    if (event.getType().equals("token")) {
+        channel.appendMessage(msgSerial, event.getText());
+    }
 }
 ```
 </Code>
@@ -88,6 +130,44 @@ for await (const event of stream) {
   if (event.type === 'token') {
     await channel.appendMessage({ serial: msgSerial, data: event.text });
   }
+}
+```
+```python
+# ✅ Do this - append without await for maximum throughput
+async for event in stream:
+    if event['type'] == 'token':
+        channel.append_message(serial=msg_serial, data=event['text'])
+
+# ❌ Don't do this - awaiting each append reduces throughput
+async for event in stream:
+    if event['type'] == 'token':
+        await channel.append_message(serial=msg_serial, data=event['text'])
+```
+```java
+// ✅ Do this - append without blocking for maximum throughput
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        channel.appendMessage(msgSerial, event.getText());
+    }
+}
+
+// ❌ Don't do this - blocking on each append reduces throughput
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        CompletableFuture<UpdateDeleteResult> appendFuture = new CompletableFuture<>();
+        channel.appendMessage(msgSerial, event.getText(), new Callback<UpdateDeleteResult>() {
+            @Override
+            public void onSuccess(UpdateDeleteResult result) {
+                appendFuture.complete(result);
+            }
+
+            @Override
+            public void onError(ErrorInfo reason) {
+                appendFuture.completeExceptionally(AblyException.fromErrorInfo(reason));
+            }
+        });
+        appendFuture.get(); // blocking call
+    }
 }
 ```
 </Code>
@@ -112,6 +192,18 @@ const realtime = new Ably.Realtime({
   key: 'your-api-key',
   transportParams: { appendRollupWindow: 100 } // 10 messages/s
 });
+```
+```python
+realtime = AblyRealtime(
+    key='your-api-key',
+    transport_params={'appendRollupWindow': 100}  # 10 messages/s
+)
+```
+```java
+ClientOptions options = new ClientOptions();
+options.key = "your-api-key";
+options.transportParams = Map.of("appendRollupWindow", "100"); // 10 messages/s
+AblyRealtime realtime = new AblyRealtime(options);
 ```
 </Code>
 
@@ -160,6 +252,54 @@ await channel.subscribe((message) => {
   }
 });
 ```
+```python
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by message serial
+responses = {}
+
+# Subscribe to live messages (implicitly attaches the channel)
+def on_message(message):
+    action = message.action
+
+    if action == 'message.create':
+        # New response started
+        responses[message.serial] = message.data
+    elif action == 'message.append':
+        # Append token to existing response
+        current = responses.get(message.serial, '')
+        responses[message.serial] = current + message.data
+    elif action == 'message.update':
+        # Replace entire response content
+        responses[message.serial] = message.data
+
+await channel.subscribe(on_message)
+```
+```java
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by message serial
+Map<String, String> responses = new ConcurrentHashMap<>();
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe(message -> {
+    switch (message.action) {
+        case "message.create":
+            // New response started
+            responses.put(message.serial, (String) message.data);
+            break;
+        case "message.append":
+            // Append token to existing response
+            String current = responses.getOrDefault(message.serial, "");
+            responses.put(message.serial, current + (String) message.data);
+            break;
+        case "message.update":
+            // Replace entire response content
+            responses.put(message.serial, (String) message.data);
+            break;
+    }
+});
+```
 </Code>
 
 ## Client hydration <a id="hydration"/>
@@ -204,6 +344,60 @@ await channel.subscribe((message) => {
       responses.set(message.serial, message.data);
       break;
   }
+});
+```
+```python
+# Use rewind to receive recent historical messages
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}', params={'rewind': '2m'})  # or rewind: '10' for message count
+
+# Track responses by message serial
+responses = {}
+
+# Subscribe to receive both recent historical and live messages,
+# which are delivered in order to the subscription
+def on_message(message):
+    action = message.action
+
+    if action == 'message.create':
+        # New response started
+        responses[message.serial] = message.data
+    elif action == 'message.append':
+        # Append token to existing response
+        current = responses.get(message.serial, '')
+        responses[message.serial] = current + message.data
+    elif action == 'message.update':
+        # Replace entire response content
+        responses[message.serial] = message.data
+
+await channel.subscribe(on_message)
+```
+```java
+// Use rewind to receive recent historical messages
+ChannelOptions options = new ChannelOptions();
+options.params = Map.of("rewind", "2m"); // or rewind: '10' for message count
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}", options);
+
+// Track responses by message serial
+Map<String, String> responses = new ConcurrentHashMap<>();
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+channel.subscribe(message -> {
+    switch (message.action) {
+        case "message.create":
+            // New response started
+            responses.put(message.serial, (String) message.data);
+            break;
+        case "message.append":
+            // Append token to existing response
+            String current = responses.getOrDefault(message.serial, "");
+            responses.put(message.serial, current + (String) message.data);
+            break;
+        case "message.update":
+            // Replace entire response content
+            responses.put(message.serial, (String) message.data);
+            break;
+    }
 });
 ```
 </Code>
@@ -262,6 +456,82 @@ while (page) {
   page = page.hasNext() ? await page.next() : null;
 }
 ```
+```python
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by message serial
+responses = {}
+
+# Subscribe to live messages (implicitly attaches the channel)
+def on_message(message):
+    action = message.action
+
+    if action == 'message.create':
+        # New response started
+        responses[message.serial] = message.data
+    elif action == 'message.append':
+        # Append token to existing response
+        current = responses.get(message.serial, '')
+        responses[message.serial] = current + message.data
+    elif action == 'message.update':
+        # Replace entire response content
+        responses[message.serial] = message.data
+
+await channel.subscribe(on_message)
+
+# Fetch history up until the point of attachment
+page = await channel.history(until_attach=True)
+
+# Paginate backwards through history
+while page:
+    # Messages are newest-first
+    for message in page.items:
+        # message.data contains the full concatenated text
+        responses[message.serial] = message.data
+
+    # Move to next page if available
+    page = await page.next() if page.has_next() else None
+```
+```java
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by message serial
+Map<String, String> responses = new ConcurrentHashMap<>();
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe(message -> {
+    switch (message.action) {
+        case "message.create":
+            // New response started
+            responses.put(message.serial, (String) message.data);
+            break;
+        case "message.append":
+            // Append token to existing response
+            String current = responses.getOrDefault(message.serial, "");
+            responses.put(message.serial, current + (String) message.data);
+            break;
+        case "message.update":
+            // Replace entire response content
+            responses.put(message.serial, (String) message.data);
+            break;
+    }
+});
+
+// Fetch history up until the point of attachment
+PaginatedResult<Message> page = channel.history(new Param("untilAttach", "true"));
+
+// Paginate backwards through history
+while (page != null) {
+    // Messages are newest-first
+    for (Message message : page.items()) {
+        // message.data contains the full concatenated text
+        responses.put(message.serial, (String) message.data);
+    }
+
+    // Move to next page if available
+    page = page.hasNext() ? page.next() : null;
+}
+```
 </Code>
 
 ### Hydrating an in-progress response <a id="in-progress-response"/>
@@ -298,6 +568,66 @@ for await (const event of stream) {
       }
     }});
   }
+}
+```
+```python
+# Publish initial message with responseId in extras
+message = Message(
+    name='response',
+    data='',
+    extras={
+        'headers': {
+            'responseId': 'resp_abc123'  # Your database response ID
+        }
+    }
+)
+result = await channel.publish(message)
+msg_serial = result.serials[0]
+
+# Append tokens, including extras to preserve headers
+async for event in stream:
+    if event['type'] == 'token':
+        channel.append_message(
+            serial=msg_serial,
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': 'resp_abc123'
+                }
+            }
+        )
+```
+```java
+// Publish initial message with responseId in extras
+JsonObject extras = new JsonObject();
+JsonObject headers = new JsonObject();
+headers.addProperty("responseId", "resp_abc123"); // Your database response ID
+extras.add("headers", headers);
+
+CompletableFuture<PublishResult> publishFuture = new CompletableFuture<>();
+channel.publish("response", "", extras, new Callback<PublishResult>() {
+    @Override
+    public void onSuccess(PublishResult result) {
+        publishFuture.complete(result);
+    }
+
+    @Override
+    public void onError(ErrorInfo reason) {
+        publishFuture.completeExceptionally(AblyException.fromErrorInfo(reason));
+    }
+});
+String msgSerial = publishFuture.get().serials[0];
+
+// Append tokens, including extras to preserve headers
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        JsonObject appendExtras = new JsonObject();
+        JsonObject appendHeaders = new JsonObject();
+        appendHeaders.addProperty("responseId", "resp_abc123");
+        appendExtras.add("headers", appendHeaders);
+
+        channel.appendMessage(msgSerial, event.getText(), appendExtras);
+    }
 }
 ```
 </Code>
@@ -352,6 +682,87 @@ await channel.subscribe((message) => {
       inProgressResponses.set(responseId, message.data);
       break;
   }
+});
+```
+```python
+# Load completed responses from your database
+# completed_responses is a set of responseIds
+completed_responses = await load_responses_from_database()
+
+# Use rewind to receive recent historical messages
+channel = realtime.channels.get('ai:responses', params={'rewind': '2m'})
+
+# Track in-progress responses by responseId
+in_progress_responses = {}
+
+def on_message(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Message missing responseId')
+        return
+
+    # Skip messages for responses already loaded from database
+    if response_id in completed_responses:
+        return
+
+    action = message.action
+
+    if action == 'message.create':
+        # New response started
+        in_progress_responses[response_id] = message.data
+    elif action == 'message.append':
+        # Append token to existing response
+        current = in_progress_responses.get(response_id, '')
+        in_progress_responses[response_id] = current + message.data
+    elif action == 'message.update':
+        # Replace entire response content
+        in_progress_responses[response_id] = message.data
+
+await channel.subscribe(on_message)
+```
+```java
+// Load completed responses from your database
+// completedResponses is a Set of responseIds
+Set<String> completedResponses = loadResponsesFromDatabase();
+
+// Use rewind to receive recent historical messages
+ChannelOptions options = new ChannelOptions();
+options.params = Map.of("rewind", "2m");
+Channel channel = realtime.channels.get("ai:responses", options);
+
+// Track in-progress responses by responseId
+Map<String, String> inProgressResponses = new ConcurrentHashMap<>();
+
+channel.subscribe(message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Message missing responseId");
+        return;
+    }
+
+    // Skip messages for responses already loaded from database
+    if (completedResponses.contains(responseId)) {
+        return;
+    }
+
+    switch (message.action) {
+        case "message.create":
+            // New response started
+            inProgressResponses.put(responseId, (String) message.data);
+            break;
+        case "message.append":
+            // Append token to existing response
+            String current = inProgressResponses.getOrDefault(responseId, "");
+            inProgressResponses.put(responseId, current + (String) message.data);
+            break;
+        case "message.update":
+            // Replace entire response content
+            inProgressResponses.put(responseId, (String) message.data);
+            break;
+    }
 });
 ```
 </Code>
@@ -431,6 +842,137 @@ while (page) {
 
   // Move to next page if available
   page = page.hasNext() ? await page.next() : null;
+}
+```
+```python
+# Load completed responses from database (sorted by timestamp, oldest first)
+completed_responses = await load_responses_from_database()
+
+# Get the timestamp of the latest completed response
+latest_timestamp = completed_responses.latest().timestamp
+
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+
+# Track in progress responses by ID
+in_progress_responses = {}
+
+# Subscribe to live messages (implicitly attaches)
+def on_message(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Message missing responseId')
+        return
+
+    # Skip messages for responses already loaded from database
+    if response_id in completed_responses:
+        return
+
+    action = message.action
+
+    if action == 'message.create':
+        # New response started
+        in_progress_responses[response_id] = message.data
+    elif action == 'message.append':
+        # Append token to existing response
+        current = in_progress_responses.get(response_id, '')
+        in_progress_responses[response_id] = current + message.data
+    elif action == 'message.update':
+        # Replace entire response content
+        in_progress_responses[response_id] = message.data
+
+await channel.subscribe(on_message)
+
+# Fetch history from the last completed response until attachment
+page = await channel.history(
+    until_attach=True,
+    start=latest_timestamp,
+    direction='forwards'
+)
+
+# Paginate through all missed messages
+while page:
+    for message in page.items:
+        response_id = message.extras.get('headers', {}).get('responseId')
+
+        if not response_id:
+            print('Message missing responseId')
+            continue
+
+        # message.data contains the full concatenated text so far
+        in_progress_responses[response_id] = message.data
+
+    # Move to next page if available
+    page = await page.next() if page.has_next() else None
+```
+```java
+// Load completed responses from database (sorted by timestamp, oldest first)
+List<Response> completedResponses = loadResponsesFromDatabase();
+
+// Get the timestamp of the latest completed response
+long latestTimestamp = completedResponses.get(completedResponses.size() - 1).getTimestamp();
+
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+// Track in progress responses by ID
+Map<String, String> inProgressResponses = new ConcurrentHashMap<>();
+
+// Subscribe to live messages (implicitly attaches)
+channel.subscribe(message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Message missing responseId");
+        return;
+    }
+
+    // Skip messages for responses already loaded from database
+    if (completedResponses.stream().anyMatch(r -> r.getId().equals(responseId))) {
+        return;
+    }
+
+    switch (message.action) {
+        case "message.create":
+            // New response started
+            inProgressResponses.put(responseId, (String) message.data);
+            break;
+        case "message.append":
+            // Append token to existing response
+            String current = inProgressResponses.getOrDefault(responseId, "");
+            inProgressResponses.put(responseId, current + (String) message.data);
+            break;
+        case "message.update":
+            // Replace entire response content
+            inProgressResponses.put(responseId, (String) message.data);
+            break;
+    }
+});
+
+// Fetch history from the last completed response until attachment
+PaginatedResult<Message> page = channel.history(
+    new Param("untilAttach", "true"),
+    new Param("start", String.valueOf(latestTimestamp)),
+    new Param("direction", "forwards")
+);
+
+// Paginate through all missed messages
+while (page != null) {
+    for (Message message : page.items()) {
+        JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+        String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+        if (responseId == null) {
+            System.err.println("Message missing responseId");
+            continue;
+        }
+
+        // message.data contains the full concatenated text so far
+        inProgressResponses.put(responseId, (String) message.data);
+    }
+
+    // Move to next page if available
+    page = page.hasNext() ? page.next() : null;
 }
 ```
 </Code>

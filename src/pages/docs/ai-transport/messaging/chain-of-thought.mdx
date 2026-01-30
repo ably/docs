@@ -76,6 +76,63 @@ for await (const event of stream) {
   }
 }
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like:
+# { 'type': 'reasoning', 'text': "Let's break down the problem: 27 * 12", 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'First, I can split this into 27 * 10 + 27 * 2', 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'That gives us 270 + 54 = 324', 'responseId': 'resp_abc123' }
+# { 'type': 'message', 'text': '27 * 12 = 324', 'responseId': 'resp_abc123' }
+
+async for event in stream:
+    if event['type'] == 'reasoning':
+        # Publish reasoning messages
+        await channel.publish(
+            name='reasoning',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+    elif event['type'] == 'message':
+        # Publish model output messages
+        await channel.publish(
+            name='message',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like:
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for (Event event : stream) {
+    JsonObject extras = new JsonObject();
+    JsonObject headers = new JsonObject();
+    headers.addProperty("responseId", event.getResponseId());
+    extras.add("headers", headers);
+
+    if (event.getType().equals("reasoning")) {
+        // Publish reasoning messages
+        channel.publish(new Message("reasoning", event.getText(), new MessageExtras(extras)));
+    } else if (event.getType().equals("message")) {
+        // Publish model output messages
+        channel.publish(new Message("message", event.getText(), new MessageExtras(extras)));
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -130,6 +187,74 @@ await channel.subscribe((message) => {
 
   // Display the reasoning and response for this turn
   console.log(`Response ${responseId}:`, response);
+});
+```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by ID, each containing reasoning messages and final response
+responses = {}
+
+# Subscribe to all events on the channel
+def on_message(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Message missing responseId')
+        return
+
+    # Initialize response object if needed
+    if response_id not in responses:
+        responses[response_id] = {
+            'reasoning': [],
+            'message': ''
+        }
+
+    response = responses[response_id]
+
+    # Handle each message type
+    if message.name == 'message':
+        response['message'] = message.data
+    elif message.name == 'reasoning':
+        response['reasoning'].append(message.data)
+
+    # Display the reasoning and response for this turn
+    print(f'Response {response_id}:', response)
+
+await channel.subscribe(on_message)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by ID, each containing reasoning messages and final response
+Map<String, Response> responses = new ConcurrentHashMap<>();
+
+// Subscribe to all events on the channel
+channel.subscribe(message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Message missing responseId");
+        return;
+    }
+
+    // Initialize response object if needed
+    responses.putIfAbsent(responseId, new Response());
+    Response response = responses.get(responseId);
+
+    // Handle each message type
+    switch (message.name) {
+        case "message":
+            response.setMessage((String) message.data);
+            break;
+        case "reasoning":
+            response.getReasoning().add((String) message.data);
+            break;
+    }
+
+    // Display the reasoning and response for this turn
+    System.out.println("Response " + responseId + ": " + response);
 });
 ```
 </Code>
@@ -202,6 +327,82 @@ for await (const event of stream) {
   }
 }
 ```
+```python
+conversation_channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like:
+# { 'type': 'start', 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': "Let's break down the problem: 27 * 12", 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'First, I can split this into 27 * 10 + 27 * 2', 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'That gives us 270 + 54 = 324', 'responseId': 'resp_abc123' }
+# { 'type': 'message', 'text': '27 * 12 = 324', 'responseId': 'resp_abc123' }
+
+async for event in stream:
+    if event['type'] == 'start':
+        # Publish response start control message
+        await conversation_channel.publish(
+            name='start',
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+    elif event['type'] == 'reasoning':
+        # Publish reasoning to separate reasoning channel
+        reasoning_channel = realtime.channels.get(f"{{{{RANDOM_CHANNEL_NAME}}}}:{event['responseId']}")
+
+        await reasoning_channel.publish(
+            name='reasoning',
+            data=event['text']
+        )
+    elif event['type'] == 'message':
+        # Publish model output to main channel
+        await conversation_channel.publish(
+            name='message',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        )
+```
+```java
+Channel conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like:
+// { type: 'start', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for (Event event : stream) {
+    if (event.getType().equals("start")) {
+        // Publish response start control message
+        JsonObject extras = new JsonObject();
+        JsonObject headers = new JsonObject();
+        headers.addProperty("responseId", event.getResponseId());
+        extras.add("headers", headers);
+
+        conversationChannel.publish("start", null, extras);
+    } else if (event.getType().equals("reasoning")) {
+        // Publish reasoning to separate reasoning channel
+        Channel reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:" + event.getResponseId());
+
+        reasoningChannel.publish("reasoning", event.getText());
+    } else if (event.getType().equals("message")) {
+        // Publish model output to main channel
+        JsonObject extras = new JsonObject();
+        JsonObject headers = new JsonObject();
+        headers.addProperty("responseId", event.getResponseId());
+        extras.add("headers", headers);
+
+        conversationChannel.publish("message", event.getText(), extras);
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -257,6 +458,86 @@ async function onClickViewReasoning(responseId) {
   await reasoningChannel.subscribe((message) => {
     console.log(`[Reasoning]: ${message.data}`);
   });
+}
+```
+```python
+conversation_channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by ID
+responses = {}
+
+# Subscribe to all messages on the main channel
+def on_message(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Message missing responseId')
+        return
+
+    # Handle response start control message
+    if message.name == 'start':
+        responses[response_id] = ''
+
+    # Handle model output message
+    if message.name == 'message':
+        responses[response_id] = message.data
+
+await conversation_channel.subscribe(on_message)
+
+# Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+async def on_click_view_reasoning(response_id):
+    # Derive reasoning channel name from responseId and
+    # use rewind to retrieve historical reasoning
+    reasoning_channel = realtime.channels.get(
+        f'{{{{RANDOM_CHANNEL_NAME}}}}:{response_id}',
+        params={'rewind': '2m'}
+    )
+
+    # Subscribe to reasoning messages
+    def on_reasoning(message):
+        print(f'[Reasoning]: {message.data}')
+
+    await reasoning_channel.subscribe(on_reasoning)
+```
+```java
+Channel conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by ID
+Map<String, String> responses = new ConcurrentHashMap<>();
+
+// Subscribe to all messages on the main channel
+conversationChannel.subscribe(message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Message missing responseId");
+        return;
+    }
+
+    // Handle response start control message
+    if (message.name.equals("start")) {
+        responses.put(responseId, "");
+    }
+
+    // Handle model output message
+    if (message.name.equals("message")) {
+        responses.put(responseId, (String) message.data);
+    }
+});
+
+// Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+void onClickViewReasoning(String responseId) {
+    // Derive reasoning channel name from responseId and
+    // use rewind to retrieve historical reasoning
+    ChannelOptions options = new ChannelOptions();
+    options.params = Map.of("rewind", "2m");
+    Channel reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:" + responseId, options);
+
+    // Subscribe to reasoning messages
+    reasoningChannel.subscribe(message -> {
+        System.out.println("[Reasoning]: " + message.data);
+    });
 }
 ```
 </Code>
