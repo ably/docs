@@ -433,6 +433,36 @@ function convertDocsLinksToMarkdown(content: string): string {
 }
 
 /**
+ * Generate a readable link text from a /docs/ URL path
+ * Converts: /docs/chat/getting-started/javascript → ably docs chat getting-started javascript
+ * Note: This function expects paths starting with /docs/
+ */
+function generateLinkTextFromPath(urlPath: string): string {
+  // Remove leading /docs/ and split by /
+  const pathWithoutDocs = urlPath.replace(/^\/docs\//, '');
+  const parts = pathWithoutDocs.split('/');
+  // Prepend 'ably docs' to the path parts
+  return `ably docs ${parts.join(' ')}`;
+}
+
+/**
+ * Convert quoted strings containing relative /docs/ URLs to markdown links with absolute URLs
+ * Converts: '/docs/chat/getting-started/javascript' → '[ably docs chat getting-started javascript](https://ably.com/docs/chat/getting-started/javascript)'
+ * Matches any quoted string starting with /docs/ (single or double quotes)
+ * This handles JSX props like link: '/docs/...' as well as other contexts
+ */
+function convertJsxLinkProps(content: string, siteUrl: string): string {
+  const baseUrl = siteUrl.replace(/\/$/, ''); // Remove trailing slash
+
+  // Matches any quoted string starting with /docs/: '/docs/...' or "/docs/..."
+  return content.replace(/(['"])(\/docs\/[^'"]+)\1/g, (match, quote, url) => {
+    const absoluteUrl = `${baseUrl}${url}`;
+    const linkText = generateLinkTextFromPath(url);
+    return `${quote}[${linkText}](${absoluteUrl})${quote}`;
+  });
+}
+
+/**
  * Convert relative URLs to absolute URLs using the main website domain
  * Converts: [text](/docs/channels) → [text](https://ably.com/docs/channels)
  * Preserves: External URLs (http://, https://), hash-only links (#anchor)
@@ -534,13 +564,16 @@ function transformMdxToMarkdown(
   // Stage 8: Convert relative URLs to absolute URLs
   content = convertRelativeUrls(content, siteUrl);
 
-  // Stage 9: Convert /docs/ links to .md extension and remove ?lang= params
+  // Stage 9: Convert quoted /docs/ URLs to markdown links (for JSX props like link: '/docs/...')
+  content = convertJsxLinkProps(content, siteUrl);
+
+  // Stage 10: Convert /docs/ links to .md extension and remove ?lang= params
   content = convertDocsLinksToMarkdown(content);
 
-  // Stage 10: Replace template variables
+  // Stage 11: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 11: Prepend title as markdown heading
+  // Stage 12: Prepend title as markdown heading
   const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
   return { content: finalContent, title, intro };
@@ -661,6 +694,8 @@ export {
   stripHiddenFromTables,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
+  convertJsxLinkProps,
+  generateLinkTextFromPath,
   convertRelativeUrls,
   replaceTemplateVariables,
   calculateOutputPath,
