@@ -76,6 +76,52 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(
+    realtime: ARTRealtime,
+    stream: any AsyncSequence<(type: String, text: String, responseId: String), Never>
+) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like:
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for await event in stream {
+    if event.type == "reasoning" {
+        // Publish reasoning messages
+        try await channel.publish(
+            name: "reasoning",
+            data: event.text,
+            extras: [
+                "headers": [
+                    "responseId": event.responseId
+                ]
+            ]
+        )
+    } else if event.type == "message" {
+        // Publish model output messages
+        try await channel.publish(
+            name: "message",
+            data: event.text,
+            extras: [
+                "headers": [
+                    "responseId": event.responseId
+                ]
+            ]
+        )
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -132,6 +178,46 @@ await channel.subscribe((message) => {
   console.log(`Response ${responseId}:`, response);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(realtime: ARTRealtime) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID, each containing reasoning messages and final response
+var responses: [String: (reasoning: [String], message: String)] = [:]
+
+// Subscribe to all events on the channel
+try await channel.subscribe { message in
+    guard let responseId = message.extras?["headers"]?["responseId"] as? String else {
+        print("Message missing responseId")
+        return
+    }
+
+    // Initialize response object if needed
+    if responses[responseId] == nil {
+        responses[responseId] = (reasoning: [], message: "")
+    }
+
+    // Handle each message type
+    switch message.name {
+    case "message":
+        responses[responseId]?.message = message.data as? String ?? ""
+    case "reasoning":
+        responses[responseId]?.reasoning.append(message.data as? String ?? "")
+    default:
+        break
+    }
+
+    // Display the reasoning and response for this turn
+    print("Response \(responseId):", responses[responseId] ?? (reasoning: [], message: ""))
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="further-reading">
@@ -202,6 +288,60 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(
+    realtime: ARTRealtime,
+    stream: any AsyncSequence<(type: String, text: String, responseId: String), Never>
+) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+let conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like:
+// { type: 'start', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for await event in stream {
+    if event.type == "start" {
+        // Publish response start control message
+        try await conversationChannel.publish(
+            name: "start",
+            extras: [
+                "headers": [
+                    "responseId": event.responseId
+                ]
+            ]
+        )
+    } else if event.type == "reasoning" {
+        // Publish reasoning to separate reasoning channel
+        let reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:\(event.responseId)")
+
+        try await reasoningChannel.publish(
+            name: "reasoning",
+            data: event.text
+        )
+    } else if event.type == "message" {
+        // Publish model output to main channel
+        try await conversationChannel.publish(
+            name: "message",
+            data: event.text,
+            extras: [
+                "headers": [
+                    "responseId": event.responseId
+                ]
+            ]
+        )
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -259,6 +399,53 @@ async function onClickViewReasoning(responseId) {
   });
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(realtime: ARTRealtime) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+let conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID
+var responses: [String: String] = [:]
+
+// Subscribe to all messages on the main channel
+try await conversationChannel.subscribe { message in
+    guard let responseId = message.extras?["headers"]?["responseId"] as? String else {
+        print("Message missing responseId")
+        return
+    }
+
+    // Handle response start control message
+    if message.name == "start" {
+        responses[responseId] = ""
+    }
+
+    // Handle model output message
+    if message.name == "message" {
+        responses[responseId] = message.data as? String ?? ""
+    }
+}
+
+// Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+func onClickViewReasoning(responseId: String) async throws {
+    // Derive reasoning channel name from responseId and
+    // use rewind to retrieve historical reasoning
+    let reasoningChannel = realtime.channels.get(
+        "{{RANDOM_CHANNEL_NAME}}:\(responseId)",
+        options: ARTRealtimeChannelOptions(params: ["rewind": "2m"])
+    )
+
+    // Subscribe to reasoning messages
+    try await reasoningChannel.subscribe { message in
+        print("[Reasoning]: \(message.data as? String ?? "")")
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="further-reading">
