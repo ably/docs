@@ -1,4 +1,5 @@
 import Icon from '@ably/ui/core/Icon';
+import * as styles from './dividers.module.css';
 import {
   inlineGridParagraph,
   inlineContentContainer,
