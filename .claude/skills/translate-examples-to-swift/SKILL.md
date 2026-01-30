@@ -495,13 +495,28 @@ When the verification subagent returns:
    - If intentional (documented in your decisions), note this in the final report
    - If unintentional, fix the translation and re-verify
 
-### Skipping verification
+### Handling user feedback
 
-You may skip independent verification only if:
-- The user explicitly requests it (e.g., "skip verification" or "I'll verify myself")
-- You're doing a quick fix to a single, trivial example
+When the user reviews the generated review file and provides feedback:
 
-In all other cases, verification is required.
+1. Make the requested changes to the translation
+2. Update the test harness and re-run `swift build` to verify compilation
+3. Update the documentation with the fixed translation
+4. Re-run independent verification (spawn a new verification subagent)
+5. Regenerate the review file with updated data
+6. Report back to the user
+
+**This is not optional.** Any change to a translation—whether from user feedback, verification comments, or your own corrections—must go through the full verify-and-review cycle before being considered complete.
+
+### The verification invariant
+
+**Never output code that hasn't been verified.** This is the core principle of the skill:
+
+- Every Swift code block inserted into documentation must have passed `swift build` in a test harness
+- Every change to existing Swift code must be re-verified before the task is complete
+- The review file must always reflect the current state of the translations
+
+If you find yourself about to report completion without having verified recent changes, stop and run verification first.
 
 ## 7. Generate review file for human review
 
