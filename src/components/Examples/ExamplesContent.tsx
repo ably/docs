@@ -3,10 +3,10 @@ import { StaticImage } from 'gatsby-plugin-image';
 import ExamplesGrid from './ExamplesGrid';
 import ExamplesFilter from './ExamplesFilter';
 import { ImageProps } from '../Image';
-import { examples } from '../../data/examples/';
+import { examples, products } from '../../data/examples/';
 import { filterSearchExamples } from './filter-search-examples';
 import ExamplesNoResults from './ExamplesNoResults';
-import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
+import { ProductName } from '@ably/ui/core/ProductTile/data';
 import { useLocation } from '@reach/router';
 
 export type SelectedFilters = { products: ProductName[]; useCases: string[] };
@@ -18,7 +18,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
   const getInitialProducts = (): ProductName[] => {
     const params = new URLSearchParams(location.search);
     const productParam = params.get('product');
-    const validProductNames = Object.keys(dataProducts).map((product) => product.toLowerCase());
+    const validProductNames = Object.keys(products).map((product) => product.toLowerCase());
 
     if (!productParam) {
       return [];
@@ -29,7 +29,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
       .split(',')
       .map((p) => p.trim())
       .filter((product): product is ProductName =>
-        // Check if the product is a key in dataProducts
+        // Check if the product is a key in products
         validProductNames.includes(product as string),
       ) as ProductName[];
   };
