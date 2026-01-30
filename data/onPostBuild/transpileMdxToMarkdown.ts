@@ -243,6 +243,53 @@ function removeAnchorTags(content: string): string {
 }
 
 /**
+ * Strip the hidden attribute from Table components
+ * Converts: <Table id="TypeName" hidden> → <Table id="TypeName">
+ * This makes hidden type definition tables visible in markdown output
+ */
+function stripHiddenFromTables(content: string): string {
+  // Split content into code block and non-code-block sections
+  const parts: Array<{ content: string; isCodeBlock: boolean }> = [];
+  const fenceRegex = /```[\s\S]*?```/g;
+
+  let lastIndex = 0;
+  const matches = Array.from(content.matchAll(fenceRegex));
+
+  for (const match of matches) {
+    if (match.index !== undefined && match.index > lastIndex) {
+      parts.push({
+        content: content.slice(lastIndex, match.index),
+        isCodeBlock: false,
+      });
+    }
+    parts.push({
+      content: match[0],
+      isCodeBlock: true,
+    });
+    lastIndex = (match.index || 0) + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push({
+      content: content.slice(lastIndex),
+      isCodeBlock: false,
+    });
+  }
+
+  // Strip hidden attribute from Table tags only in non-code-block parts
+  return parts
+    .map((part) => {
+      if (part.isCodeBlock) {
+        return part.content; // Preserve code blocks exactly
+      }
+      // Remove the hidden attribute from <Table> tags
+      // Handles: <Table id="X" hidden>, <Table hidden id="X">, <Table hidden>
+      return part.content.replace(/(<Table\s+[^>]*)\bhidden\b\s*/gi, '$1');
+    })
+    .join('');
+}
+
+/**
  * Remove JSX comments from content
  * Removes patterns like: {slash-star comment star-slash}
  * Preserves JSX comments in code blocks
@@ -478,19 +525,22 @@ function transformMdxToMarkdown(
   // Stage 5: Remove JSX comments
   content = removeJsxComments(content);
 
-  // Stage 6: Convert image paths to GitHub URLs
+  // Stage 6: Strip hidden attribute from tables (makes them visible in markdown)
+  content = stripHiddenFromTables(content);
+
+  // Stage 7: Convert image paths to GitHub URLs
   content = convertImagePathsToGitHub(content);
 
-  // Stage 7: Convert relative URLs to absolute URLs
+  // Stage 8: Convert relative URLs to absolute URLs
   content = convertRelativeUrls(content, siteUrl);
 
-  // Stage 8: Convert /docs/ links to .md extension and remove ?lang= params
+  // Stage 9: Convert /docs/ links to .md extension and remove ?lang= params
   content = convertDocsLinksToMarkdown(content);
 
-  // Stage 9: Replace template variables
+  // Stage 10: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 10: Prepend title as markdown heading
+  // Stage 11: Prepend title as markdown heading
   const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
   return { content: finalContent, title, intro };
@@ -608,6 +658,7 @@ export {
   removeScriptTags,
   removeAnchorTags,
   removeJsxComments,
+  stripHiddenFromTables,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
   convertRelativeUrls,
