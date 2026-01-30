@@ -249,7 +249,12 @@ When you need to look up specific API details (method signatures, parameter type
 - **JavaScript SDK**: https://ably.com/docs/sdk/js/v2.0 (to understand what you're translating FROM)
 - **Swift/Cocoa SDK**: https://ably.com/docs/sdk/cocoa/v1.2/ (to understand what you're translating TO)
 
-Note that some items may not appear in the auto-generated docs. If you can't find something, check existing Swift examples in this repository for reference.
+Note that some items may not appear in the auto-generated docs. If you can't find something:
+
+1. **Check existing Swift examples** in this documentation repository for reference
+2. **Look at the ably-cocoa header files** in the test harness's SPM checkout. After running `swift build`, the source is available at `.build/checkouts/ably-cocoa/Source/include/Ably/`. Use `find` and `grep` to locate the header file you need, then read it directly. The headers contain authoritative type definitions, method signatures, and documentation comments.
+
+**Do not fetch files from GitHub** to look up API details. The SPM checkout already contains the exact version of the SDK you're compiling against, so it's both faster and more reliable to read the headers locally.
 
 ### Looking up translation patterns
 
