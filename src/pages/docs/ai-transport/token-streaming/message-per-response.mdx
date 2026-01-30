@@ -53,6 +53,17 @@ Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retri
 ```javascript
 const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
+```
+{/* --- end example code --- */}
 </Code>
 
 To start streaming an AI response, publish the initial message. The message is identified by a server-assigned identifier called a [`serial`](/docs/messages#properties). Use the `serial` to append each subsequent token to the message as it arrives from the AI model:
@@ -70,6 +81,45 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable) {
+    // --- example code starts here ---
+*/}
+```swift
+// Publish initial message and capture the serial for appending tokens
+channel.publish([.init(name: "response", data: "")]) { result, error in
+    if let error {
+        print("Error publishing message: \(error)")
+        return
+    }
+
+    guard let msgSerial = result?.serials.first?.value else {
+        print("No serial available")
+        return
+    }
+
+    Task {
+        // Example: stream returns events like { type: 'token', text: 'Hello' }
+        for try await event in stream {
+            // Append each token as it arrives
+            if event.type == "token" {
+                let messageToAppend = ARTMessage(name: nil, data: event.text)
+                messageToAppend.serial = msgSerial
+
+                channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+                    if let error {
+                        print("Error appending to message: \(error)")
+                    }
+                }
+            }
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 When publishing tokens, don't await the `channel.appendMessage()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each append would unnecessarily slow down your token stream. Messages are still published in the order that `appendMessage()` is called, so delivery order is not affected.
@@ -90,6 +140,47 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable, msgSerial: String) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+// ✅ Do this - append without awaiting for maximum throughput
+for try await event in stream {
+    if event.type == "token" {
+        let messageToAppend = ARTMessage(name: nil, data: event.text)
+        messageToAppend.serial = msgSerial
+
+        channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+            if let error {
+                print("Error appending to message: \(error)")
+            }
+        }
+    }
+}
+
+// ❌ Don't do this - awaiting each append reduces throughput
+for try await event in stream {
+    if event.type == "token" {
+        let messageToAppend = ARTMessage(name: nil, data: event.text)
+        messageToAppend.serial = msgSerial
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="important">
@@ -113,6 +204,19 @@ const realtime = new Ably.Realtime({
   transportParams: { appendRollupWindow: 100 } // 10 messages/s
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+let options = ARTClientOptions(key: "your-api-key")
+options.transportParams = ["appendRollupWindow": ARTStringifiable.withString("100")] // 10 messages/s
+let realtime = ARTRealtime(options: options)
+```
+{/* --- end example code --- */}
 </Code>
 
 The `appendRollupWindow` parameter controls how many tokens are combined into each published message for a given model output rate. This creates a trade-off between delivery smoothness and the number of concurrent model responses you can stream on a single connection:
