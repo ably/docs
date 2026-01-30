@@ -100,7 +100,7 @@ for await (const event of stream) {
 
 We wish to generate equivalent Swift example code to be inserted alongside the JavaScript example, and to be sure that this code is correct; in particular, that it compiles.
 
-In order to generate the Swift example code, there are seven steps:
+In order to generate the Swift example code, there are eight steps:
 
 1. Generate a Swift test harness
 2. Translate the JavaScript code
@@ -108,9 +108,12 @@ In order to generate the Swift example code, there are seven steps:
 4. Use the test harness to verify the translated code
 5. Insert the translated code into the documentation
 6. Independent verification (via subagent)
-7. Report back to the user
+7. Generate review file for human review
+8. Report back to the user
 
 Detailed instructions for each of these steps are given below.
+
+**Important**: As you work through steps 1-6, collect the data needed for the review file (step 7). For each example, you'll need: the original code, the translation, the test harness context, any translation notes/decisions, and the verification results.
 
 ## 1. Generate a Swift test harness
 
@@ -477,7 +480,7 @@ Provide a structured report:
 
 When the verification subagent returns:
 
-1. **All passed**: Proceed to Step 7 (report to user), including the verification summary
+1. **All passed**: Proceed to Step 7 (generate review file), including the verification summary
 2. **Compilation failures**:
    - Review the failure details
    - If it's a harness comment issue (incomplete context), fix the comment and re-verify
@@ -495,10 +498,121 @@ You may skip independent verification only if:
 
 In all other cases, verification is required.
 
-## 7. Report back to the user
+## 7. Generate review file for human review
+
+After automated verification, generate a review file that allows human reviewers to examine translations side-by-side with their originals.
+
+### Collect the translation data
+
+Create a JSON file containing all translation data collected during steps 1-6. The file should follow this structure:
+
+```json
+{
+  "version": "1.0",
+  "generatedAt": "2026-01-30T10:30:00Z",
+  "summary": {
+    "filesProcessed": 2,
+    "examplesTranslated": 3,
+    "compilationPassed": 2,
+    "compilationFailed": 1
+  },
+  "files": [
+    {
+      "path": "src/pages/docs/example.mdx",
+      "examples": [
+        {
+          "id": "example-mdx-45",
+          "lineNumber": 45,
+          "original": {
+            "language": "javascript",
+            "code": "// original JavaScript code..."
+          },
+          "translation": {
+            "language": "swift",
+            "code": "// translated Swift code..."
+          },
+          "harness": {
+            "functionSignature": "func example(channel: ARTRealtimeChannel) async throws",
+            "stubTypes": null,
+            "fullContext": "import Ably\n\nfunc example(...) {\n    // example code here\n}"
+          },
+          "translationNotes": [
+            {
+              "type": "decision",
+              "message": "Used callback pattern instead of async/await"
+            },
+            {
+              "type": "deviation",
+              "message": "Added explicit error handling"
+            }
+          ],
+          "verification": {
+            "compilation": {
+              "status": "pass"
+            },
+            "faithfulness": {
+              "rating": "faithful",
+              "notes": null
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Field details:**
+
+- `id`: Unique identifier for the example (e.g., `{filename}-{line}`)
+- `translationNotes.type`: One of `decision`, `deviation`, `info`, or `warning`
+- `verification.compilation.status`: `pass`, `fail`, or `skipped`
+- `verification.faithfulness.rating`: `faithful`, `minor_differences`, `significant_deviation`, or `not_assessed`
+
+### Generate the HTML review file
+
+Use the review app generator script to create a standalone HTML file:
+
+```bash
+.claude/skills/translate-examples-to-swift/review-app/generate-review.sh \
+  /path/to/translation-data.json \
+  /path/to/output/translation-review.html
+```
+
+The output file can be opened directly in a browser. It provides:
+- Side-by-side comparison of JavaScript and Swift code
+- Syntax highlighting
+- Translation notes and decisions (collapsible)
+- Test harness context (collapsible)
+- Verification results (compilation status, faithfulness rating)
+- Interactive review controls (approve/flag/skip with comments)
+- Export functionality for review summary
+
+See `review-app/example-data.json` for a complete example of the expected data format.
+
+## 8. Report back to the user
 
 Report back to the user, explaining:
 
 - any important decisions that you made, such as deviations from the JavaScript code
 - the verification results summary
 - any issues that require human attention
+- the location of the review file for human review
+
+Example:
+
+```
+Translation complete.
+
+## Summary
+- Files processed: 2
+- Examples translated: 5
+- Compilation: 4 passed, 1 failed
+
+## Review file
+Open the review file to examine translations:
+  /path/to/translation-review.html
+
+## Issues requiring attention
+- src/pages/docs/messages/updates-deletes.mdx:78 - Compilation failed: `updateSerial` property not found on ARTMessage
+```
