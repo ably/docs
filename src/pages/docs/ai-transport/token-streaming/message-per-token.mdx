@@ -24,6 +24,17 @@ Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retri
 ```javascript
 const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_channelGet(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+```
+{/* --- end example code --- */}
 </Code>
 
 When publishing tokens, don't await the `channel.publish()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each publish would unnecessarily slow down your token stream. Messages are still published in the order that `publish()` is called, so delivery order is not affected.
@@ -44,6 +55,34 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+struct StreamEvent {
+    let type: String
+    let text: String
+}
+
+func example_publishWithoutAwait(channel: ARTRealtimeChannel, stream: AsyncStream<StreamEvent>) async {
+    // --- example code starts here ---
+*/}
+```swift
+// ✅ Do this - publish without await for maximum throughput
+for await event in stream {
+  if event.type == "token" {
+    channel.publish("token", data: event.text)
+  }
+}
+
+// ❌ Don't do this - awaiting each publish reduces throughput
+for await event in stream {
+  if event.type == "token" {
+    try? await channel.publish("token", data: event.text)
+  }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 This approach maximizes throughput while maintaining ordering guarantees, allowing you to stream tokens as fast as your AI model generates them.
@@ -77,6 +116,29 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+struct StreamEvent {
+    let type: String
+    let text: String
+}
+
+func example_continuousPublish(realtime: ARTRealtime, stream: AsyncStream<StreamEvent>) async {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like { type: 'token', text: 'Hello' }
+for await event in stream {
+  if event.type == "token" {
+    channel.publish("token", data: event.text)
+  }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 #### Subscribe to tokens
@@ -91,6 +153,23 @@ await channel.subscribe('token', (message) => {
   console.log(token); // log each token as it arrives
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_continuousSubscribe(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Subscribe to token messages
+channel.subscribe("token") { message in
+  let token = message.data
+  print(token) // log each token as it arrives
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 This pattern is simple and works well when you're displaying a single, continuous stream of tokens.
@@ -120,6 +199,39 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+struct StreamEvent {
+    let type: String
+    let text: String
+    let responseId: String
+}
+
+func example_multipleResponsesPublish(realtime: ARTRealtime, stream: AsyncStream<StreamEvent>) async {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like { type: 'token', text: 'Hello', responseId: 'resp_abc123' }
+for await event in stream {
+  if event.type == "token" {
+    let message = ARTMessage(
+      name: "token",
+      data: event.text
+    )
+    message.extras = [
+      "headers": [
+        "responseId": event.responseId
+      ]
+    ]
+    channel.publish([message])
+  }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 #### Subscribe to tokens
@@ -151,6 +263,38 @@ await channel.subscribe('token', (message) => {
   responses.set(responseId, responses.get(responseId) + token);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_multipleResponsesSubscribe(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID
+var responses: [String: String] = [:]
+
+channel.subscribe("token") { message in
+  guard let token = message.data as? String else { return }
+  guard let extras = message.extras as? [String: Any],
+        let headers = extras["headers"] as? [String: Any],
+        let responseId = headers["responseId"] as? String else {
+    print("Token missing responseId")
+    return
+  }
+
+  // Create an empty response
+  if responses[responseId] == nil {
+    responses[responseId] = ""
+  }
+
+  // Append token to response
+  responses[responseId] = (responses[responseId] ?? "") + token
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ### Token stream with explicit start/stop events <a id="explicit-events"/>
@@ -203,6 +347,59 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+struct StreamEvent {
+    let type: String
+    let responseId: String
+    let text: String?
+}
+
+func example_explicitEventsPublish(realtime: ARTRealtime, stream: AsyncStream<StreamEvent>) async {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like:
+// { type: 'message_start', responseId: 'resp_abc123' }
+// { type: 'message_delta', responseId: 'resp_abc123', text: 'Hello' }
+// { type: 'message_stop', responseId: 'resp_abc123' }
+
+for await event in stream {
+  if event.type == "message_start" {
+    // Publish response start
+    let message = ARTMessage(name: "start", data: nil)
+    message.extras = [
+      "headers": [
+        "responseId": event.responseId
+      ]
+    ]
+    channel.publish([message])
+  } else if event.type == "message_delta" {
+    // Publish tokens
+    let message = ARTMessage(name: "token", data: event.text)
+    message.extras = [
+      "headers": [
+        "responseId": event.responseId
+      ]
+    ]
+    channel.publish([message])
+  } else if event.type == "message_stop" {
+    // Publish response stop
+    let message = ARTMessage(name: "stop", data: nil)
+    message.extras = [
+      "headers": [
+        "responseId": event.responseId
+      ]
+    ]
+    channel.publish([message])
+  }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 #### Subscribe to tokens
@@ -237,6 +434,47 @@ await channel.subscribe('stop', (message) => {
   console.log('Response complete:', finalText);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_explicitEventsSubscribe(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+var responses: [String: String] = [:]
+
+// Handle response start
+channel.subscribe("start") { message in
+  guard let extras = message.extras as? [String: Any],
+        let headers = extras["headers"] as? [String: Any],
+        let responseId = headers["responseId"] as? String else { return }
+  responses[responseId] = ""
+}
+
+// Handle tokens
+channel.subscribe("token") { message in
+  guard let token = message.data as? String,
+        let extras = message.extras as? [String: Any],
+        let headers = extras["headers"] as? [String: Any],
+        let responseId = headers["responseId"] as? String else { return }
+
+  let currentText = responses[responseId] ?? ""
+  responses[responseId] = currentText + token
+}
+
+// Handle response stop
+channel.subscribe("stop") { message in
+  guard let extras = message.extras as? [String: Any],
+        let headers = extras["headers"] as? [String: Any],
+        let responseId = headers["responseId"] as? String else { return }
+  let finalText = responses[responseId]
+  print("Response complete:", finalText ?? "")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ## Client hydration <a id="hydration"/>
@@ -271,6 +509,29 @@ await channel.subscribe('token', (message) => {
   console.log('Token received:', token);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_rewind(realtime: ARTRealtime) {
+    // --- example code starts here ---
+*/}
+```swift
+// Use rewind to receive recent historical messages
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.params = ["rewind": "2m"] // or rewind: 100 for message count
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options: channelOptions)
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+channel.subscribe("token") { message in
+  guard let token = message.data as? String else { return }
+
+  // Process tokens from both recent history and live stream
+  print("Token received:", token)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 Rewind supports two formats:
@@ -315,6 +576,45 @@ while (page) {
   page = page.hasNext() ? await page.next() : null;
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_history(realtime: ARTRealtime) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+let channel = realtime.channels.get("persisted:{{RANDOM_CHANNEL_NAME}}")
+
+var response = ""
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe("token") { message in
+  guard let token = message.data as? String else { return }
+  // Append the token to the end of the response
+  response += token
+}
+
+// Fetch history up until the point of attachment
+let query = ARTRealtimeHistoryQuery()
+query.untilAttach = true
+var page = try await channel.history(query)
+
+// Paginate backwards through history
+while page != nil {
+  // Messages are newest-first, so prepend them to response
+  for message in page!.items {
+    if let token = message.data as? String {
+      response = token + response
+    }
+  }
+
+  // Move to next page if available
+  page = page!.hasNext ? try await page!.next() : nil
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ### Hydrating an in-progress response <a id="in-progress-response"/>
@@ -367,6 +667,55 @@ await channel.subscribe('token', (message) => {
   inProgressResponses.set(responseId, inProgressResponses.get(responseId) + token);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func loadResponsesFromDatabase() async -> Set<String> {
+    return []
+}
+
+func example_hydrateRewind(realtime: ARTRealtime) async {
+    // --- example code starts here ---
+*/}
+```swift
+// Load completed responses from database
+let completedResponses = await loadResponsesFromDatabase()
+
+// Use rewind to receive recent historical messages
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.params = ["rewind": "2m"]
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options: channelOptions)
+
+// Track in progress responses by ID
+var inProgressResponses: [String: String] = [:]
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+channel.subscribe("token") { message in
+  guard let token = message.data as? String,
+        let extras = message.extras as? [String: Any],
+        let headers = extras["headers"] as? [String: Any],
+        let responseId = headers["responseId"] as? String else {
+    print("Token missing responseId")
+    return
+  }
+
+  // Skip tokens for responses already hydrated from database
+  if completedResponses.contains(responseId) {
+    return
+  }
+
+  // Create an empty in-progress response
+  if inProgressResponses[responseId] == nil {
+    inProgressResponses[responseId] = ""
+  }
+
+  // Append tokens for new responses
+  inProgressResponses[responseId] = (inProgressResponses[responseId] ?? "") + token
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 #### Hydrate using history
@@ -438,4 +787,84 @@ while (page && !done) {
   page = page.hasNext() ? await page.next() : null;
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func loadResponsesFromDatabase() async -> Set<String> {
+    return []
+}
+
+func example_hydrateHistory(realtime: ARTRealtime) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Load completed responses from database
+let completedResponses = await loadResponsesFromDatabase()
+
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+let channel = realtime.channels.get("persisted:{{RANDOM_CHANNEL_NAME}}")
+
+// Track in progress responses by ID
+var inProgressResponses: [String: String] = [:]
+
+// Subscribe to live tokens (implicitly attaches)
+channel.subscribe("token") { message in
+  guard let token = message.data as? String,
+        let extras = message.extras as? [String: Any],
+        let headers = extras["headers"] as? [String: Any],
+        let responseId = headers["responseId"] as? String else {
+    print("Token missing responseId")
+    return
+  }
+
+  // Skip tokens for responses already hydrated from database
+  if completedResponses.contains(responseId) {
+    return
+  }
+
+  // Create an empty in-progress response
+  if inProgressResponses[responseId] == nil {
+    inProgressResponses[responseId] = ""
+  }
+
+  // Append live tokens for in-progress responses
+  inProgressResponses[responseId] = (inProgressResponses[responseId] ?? "") + token
+}
+
+// Paginate backwards through history until we encounter a hydrated response
+let query = ARTRealtimeHistoryQuery()
+query.untilAttach = true
+var page = try await channel.history(query)
+
+// Paginate backwards through history
+var done = false
+while let currentPage = page, !done {
+  // Messages are newest-first, so prepend them to response
+  for message in currentPage.items {
+    guard let token = message.data as? String,
+          let extras = message.extras as? [String: Any],
+          let headers = extras["headers"] as? [String: Any],
+          let responseId = headers["responseId"] as? String else { continue }
+
+    // Stop when we reach a response already loaded from database
+    if completedResponses.contains(responseId) {
+      done = true
+      break
+    }
+
+    // Create an empty in-progress response
+    if inProgressResponses[responseId] == nil {
+      inProgressResponses[responseId] = ""
+    }
+
+    // Prepend historical tokens for in-progress responses
+    inProgressResponses[responseId] = token + (inProgressResponses[responseId] ?? "")
+  }
+
+  // Move to next page if available
+  page = currentPage.hasNext ? try await currentPage.next() : nil
+}
+```
+{/* --- end example code --- */}
 </Code>

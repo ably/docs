@@ -127,6 +127,83 @@ while (page) {
   page = page.hasNext() ? await page.next() : null;
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+import Ably
+import Foundation
+
+func example_resuming_session_C4F8E2A1(
+    ably: ARTRealtime,
+    channelName: String,
+    lastProcessedTimestamp: Int64,
+    processMessage: @escaping (ARTMessage) -> Void,
+    saveLastProcessedTimestamp: @escaping (Int64) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+// Use a channel in a namespace with persistence enabled
+// to access more than 2 minutes of message history
+let channel = ably.channels.get(channelName)
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe("prompt") { message in
+    // Process the live message
+    processMessage(message)
+
+    // Persist the timestamp after successful processing
+    saveLastProcessedTimestamp(message.timestamp.int64Value)
+}
+
+// Fetch history up until the point of attachment, starting from last checkpoint
+let query = ARTRealtimeHistoryQuery()
+query.untilAttach = true
+query.start = NSDate(timeIntervalSince1970: TimeInterval(lastProcessedTimestamp) / 1000.0)
+query.direction = .forwards
+
+do {
+    try channel.history(query) { result, error in
+        if let error = error {
+            print("Error fetching history: \(error.message)")
+            return
+        }
+
+        // Paginate through all missed messages
+        var page = result
+        func processPage(_ currentPage: ARTPaginatedResult<ARTMessage>?) {
+            guard let currentPage = currentPage else { return }
+
+            for message in currentPage.items {
+                // Process the historical message
+                processMessage(message)
+
+                // Persist the timestamp after successful processing
+                saveLastProcessedTimestamp(message.timestamp.int64Value)
+            }
+
+            // Move to next page if available
+            if currentPage.hasNext {
+                currentPage.next { nextPage, error in
+                    if let error = error {
+                        print("Error fetching next page: \(error.message)")
+                        return
+                    }
+                    processPage(nextPage)
+                }
+            } else {
+                // All historical messages processed
+            }
+        }
+
+        processPage(page)
+    }
+} catch {
+    print("Error calling history: \(error)")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">

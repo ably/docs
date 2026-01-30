@@ -98,6 +98,45 @@ ably.connection.on("connected", () => {
   console.log("Connected to Ably");
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_authCallback(authServerURL: URL) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+import Ably
+
+let clientOptions = ARTClientOptions()
+clientOptions.authCallback = { tokenParams, completion in
+    let task = URLSession.shared.dataTask(with: authServerURL) { data, response, error in
+        if let error = error {
+            completion(nil, error as NSError)
+            return
+        }
+
+        guard let data = data, let token = String(data: data, encoding: .utf8) else {
+            let error = NSError(domain: "AuthError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid token response"])
+            completion(nil, error)
+            return
+        }
+
+        completion(token as ARTTokenDetailsCompatible, nil)
+    }
+    task.resume()
+}
+
+let realtime = ARTRealtime(options: clientOptions)
+
+realtime.connection.on { stateChange in
+    if stateChange.current == .connected {
+        print("Connected to Ably")
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ## Authenticating agents <a id="authenticating-agents"/>
@@ -117,6 +156,26 @@ ably.connection.on("connected", () => {
   console.log("Connected to Ably");
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_agentAuth() throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+import Ably
+
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+
+realtime.connection.on { stateChange in
+    if stateChange.current == .connected {
+        print("Connected to Ably")
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="important">
@@ -175,6 +234,39 @@ const announcementsChannel = ably.channels.get("announcements");
 await announcementsChannel.publish("prompt", "What is the weather like today?"); // fails
 await announcementsChannel.subscribe((msg) => console.log(msg)); // succeeds
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_testCapabilities(realtime: ARTRealtime) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let acmeChannel = realtime.channels.get("org:acme:{{RANDOM_CHANNEL_NAME}}")
+acmeChannel.publish("prompt", data: "What is the weather like today?") { error in
+    // succeeds
+    guard error == nil else {
+        print("Error publishing to acme channel: \(error!.message)")
+        return
+    }
+}
+
+let foobarChannel = realtime.channels.get("org:foobar:{{RANDOM_CHANNEL_NAME}}")
+foobarChannel.publish("prompt", data: "What is the weather like today?") { error in
+    // fails
+}
+
+let announcementsChannel = realtime.channels.get("announcements")
+announcementsChannel.publish("prompt", data: "What is the weather like today?") { error in
+    // fails
+}
+announcementsChannel.subscribe { message in
+    // succeeds
+    print(message.data ?? "")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -218,6 +310,34 @@ const otherChannel = ably.channels.get("org:acme:other:{{RANDOM_CHANNEL_NAME}}")
 await otherChannel.subscribe((msg) => console.log(msg)); // fails
 await otherChannel.publish("update", "It's raining in London"); // fails
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_agentCapabilities(realtime: ARTRealtime) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let weatherChannel = realtime.channels.get("org:acme:weather:{{RANDOM_CHANNEL_NAME}}")
+weatherChannel.subscribe { message in
+    // succeeds
+    print(message.data ?? "")
+}
+weatherChannel.publish("update", data: "It's raining in London") { error in
+    // succeeds
+}
+
+let otherChannel = realtime.channels.get("org:acme:other:{{RANDOM_CHANNEL_NAME}}")
+otherChannel.subscribe { message in
+    // fails
+    print(message.data ?? "")
+}
+otherChannel.publish("update", data: "It's raining in London") { error in
+    // fails
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="important">
@@ -261,6 +381,26 @@ const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
 // Publish a message - the clientId is automatically attached
 await channel.publish("prompt", "What is the weather like today?");
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_publishWithClientId(realtime: ARTRealtime) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Publish a message - the clientId is automatically attached
+channel.publish("prompt", data: "What is the weather like today?") { error in
+    guard error == nil else {
+        print("Error publishing: \(error!.message)")
+        return
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 Agents can then access this verified identity to identify the sender:
@@ -280,6 +420,28 @@ await channel.subscribe("prompt", (message) => {
   console.log(`Prompt:`, prompt);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_agentSubscribeClientId(realtime: ARTRealtime) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Subscribe to messages from clients
+channel.subscribe("prompt") { message in
+    // Access the verified clientId from the message
+    guard let userId = message.clientId else { return }
+    let prompt = message.data
+
+    print("Received message from user: \(userId)")
+    print("Prompt: \(prompt ?? "")")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 The `clientId` in the message can be trusted, so agents can use this identity to make decisions about what actions the user can take. For example, agents can check user permissions before executing tool calls, route messages to appropriate AI models based on subscription tiers, or maintain per-user conversation history and context.
@@ -299,6 +461,24 @@ const ably = new Ably.Realtime({
   clientId: "weather-agent"
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_agentIdentity() throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+import Ably
+
+let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
+// Specify an identity for this agent
+clientOptions.clientId = "weather-agent"
+
+let realtime = ARTRealtime(options: clientOptions)
+```
+{/* --- end example code --- */}
 </Code>
 
 When subscribers receive messages, they can use the `clientId` to determine which agent published the message:
@@ -314,6 +494,24 @@ await channel.subscribe((message) => {
   }
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_clientCheckClientId(realtime: ARTRealtime) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe { message in
+    if message.clientId == "weather-agent" {
+        print("Weather agent response: \(message.data ?? "")")
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -364,6 +562,27 @@ await channel.subscribe("prompt", async (message) => {
   console.log(`Message from user with role: ${role}`);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_agentReadUserClaims(realtime: ARTRealtime) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let channel = realtime.channels.get("org:acme:{{RANDOM_CHANNEL_NAME}}")
+
+// Subscribe to user prompts
+channel.subscribe("prompt") { message in
+    // Access the user's role from the user claim in message extras
+    if let extras = message.extras as? [String: Any],
+       let userClaim = extras["userClaim"] as? String {
+        print("Message from user with role: \(userClaim)")
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 The `message.extras.userClaim` in the message can be trusted, so agents can rely on this information to make decisions about what actions the user can take. For example, an agent could allow users with an "editor" role to execute tool calls that modify documents, while restricting users with a "guest" role to read-only operations.
@@ -400,6 +619,38 @@ await channel.publish({
   }
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_agentPublishWithMetadata() throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+import Ably
+
+let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
+clientOptions.clientId = "weather-agent"
+let realtime = ARTRealtime(options: clientOptions)
+
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+let message = ARTMessage(name: "update", data: "It's raining in London")
+message.extras = [
+    "headers": [
+        "model": "gpt-4"
+    ]
+]
+
+channel.publish([message]) { error in
+    guard error == nil else {
+        print("Error publishing: \(error!.message)")
+        return
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 Clients and other agents can access this metadata when messages are received:
@@ -416,4 +667,26 @@ await channel.subscribe((message) => {
   }
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example_clientReadMetadata(realtime: ARTRealtime) throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Client code
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe { message in
+    if message.clientId == "weather-agent" {
+        if let extras = message.extras as? [String: Any],
+           let headers = extras["headers"] as? [String: Any],
+           let model = headers["model"] as? String {
+            print("Response from weather agent using \(model): \(message.data ?? "")")
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
