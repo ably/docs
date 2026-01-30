@@ -3,6 +3,82 @@ name: translate-examples-to-swift
 description: Translates inline JavaScript example code to Swift
 ---
 
+## Usage
+
+Invoke this skill with `/translate-examples-to-swift` followed by a description of what to translate.
+
+### Examples
+
+```
+/translate-examples-to-swift translate the JavaScript examples in src/pages/docs/ai-transport/streaming.mdx
+```
+
+```
+/translate-examples-to-swift translate all JavaScript code blocks in the src/pages/docs/messages/ directory
+```
+
+```
+/translate-examples-to-swift translate the code block at line 45 of src/pages/docs/channels/index.mdx
+```
+
+### What to specify
+
+- **File or directory**: Which documentation file(s) contain the examples to translate
+- **Scope** (optional): Specific code blocks if you don't want to translate all examples in a file
+
+---
+
+## Scaling Strategy
+
+When translating many examples, choose a strategy based on the workload size.
+
+### Small workload (1-5 examples in a single file)
+
+Translate all examples yourself using a **single test harness**:
+1. Create one Swift package
+2. Add each example as a separate function with a unique identifier (see "Providing context via parameters vs stub type declarations")
+3. Run `swift build` once to verify all examples compile
+4. Insert all translations into the documentation
+5. Proceed to verification
+
+This minimizes overhead and keeps all context together.
+
+### Medium workload (5-15 examples across a few files)
+
+Still use a **single test harness**, but be mindful of context:
+1. Process examples in batches by file
+2. After completing each file's translations and insertions, summarize what you've done
+3. If context is getting long, consider completing the current file fully (including verification) before moving to the next
+
+### Large workload (15+ examples or spanning many files)
+
+**Delegate to subagents** to manage context and parallelize work:
+
+1. Create a task list with one task per file (or logical grouping)
+2. For each task, spawn a subagent using the Task tool:
+   ```
+   Task tool with subagent_type: "general-purpose"
+   Prompt: "Translate JavaScript examples to Swift in [file]. Follow the translate-examples-to-swift skill instructions. Create your own test harness, translate examples, verify compilation, and insert into documentation. Report back what you translated and any issues."
+   ```
+3. Each subagent creates its own harness, translates, verifies, and inserts
+4. After all subagents complete, run the verification step (Step 6) across all files
+
+This approach:
+- Prevents context rot by giving each subagent fresh context
+- Allows parallel processing
+- Isolates failures to individual files
+
+### When examples share significant context
+
+If multiple examples across different files share the same complex context (e.g., the same custom types or setup), consider:
+1. Creating a shared test harness first
+2. Documenting the harness location
+3. Having subagents reuse/extend that harness rather than creating from scratch
+
+---
+
+## Translation Steps
+
 Given a JavaScript code block in the documentation, for example:
 
 <pre>
@@ -24,14 +100,15 @@ for await (const event of stream) {
 
 We wish to generate equivalent Swift example code to be inserted alongside the JavaScript example, and to be sure that this code is correct; in particular, that it compiles.
 
-In order to generate the Swift example code, there are six steps:
+In order to generate the Swift example code, there are seven steps:
 
 1. Generate a Swift test harness
 2. Translate the JavaScript code
 3. Insert the translated code into the test harness
 4. Use the test harness to verify the translated code
 5. Insert the translated code into the documentation
-6. Report back to the user
+6. Independent verification (via subagent)
+7. Report back to the user
 
 Detailed instructions for each of these steps are given below.
 
@@ -289,8 +366,139 @@ The test harness comment documents the function signature and context required t
 - **Reviewers** to verify the translation compiles correctly
 - **Future editors** to modify the Swift code and test compilation without having to reverse-engineer what context was originally used
 
-## 6. Report back to the user
+## 6. Independent verification (via subagent)
+
+After inserting translations into the documentation, spawn an independent verification subagent. This provides an unbiased review by an agent with fresh context that recreates everything from scratch.
+
+### Why independent verification?
+
+- **Fresh perspective**: The verifier has no memory of your translation decisions, so it approaches the code without bias
+- **Catches copy-paste errors**: Ensures the code in documentation matches what was actually tested
+- **Validates harness comments**: Confirms the test harness comments are complete and usable
+- **Faithfulness check**: Compares translations against originals with fresh eyes
+
+### How to spawn the verification subagent
+
+Use the Task tool with the following configuration:
+
+```
+Tool: Task
+subagent_type: "general-purpose"
+prompt: [see below]
+```
+
+**Verification prompt template:**
+
+```
+You are a verification agent for Swift translations. Your job is to independently verify that Swift example code in documentation is correct and faithful to the original JavaScript.
+
+## Files to verify
+
+[List the documentation files that contain newly inserted Swift examples]
+
+## Your tasks
+
+For each Swift code block that has an accompanying test harness comment:
+
+### 1. Recreate the test harness from scratch
+
+- Create a new Swift package in the scratchpad directory:
+  ```bash
+  cd [scratchpad directory]
+  mkdir SwiftVerification && cd SwiftVerification
+  swift package init --type executable
+  ```
+- Set up Package.swift with ably-cocoa dependency (see standard setup)
+- Extract the function signature from the JSX comment in the documentation
+- Create the harness in Sources/SwiftVerification/main.swift
+
+### 2. Insert the example code and verify compilation
+
+- Copy the Swift example code from the documentation (the code between the ``` markers, NOT the harness comment)
+- Insert it into the function body in your recreated harness
+- Run `swift build`
+- Record: PASS if it compiles, FAIL with error message if not
+
+### 3. Check faithfulness to original JavaScript
+
+Compare the Swift translation to the original JavaScript code block in the same <Code> section:
+
+- Does it preserve the same logical flow?
+- Does it handle the same cases?
+- Are comments preserved and accurate?
+- Are there any material additions or omissions?
+
+Rate faithfulness as: FAITHFUL, MINOR_DIFFERENCES (list them), or SIGNIFICANT_DEVIATION (explain)
+
+### 4. Report findings
+
+Provide a structured report:
+
+```
+## Verification Report
+
+### Summary
+- Files verified: [count]
+- Examples verified: [count]
+- Compilation: [X passed, Y failed]
+- Faithfulness: [X faithful, Y with differences]
+
+### Details by file
+
+#### [filename]
+
+**Example at line [N]:**
+- Compilation: PASS/FAIL
+  [If FAIL: error message]
+- Faithfulness: FAITHFUL/MINOR_DIFFERENCES/SIGNIFICANT_DEVIATION
+  [If not faithful: explanation]
+- Harness comment complete: YES/NO
+  [If NO: what's missing]
+
+[Repeat for each example]
+
+### Issues requiring attention
+
+[List any failures or significant deviations that need human review]
+
+### Recommendations
+
+[Any suggestions for improving the translations]
+```
+
+## Important
+
+- Do NOT modify any documentation files - you are only verifying
+- If you cannot recreate a harness from the comment alone, note this as an issue (the comment is incomplete)
+- Be objective and thorough
+```
+
+### Handling verification results
+
+When the verification subagent returns:
+
+1. **All passed**: Proceed to Step 7 (report to user), including the verification summary
+2. **Compilation failures**:
+   - Review the failure details
+   - If it's a harness comment issue (incomplete context), fix the comment and re-verify
+   - If it's a translation issue, fix the translation and re-verify
+3. **Faithfulness concerns**:
+   - Review the differences noted
+   - If intentional (documented in your decisions), note this in the final report
+   - If unintentional, fix the translation and re-verify
+
+### Skipping verification
+
+You may skip independent verification only if:
+- The user explicitly requests it (e.g., "skip verification" or "I'll verify myself")
+- You're doing a quick fix to a single, trivial example
+
+In all other cases, verification is required.
+
+## 7. Report back to the user
 
 Report back to the user, explaining:
 
 - any important decisions that you made, such as deviations from the JavaScript code
+- the verification results summary
+- any issues that require human attention
