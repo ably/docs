@@ -17,7 +17,7 @@ import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
-import Table from './mdx/Table';
+import { Table, NestedTableProvider } from './mdx/NestedTable';
 import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
 import Admonition from './mdx/Admonition';
@@ -271,24 +271,26 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
         </div>
       </noscript>
       <Article>
-        <MarkdownProvider
-          components={{
-            If,
-            Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
-            Aside: Admonition,
-            Table,
-            table: Table.Root,
-            thead: Table.Header,
-            tbody: Table.Body,
-            tr: Table.Row,
-            th: Table.Head,
-            td: Table.Cell,
-            Tiles,
-          }}
-        >
-          <PageHeader title={title} intro={intro} />
-          {children}
-        </MarkdownProvider>
+        <NestedTableProvider>
+          <MarkdownProvider
+            components={{
+              If,
+              Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
+              Aside: Admonition,
+              Table,
+              table: Table.Root,
+              thead: Table.Header,
+              tbody: Table.Body,
+              tr: Table.Row,
+              th: Table.Head,
+              td: Table.Cell,
+              Tiles,
+            }}
+          >
+            <PageHeader title={title} intro={intro} />
+            {children}
+          </MarkdownProvider>
+        </NestedTableProvider>
       </Article>
     </SDKContext.Provider>
   );

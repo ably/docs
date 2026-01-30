@@ -154,6 +154,51 @@ Tables use standard Markdown syntax:
 
 For more complex table layouts, HTML table syntax can be used.
 
+### Nested tables
+
+Nested tables are used to display API reference types and enums.
+
+This new style will be enabled when you wrap a normal table in `<Table>` tags. They use the following special properties:
+
+| Property | Description |
+| -------- | ----------- |
+| `id` | The identifier for that table so that it can be referenced in another table. |
+| `hidden` | If present, the table will not appear in the rendered content. It will however be present when you view the page as markdown, just with this property removed. This is to simplify the approach for LLMs and ensures the content is present and used. |
+
+The following is an example of using this new format. Only `TypingOptions` is included for brevity:
+
+```mdx
+<Table id='RoomOptions'>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| typing | optional | Configuration for typing indicators. | <Table id='TypingOptions'/> |
+| presence | optional | Configuration for presence events. | <Table id='PresenceOptions'/> |
+| occupancy | optional | Configuration for occupancy events. | <Table id='OccupancyOptions'/> |
+| messages | optional | Configuration for message reactions. | <Table id='MessagesOptions'/> |
+
+</Table>
+
+<Table id='TypingOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| heartbeatThrottleMs | optional | Minimum time in milliseconds between consecutive typing started events. The first call emits immediately; later calls are no-ops until the interval has elapsed. Calling typing.stop resets the interval. Default 10000. | number |
+
+</Table>
+```
+
+Nested tables use the following columns and they must be in this order:
+
+| Column | Description |
+| ------ | ----------- |
+| name | The name of the fields, e.g. `Attributes`, `Properties` or `Members` etc.|
+| `Description` | A description of the property. |
+| `Required` | Adds a tag showing whether a property is required or not. Permitted values are `optional` and `required`. |
+| `Type` | Adds a label as to the type of property and renders that as plain text. If a `<Table>` tag is embedded with an `id` then renders that table nested. |
+
+Note that both the `Required` and `Type` columns can be omitted when show a list of enums for example.
+
 ### Admonitions
 
 There are three types of admonition that can be used; `note`, `important` and `further-reading`. Update the value of `data-type` to switch between them. Admonitions are written using the HTML `<aside>` tag with HTML or Markdown content.
