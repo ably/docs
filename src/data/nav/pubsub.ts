@@ -325,6 +325,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Data streaming',
+          link: '/docs/guides/pub-sub/data-streaming',
+        },
+      ],
+    },
   ],
   api: [
     {
