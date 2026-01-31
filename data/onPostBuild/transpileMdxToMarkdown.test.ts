@@ -6,6 +6,8 @@ import {
   removeJsxComments,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
+  convertJsxLinkProps,
+  generateLinkTextFromPath,
   convertRelativeUrls,
   replaceTemplateVariables,
   calculateOutputPath,
@@ -434,6 +436,107 @@ import Baz from 'qux';
       const input = '[Link text](not-a-valid-url)';
       const output = convertDocsLinksToMarkdown(input);
       expect(output).toBe('[Link text](not-a-valid-url)');
+    });
+  });
+
+  describe('generateLinkTextFromPath', () => {
+    it('should convert /docs/ path to readable text', () => {
+      const output = generateLinkTextFromPath('/docs/chat/getting-started/javascript');
+      expect(output).toBe('ably docs chat getting-started javascript');
+    });
+
+    it('should handle simple /docs/ path', () => {
+      const output = generateLinkTextFromPath('/docs/channels');
+      expect(output).toBe('ably docs channels');
+    });
+
+    it('should handle deeply nested paths', () => {
+      const output = generateLinkTextFromPath('/docs/api/realtime-sdk/channels');
+      expect(output).toBe('ably docs api realtime-sdk channels');
+    });
+  });
+
+  describe('convertJsxLinkProps', () => {
+    it('should convert quoted /docs/ path with single quotes', () => {
+      const input = `'/docs/chat/getting-started/javascript'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`'[ably docs chat getting-started javascript](http://localhost:3000/docs/chat/getting-started/javascript)'`);
+    });
+
+    it('should convert quoted /docs/ path with double quotes', () => {
+      const input = `"/docs/chat/getting-started/react"`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`"[ably docs chat getting-started react](http://localhost:3000/docs/chat/getting-started/react)"`);
+    });
+
+    it('should convert JSX link prop with single quotes', () => {
+      const input = `link: '/docs/chat/getting-started/javascript'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`link: '[ably docs chat getting-started javascript](http://localhost:3000/docs/chat/getting-started/javascript)'`);
+    });
+
+    it('should convert JSX link prop with double quotes', () => {
+      const input = `link: "/docs/chat/getting-started/react"`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`link: "[ably docs chat getting-started react](http://localhost:3000/docs/chat/getting-started/react)"`);
+    });
+
+    it('should handle multiple link props in content', () => {
+      const input = `{
+  title: 'JavaScript',
+  link: '/docs/chat/getting-started/javascript',
+},
+{
+  title: 'React',
+  link: '/docs/chat/getting-started/react',
+}`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toContain(`link: '[ably docs chat getting-started javascript](http://localhost:3000/docs/chat/getting-started/javascript)'`);
+      expect(output).toContain(`link: '[ably docs chat getting-started react](http://localhost:3000/docs/chat/getting-started/react)'`);
+    });
+
+    it('should not convert non-docs paths', () => {
+      const input = `'/blog/article'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`'/blog/article'`);
+    });
+
+    it('should not convert external URLs', () => {
+      const input = `'https://example.com/docs/page'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`'https://example.com/docs/page'`);
+    });
+
+    it('should handle Tiles component content like the real example', () => {
+      const input = `<Tiles>
+{[
+  {
+    title: 'JavaScript',
+    description: 'Start building with Chat using Ably\\'s JavaScript SDK',
+    image: 'icon-tech-javascript',
+    link: '/docs/chat/getting-started/javascript',
+  },
+  {
+    title: 'React',
+    description: 'Start building Chat applications using Ably\\'s React SDK.',
+    image: 'icon-tech-react',
+    link: '/docs/chat/getting-started/react',
+  },
+]}
+</Tiles>`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toContain(`link: '[ably docs chat getting-started javascript](http://localhost:3000/docs/chat/getting-started/javascript)'`);
+      expect(output).toContain(`link: '[ably docs chat getting-started react](http://localhost:3000/docs/chat/getting-started/react)'`);
+      // Ensure other content is preserved
+      expect(output).toContain(`title: 'JavaScript'`);
+      expect(output).toContain(`image: 'icon-tech-javascript'`);
+    });
+
+    it('should convert any quoted /docs/ path regardless of context', () => {
+      const input = `href: '/docs/channels', data: '/docs/presence'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toContain(`'[ably docs channels](http://localhost:3000/docs/channels)'`);
+      expect(output).toContain(`'[ably docs presence](http://localhost:3000/docs/presence)'`);
     });
   });
 
