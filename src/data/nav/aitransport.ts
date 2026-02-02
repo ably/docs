@@ -93,36 +93,56 @@ export default {
       name: 'Guides',
       pages: [
         {
-          name: 'OpenAI token streaming - message per token',
-          link: '/docs/guides/ai-transport/openai-message-per-token',
+          name: 'Anthropic',
+          pages: [
+            {
+              name: 'Message per token',
+              link: '/docs/guides/ai-transport/anthropic-message-per-token',
+            },
+            {
+              name: 'Message per response',
+              link: '/docs/guides/ai-transport/anthropic-message-per-response',
+            },
+          ],
         },
         {
-          name: 'OpenAI token streaming - message per response',
-          link: '/docs/guides/ai-transport/openai-message-per-response',
+          name: 'OpenAI',
+          pages: [
+            {
+              name: 'Message per token',
+              link: '/docs/guides/ai-transport/openai-message-per-token',
+            },
+            {
+              name: 'Message per response',
+              link: '/docs/guides/ai-transport/openai-message-per-response',
+            },
+          ],
         },
         {
-          name: 'Anthropic token streaming - message per token',
-          link: '/docs/guides/ai-transport/anthropic-message-per-token',
+          name: 'LangGraph',
+          pages: [
+            {
+              name: 'Message per token',
+              link: '/docs/guides/ai-transport/lang-graph-message-per-token',
+            },
+            {
+              name: 'Message per response',
+              link: '/docs/guides/ai-transport/lang-graph-message-per-response',
+            },
+          ],
         },
         {
-          name: 'Anthropic token streaming - message per response',
-          link: '/docs/guides/ai-transport/anthropic-message-per-response',
-        },
-        {
-          name: 'Vercel AI SDK token streaming - message per token',
-          link: '/docs/guides/ai-transport/vercel-message-per-token',
-        },
-        {
-          name: 'Vercel AI SDK token streaming - message per response',
-          link: '/docs/guides/ai-transport/vercel-message-per-response',
-        },
-        {
-          name: 'LangGraph token streaming - message per token',
-          link: '/docs/guides/ai-transport/lang-graph-message-per-token',
-        },
-        {
-          name: 'LangGraph token streaming - message per response',
-          link: '/docs/guides/ai-transport/lang-graph-message-per-response',
+          name: 'Vercel AI SDK',
+          pages: [
+            {
+              name: 'Message per token',
+              link: '/docs/guides/ai-transport/vercel-message-per-token',
+            },
+            {
+              name: 'Message per response',
+              link: '/docs/guides/ai-transport/vercel-message-per-response',
+            },
+          ],
         },
       ],
     },
