@@ -16,6 +16,21 @@ import { ProductKey } from 'src/data/types';
 
 export const DEFAULT_LANGUAGE = 'javascript';
 
+// Languages supported for dual-language selection in AI Transport guides
+export const FE_LANGUAGES: LanguageKey[] = ['javascript', 'swift', 'java'];
+export const BE_LANGUAGES: LanguageKey[] = ['javascript', 'python', 'java'];
+
+// Check if a page supports dual language selection based on its path
+// Used for navigation param preservation (we don't have access to page content at nav time)
+export const isDualLanguagePath = (pathname: string): boolean => {
+  return pathname.includes('/docs/guides/ai-transport');
+};
+
+// Check if page content has fe_/be_ prefixed languages (more accurate than path check)
+const hasDualLanguageContent = (languages: string[]): boolean => {
+  return languages.some((lang) => lang.startsWith('fe_') || lang.startsWith('be_'));
+};
+
 const LayoutContext = createContext<{
   activePage: ActivePage;
 }>({
@@ -26,6 +41,9 @@ const LayoutContext = createContext<{
     language: DEFAULT_LANGUAGE,
     product: null,
     template: null,
+    feLanguage: null,
+    beLanguage: null,
+    isDualLanguage: false,
   },
 });
 
@@ -47,6 +65,32 @@ const determineActiveLanguage = (
   return DEFAULT_LANGUAGE;
 };
 
+// Determine frontend language for dual-language pages
+const determineFELanguage = (location: string, _product: ProductKey | null): LanguageKey => {
+  const params = new URLSearchParams(location);
+  const feLangParam = params.get('fe_lang') as LanguageKey;
+
+  if (feLangParam && FE_LANGUAGES.includes(feLangParam)) {
+    return feLangParam;
+  }
+
+  // Default to javascript
+  return DEFAULT_LANGUAGE;
+};
+
+// Determine backend language for dual-language pages
+const determineBELanguage = (location: string, _product: ProductKey | null): LanguageKey => {
+  const params = new URLSearchParams(location);
+  const beLangParam = params.get('be_lang') as LanguageKey;
+
+  if (beLangParam && BE_LANGUAGES.includes(beLangParam)) {
+    return beLangParam;
+  }
+
+  // Default to javascript
+  return DEFAULT_LANGUAGE;
+};
+
 export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageContextType }>> = ({
   children,
   pageContext,
@@ -65,6 +109,12 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
 
     const language = determineActiveLanguage(languages, location.search, activePageData?.product ?? null);
 
+    // Check if this page has dual-language content (fe_/be_ prefixed code blocks)
+    const rawLanguages = pageContext?.languages ?? [];
+    const isDualLanguage = hasDualLanguageContent(rawLanguages);
+    const feLanguage = isDualLanguage ? determineFELanguage(location.search, activePageData?.product ?? null) : null;
+    const beLanguage = isDualLanguage ? determineBELanguage(location.search, activePageData?.product ?? null) : null;
+
     return {
       tree: activePageData?.tree ?? [],
       page: activePageData?.page ?? { name: '', link: '' },
@@ -72,6 +122,9 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
       language: languages.includes(language) ? language : null,
       product: activePageData?.product ?? null,
       template: 'mdx' as PageTemplate,
+      feLanguage,
+      beLanguage,
+      isDualLanguage,
     };
   }, [location.pathname, location.search, pageContext?.languages]);
 
