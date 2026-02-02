@@ -81,51 +81,76 @@ function readJsonFiles(dir) {
 const translations = readJsonFiles(translationsDir);
 const verifications = readJsonFiles(verificationsDir);
 
-// Build lookup maps
-const translationsByFile = new Map();
-translations.forEach(t => {
-    const notesByExample = new Map();
-    t.data.examples.forEach(ex => {
-        notesByExample.set(ex.id, ex.notes || []);
+// Build lookup map of verifications by file, then by example ID
+const verificationsByFile = new Map();
+verifications.forEach(v => {
+    const byId = new Map();
+    v.data.examples.forEach(ex => {
+        byId.set(ex.id, ex);
     });
-    translationsByFile.set(t.data.file, notesByExample);
+    verificationsByFile.set(v.data.file, byId);
 });
 
-// Merge into consolidated format
+// Merge by iterating over translations (ensures every translation is accounted for)
+let validationErrors = [];
 let totalExamples = 0;
 let compilationPassed = 0;
 let compilationFailed = 0;
 
-const files = verifications.map(v => {
-    const translationNotes = translationsByFile.get(v.data.file) || new Map();
+const files = translations.map(t => {
+    const verificationMap = verificationsByFile.get(t.data.file);
+    if (!verificationMap) {
+        validationErrors.push(`Translation for ${t.data.file} has no matching verification file`);
+        return null;
+    }
 
-    const examples = v.data.examples.map(ex => {
+    const examples = t.data.examples.map(translationEx => {
+        const verificationEx = verificationMap.get(translationEx.id);
+        if (!verificationEx) {
+            validationErrors.push(`Translation ID "${translationEx.id}" in ${t.data.file} was not verified`);
+            return null;
+        }
+
         totalExamples++;
-        if (ex.compilation.status === "pass") {
+        if (verificationEx.compilation.status === "pass") {
             compilationPassed++;
         } else {
             compilationFailed++;
         }
 
         return {
-            id: ex.id,
-            lineNumber: ex.lineNumber,
-            original: ex.original,
-            translation: ex.translation,
-            harness: ex.harness,
-            translationNotes: translationNotes.get(ex.id) || [],
+            id: translationEx.id,
+            lineNumber: verificationEx.lineNumber,
+            original: verificationEx.original,
+            translation: verificationEx.translation,
+            harness: verificationEx.harness,
+            translationNotes: translationEx.notes || [],
             verification: {
-                compilation: ex.compilation,
-                faithfulness: ex.faithfulness
+                compilation: verificationEx.compilation,
+                faithfulness: verificationEx.faithfulness
             }
         };
+    }).filter(Boolean);
+
+    // Check for extra verifications not in translation
+    verificationMap.forEach((_, id) => {
+        const inTranslation = t.data.examples.some(ex => ex.id === id);
+        if (!inTranslation) {
+            validationErrors.push(`Verification ID "${id}" in ${t.data.file} has no matching translation`);
+        }
     });
 
     return {
-        path: v.data.file,
+        path: t.data.file,
         examples
     };
-});
+}).filter(Boolean);
+
+if (validationErrors.length > 0) {
+    console.error("Validation errors:");
+    validationErrors.forEach(e => console.error("  - " + e));
+    process.exit(1);
+}
 
 const consolidated = {
     version: "1.0",

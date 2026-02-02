@@ -25,6 +25,15 @@ For each JavaScript code block in the documentation, you will:
 
 As you work through these steps, collect the data needed for the translation JSON. For each example, you'll need: the example ID, line number, and any translation notes/decisions.
 
+### Example IDs
+
+Generate a unique ID for each example using the format `{filename}-{sequential}`:
+- `streaming-1` for the first example in `streaming.mdx`
+- `streaming-2` for the second example
+- etc.
+
+This ID will be embedded in the harness comment (see step 5) so that the verification agent can extract it. Use the same ID in your JSON output.
+
 ---
 
 ## 1. Generate a Swift test harness
@@ -284,7 +293,7 @@ func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: Strin
 
 ## 5. Insert the translated code into the documentation
 
-Insert the verified Swift code into the documentation file, within the same `<Code>` block as the JavaScript example. Include the test harness context as a JSX comment:
+Insert the verified Swift code into the documentation file, within the same `<Code>` block as the JavaScript example. Include the test harness context as a JSX comment with the example ID:
 
 ```mdx
 <Code>
@@ -292,8 +301,9 @@ Insert the verified Swift code into the documentation file, within the same `<Co
 // original JavaScript code
 ```
 
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
+{/* Swift example test harness
+ID: streaming-1
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
 
 func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
     // --- example code starts here ---
@@ -305,7 +315,12 @@ func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: Strin
 </Code>
 ```
 
-The test harness comment documents the function signature and context required to compile the example. This enables:
+The test harness comment includes:
+- **ID**: Unique identifier for this example (used by verification to match translations)
+- **Function signature**: The context required to compile the example
+
+This enables:
+- **Verification agent** to match this translation with its verification results
 - **Reviewers** to verify the translation compiles correctly
 - **Future editors** to modify the Swift code and test compilation without having to reverse-engineer what context was originally used
 

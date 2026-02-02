@@ -22,10 +22,13 @@ For each Swift code block that has an accompanying test harness comment:
 ### 1. Extract the code from the MDX
 
 For each `<Code>` block containing both JavaScript and Swift:
+- Extract the **ID** from the JSX harness comment (line starting with `ID:`) - this goes in `id`
 - Extract the JavaScript code (this goes in `original.code`)
 - Extract the Swift code (this goes in `translation.code`)
 - Extract the function signature from the JSX harness comment (this goes in `harness.functionSignature`)
 - Build the full compilable context (this goes in `harness.fullContext`)
+
+**Important**: The ID must be extracted from the harness comment, not generated. If no ID is found in the comment, report this as an error - the translation is incomplete.
 
 ### 2. Recreate the test harness from scratch
 
@@ -85,8 +88,8 @@ Rate faithfulness as: faithful, minor_differences (list them), or significant_de
 
 Write the results to swift-translations/verifications/{FILENAME}.json conforming to the schema. Each example in the `examples` array must include:
 
-- `id`: Unique identifier (e.g., "{FILENAME}-1", "{FILENAME}-2")
-- `lineNumber`: Line number of the JavaScript code block in the MDX
+- `id`: The ID extracted from the harness comment (e.g., "streaming-1", "streaming-2")
+- `lineNumber`: Line number of the JavaScript code block in the MDX (for human reference)
 - `original`: `{ "language": "javascript", "code": "..." }` - the extracted JavaScript code
 - `translation`: `{ "language": "swift", "code": "..." }` - the extracted Swift code
 - `harness`: `{ "functionSignature": "...", "stubTypes": null, "fullContext": "..." }` - the harness details
