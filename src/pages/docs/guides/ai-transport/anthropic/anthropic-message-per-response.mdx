@@ -81,10 +81,10 @@ The `ai:` namespace is just a naming convention used in this guide. There's noth
 
 Initialize an Anthropic client and use the [Messages API](https://docs.anthropic.com/en/api/messages) to stream model output as a series of events.
 
-Create a new file `publisher.mjs` with the following contents:
+Create a new file `publisher.mjs` (JavaScript) or `publisher.py` (Python) with the following contents:
 
 <Code>
-```javascript
+```be_javascript
 import Anthropic from '@anthropic-ai/sdk';
 
 // Initialize Anthropic client
@@ -113,6 +113,31 @@ async function streamAnthropicResponse(prompt) {
 
 // Usage example
 streamAnthropicResponse("Tell me a short joke");
+```
+
+```be_python
+import anthropic
+
+# Initialize Anthropic client
+client = anthropic.Anthropic()
+
+# Process each streaming event
+def process_event(event):
+    print(event)
+    # This function is updated in the next sections
+
+# Create streaming response from Anthropic
+def stream_anthropic_response(prompt: str):
+    with client.messages.stream(
+        model="claude-sonnet-4-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        for event in stream:
+            process_event(event)
+
+# Usage example
+stream_anthropic_response("Tell me a short joke")
 ```
 </Code>
 
@@ -170,10 +195,10 @@ Each AI response is stored as a single Ably message that grows as tokens are app
 
 ### Initialize the Ably client <a id="initialize-ably"/>
 
-Add the Ably client initialization to your `publisher.mjs` file:
+Add the Ably client initialization to your publisher file:
 
 <Code>
-```javascript
+```be_javascript
 import Ably from 'ably';
 
 // Initialize Ably Realtime client
@@ -184,6 +209,16 @@ const realtime = new Ably.Realtime({
 
 // Create a channel for publishing streamed AI responses
 const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+```
+
+```be_python
+from ably import AblyRealtime
+
+# Initialize Ably Realtime client
+realtime = AblyRealtime(key='{{API_KEY}}', echo_messages=False)
+
+# Create a channel for publishing streamed AI responses
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
 ```
 </Code>
 
@@ -201,10 +236,10 @@ When a new response begins, publish an initial message to create it. Ably assign
 This implementation assumes each response contains a single text content block. It filters out thinking tokens and other non-text content blocks. For production use cases with multiple content blocks or concurrent responses, consider tracking state per message ID and content block index.
 </Aside>
 
-Update your `publisher.mjs` file to publish the initial message and append tokens:
+Update your publisher file to publish the initial message and append tokens:
 
 <Code>
-```javascript
+```be_javascript
 // Track state across events
 let msgSerial = null;
 let textBlockIndex = null;
@@ -246,6 +281,38 @@ async function processEvent(event) {
   }
 }
 ```
+
+```be_python
+# Track state across events
+msg_serial = None
+text_block_index = None
+
+# Process each streaming event and publish to Ably
+async def process_event(event):
+    global msg_serial, text_block_index
+
+    if event.type == 'message_start':
+        # Publish initial empty message when response starts
+        result = await channel.publish('response', data='')
+
+        # Capture the message serial for appending tokens
+        msg_serial = result.serials[0]
+
+    elif event.type == 'content_block_start':
+        # Capture text block index when a text content block is added
+        if event.content_block.type == 'text':
+            text_block_index = event.index
+
+    elif event.type == 'content_block_delta':
+        # Append tokens from text deltas only
+        if (event.index == text_block_index and
+            hasattr(event.delta, 'text') and
+            msg_serial):
+            channel.append_message(serial=msg_serial, data=event.delta.text)
+
+    elif event.type == 'message_stop':
+        print('Stream completed!')
+```
 </Code>
 
 This implementation:
@@ -274,10 +341,10 @@ node publisher.mjs
 
 Create a subscriber that receives the streaming tokens from Ably and reconstructs the response in realtime.
 
-Create a new file `subscriber.mjs` with the following contents:
+Create a new file `subscriber.mjs` (JavaScript) or use the Swift code below for iOS/macOS apps:
 
 <Code>
-```javascript
+```fe_javascript
 import Ably from 'ably';
 
 // Initialize Ably Realtime client
@@ -316,6 +383,50 @@ await channel.subscribe((message) => {
 });
 
 console.log('Subscriber ready, waiting for tokens...');
+```
+
+```fe_swift
+import Ably
+
+// Initialize Ably Realtime client
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+
+// Get the same channel used by the publisher
+let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by message serial
+var responses: [String: String] = [:]
+
+// Subscribe to receive messages
+channel.subscribe { message in
+    guard let serial = message.serial else { return }
+
+    switch message.action {
+    case .create:
+        // New response started
+        print("\n[Response started] \(serial)")
+        responses[serial] = message.data as? String ?? ""
+
+    case .messageAppend:
+        // Append token to existing response
+        let current = responses[serial] ?? ""
+        let token = message.data as? String ?? ""
+        responses[serial] = current + token
+
+        // Display token as it arrives
+        print(token, terminator: "")
+
+    case .update:
+        // Replace entire response content
+        responses[serial] = message.data as? String ?? ""
+        print("\n[Response updated with full content]")
+
+    default:
+        break
+    }
+}
+
+print("Subscriber ready, waiting for tokens...")
 ```
 </Code>
 
@@ -390,7 +501,7 @@ One key advantage of the message-per-response pattern is that each complete AI r
 Use Ably's [rewind](/docs/channels/options/rewind) channel option to attach to the channel at some point in the recent past and automatically receive complete responses from history. Historical messages are delivered as `message.update` events containing the complete concatenated response, which then seamlessly transition to live `message.append` events for any ongoing responses:
 
 <Code>
-```javascript
+```fe_javascript
 // Use rewind to receive recent historical messages
 const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}', {
   params: { rewind: '2m' } // Retrieve messages from the last 2 minutes
@@ -417,6 +528,39 @@ await channel.subscribe((message) => {
       break;
   }
 });
+```
+
+```fe_swift
+// Use rewind to receive recent historical messages
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.params = ["rewind": "2m"] // Retrieve messages from the last 2 minutes
+
+let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}", options: channelOptions)
+
+var responses: [String: String] = [:]
+
+channel.subscribe { message in
+    guard let serial = message.serial else { return }
+
+    switch message.action {
+    case .create:
+        responses[serial] = message.data as? String ?? ""
+
+    case .messageAppend:
+        let current = responses[serial] ?? ""
+        let token = message.data as? String ?? ""
+        responses[serial] = current + token
+        print(token, terminator: "")
+
+    case .update:
+        // Historical messages contain full concatenated response
+        responses[serial] = message.data as? String ?? ""
+        print("\n[Historical response]: \(responses[serial] ?? "")")
+
+    default:
+        break
+    }
+}
 ```
 </Code>
 
