@@ -84,6 +84,77 @@ for await (const event of stream) {
   }
 }
 ```
+
+{/* Swift example test harness
+ID: tool-calls-1
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(
+    channel: ARTRealtimeChannel,
+    stream: any AsyncSequence<ToolCallEvent, Never> & Sendable
+) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like:
+// { type: 'tool_call', name: 'get_weather', args: '{"location":"San Francisco"}', toolCallId: 'tool_123', responseId: 'resp_abc123' }
+// { type: 'tool_result', name: 'get_weather', result: '{"temp":72,"conditions":"sunny"}', toolCallId: 'tool_123', responseId: 'resp_abc123' }
+// { type: 'message', text: 'The weather in San Francisco is 72°F and sunny.', responseId: 'resp_abc123' }
+
+for try await event in stream {
+    if event.type == "tool_call" {
+        // Publish tool call arguments
+        let message = ARTMessage(name: "tool_call", data: [
+            "name": event.name ?? "",
+            "args": event.args ?? ""
+        ])
+        message.extras = [
+            "headers": [
+                "responseId": event.responseId ?? "",
+                "toolCallId": event.toolCallId ?? ""
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message]) { error in
+            if let error = error {
+                print("Error publishing tool call: \(error)")
+            }
+        }
+    } else if event.type == "tool_result" {
+        // Publish tool call results
+        let message = ARTMessage(name: "tool_result", data: [
+            "name": event.name ?? "",
+            "result": event.result ?? ""
+        ])
+        message.extras = [
+            "headers": [
+                "responseId": event.responseId ?? "",
+                "toolCallId": event.toolCallId ?? ""
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message]) { error in
+            if let error = error {
+                print("Error publishing tool result: \(error)")
+            }
+        }
+    } else if event.type == "message" {
+        // Publish model output messages
+        let message = ARTMessage(name: "message", data: event.text ?? "")
+        message.extras = [
+            "headers": [
+                "responseId": event.responseId ?? ""
+            ]
+        ] as ARTJsonCompatible
+        channel.publish([message]) { error in
+            if let error = error {
+                print("Error publishing message: \(error)")
+            }
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -155,6 +226,69 @@ await channel.subscribe((message) => {
   console.log(`Response ${responseId}:`, response);
 });
 ```
+
+{/* Swift example test harness
+ID: tool-calls-2
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+class ResponseState {
+    var toolCalls: [String: (name: String, args: String, result: String?)] = [:]
+    var message: String = ""
+}
+
+func example(channel: ARTRealtimeChannel) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID, each containing tool calls and final response
+var responses: [String: ResponseState] = [:]
+
+// Subscribe to all events on the channel
+channel.subscribe { message in
+    let extras = message.extras as? [String: Any]
+    let headers = extras?["headers"] as? [String: Any]
+    guard let responseId = headers?["responseId"] as? String else {
+        print("Message missing responseId")
+        return
+    }
+
+    // Initialize response object if needed
+    if responses[responseId] == nil {
+        responses[responseId] = ResponseState()
+    }
+
+    let response = responses[responseId]!
+
+    // Handle each message type
+    switch message.name {
+    case "message":
+        response.message = message.data as? String ?? ""
+    case "tool_call":
+        let toolCallId = headers?["toolCallId"] as? String ?? ""
+        let data = message.data as? [String: Any] ?? [:]
+        response.toolCalls[toolCallId] = (
+            name: data["name"] as? String ?? "",
+            args: data["args"] as? String ?? "",
+            result: nil
+        )
+    case "tool_result":
+        let resultToolCallId = headers?["toolCallId"] as? String ?? ""
+        let data = message.data as? [String: Any] ?? [:]
+        if var toolCall = response.toolCalls[resultToolCallId] {
+            toolCall.result = data["result"] as? String
+            response.toolCalls[resultToolCallId] = toolCall
+        }
+    default:
+        break
+    }
+
+    // Display the tool calls and response for this turn
+    print("Response \(responseId): \(response)")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="further-reading">
@@ -185,6 +319,47 @@ await channel.subscribe((message) => {
   }
 });
 ```
+
+{/* Swift example test harness
+ID: tool-calls-3
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example(
+    channel: ARTRealtimeChannel,
+    renderWeatherCard: @escaping @Sendable ([String: Any]) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe { message in
+    // Render component when tool is invoked
+    if message.name == "tool_call" {
+        let data = message.data as? [String: Any] ?? [:]
+        if data["name"] as? String == "get_weather" {
+            if let argsString = data["args"] as? String,
+               let argsData = argsString.data(using: .utf8),
+               let args = try? JSONSerialization.jsonObject(with: argsData) as? [String: Any] {
+                renderWeatherCard(["location": args["location"] ?? "", "loading": true])
+            }
+        }
+    }
+
+    // Update component with results
+    if message.name == "tool_result" {
+        let data = message.data as? [String: Any] ?? [:]
+        if data["name"] as? String == "get_weather" {
+            if let resultString = data["result"] as? String,
+               let resultData = resultString.data(using: .utf8),
+               let result = try? JSONSerialization.jsonObject(with: resultData) as? [String: Any] {
+                renderWeatherCard(result)
+            }
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -237,6 +412,62 @@ await channel.subscribe('tool_call', async (message) => {
   }
 });
 ```
+
+{/* Swift example test harness
+ID: tool-calls-4
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+struct GeolocationPosition: Sendable {
+    struct Coordinates: Sendable {
+        let latitude: Double
+        let longitude: Double
+    }
+    let coords: Coordinates
+}
+
+func example(
+    channel: ARTRealtimeChannel,
+    getGeolocationPosition: @escaping @Sendable () async -> GeolocationPosition
+) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe("tool_call") { message in
+    let data = message.data as? [String: Any] ?? [:]
+    let name = data["name"] as? String ?? ""
+    let extras = message.extras as? [String: Any]
+    let headers = extras?["headers"] as? [String: Any]
+    let responseId = headers?["responseId"] as? String ?? ""
+    let toolCallId = headers?["toolCallId"] as? String ?? ""
+
+    if name == "get_location" {
+        Task {
+            let result = await getGeolocationPosition()
+            let resultMessage = ARTMessage(name: "tool_result", data: [
+                "name": name,
+                "result": [
+                    "lat": result.coords.latitude,
+                    "lng": result.coords.longitude
+                ]
+            ])
+            resultMessage.extras = [
+                "headers": [
+                    "responseId": responseId,
+                    "toolCallId": toolCallId
+                ]
+            ] as ARTJsonCompatible
+            channel.publish([resultMessage]) { error in
+                if let error = error {
+                    print("Error publishing tool result: \(error)")
+                }
+            }
+        }
+    }
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -265,6 +496,43 @@ await channel.subscribe('tool_result', (message) => {
   pendingToolCalls.delete(toolCallId);
 });
 ```
+
+{/* Swift example test harness
+ID: tool-calls-5
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+struct PendingToolCall: Sendable {
+    let responseId: String
+}
+
+final class PendingToolCallsStore: @unchecked Sendable {
+    private var _storage: [String: PendingToolCall] = [:]
+    func get(_ key: String) -> PendingToolCall? { _storage[key] }
+    func delete(_ key: String) { _storage.removeValue(forKey: key) }
+}
+
+func example(
+    channel: ARTRealtimeChannel,
+    pendingToolCalls: PendingToolCallsStore,
+    processResult: @escaping @Sendable (String, String, Any) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+channel.subscribe("tool_result") { message in
+    let data = message.data as? [String: Any] ?? [:]
+    let toolCallId = data["toolCallId"] as? String ?? ""
+    let result = data["result"]
+
+    guard let pending = pendingToolCalls.get(toolCallId) else { return }
+
+    // Pass result back to the AI model to continue the conversation
+    processResult(pending.responseId, toolCallId, result ?? NSNull())
+
+    pendingToolCalls.delete(toolCallId)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ## Human-in-the-loop workflows <a id="human-in-the-loop"/>
