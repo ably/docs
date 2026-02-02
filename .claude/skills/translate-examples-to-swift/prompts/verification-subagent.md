@@ -64,7 +64,37 @@ let package = Package(
 )
 ```
 
-Use the function signature from the JSX comment in the documentation to create the harness in `Sources/SwiftVerification/main.swift`.
+Create the harness in `Sources/SwiftVerification/main.swift`. **Important**: Include ALL Swift examples from the MDX file in a single harness file. Use the example ID from the MDX harness comment in each function name:
+
+```swift
+import Ably
+
+// MARK: - Example streaming-1
+func example_streaming_1(channel: ARTRealtimeChannel) {
+    // Example code from MDX inserted here
+}
+
+// MARK: - Example streaming-3
+// (streaming-2 was not translated, so there's a gap in numbering)
+func example_streaming_3(channel: ARTRealtimeChannel, stream: any AsyncSequence<String, Never> & Sendable) async {
+    // Example code from MDX inserted here
+}
+
+// ... include ALL translated examples ...
+
+@main
+struct SwiftVerification {
+    static func main() {
+        print("Verification harness")
+    }
+}
+```
+
+This ensures:
+1. All translated examples are verified in a single compilation
+2. The harness file can be compared with the translation harness for discrepancies
+3. Function names match the IDs in the MDX for easy correlation
+4. Gaps in numbering are expected (some JS examples may not have Swift translations)
 
 ### 3. Insert the example code and verify compilation
 

@@ -27,12 +27,19 @@ As you work through these steps, collect the data needed for the translation JSO
 
 ### Example IDs
 
-Generate a unique ID for each example using the format `{filename}-{sequential}`:
-- `streaming-1` for the first example in `streaming.mdx`
-- `streaming-2` for the second example
+Generate a unique ID for each example using the format `{filename}-{sequential}`, numbering ALL JavaScript examples in the file sequentially:
+- `streaming-1` for the first JavaScript example in `streaming.mdx`
+- `streaming-2` for the second JavaScript example
 - etc.
 
-This ID will be embedded in the harness comment (see step 5) so that the verification agent can extract it. Use the same ID in your JSON output.
+**Important**: Number all JavaScript examples, even those you don't translate (like data structure literals). This keeps IDs stable and predictable. If you skip translating an example, just skip that ID - don't renumber.
+
+This ID must be consistent across:
+1. The harness function name (e.g., `func example_streaming_1(...)`)
+2. The MDX harness comment (e.g., `ID: streaming-1`)
+3. Your JSON output
+
+All three must match exactly to enable correlation between harness, MDX, and verification results.
 
 ---
 
@@ -163,11 +170,12 @@ func exampleContext_7EEA145D_060F_4DAD_BFBF_1A4CC28856E8() {
 
 ### Putting it together
 
-For the running example (which doesn't need stub type declarations), create a simple function:
+For the running example (which doesn't need stub type declarations), create a simple function. **Use the example ID in the function name** to enable correlation:
 
 ```swift
 // The body of this function is the translation of the example.
-func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
+// Function name includes the example ID (streaming-1 -> example_streaming_1)
+func example_streaming_1(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
     // TODO: fill in with translation of example (to come in next step)
 }
 ```
