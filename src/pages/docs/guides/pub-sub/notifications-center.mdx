@@ -1,0 +1,459 @@
+---
+title: "Guide: Building a notification center at scale with Ably"
+meta_description: "Architecting a scalable notification center with Ably: inbox pattern, authentication, backend integration, and cost optimization."
+meta_keywords: "notifications, notification center, push, push-notifications, inbox, pub/sub, scalability, Ably, realtime messaging, authentication, backend integration, cost optimization"
+---
+
+Ably provides the infrastructure to build a robust, scalable notification center that can handle everything from individual user notifications to system-wide broadcasts. Whether you're building friend requests for a social platform, order updates for e-commerce, or alerts for a gaming application, Ably's platform enables you to deliver notifications reliably at any scale.
+
+Building with Ably means you can focus on your application logic while Ably handles the complexities of realtime delivery, connection management, and global distribution. This guide explains how to architect a notification center using the inbox pattern, with a focus on security, scalability, and cost optimization.
+
+## Why Ably for notification centers?
+
+Ably is trusted by organizations delivering notifications to millions of users in realtime. Its platform is engineered around the four pillars of dependability:
+
+* **[Performance](/docs/platform/architecture/performance):** Ultra-low latency messaging ensures notifications reach users instantly, even at global scale.
+* **[Integrity](/docs/platform/architecture/message-ordering):** Guaranteed message ordering and delivery, with no duplicates or data loss.
+* **[Reliability](/docs/platform/architecture/fault-tolerance):** 99.999% uptime SLA, with automatic failover and seamless re-connection.
+* **[Availability](/docs/platform/architecture/edge-network):** Global edge infrastructure ensures users connect to the closest point for optimal experience.
+
+![Ably Architecture Overview Diagram](../../../../images/content/diagrams/architecture-overview.png)
+
+Delivering notifications in realtime is critical for user engagement. Ably's [serverless architecture](/docs/platform/architecture) eliminates the need to manage websocket servers. It automatically scales to handle millions of concurrent connections without provisioning or maintenance, while handling all edge-cases around delivery, failover, and scaling.
+
+For notifications that need to reach users even when they're offline, Ably integrates seamlessly with push notification services like [Apple Push Notification Service](https://developer.apple.com/notifications/) (APNS), [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging) (FCM)] and [web push](https://developer.mozilla.org/en-US/docs/Web/API/Push_API), ensuring your users never miss important updates.
+
+## Architecting your notification center
+
+The inbox pattern is a proven architecture for building scalable notification systems. It provides clear separation of concerns, secure authentication, and flexible processing workflows.
+
+### The pattern
+
+The architecture consists of three main components:
+
+* **Notification trigger:** Notifications can originate from various sources: frontend clients sending requests (like friend requests), backend systems or jobs (like game events or scheduled alerts), or event-driven processes. These are sent to your backend for processing.
+* **Backend processing:** Your backend receives the trigger, validates it, applies business logic, determines the target recipients, and publishes notifications to Ably.
+* **Inbox channels:** Notifications are published to client-specific inbox channels (e.g., `inbox:clientId`), where recipients are subscribed to receive realtime updates.
+
+### Key benefits
+
+This pattern provides several advantages:
+
+* **Security:** Clients only have subscribe access to their own inbox channels. All notification publishing flows through your backend, ensuring complete control over validation and authorization.
+* **Flexibility:** Your backend can implement any business logic (validation, rate limiting, enrichment, filtering, or integration with other services) before publishing to Ably.
+* **Scalability:** Each component scales independently. Ably handles the inbox channels and realtime delivery, while your backend scales based on request load.
+* **Auditability:** All notification requests pass through your backend, enabling logging, analytics, and compliance tracking.
+
+### Channel structure
+
+When designing your notification center, use the following channel structure:
+
+* Each client has their own inbox channel following the pattern `notifications:inbox:clientId`. Your backend publishes notifications to the specific client's inbox channel.
+* A shared channel like `notifications:inbox:general` can be used for system-wide notifications that should reach all clients.
+
+Inboxes are client-specific, one per client. The general channel is optional and used for notifications that should reach all clients.
+
+### Handling broadcasts
+
+For notifications that need to reach all clients, you have two architectural options:
+
+**Option 1: Individual inboxes**
+Iterate through the list of target clients and publish to each client's inbox channel individually. Ably's [batch publish REST endpoint](/docs/api/rest-api#batch-publish) makes this efficient, allowing you to publish to multiple channels in a single HTTP request.
+
+**Option 2: General broadcast channel**
+Create a shared channel where all clients subscribe. Notifications published to this channel reach all subscribers.
+
+The general broadcast channel is typically more cost-effective, especially for system-wide notifications, at any frequency. You pay per message published and per user receiving it. With a general channel, you publish once (1 inbound message) instead of once per recipient (N inbound messages). The additional cost of maintaining one extra active channel is usually negligible compared to the savings on message costs.
+
+See the [cost optimization section](#cost-optimization) for detailed calculations.
+
+## Authentication: Securing your notification center
+
+Authentication is critical in a notification center. You need to ensure that clients can only receive notifications intended for them and cannot access other users' notifications.
+
+### Token-based authentication
+
+Ably's [token authentication](/docs/auth/token) with JSON Web Tokens (JWT) provides the flexibility to implement fine-grained access control. Tokens are short-lived, can be easily revoked, and include [capabilities](/docs/auth/capabilities) that define what actions a client can perform.
+
+For a notification center, clients typically need subscribe-only access to their specific inbox channel, plus optional access to a general broadcast channel.
+
+### Creating a token
+
+The following example shows how to generate a JWT that grants the necessary capabilities for a notification center client, including subscribe access to inbox channels, push-subscribe for device activation, and the `clientId` to identify the client:
+
+<Code>
+```javascript
+const jwt = require("jsonwebtoken");
+
+const header = {
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": "{{ API_KEY_NAME }}"
+}
+
+const currentTime = Math.round(Date.now() / 1000);
+
+const claims = {
+    "iat": currentTime,
+    "exp": currentTime + 3600, // Token expires in 1 hour
+    "x-ably-capability": JSON.stringify({
+        "inbox:client123": ["subscribe", "history", "push-subscribe"], // Inbox access
+        "inbox:general": ["subscribe", "history", "push-subscribe"] // Optional: general broadcast channel
+    }),
+    "x-ably-clientId": "client123" // Identify the client
+}
+
+const token = jwt.sign(
+    claims,
+    "{{ API_KEY_SECRET }}",
+    { header: header }
+);
+
+console.log('Inbox JWT:', token);
+```
+</Code>
+
+* The `subscribe` capability allows clients to receive message sent to either their personal inbox channel or the general broadcast channel.
+* The `push-subscribe` capability allows clients to activate their devices for push notifications and manage their own push channel subscriptions. This is required for device activation.
+* The `history` capability allows clients to retrieve data associated with a notification they might have missed while offline. Message persistence must be enabled to use history.
+
+### Best practices
+
+Key security considerations:
+
+* Use short-lived tokens with expiry set to 1-4 hours to limit exposure if compromised. Ably's SDKs automatically handle token renewal.
+* Always include a `clientId` in your tokens to identify the client and enable auditing. You can also setup a rule to prevent anonymous connections.
+* Implement automatic token refresh using [`authUrl`](/docs/auth/token#auth-url) or [`authCallback`](/docs/auth/token#auth-callback).
+* Never trust client-provided data. Your backend should validate all notification request data before publishing to Ably.
+* Use wildcard patterns in capabilities (like `inbox:*`) sparingly. Always scope tokens to the specific channels a client needs access to.
+
+## Publishing notifications from your backend
+
+Your backend is responsible for processing notification requests and publishing them to Ably. For the notification center pattern, you have two main publishing approaches: publishing to channels (inbox channels or general broadcast channel) for realtime delivery, with optional push notifications for offline users, or sending push notifications directly to specific users or devices via their `clientId` or `deviceId`.
+
+### Publishing to channels
+
+Publishing to channels delivers notifications in realtime to connected clients. You can optionally include push notification payloads in the `extras.push` field to ensure offline users also receive the notification via push. This approach works for both individual inbox channels and the general broadcast channel.
+
+#### REST API publishing
+
+The simplest approach is to use Ably's [REST API](/docs/api/rest-api) directly from your backend. All Ably SDKs provide REST client libraries for various languages (JavaScript, Python, Go, Java, Ruby, and more). The REST API is recommended for most use cases as it's built into all Ably SDKs for ease of use and requires no additional infrastructure. Each publish is a synchronous HTTP request, and multiple requests can be batched together to reduce API calls.
+
+When using the REST API and making concurrent publish requests, ordering is not guaranteed. If you're publishing via the batch publish endpoint, messages within a single batch maintain order, but batches themselves may be processed out of order. This is a consequence of HTTP's stateless nature and network variability. To maintain ordering, publish related notifications sequentially rather than concurrently, and use [idempotency keys](/docs/platform/architecture/idempotency) to prevent duplicate processing if retries occur.
+
+<Code>
+```javascript
+const Ably = require('ably');
+
+// Initialize REST client with your API key
+const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+// Publish a notification to a specific user's inbox
+const inbox = ably.channels.get('inbox:user123');
+await inbox.publish({
+    name: 'notification',
+    data: {
+        type: 'friend-request',
+        fromUserId: 'user456',
+        fromUserName: 'Jane Doe',
+        timestamp: Date.now()
+    },
+    extras: {
+        push: {
+            notification: {
+                title: 'New Friend Request',
+                body: 'Jane Doe sent you a friend request'
+            }
+        }
+    }
+});
+```
+</Code>
+
+Including the `extras.push` field ensures that if the user is offline or the app is closed, they'll receive a push notification. Connected clients receive the message in realtime through their channel subscription.
+
+For notifications targeting multiple recipients, use the [batch publish REST endpoint](/docs/api/rest-api#batch-publish) to publish to multiple channels in a single HTTP request, reducing latency and improving efficiency.
+
+#### Kafka Connector publishing
+
+You can also publish directly from your existing Kafka infrastructure through [Ably's Kafka Connector](/docs/platform/integrations/kafka-connector). This allows your backend to produce messages to Kafka topics, which are then automatically published to Ably channels based on your [configured mappings](docs/platform/integrations/inbound/kafka-connector#mapping). The Kafka Connector supports dynamic channel routing, allowing you to determine the target Ably channel based on Kafka message attributes like topic, partition, key, or custom headers.
+
+The Kafka Connector should be used when you have existing Kafka infrastructure and want to integrate this directly with Ably. The Kafka Connector preserves Kafka's ordering guarantees, so messages in the same Kafka partition are published to Ably in order. Use consistent partition keys (e.g., clientId) for related client notifications, and configure appropriate partition counts for your throughput needs. Messages published to the same channel from the same partition maintain order, but this requires some [configuration](https://github.com/ably/kafka-connect-ably?tab=readme-ov-file#message-ordering).
+
+To route messages to the correct channel, you can use the Kafka message key or headers to specify the target client ID. For example, you could define a channel mapping such as `inbox:${key}` to route messages to the appropriate inbox based on the Kafka message key. To include push notification payloads for offline users, add a `com.ably.extras.push` header to your Kafka message with the push notification details as a JSON string.
+
+<Code>
+```javascript
+const { Kafka } = require('kafkajs');
+
+const kafka = new Kafka({
+    clientId: 'notification-service',
+    brokers: ['kafka:9092']
+});
+
+const producer = kafka.producer();
+await producer.connect();
+
+// Publish notification with push payload - will be routed to inbox:client123
+await producer.send({
+    topic: 'notifications',
+    messages: [{
+        key: 'client123',
+        value: JSON.stringify({
+            type: 'friend-request',
+            fromUserId: 'client456',
+            fromUserName: 'Jane Doe',
+            timestamp: Date.now()
+        }),
+        headers: {
+            'com.ably.extras.push': JSON.stringify({
+                notification: {
+                    title: 'New Friend Request',
+                    body: 'Jane Doe sent you a friend request'
+                }
+            })
+        }
+    }]
+});
+```
+</Code>
+
+The Kafka Connector will automatically include the push payload from the `com.ably.extras.push` header as `extras.push` in the published Ably message, ensuring offline users receive push notifications.
+
+### Direct push publishing
+
+For notifications that only need to be delivered as push (without realtime channel delivery), you can publish push notifications directly to specific users or devices using `clientId` or `deviceId`. This approach is useful when you want to send a notification exclusively as a push alert without publishing to channels.
+
+<Code>
+```javascript
+const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+// Send push notification to all devices for a user
+await ably.push.admin.publish(
+    { clientId: 'user123' },
+    {
+        notification: {
+            title: 'New Friend Request',
+            body: 'Jane Doe sent you a friend request'
+        },
+        data: {
+            type: 'friend-request',
+            fromUserId: 'user456'
+        }
+    }
+);
+
+// Or send to a specific device
+await ably.push.admin.publish(
+    { deviceId: 'device-abc123' },
+    {
+        notification: {
+            title: 'New Friend Request',
+            body: 'Jane Doe sent you a friend request'
+        }
+    }
+);
+```
+</Code>
+
+Direct push publishing is most useful when notifications don't need to appear in a realtime feed or when you want to send different content to push vs. in-app notifications. For most notification center use cases, publishing to channels with `extras.push` is recommended because it provides both realtime delivery and push notifications with a single publish.
+
+## Receiving notifications on the client
+
+Clients subscribe to their inbox channels using Ably's realtime SDKs. When your backend publishes a message to a client's inbox channel, the client will receive it in realtime provided they are attached and subscribed to the channel.
+
+Using the token-based authentication described earlier, clients can securely connect and subscribe to their permitted channels.
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({ authUrl: '/path/to/your/auth/api' });
+
+// Subscribe to your personal inbox channel
+const inbox = ably.channels.get('inbox:client123');
+await inbox.subscribe((message) => {
+    const notification = message.data;
+    displayNotification(notification);
+    }
+});
+```
+</Code>
+
+If you're using a general broadcast channel for system-wide notifications, clients can subscribe to it alongside their personal inbox.
+
+<Code>
+```javascript
+// Subscribe to general broadcast channel
+const general = ably.channels.get('inbox:general');
+await general.subscribe((message) => {
+    displaySystemNotification(message.data);
+});
+```
+</Code>
+
+Clients can subscribe to multiple channels simultaneously over a single connection, allowing them to receive both personal and broadcast notifications efficiently.
+
+## Cost optimization <a id="cost-optimization"/>
+
+Understanding the cost implications of different architectural decisions helps you build efficiently at scale.
+
+### Individual inboxes vs general channel
+
+Ably's pricing includes three main components relevant to notifications:
+
+* **Channels:** Priced per million minutes of channel activity. A channel is active from when the first client attaches until approximately one minute after the last client detaches and the last message was published. The number of clients attached to a channel does not affect channel minute costs.
+* **Connections:** Priced per million minutes of connection time. Each client connection to Ably contributes to connection minutes.
+* **Messages:** Priced per message. Each message published and delivered counts toward your usage.
+
+#### Scenario: System-wide notification
+
+Assume you have 10,000 users who each connect for an average of 4 hours per day. Let's compare the costs of broadcasting notifications using individual inboxes versus a general channel.
+
+Both options share the same baseline costs:
+
+* **Connection minutes:** 10,000 connections × 240 minutes/day × 30 days = 72,000,000 connection minutes/month
+* **Inbox channel minutes:** 10,000 channels × 240 minutes/day × 30 days = 72,000,000 channel minutes/month
+* **Baseline cost:** (72M + 72M) × ($1.00 / 1,000,000) = **$144/month**
+
+**Option 1: Broadcast via individual inboxes**
+
+Publish to 10,000 individual inbox channels using [batch publish](/docs/api/rest-api#batch-publish). Each channel publish counts as a separate inbound message, and each client receives 1 outbound message.
+
+If you send this notification once per day:
+* Messages: 20,000 × 30 = **600,000 messages/month**
+* Message cost: 600,000 × ($2.50 / 1,000,000) = **$1.50/month**
+* **Total: $144 (baseline) + $1.50 (messages) = $145.50/month**
+
+**Option 2: Broadcast via general channel**
+
+Publish 1 notification to a shared general channel where all 10,000 clients are subscribed. This adds one additional channel to your baseline.
+
+If you send this notification once per day:
+* Additional channel minutes: 1 channel × 240 minutes/day × 30 days = 7,200 channel minutes/month
+* Channel cost: 7,200 × ($1.00 / 1,000,000) = **$0.0072/month** (negligible)
+* Messages: 10,001 × 30 = **300,030 messages/month**
+* Message cost: 300,030 × ($2.50 / 1,000,000) = **$0.75/month**
+* **Total: $144 (baseline) + $0.0072 (general channel) + $0.75 (messages) = $144.76/month**
+
+#### Recommendation
+
+The baseline costs ($144/month for connections and inbox channels) are the same regardless of which broadcast approach you choose. The decision comes down to the incremental costs of broadcasting.
+
+For the scenario above (1 notification/day):
+
+**Individual inboxes:** $1.50/month in message costs
+**General channel:** $0.76/month ($0.75 messages + $0.0072 channel)
+
+The general channel saves approximately 50% on broadcast message costs by requiring only one inbound message per broadcast instead of one per recipient. The additional channel cost is negligible (less than $0.01/month), making this the clear choice for system-wide notifications at any frequency.
+
+Use a hybrid approach with both individual inboxes and a general channel:
+
+* Individual inboxes for targeted notifications (user-specific alerts, direct messages, personalized updates)
+* General broadcast channel for system-wide notifications (announcements, maintenance alerts, global updates)
+
+### Other cost optimizations
+
+Additional strategies to optimize costs:
+
+* Call `close()` on Ably clients when users log out to immediately clean up connections. Adjust [heartbeat intervals](/docs/connect#heartbeat) to detect dropped connections faster.
+* Use appropriate token TTLs to balance security and token refresh overhead.
+* If inboxes receive multiple notifications per second, consider [batching](/docs/messages/batch#server-side) them with Ably's server-side batching to reduce outbound message counts.
+
+## Handling offline notifications <a id="offline-notifications"/>
+
+The publishing examples shown earlier include `extras.push` fields that automatically deliver push notifications to offline users. For this to work, client devices must be activated for push notifications, and you need to configure your push credentials (APNs, FCM, or Web Push) in your Ably dashboard.
+
+### Device activation
+
+Before devices can receive push notifications, they must be activated with Ably. Ably supports both [client-side activation](/docs/push/configure/device#client-side-activation) (where the device registers itself) and [server-side activation](/docs/push/configure/device#server-side-activation) (where your backend manages registration). Client-side activation is simpler and suitable for most use cases, while server-side activation provides more control and is useful when migrating from other push providers or when using FCM for all platforms.
+
+For a comprehensive guide to implementing push notifications at scale, including device management, multi-platform considerations, security, and delivery monitoring, see the [push notifications guide](/docs/guides/pubsub/push-notifications).
+
+### Temporary disconnections
+
+For users who are actively connected to your application but experience brief network interruptions, Ably's automatic connection recovery handles reconnection seamlessly. Ably stores messages by default for 2 minutes to support short-term [history](/docs/storage-history/storage), and the [resume feature](/docs/platform/architecture/connection-recovery#why) allows clients to automatically receive any messages they missed during a temporary disconnection. This is enabled by default in all Ably SDKs and requires no additional implementation.
+
+### Confirming notification delivery
+
+For critical notifications delivered over channels where you need confirmation that specific users have received them, [message annotations](/docs/messages/annotations) provide a mechanism to track acknowledgment.
+
+[Message annotations](/docs/messages/annotations) enable clients to mark messages with metadata such as "read" or "delivered" receipts. Annotating a message will mutate the original, and this change is persisted by Ably – on querying history, clients can see which messages have been marked without needing to track individual message IDs.
+
+The act of annotating a message will result in a new annotation type message being published to the same channel. As such, it can also be used to track if a message has been acknowledged by a client in realtime, backed by all the same reliability and delivery guarantees as any other message.
+
+#### Enable annotations
+
+To use annotations, enable them on your inbox channel namespace by following the instructions in the [message annotations documentation](/docs/messages/annotations#enable) to configure the *Message annotations, updates, and deletes* rule.
+
+#### Configure capabilities
+
+Include the `annotation-publish` capability in your client JWT tokens to allow clients to publish annotations. Your backend should subscribe to annotation summaries (using the standard `subscribe` capability) to track which messages have been acknowledged.
+
+#### Publishing annotations
+
+When a client receives a notification on a channel with annotations enabled, the message includes a `serial` field. Use this unique identifier to annotate the message:
+
+<Code>
+```javascript
+const inbox = ably.channels.get('inbox:client456');
+
+await inbox.subscribe('notification', async (message) => {
+    handleNotification(message.data);
+
+    // Mark as delivered
+    await inbox.annotations.publish(message.serial, {
+        type: 'receipts:flag.v1',
+        name: 'delivered'
+    });
+});
+```
+</Code>
+
+#### Receiving annotation summaries
+
+Your backend can subscribe to annotation summaries to track acknowledgment:
+
+<Code>
+```javascript
+const inbox = ably.channels.get('inbox:client456');
+
+await inbox.subscribe((message) => {
+    if (message.action === 'message.summary') {
+        const summary = message.annotations.summary;
+
+        if (summary['receipts:flag.v1']) {
+            const { delivered, read } = summary['receipts:flag.v1'];
+            updateDeliveryStatus(message.serial, {
+                delivered: delivered?.clientIds || [],
+                read: read?.clientIds || []
+            });
+        }
+    }
+});
+```
+</Code>
+
+<Aside data-type='important'>
+Message annotations are not suitable for general broadcast channels or high fanout scenarios. When many clients annotate the same message simultaneously (such as thousands of clients marking a broadcast notification as "delivered"), the volume of annotation messages can exceed [channel rate limits](/docs/platform/pricing/limits#channels), causing rejections. Annotations work best with individual inbox channels where each client annotates only their own messages.
+</Aside>
+
+## Production-ready checklist
+
+Before launching your notification center, review these key considerations:
+
+* Use JWT authentication for all client-side communication with short TTLs (1-4 hours max).
+* Apply the principle of least privilege. Clients should only have subscribe access to their own inbox channels.
+* Configure push notification delivery for offline users. Set up APNs, FCM, or Web Push credentials and implement device activation.
+* Implement rate limiting in your backend to prevent abuse.
+* Ensure your backend can scale horizontally to handle request and publishing load.
+* Set up billing alerts and monitor usage patterns to optimize costs.
+
+## Next steps
+
+* Read the [push notifications guide](/docs/guides/pubsub/push-notifications) for a comprehensive guide to implementing push at scale.
+* Review the [JWT authentication documentation](/docs/auth/token) for detailed auth implementation.
+* Explore the [REST API documentation](/docs/api/rest-api) for publishing to Ably from your backend.
+* Review the [batch publish API](/docs/api/rest-api#batch-publish) for efficient multi-channel publishing.
+* Learn about the [Kafka Connector](/docs/platform/integrations/kafka-connector) for high-throughput scenarios.
+* Understand [message annotations](/docs/messages/annotations) for tracking notification acknowledgment.
+* Check the [pricing page](/pricing) to understand costs at your scale.
+* Try the [pub/sub getting started guide](/docs/getting-started) to build a proof of concept.
