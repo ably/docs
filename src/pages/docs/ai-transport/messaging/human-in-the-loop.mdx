@@ -58,6 +58,37 @@ async function requestHumanApproval(toolCall) {
   });
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+struct ToolCall {
+    var id: String
+    var name: String
+    var arguments: [String: Any]
+}
+
+func example(channel: ARTRealtimeChannel, pendingApprovals: inout [String: (toolCall: ToolCall, Void)]) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+var pendingApprovals: [String: (toolCall: ToolCall, Void)] = [:]
+
+func requestHumanApproval(toolCall: ToolCall) {
+    pendingApprovals[toolCall.id] = (toolCall: toolCall, ())
+
+    channel.publish("approval-request", data: [
+        "name": toolCall.name,
+        "arguments": toolCall.arguments
+    ], extras: [
+        "headers": [
+            "toolCallId": toolCall.id
+        ]
+    ] as NSDictionary)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -77,6 +108,20 @@ const claims = {
   'ably.channel.*': 'user'
 };
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example() {
+    // --- example code starts here ---
+*/}
+```swift
+let claims: [String: String] = [
+    "x-ably-clientId": "user-123",
+    "ably.channel.*": "user"
+]
+```
+{/* --- end example code --- */}
 </Code>
 
 The `clientId` and user claims are automatically attached to every message the user publishes and cannot be forged, so agents can trust this identity and role information.
@@ -124,6 +169,45 @@ async function reject(toolCallId) {
   });
 }
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+func example(channel: ARTRealtimeChannel, displayApprovalUI: @escaping (Any?, String?) -> Void) {
+    // --- example code starts here ---
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe("approval-request") { message in
+    let request = message.data
+    let headers = (message.extras as? NSDictionary)?["headers"] as? NSDictionary
+    let toolCallId = headers?["toolCallId"] as? String
+    // Display request for human review
+    displayApprovalUI(request, toolCallId)
+}
+
+func approve(toolCallId: String) {
+    channel.publish("approval-response", data: [
+        "decision": "approved"
+    ], extras: [
+        "headers": [
+            "toolCallId": toolCallId
+        ]
+    ] as NSDictionary)
+}
+
+func reject(toolCallId: String) {
+    channel.publish("approval-response", data: [
+        "decision": "rejected"
+    ], extras: [
+        "headers": [
+            "toolCallId": toolCallId
+        ]
+    ] as NSDictionary)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -178,6 +262,58 @@ await channel.subscribe('approval-response', async (message) => {
   pendingApprovals.delete(toolCallId);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+struct ToolCall {
+    var id: String
+    var name: String
+}
+
+func example(
+    channel: ARTRealtimeChannel,
+    pendingApprovals: [String: ToolCall],
+    getUserPermissions: @escaping (String) -> UserPermissions,
+    executeToolCall: @escaping (ToolCall) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+var pendingApprovals: [String: ToolCall] = [:]
+
+channel.subscribe("approval-response") { message in
+    let response = message.data as? [String: Any]
+    let headers = (message.extras as? NSDictionary)?["headers"] as? NSDictionary
+    let toolCallId = headers?["toolCallId"] as? String
+
+    guard let toolCallId = toolCallId,
+          let pending = pendingApprovals[toolCallId] else {
+        return
+    }
+
+    // The clientId is the trusted approver identity
+    let approverId = message.clientId ?? ""
+
+    // Look up user-specific permissions from your database
+    let userPermissions = getUserPermissions(approverId)
+
+    if !userPermissions.canApprove(pending.name) {
+        print("User \(approverId) not authorized to approve \(pending.name)")
+        return
+    }
+
+    if response?["decision"] as? String == "approved" {
+        executeToolCall(pending)
+        print("Action approved by \(approverId)")
+    } else {
+        print("Action rejected by \(approverId)")
+    }
+
+    pendingApprovals.removeValue(forKey: toolCallId)
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 ### Verify by role <a id="verify-role"/>
@@ -234,4 +370,70 @@ await channel.subscribe('approval-response', async (message) => {
   pendingApprovals.delete(toolCallId);
 });
 ```
+
+{/* Swift example test harness: to modify and check it compiles, copy this comment into a
+temporary Swift file, paste the example code into the function body, and run `swift build`
+
+struct ToolCall {
+    var id: String
+    var name: String
+}
+
+func example(
+    channel: ARTRealtimeChannel,
+    pendingApprovals: [String: ToolCall],
+    executeToolCall: @escaping (ToolCall) -> Void
+) {
+    // --- example code starts here ---
+*/}
+```swift
+let roleHierarchy = ["editor", "publisher", "admin"]
+
+let approvalPolicies: [String: String] = [
+    "publish_blog_post": "publisher"
+]
+
+func canApprove(approverRole: String?, requiredRole: String) -> Bool {
+    guard let approverRole = approverRole else { return false }
+    let approverLevel = roleHierarchy.firstIndex(of: approverRole) ?? -1
+    let requiredLevel = roleHierarchy.firstIndex(of: requiredRole) ?? -1
+
+    return approverLevel >= requiredLevel
+}
+
+var pendingApprovals: [String: ToolCall] = [:]
+
+// When processing approval response
+channel.subscribe("approval-response") { message in
+    let response = message.data as? [String: Any]
+    let headers = (message.extras as? NSDictionary)?["headers"] as? NSDictionary
+    let toolCallId = headers?["toolCallId"] as? String
+
+    guard let toolCallId = toolCallId,
+          let pending = pendingApprovals[toolCallId] else {
+        return
+    }
+
+    let policy = approvalPolicies[pending.name] ?? ""
+
+    // Get the trusted role from the JWT claim
+    let approverRole = (message.extras as? NSDictionary)?["userClaim"] as? String
+
+    // Verify the approver's role meets the minimum required role for this action
+    if !canApprove(approverRole: approverRole, requiredRole: policy) {
+        print("Approver role '\(approverRole ?? "")' insufficient: minimum required role is '\(policy)'")
+        return
+    }
+
+    if response?["decision"] as? String == "approved" {
+        executeToolCall(pending)
+        print("Action approved by role \(approverRole ?? "")")
+    } else {
+        print("Action rejected by role \(approverRole ?? "")")
+    }
+
+    pendingApprovals.removeValue(forKey: toolCallId)
+}
+```
+{/* --- end example code --- */}
 </Code>
