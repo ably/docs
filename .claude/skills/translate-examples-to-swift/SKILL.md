@@ -44,6 +44,24 @@ This skill uses a **two-phase architecture** with independent translation and ve
 
 ---
 
+## Orchestrator Constraints
+
+The orchestrator (you, when running this skill) coordinates subagents but does NOT directly modify:
+- MDX documentation files
+- Translation JSON files (`swift-translations/translations/*.json`)
+- Verification JSON files (`swift-translations/verifications/*.json`)
+
+All modifications to these files must go through the appropriate subagent. The orchestrator may:
+- Read files to understand state
+- Run validation commands
+- Run the consolidation script
+- Spawn and coordinate subagents
+- Report results to the user
+
+This separation ensures that all code changes are tested before being written, and all verification results reflect actual verification.
+
+---
+
 ## Output Directory Structure
 
 All intermediate files go in `swift-translations/` at the repo root:
@@ -142,14 +160,14 @@ If validation fails, report the error.
 When the verification subagent returns:
 
 1. **All passed**: Proceed to Step 3 (generate review file)
-2. **Compilation failures**:
-   - Review the failure details
-   - If it's a harness comment issue (incomplete context), fix the comment and re-verify
-   - If it's a translation issue, fix the translation and re-verify
-3. **Faithfulness concerns**:
-   - Review the differences noted
-   - If intentional (documented in decisions), note this in the final report
-   - If unintentional, fix the translation and re-verify
+2. **Compilation failures or faithfulness concerns**:
+   - Report the failures to the user with details
+   - Ask if they want you to attempt a fix
+   - If yes, spawn a **new translation subagent** (or resume the original one) to fix the issue
+   - After the fix subagent completes, spawn a **new verification subagent** to re-verify
+   - Repeat until verification passes or the user decides to skip
+
+**Important**: The orchestrator must NEVER directly edit MDX files or verification JSON files. All changes to translations must go through a translation subagent. All verification results must come from a verification subagent.
 
 ### Step 3: Generate review file
 
@@ -205,12 +223,16 @@ Open the review file to examine translations:
 
 When the user reviews the generated review file and provides feedback:
 
-1. Make the requested changes to the translation
-2. Update the test harness and re-run `swift build` to verify compilation
-3. Update the documentation with the fixed translation
-4. Re-run independent verification (spawn a new verification subagent)
-5. Regenerate the review file with updated data
-6. Report back to the user
+1. Spawn a **translation subagent** (or resume the original one) to make the requested changes
+   - The subagent will update the test harness, verify compilation, and update the MDX
+2. Spawn a **verification subagent** to independently verify the changes
+3. Regenerate the review file with updated data
+4. Report back to the user
+
+**Important**: The orchestrator must NEVER directly edit MDX files, translation JSON, or verification JSON. All file modifications must go through the appropriate subagent. This ensures:
+- Every change is tested before being written
+- The verification JSON always reflects actual verification results
+- There's a clear audit trail of what each agent did
 
 **This is not optional.** Any change to a translation—whether from user feedback, verification comments, or your own corrections—must go through the full verify-and-review cycle before being considered complete.
 

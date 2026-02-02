@@ -333,9 +333,49 @@ func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: Strin
 </Code>
 ```
 
-The test harness comment includes:
+When **stub types are needed** (the translated code references a type by name), include them in the harness comment:
+
+```mdx
+<Code>
+```javascript
+// original JavaScript code
+```
+
+{/* Swift example test harness
+ID: streaming-5
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+actor ActiveRequestsStore {
+    var requests: [String: (userId: String, text: String)] = [:]
+    func set(_ promptId: String, userId: String, text: String) {
+        requests[promptId] = (userId: userId, text: text)
+    }
+    func remove(_ promptId: String) {
+        requests.removeValue(forKey: promptId)
+    }
+}
+
+func example(channel: ARTRealtimeChannel, streamResponse: @escaping @Sendable (ARTRealtimeChannel, String, String) async throws -> Void) {
+    // --- example code starts here ---
+*/}
+```swift
+let activeRequests = ActiveRequestsStore()
+// ... rest of example that uses activeRequests ...
+```
+{/* --- end example code --- */}
+</Code>
+```
+
+The test harness comment must include **everything needed to compile the example**:
 - **ID**: Unique identifier for this example (used by verification to match translations)
-- **Function signature**: The context required to compile the example
+- **Stub types**: Any actors, structs, classes, or type aliases that the example code references by name
+- **Function signature**: The function that wraps the example code, with all parameters
+
+**Critical**: The example code in the MDX must be **byte-for-byte identical** to the code inside the `example()` function body that was tested. If you need to add a wrapper, actor, or any other code to make compilation work, that code must either:
+1. Go in the harness comment (if it's context the example assumes exists), OR
+2. Be part of the example code itself (if it's something the reader should see)
+
+Never test code with workarounds (like `@unchecked Sendable`) that aren't included in either the harness comment or the example code.
 
 This enables:
 - **Verification agent** to match this translation with its verification results
