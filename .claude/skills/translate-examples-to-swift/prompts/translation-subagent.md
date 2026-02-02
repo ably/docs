@@ -57,9 +57,11 @@ All three must match exactly to enable correlation between harness, MDX, and ver
 
 Generate a Swift _test harness_. This is a Swift program into which we will subsequently insert the translated code in order to verify that the translated code compiles. This is necessary because a given block may not be self-contained; it may assume that there are variables or other types that already exist. The test harness provides these types.
 
+**Important**: The harness provides ONLY the context that is NOT present in the original JavaScript example. If the JavaScript example creates something (a client, a variable, a function), the Swift translation should also create it—that code belongs in the translated example, not hidden in the harness. The harness is for things the JS example _assumes_ exist but doesn't show.
+
 1. Read the JavaScript code example and the context surrounding this example in the documentation.
 
-2. Decide what context needs to exist in the test harness.
+2. Decide what context needs to exist in the test harness—i.e., what does the JS code assume exists but not create?
 
 For example, given this JavaScript:
 
@@ -220,6 +222,47 @@ For examples of how JavaScript code is typically translated to Swift (e.g., how 
 
 - Keep the translated code as close to the original JavaScript as possible; don't make material changes without good reason
 
+#### Handling mutable state with @MainActor
+
+When the JavaScript example uses mutable local variables (like `Map`, arrays, or objects that get mutated), use `@MainActor` isolation instead of creating actors. This keeps the Swift code closer to the JavaScript structure.
+
+Mark the harness function with `@MainActor`. Since ably-cocoa executes callbacks on the main thread by default, you can use `MainActor.assumeIsolated { }` inside callbacks to access main-actor-isolated state without compiler errors:
+
+```swift
+@MainActor
+func example(channel: ARTRealtimeChannel) {
+    // Mutable state can be simple local variables, just like in JavaScript
+    var pendingPrompts: [String: String] = [:]
+
+    // ably-cocoa callbacks run on main thread, so use MainActor.assumeIsolated
+    // to tell the compiler it's safe to access @MainActor state
+    channel.subscribe { message in
+        MainActor.assumeIsolated {
+            // This compiles because we're asserting we're on the main actor
+            pendingPrompts[message.id] = message.data as? String
+        }
+    }
+}
+```
+
+This is preferred over creating separate actor types, as it mirrors the JavaScript's straightforward mutable variable approach.
+
+#### Nested functions
+
+If the JavaScript example defines a function (like `async function processAndRespond(...)`), translate it as a nested function inside the harness function body. The nested function becomes part of the translated example code, not a harness parameter:
+
+```swift
+@MainActor
+func example(channel: ARTRealtimeChannel) {
+    // Nested async function - part of the translated example
+    func processAndRespond(prompt: String, promptId: String) async {
+        // ...
+    }
+
+    // Rest of translated code that calls processAndRespond
+}
+```
+
 For example, a candidate translation of the running example would be:
 
 ```swift
@@ -345,22 +388,18 @@ When **stub types are needed** (the translated code references a type by name), 
 ID: streaming-5
 To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
 
-actor ActiveRequestsStore {
-    var requests: [String: (userId: String, text: String)] = [:]
-    func set(_ promptId: String, userId: String, text: String) {
-        requests[promptId] = (userId: userId, text: text)
-    }
-    func remove(_ promptId: String) {
-        requests.removeValue(forKey: promptId)
-    }
+struct ResponseData {
+    var timestamp: Date
+    var content: String
 }
 
-func example(channel: ARTRealtimeChannel, streamResponse: @escaping @Sendable (ARTRealtimeChannel, String, String) async throws -> Void) {
+func example(channel: ARTRealtimeChannel) {
     // --- example code starts here ---
 */}
 ```swift
-let activeRequests = ActiveRequestsStore()
-// ... rest of example that uses activeRequests ...
+// The type name `ResponseData` appears in the translated code
+let responses: [String: ResponseData] = [:]
+// ...
 ```
 {/* --- end example code --- */}
 </Code>
