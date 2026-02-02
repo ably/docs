@@ -346,6 +346,140 @@ await channel.publish({
   }
 });
 ```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Publish initial tool call
+await channel.publish(Message(
+    name='tool_call',
+    data={
+        'name': 'process_document',
+        'args': {'documentId': 'doc_123', 'pages': 100}
+    },
+    extras={
+        'headers': {
+            'responseId': 'resp_abc123',
+            'toolCallId': 'tool_456'
+        }
+    }
+))
+
+# Publish progress updates as tool executes
+await channel.publish(Message(
+    name='tool_progress',
+    data={
+        'name': 'process_document',
+        'status': 'Processing page 25 of 100',
+        'percentComplete': 25
+    },
+    extras={
+        'headers': {
+            'responseId': 'resp_abc123',
+            'toolCallId': 'tool_456'
+        }
+    }
+))
+
+# Continue publishing progress as work progresses
+await channel.publish(Message(
+    name='tool_progress',
+    data={
+        'name': 'process_document',
+        'status': 'Processing page 75 of 100',
+        'percentComplete': 75
+    },
+    extras={
+        'headers': {
+            'responseId': 'resp_abc123',
+            'toolCallId': 'tool_456'
+        }
+    }
+))
+
+# Publish final result
+await channel.publish(Message(
+    name='tool_result',
+    data={
+        'name': 'process_document',
+        'result': {'processedPages': 100, 'summary': 'Document processed successfully'}
+    },
+    extras={
+        'headers': {
+            'responseId': 'resp_abc123',
+            'toolCallId': 'tool_456'
+        }
+    }
+))
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Helper method to create message extras with headers
+MessageExtras createExtras(String responseId, String toolCallId) {
+    JsonObject extrasJson = new JsonObject();
+    JsonObject headers = new JsonObject();
+    headers.addProperty("responseId", responseId);
+    headers.addProperty("toolCallId", toolCallId);
+    extrasJson.add("headers", headers);
+    return new MessageExtras(extrasJson);
+}
+
+// Publish initial tool call
+JsonObject toolCallData = new JsonObject();
+toolCallData.addProperty("name", "process_document");
+JsonObject args = new JsonObject();
+args.addProperty("documentId", "doc_123");
+args.addProperty("pages", 100);
+toolCallData.add("args", args);
+
+Message toolCall = new Message(
+    "tool_call",
+    toolCallData.toString(),
+    createExtras("resp_abc123", "tool_456")
+);
+channel.publish(toolCall);
+
+// Publish progress updates as tool executes
+JsonObject progress1 = new JsonObject();
+progress1.addProperty("name", "process_document");
+progress1.addProperty("status", "Processing page 25 of 100");
+progress1.addProperty("percentComplete", 25);
+
+Message progressMsg1 = new Message(
+    "tool_progress",
+    progress1.toString(),
+    createExtras("resp_abc123", "tool_456")
+);
+channel.publish(progressMsg1);
+
+// Continue publishing progress as work progresses
+JsonObject progress2 = new JsonObject();
+progress2.addProperty("name", "process_document");
+progress2.addProperty("status", "Processing page 75 of 100");
+progress2.addProperty("percentComplete", 75);
+
+Message progressMsg2 = new Message(
+    "tool_progress",
+    progress2.toString(),
+    createExtras("resp_abc123", "tool_456")
+);
+channel.publish(progressMsg2);
+
+// Publish final result
+JsonObject resultData = new JsonObject();
+resultData.addProperty("name", "process_document");
+JsonObject result = new JsonObject();
+result.addProperty("processedPages", 100);
+result.addProperty("summary", "Document processed successfully");
+resultData.add("result", result);
+
+Message resultMsg = new Message(
+    "tool_result",
+    resultData.toString(),
+    createExtras("resp_abc123", "tool_456")
+);
+channel.publish(resultMsg);
+```
 </Code>
 
 Subscribe to progress updates on the client by listening for the `tool_progress` message type:
@@ -384,6 +518,86 @@ await channel.subscribe((message) => {
       renderCompleted(toolCallId, message.data.result);
       break;
   }
+});
+```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Track tool execution progress
+tool_progress = {}
+
+async def handle_message(message):
+    headers = message.extras.get('headers', {}) if message.extras else {}
+    response_id = headers.get('responseId')
+    tool_call_id = headers.get('toolCallId')
+
+    if message.name == 'tool_call':
+        tool_progress[tool_call_id] = {
+            'name': message.data.get('name'),
+            'status': 'Starting...',
+            'percentComplete': 0
+        }
+        render_progress_bar(tool_call_id, 0)
+
+    elif message.name == 'tool_progress':
+        progress = tool_progress.get(tool_call_id)
+        if progress:
+            progress['status'] = message.data.get('status')
+            progress['percentComplete'] = message.data.get('percentComplete')
+            render_progress_bar(tool_call_id, message.data.get('percentComplete'))
+
+    elif message.name == 'tool_result':
+        if tool_call_id in tool_progress:
+            del tool_progress[tool_call_id]
+        render_completed(tool_call_id, message.data.get('result'))
+
+# Subscribe to all messages on the channel
+await channel.subscribe(handle_message)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Track tool execution progress
+Map<String, JsonObject> toolProgress = new HashMap<>();
+
+// Subscribe to all messages on the channel
+channel.subscribe(message -> {
+    JsonObject headers = message.extras != null
+        ? message.extras.asJsonObject().getAsJsonObject("headers")
+        : null;
+
+    String responseId = headers != null && headers.has("responseId")
+        ? headers.get("responseId").getAsString()
+        : null;
+    String toolCallId = headers != null && headers.has("toolCallId")
+        ? headers.get("toolCallId").getAsString()
+        : null;
+
+    switch (message.name) {
+        case "tool_call":
+            JsonObject newProgress = new JsonObject();
+            newProgress.addProperty("name", ((JsonObject) message.data).get("name").getAsString());
+            newProgress.addProperty("status", "Starting...");
+            newProgress.addProperty("percentComplete", 0);
+            toolProgress.put(toolCallId, newProgress);
+            renderProgressBar(toolCallId, 0);
+            break;
+
+        case "tool_progress":
+            JsonObject progress = toolProgress.get(toolCallId);
+            if (progress != null) {
+                JsonObject progressData = (JsonObject) message.data;
+                progress.addProperty("status", progressData.get("status").getAsString());
+                progress.addProperty("percentComplete", progressData.get("percentComplete").getAsInt());
+                renderProgressBar(toolCallId, progressData.get("percentComplete").getAsInt());
+            }
+            break;
+
+        case "tool_result":
+            toolProgress.remove(toolCallId);
+            renderCompleted(toolCallId, ((JsonObject) message.data).get("result"));
+            break;
+    }
 });
 ```
 </Code>
