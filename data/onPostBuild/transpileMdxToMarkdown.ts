@@ -33,6 +33,51 @@ interface FrontMatterAttributes {
 }
 
 /**
+ * Split content into code block and non-code-block sections
+ * Used to preserve code blocks during content transformations
+ */
+function splitByCodeBlocks(content: string): Array<{ content: string; isCodeBlock: boolean }> {
+  const parts: Array<{ content: string; isCodeBlock: boolean }> = [];
+  const fenceRegex = /```[\s\S]*?```/g;
+
+  let lastIndex = 0;
+  const matches = Array.from(content.matchAll(fenceRegex));
+
+  for (const match of matches) {
+    if (match.index !== undefined && match.index > lastIndex) {
+      parts.push({
+        content: content.slice(lastIndex, match.index),
+        isCodeBlock: false,
+      });
+    }
+    parts.push({
+      content: match[0],
+      isCodeBlock: true,
+    });
+    lastIndex = (match.index || 0) + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push({
+      content: content.slice(lastIndex),
+      isCodeBlock: false,
+    });
+  }
+
+  return parts;
+}
+
+/**
+ * Apply a transformation function only to non-code-block content
+ * Preserves fenced code blocks (``` ... ```) exactly as-is
+ */
+function transformNonCodeBlocks(content: string, transform: (text: string) => string): string {
+  return splitByCodeBlocks(content)
+    .map((part) => (part.isCodeBlock ? part.content : transform(part.content)))
+    .join('');
+}
+
+/**
  * Remove import and export statements from content
  * Uses a line-by-line parser that only removes import/export from the top of the file,
  * preserving import/export statements in code blocks later in the file
@@ -148,47 +193,9 @@ function removeImportExportStatements(content: string): string {
  * Remove script tags that are not inside code blocks
  */
 function removeScriptTags(content: string): string {
-  // Split content into code block and non-code-block sections
-  const parts: Array<{ content: string; isCodeBlock: boolean }> = [];
-  const fenceRegex = /```[\s\S]*?```/g;
-
-  let lastIndex = 0;
-  const matches = Array.from(content.matchAll(fenceRegex));
-
-  for (const match of matches) {
-    // Add content before code block
-    if (match.index !== undefined && match.index > lastIndex) {
-      parts.push({
-        content: content.slice(lastIndex, match.index),
-        isCodeBlock: false,
-      });
-    }
-    // Add code block itself
-    parts.push({
-      content: match[0],
-      isCodeBlock: true,
-    });
-    lastIndex = (match.index || 0) + match[0].length;
-  }
-
-  // Add remaining content after last code block
-  if (lastIndex < content.length) {
-    parts.push({
-      content: content.slice(lastIndex),
-      isCodeBlock: false,
-    });
-  }
-
-  // Remove script tags only from non-code-block parts
-  return parts
-    .map((part) => {
-      if (part.isCodeBlock) {
-        return part.content; // Preserve code blocks exactly
-      }
-      // Remove script tags with any attributes and their content
-      return part.content.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
-    })
-    .join('');
+  return transformNonCodeBlocks(content, (text) =>
+    text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''),
+  );
 }
 
 /**
@@ -197,49 +204,13 @@ function removeScriptTags(content: string): string {
  * Preserves actual links with href attributes
  */
 function removeAnchorTags(content: string): string {
-  // Split content into code block and non-code-block sections
-  const parts: Array<{ content: string; isCodeBlock: boolean }> = [];
-  const fenceRegex = /```[\s\S]*?```/g;
-
-  let lastIndex = 0;
-  const matches = Array.from(content.matchAll(fenceRegex));
-
-  for (const match of matches) {
-    if (match.index !== undefined && match.index > lastIndex) {
-      parts.push({
-        content: content.slice(lastIndex, match.index),
-        isCodeBlock: false,
-      });
-    }
-    parts.push({
-      content: match[0],
-      isCodeBlock: true,
-    });
-    lastIndex = (match.index || 0) + match[0].length;
-  }
-
-  if (lastIndex < content.length) {
-    parts.push({
-      content: content.slice(lastIndex),
-      isCodeBlock: false,
-    });
-  }
-
-  // Remove anchor tags only from non-code-block parts
-  return parts
-    .map((part) => {
-      if (part.isCodeBlock) {
-        return part.content; // Preserve code blocks exactly
-      }
-
-      // Remove anchor tags from regular content
-      return part.content
-        .replace(/<a\s+id="[^"]*"\s*\/>/gi, '')
-        .replace(/<a\s+name="[^"]*"\s*\/>/gi, '')
-        .replace(/<a\s+id="[^"]*"\s*><\/a>/gi, '')
-        .replace(/<a\s+name="[^"]*"\s*><\/a>/gi, '');
-    })
-    .join('');
+  return transformNonCodeBlocks(content, (text) =>
+    text
+      .replace(/<a\s+id="[^"]*"\s*\/>/gi, '')
+      .replace(/<a\s+name="[^"]*"\s*\/>/gi, '')
+      .replace(/<a\s+id="[^"]*"\s*><\/a>/gi, '')
+      .replace(/<a\s+name="[^"]*"\s*><\/a>/gi, ''),
+  );
 }
 
 /**
@@ -248,45 +219,9 @@ function removeAnchorTags(content: string): string {
  * This makes hidden type definition tables visible in markdown output
  */
 function stripHiddenFromTables(content: string): string {
-  // Split content into code block and non-code-block sections
-  const parts: Array<{ content: string; isCodeBlock: boolean }> = [];
-  const fenceRegex = /```[\s\S]*?```/g;
-
-  let lastIndex = 0;
-  const matches = Array.from(content.matchAll(fenceRegex));
-
-  for (const match of matches) {
-    if (match.index !== undefined && match.index > lastIndex) {
-      parts.push({
-        content: content.slice(lastIndex, match.index),
-        isCodeBlock: false,
-      });
-    }
-    parts.push({
-      content: match[0],
-      isCodeBlock: true,
-    });
-    lastIndex = (match.index || 0) + match[0].length;
-  }
-
-  if (lastIndex < content.length) {
-    parts.push({
-      content: content.slice(lastIndex),
-      isCodeBlock: false,
-    });
-  }
-
-  // Strip hidden attribute from Table tags only in non-code-block parts
-  return parts
-    .map((part) => {
-      if (part.isCodeBlock) {
-        return part.content; // Preserve code blocks exactly
-      }
-      // Remove the hidden attribute from <Table> tags
-      // Handles: <Table id="X" hidden>, <Table hidden id="X">, <Table hidden>
-      return part.content.replace(/(<Table\s+[^>]*)\bhidden\b\s*/gi, '$1');
-    })
-    .join('');
+  return transformNonCodeBlocks(content, (text) =>
+    text.replace(/(<Table\s+[^>]*)\bhidden\b\s*/gi, '$1'),
+  );
 }
 
 /**
@@ -295,44 +230,7 @@ function stripHiddenFromTables(content: string): string {
  * Preserves JSX comments in code blocks
  */
 function removeJsxComments(content: string): string {
-  // Split content into code block and non-code-block sections
-  const parts: Array<{ content: string; isCodeBlock: boolean }> = [];
-  const fenceRegex = /```[\s\S]*?```/g;
-
-  let lastIndex = 0;
-  const matches = Array.from(content.matchAll(fenceRegex));
-
-  for (const match of matches) {
-    if (match.index !== undefined && match.index > lastIndex) {
-      parts.push({
-        content: content.slice(lastIndex, match.index),
-        isCodeBlock: false,
-      });
-    }
-    parts.push({
-      content: match[0],
-      isCodeBlock: true,
-    });
-    lastIndex = (match.index || 0) + match[0].length;
-  }
-
-  if (lastIndex < content.length) {
-    parts.push({
-      content: content.slice(lastIndex),
-      isCodeBlock: false,
-    });
-  }
-
-  // Remove JSX comments only from non-code-block parts
-  return parts
-    .map((part) => {
-      if (part.isCodeBlock) {
-        return part.content; // Preserve code blocks exactly
-      }
-      // Remove JSX comments from regular content
-      return part.content.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
-    })
-    .join('');
+  return transformNonCodeBlocks(content, (text) => text.replace(/\{\/\*[\s\S]*?\*\/\}/g, ''));
 }
 
 /**
@@ -430,6 +328,39 @@ function convertDocsLinksToMarkdown(content: string): string {
 
     return `[${linkText}](${newUrl})`;
   });
+}
+
+/**
+ * Generate a readable link text from a /docs/ URL path
+ * Converts: /docs/chat/getting-started/javascript → ably docs chat getting-started javascript
+ * Note: This function expects paths starting with /docs/
+ */
+function generateLinkTextFromPath(urlPath: string): string {
+  // Remove leading /docs/ (or /docs) and split by /
+  const pathWithoutDocs = urlPath.replace(/^\/docs(?:\/|$)/, '');
+  // Filter out empty parts to handle trailing slashes
+  const parts = pathWithoutDocs.split('/').filter(Boolean);
+  return parts.length ? `ably docs ${parts.join(' ')}` : 'ably docs';
+}
+
+/**
+ * Convert quoted strings containing relative /docs/ URLs to markdown links with absolute URLs
+ * Converts: '/docs/chat/getting-started/javascript' → '[ably docs chat getting-started javascript](https://ably.com/docs/chat/getting-started/javascript)'
+ * Matches any quoted string starting with /docs/ (single or double quotes)
+ * This handles JSX props like link: '/docs/...' as well as other contexts
+ * Preserves code blocks - does not transform /docs/ paths inside fenced code blocks
+ */
+function convertJsxLinkProps(content: string, siteUrl: string): string {
+  const baseUrl = siteUrl.replace(/\/$/, ''); // Remove trailing slash
+
+  return transformNonCodeBlocks(content, (text) =>
+    // Matches any quoted string starting with /docs/: '/docs/...' or "/docs/..."
+    text.replace(/(['"])(\/docs\/[^'"]+)\1/g, (match, quote, url) => {
+      const absoluteUrl = `${baseUrl}${url}`;
+      const linkText = generateLinkTextFromPath(url);
+      return `${quote}[${linkText}](${absoluteUrl})${quote}`;
+    }),
+  );
 }
 
 /**
@@ -534,13 +465,16 @@ function transformMdxToMarkdown(
   // Stage 8: Convert relative URLs to absolute URLs
   content = convertRelativeUrls(content, siteUrl);
 
-  // Stage 9: Convert /docs/ links to .md extension and remove ?lang= params
+  // Stage 9: Convert quoted /docs/ URLs to markdown links (for JSX props like link: '/docs/...')
+  content = convertJsxLinkProps(content, siteUrl);
+
+  // Stage 10: Convert /docs/ links to .md extension and remove ?lang= params
   content = convertDocsLinksToMarkdown(content);
 
-  // Stage 10: Replace template variables
+  // Stage 11: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 11: Prepend title as markdown heading
+  // Stage 12: Prepend title as markdown heading
   const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
   return { content: finalContent, title, intro };
@@ -661,6 +595,8 @@ export {
   stripHiddenFromTables,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
+  convertJsxLinkProps,
+  generateLinkTextFromPath,
   convertRelativeUrls,
   replaceTemplateVariables,
   calculateOutputPath,

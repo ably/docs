@@ -6,6 +6,8 @@ import {
   removeJsxComments,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
+  convertJsxLinkProps,
+  generateLinkTextFromPath,
   convertRelativeUrls,
   replaceTemplateVariables,
   calculateOutputPath,
@@ -434,6 +436,110 @@ import Baz from 'qux';
       const input = '[Link text](not-a-valid-url)';
       const output = convertDocsLinksToMarkdown(input);
       expect(output).toBe('[Link text](not-a-valid-url)');
+    });
+  });
+
+  describe('generateLinkTextFromPath', () => {
+    it('should handle /docs root path without extra "docs"', () => {
+      const output = generateLinkTextFromPath('/docs');
+      expect(output).toBe('ably docs');
+    });
+
+    it('should convert /docs/ path to readable text', () => {
+      const output = generateLinkTextFromPath('/docs/chat/getting-started/javascript');
+      expect(output).toBe('ably docs chat getting-started javascript');
+    });
+
+    it('should handle trailing slashes without producing trailing spaces', () => {
+      const output = generateLinkTextFromPath('/docs/channels/');
+      expect(output).toBe('ably docs channels');
+    });
+  });
+
+  describe('convertJsxLinkProps', () => {
+    it('should convert quoted /docs/ path with single quotes', () => {
+      const input = `'/docs/chat/getting-started/javascript'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      const expected =
+        `'[ably docs chat getting-started javascript]` +
+        `(http://localhost:3000/docs/chat/getting-started/javascript)'`;
+      expect(output).toBe(expected);
+    });
+
+    it('should convert quoted /docs/ path with double quotes', () => {
+      const input = `"/docs/chat/getting-started/react"`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      const expected =
+        `"[ably docs chat getting-started react]` +
+        `(http://localhost:3000/docs/chat/getting-started/react)"`;
+      expect(output).toBe(expected);
+    });
+
+    it('should not convert non-docs paths', () => {
+      const input = `'/blog/article'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`'/blog/article'`);
+    });
+
+    it('should not convert external URLs', () => {
+      const input = `'https://example.com/docs/page'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      expect(output).toBe(`'https://example.com/docs/page'`);
+    });
+
+    it('should handle Tiles component content like the real example', () => {
+      const input = `<Tiles>
+{[
+  {
+    title: 'JavaScript',
+    description: 'Start building with Chat using Ably\\'s JavaScript SDK',
+    image: 'icon-tech-javascript',
+    link: '/docs/chat/getting-started/javascript',
+  },
+  {
+    title: 'React',
+    description: 'Start building Chat applications using Ably\\'s React SDK.',
+    image: 'icon-tech-react',
+    link: '/docs/chat/getting-started/react',
+  },
+]}
+</Tiles>`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      const expectedJsLink =
+        `link: '[ably docs chat getting-started javascript]` +
+        `(http://localhost:3000/docs/chat/getting-started/javascript)'`;
+      const expectedReactLink =
+        `link: '[ably docs chat getting-started react]` +
+        `(http://localhost:3000/docs/chat/getting-started/react)'`;
+      expect(output).toContain(expectedJsLink);
+      expect(output).toContain(expectedReactLink);
+      // Ensure other content is preserved
+      expect(output).toContain(`title: 'JavaScript'`);
+      expect(output).toContain(`image: 'icon-tech-javascript'`);
+    });
+
+    it('should not convert /docs/ paths inside code blocks', () => {
+      const input = `Here's an example:
+
+\`\`\`ruby
+link '/docs/channels'
+\`\`\`
+
+\`\`\`javascript
+fetch('/docs/api/posts/123')
+await fetch("/docs/api/posts/456")
+\`\`\`
+
+Real prop: link: '/docs/presence'`;
+      const output = convertJsxLinkProps(input, siteUrl);
+      // Code block content should be preserved
+      expect(output).toContain("link '/docs/channels'");
+      expect(output).toContain("fetch('/docs/api/posts/123')");
+      expect(output).toContain('fetch("/docs/api/posts/456")');
+      // Non-code-block content should be converted
+      const expectedPresenceLink =
+        `link: '[ably docs presence](http://localhost:3000/docs/presence)'`;
+      expect(output).toContain(expectedPresenceLink);
     });
   });
 
