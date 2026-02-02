@@ -8,8 +8,35 @@ import Icon from '@ably/ui/core/Icon';
 import { productData } from 'src/data';
 import { NavProductContent, NavProductPage } from 'src/data/nav/types';
 import Link from '../Link';
-import { useLayoutContext } from 'src/contexts/layout-context';
+import { useLayoutContext, isDualLanguagePath } from 'src/contexts/layout-context';
 import { interactiveButtonClassName } from './utils/styles';
+
+// Build link with appropriate language params based on target page type
+const buildLinkWithParams = (targetLink: string, searchParams: URLSearchParams): string => {
+  const clientLang = searchParams.get('client_lang');
+  const agentLang = searchParams.get('agent_lang');
+  const lang = searchParams.get('lang');
+
+  const params = new URLSearchParams();
+
+  if (isDualLanguagePath(targetLink)) {
+    // Target supports dual language - preserve client_lang/agent_lang
+    if (clientLang) {
+      params.set('client_lang', clientLang);
+    }
+    if (agentLang) {
+      params.set('agent_lang', agentLang);
+    }
+  } else {
+    // Target uses single language - preserve lang
+    if (lang) {
+      params.set('lang', lang);
+    }
+  }
+
+  const paramString = params.toString();
+  return paramString ? `${targetLink}?${paramString}` : targetLink;
+};
 
 type LeftSidebarProps = {
   className?: string;
@@ -78,7 +105,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
     }
   }, [activePage.tree.length, subtreeIdentifier]);
 
-  const lang = new URLSearchParams(location.search).get('lang');
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   return (
     <Accordion.Root
@@ -124,7 +151,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
                       target: '_blank',
                       rel: 'noopener noreferrer',
                     })}
-                    to={page.link + (lang ? `?lang=${lang}` : '')}
+                    to={buildLinkWithParams(page.link, searchParams)}
                   >
                     <span>{page.name}</span>
                     {page.external && (

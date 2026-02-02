@@ -46,6 +46,7 @@ export default {
     javascript: '2.17',
     java: '1.6',
     python: '3.1',
+    swift: '1.2',
   },
   spaces: {
     javascript: '0.5',
