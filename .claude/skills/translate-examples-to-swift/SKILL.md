@@ -119,7 +119,9 @@ If validation fails, report the error.
 
 ### Step 2: Spawn verification subagents
 
-After translation subagents complete, spawn verification subagents for each file.
+After translation subagents complete, spawn verification subagents for each file that was translated.
+
+**Important**: Spawn a verification subagent for EVERY file that had a translation subagent, even if that file had no examples. This ensures 1:1 matching between translation and verification outputs, avoiding special-case handling in the consolidation phase.
 
 **Get the prompt from the file** `.claude/skills/translate-examples-to-swift/prompts/verification-subagent.md`:
 
