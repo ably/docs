@@ -13,6 +13,16 @@ Write your verification results to:
 
 The JSON must conform to the schema at `.claude/skills/translate-examples-to-swift/schemas/verification.schema.json`. Read that schema file to understand the required structure.
 
+## Required bash commands
+
+This task requires the following bash commands:
+- `mkdir -p` to create directories
+- `swift package init` to initialize Swift packages
+- `swift build` to compile and verify translations
+- `npx ajv-cli validate` to validate JSON output against schema
+
+When validating JSON, always use `npx ajv-cli validate` - do not use python or other tools.
+
 ---
 
 ## Your tasks
