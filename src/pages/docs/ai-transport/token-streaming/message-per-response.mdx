@@ -53,17 +53,6 @@ Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retri
 ```javascript
 const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(realtime: ARTRealtime) {
-    // --- example code starts here ---
-*/}
-```swift
-let channel = realtime.channels.get("ai:myChannel")
-```
-{/* --- end example code --- */}
 </Code>
 
 To start streaming an AI response, publish the initial message. The message is identified by a server-assigned identifier called a [`serial`](/docs/messages#properties). Use the `serial` to append each subsequent token to the message as it arrives from the AI model:
@@ -81,34 +70,6 @@ for await (const event of stream) {
   }
 }
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(channel: ARTRealtimeChannel, stream: AsyncStream<(type: String, text: String?)>) async {
-    // --- example code starts here ---
-*/}
-```swift
-// Publish initial message and capture the serial for appending tokens
-channel.publish("response", data: "") { result, error in
-    guard let msgSerial = result?.serials.first?.value else {
-        return
-    }
-
-    // Example: stream returns events like (type: "token", text: "Hello")
-    Task {
-        for await event in stream {
-            // Append each token as it arrives
-            if event.type == "token", let text = event.text {
-                let appendMessage = ARTMessage(name: nil, data: text)
-                appendMessage.serial = msgSerial
-                channel.append(appendMessage, operation: nil, params: nil, callback: nil)
-            }
-        }
-    }
-}
-```
-{/* --- end example code --- */}
 </Code>
 
 When publishing tokens, don't await the `channel.appendMessage()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each append would unnecessarily slow down your token stream. Messages are still published in the order that `appendMessage()` is called, so delivery order is not affected.
@@ -129,37 +90,6 @@ for await (const event of stream) {
   }
 }
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(channel: ARTRealtimeChannel, stream: AsyncStream<(type: String, text: String?)>, msgSerial: String) async {
-    // --- example code starts here ---
-*/}
-```swift
-// Do this - append without waiting for callback for maximum throughput
-for await event in stream {
-    if event.type == "token", let text = event.text {
-        let appendMessage = ARTMessage(name: nil, data: text)
-        appendMessage.serial = msgSerial
-        channel.append(appendMessage, operation: nil, params: nil, callback: nil)
-    }
-}
-
-// Don't do this - waiting for each callback reduces throughput
-// for await event in stream {
-//     if event.type == "token", let text = event.text {
-//         let appendMessage = ARTMessage(name: nil, data: text)
-//         appendMessage.serial = msgSerial
-//         await withCheckedContinuation { continuation in
-//             channel.append(appendMessage, operation: nil, params: nil) { _, _ in
-//                 continuation.resume()
-//             }
-//         }
-//     }
-// }
-```
-{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="important">
@@ -183,19 +113,6 @@ const realtime = new Ably.Realtime({
   transportParams: { appendRollupWindow: 100 } // 10 messages/s
 });
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example() {
-    // --- example code starts here ---
-*/}
-```swift
-let options = ARTClientOptions(key: "your-api-key")
-options.transportParams = ["appendRollupWindow": ARTStringifiable.withNumber(100)] // 10 messages/s
-let realtime = ARTRealtime(options: options)
-```
-{/* --- end example code --- */}
 </Code>
 
 The `appendRollupWindow` parameter controls how many tokens are combined into each published message for a given model output rate. This creates a trade-off between delivery smoothness and the number of concurrent model responses you can stream on a single connection:
@@ -243,40 +160,6 @@ await channel.subscribe((message) => {
   }
 });
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(realtime: ARTRealtime) {
-    // --- example code starts here ---
-*/}
-```swift
-let channel = realtime.channels.get("ai:myChannel")
-
-// Track responses by message serial
-var responses: [String: String] = [:]
-
-// Subscribe to live messages (implicitly attaches the channel)
-channel.subscribe { message in
-    guard let serial = message.serial else { return }
-
-    switch message.action {
-    case .create:
-        // New response started
-        responses[serial] = message.data as? String ?? ""
-    case .append:
-        // Append token to existing response
-        let current = responses[serial] ?? ""
-        responses[serial] = current + (message.data as? String ?? "")
-    case .update:
-        // Replace entire response content
-        responses[serial] = message.data as? String ?? ""
-    default:
-        break
-    }
-}
-```
-{/* --- end example code --- */}
 </Code>
 
 ## Client hydration <a id="hydration"/>
@@ -323,44 +206,6 @@ await channel.subscribe((message) => {
   }
 });
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(realtime: ARTRealtime) {
-    // --- example code starts here ---
-*/}
-```swift
-// Use rewind to receive recent historical messages
-let options = ARTRealtimeChannelOptions()
-options.params = ["rewind": "2m"] // or "10" for message count
-let channel = realtime.channels.get("ai:myChannel", options: options)
-
-// Track responses by message serial
-var responses: [String: String] = [:]
-
-// Subscribe to receive both recent historical and live messages,
-// which are delivered in order to the subscription
-channel.subscribe { message in
-    guard let serial = message.serial else { return }
-
-    switch message.action {
-    case .create:
-        // New response started
-        responses[serial] = message.data as? String ?? ""
-    case .append:
-        // Append token to existing response
-        let current = responses[serial] ?? ""
-        responses[serial] = current + (message.data as? String ?? "")
-    case .update:
-        // Replace entire response content
-        responses[serial] = message.data as? String ?? ""
-    default:
-        break
-    }
-}
-```
-{/* --- end example code --- */}
 </Code>
 
 Rewind supports two formats:
@@ -417,70 +262,6 @@ while (page) {
   page = page.hasNext() ? await page.next() : null;
 }
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(realtime: ARTRealtime) {
-    // --- example code starts here ---
-*/}
-```swift
-let channel = realtime.channels.get("ai:myChannel")
-
-// Track responses by message serial
-var responses: [String: String] = [:]
-
-// Subscribe to live messages (implicitly attaches the channel)
-channel.subscribe { message in
-    guard let serial = message.serial else { return }
-
-    switch message.action {
-    case .create:
-        // New response started
-        responses[serial] = message.data as? String ?? ""
-    case .append:
-        // Append token to existing response
-        let current = responses[serial] ?? ""
-        responses[serial] = current + (message.data as? String ?? "")
-    case .update:
-        // Replace entire response content
-        responses[serial] = message.data as? String ?? ""
-    default:
-        break
-    }
-}
-
-// Fetch history up until the point of attachment
-let query = ARTRealtimeHistoryQuery()
-query.untilAttach = true
-
-func fetchPage(_ page: ARTPaginatedResult<ARTMessage>?) {
-    guard let page = page else { return }
-
-    // Messages are newest-first
-    for message in page.items {
-        guard let serial = message.serial else { continue }
-        // message.data contains the full concatenated text
-        responses[serial] = message.data as? String ?? ""
-    }
-
-    // Move to next page if available
-    if page.hasNext {
-        page.next { nextPage, _ in
-            fetchPage(nextPage)
-        }
-    }
-}
-
-do {
-    try channel.history(query) { page, _ in
-        fetchPage(page)
-    }
-} catch {
-    print("History query error: \(error)")
-}
-```
-{/* --- end example code --- */}
 </Code>
 
 ### Hydrating an in-progress response <a id="in-progress-response"/>
@@ -519,39 +300,6 @@ for await (const event of stream) {
   }
 }
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(channel: ARTRealtimeChannel, stream: AsyncStream<(type: String, text: String?)>) {
-    // --- example code starts here ---
-*/}
-```swift
-let responseId = "resp_abc123" // Your database response ID
-let extras: [String: Any] = ["headers": ["responseId": responseId]]
-
-// Publish initial message with responseId in extras
-let message = ARTMessage(name: "response", data: "")
-message.extras = extras as NSDictionary
-channel.publish([message]) { result, error in
-    guard let msgSerial = result?.serials.first?.value else {
-        return
-    }
-
-    // Append tokens, including extras to preserve headers
-    Task {
-        for await event in stream {
-            if event.type == "token", let text = event.text {
-                let appendMessage = ARTMessage(name: nil, data: text)
-                appendMessage.serial = msgSerial
-                appendMessage.extras = ["headers": ["responseId": responseId]] as NSDictionary
-                channel.append(appendMessage, operation: nil, params: nil, callback: nil)
-            }
-        }
-    }
-}
-```
-{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -606,56 +354,6 @@ await channel.subscribe((message) => {
   }
 });
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(realtime: ARTRealtime) async {
-    // --- example code starts here ---
-*/}
-```swift
-// Load completed responses from your database
-// completedResponses is a Set of responseIds
-let completedResponses = await loadResponsesFromDatabase()
-
-// Use rewind to receive recent historical messages
-let options = ARTRealtimeChannelOptions()
-options.params = ["rewind": "2m"]
-let channel = realtime.channels.get("ai:responses", options: options)
-
-// Track in-progress responses by responseId
-var inProgressResponses: [String: String] = [:]
-
-channel.subscribe { message in
-    guard let extras = message.extras as? [String: Any],
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String else {
-        print("Message missing responseId")
-        return
-    }
-
-    // Skip messages for responses already loaded from database
-    if completedResponses.has(responseId) {
-        return
-    }
-
-    switch message.action {
-    case .create:
-        // New response started
-        inProgressResponses[responseId] = message.data as? String ?? ""
-    case .append:
-        // Append token to existing response
-        let current = inProgressResponses[responseId] ?? ""
-        inProgressResponses[responseId] = current + (message.data as? String ?? "")
-    case .update:
-        // Replace entire response content
-        inProgressResponses[responseId] = message.data as? String ?? ""
-    default:
-        break
-    }
-}
-```
-{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
@@ -735,93 +433,6 @@ while (page) {
   page = page.hasNext() ? await page.next() : null;
 }
 ```
-
-{/* Swift example test harness: to modify and check it compiles, copy this comment into a
-temporary Swift file, paste the example code into the function body, and run `swift build`
-
-func example(realtime: ARTRealtime) async {
-    // --- example code starts here ---
-*/}
-```swift
-// Load completed responses from database (sorted by timestamp, oldest first)
-let completedResponses = await loadResponsesFromDatabase()
-
-// Get the timestamp of the latest completed response
-let latestTimestamp = completedResponses.latest().timestamp
-
-let channel = realtime.channels.get("ai:myChannel")
-
-// Track in progress responses by ID
-var inProgressResponses: [String: String] = [:]
-
-// Subscribe to live messages (implicitly attaches)
-channel.subscribe { message in
-    guard let extras = message.extras as? [String: Any],
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String else {
-        print("Message missing responseId")
-        return
-    }
-
-    // Skip messages for responses already loaded from database
-    if completedResponses.has(responseId) {
-        return
-    }
-
-    switch message.action {
-    case .create:
-        // New response started
-        inProgressResponses[responseId] = message.data as? String ?? ""
-    case .append:
-        // Append token to existing response
-        let current = inProgressResponses[responseId] ?? ""
-        inProgressResponses[responseId] = current + (message.data as? String ?? "")
-    case .update:
-        // Replace entire response content
-        inProgressResponses[responseId] = message.data as? String ?? ""
-    default:
-        break
-    }
-}
-
-// Fetch history from the last completed response until attachment
-let query = ARTRealtimeHistoryQuery()
-query.untilAttach = true
-query.start = latestTimestamp
-query.direction = .forwards
-
-func fetchPage(_ page: ARTPaginatedResult<ARTMessage>?) {
-    guard let page = page else { return }
-
-    for message in page.items {
-        guard let extras = message.extras as? [String: Any],
-              let headers = extras["headers"] as? [String: Any],
-              let responseId = headers["responseId"] as? String else {
-            print("Message missing responseId")
-            continue
-        }
-
-        // message.data contains the full concatenated text so far
-        inProgressResponses[responseId] = message.data as? String ?? ""
-    }
-
-    // Move to next page if available
-    if page.hasNext {
-        page.next { nextPage, _ in
-            fetchPage(nextPage)
-        }
-    }
-}
-
-do {
-    try channel.history(query) { page, _ in
-        fetchPage(page)
-    }
-} catch {
-    print("History query error: \(error)")
-}
-```
-{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
