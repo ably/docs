@@ -28,52 +28,39 @@ Invoke this skill with `/translate-examples-to-swift` followed by a description 
 
 ---
 
-## Scaling Strategy
+## Architecture Overview
 
-When translating many examples, choose a strategy based on the workload size.
+This skill uses a **two-phase architecture** with independent translation and verification:
 
-### Small workload (1-5 examples in a single file)
+1. **Translation phase**: Spawn one sub-agent per MDX file. Each translates examples, self-checks compilation (for iteration), inserts into MDX, and writes translation metadata JSON.
 
-Translate all examples yourself using a **single test harness**:
-1. Create one Swift package
-2. Add each example as a separate function with a unique identifier (see "Providing context via parameters vs stub type declarations")
-3. Run `swift build` once to verify all examples compile
-4. Insert all translations into the documentation
-5. Proceed to verification
+2. **Verification phase**: Spawn one sub-agent per MDX file. Each reads Swift code from the MDX (source of truth), compiles in a fresh harness, assesses faithfulness, and writes verification results JSON.
 
-This minimizes overhead and keeps all context together.
+3. **Assembly phase**: Merge translation and verification JSONs, generate consolidated JSON and HTML review file.
 
-### Medium workload (5-15 examples across a few files)
+**Key principle**: Verification reads from MDX, not from translation output. This ensures verification tests what actually ships.
 
-Still use a **single test harness**, but be mindful of context:
-1. Process examples in batches by file
-2. After completing each file's translations and insertions, summarize what you've done
-3. If context is getting long, consider completing the current file fully (including verification) before moving to the next
+**Always delegate**: Spawn a sub-agent for each file, even for single-file tasks. This keeps behavior consistent and context isolated.
 
-### Large workload (15+ examples or spanning many files)
+---
 
-**Delegate to subagents** to manage context and parallelize work:
+## Output Directory Structure
 
-1. Create a task list with one task per file (or logical grouping)
-2. For each task, spawn a subagent using the Task tool:
-   ```
-   Task tool with subagent_type: "general-purpose"
-   Prompt: "Translate JavaScript examples to Swift in [file]. Follow the translate-examples-to-swift skill instructions. Create your own test harness, translate examples, verify compilation, and insert into documentation. Report back what you translated and any issues."
-   ```
-3. Each subagent creates its own harness, translates, verifies, and inserts
-4. After all subagents complete, run the verification step (Step 6) across all files
+All intermediate files go in `swift-translations/` at the repo root:
 
-This approach:
-- Prevents context rot by giving each subagent fresh context
-- Allows parallel processing
-- Isolates failures to individual files
+```
+swift-translations/
+    translations/
+        {filename}.json       # One per MDX file
+    verifications/
+        {filename}.json       # One per MDX file
+    consolidated.json         # Merged data for review app
+    review.html               # Human review interface
+```
 
-### When examples share significant context
-
-If multiple examples across different files share the same complex context (e.g., the same custom types or setup), consider:
-1. Creating a shared test harness first
-2. Documenting the harness location
-3. Having subagents reuse/extend that harness rather than creating from scratch
+The `{filename}` is derived from the MDX filename without path or extension:
+- `src/pages/docs/ai-transport/messaging/citations.mdx` → `citations.json`
+- `src/pages/docs/ai-transport/token-streaming/message-per-token.mdx` → `message-per-token.json`
 
 ---
 
@@ -113,7 +100,7 @@ In order to generate the Swift example code, there are eight steps:
 
 Detailed instructions for each of these steps are given below.
 
-**Important**: As you work through steps 1-6, collect the data needed for the review file (step 7). For each example, you'll need: the original code, the translation, the test harness context, any translation notes/decisions, and the verification results.
+**Important**: As you work through steps 1-5, collect the data needed for the translation JSON (step 6). For each example, you'll need: the example ID, line number, and any translation notes/decisions.
 
 ## 1. Generate a Swift test harness
 
@@ -138,7 +125,7 @@ Create a Swift package with ably-cocoa as a dependency:
 
 1. Create the package:
    ```bash
-   mkdir SwiftTestHarness && cd SwiftTestHarness
+   mkdir -p swift-translations/harness && cd swift-translations/harness
    swift package init --type executable
    ```
 
@@ -400,9 +387,18 @@ prompt: [see below]
 ```
 You are a verification agent for Swift translations. Your job is to independently verify that Swift example code in documentation is correct and faithful to the original JavaScript.
 
-## Files to verify
+**Important**: You must verify what's actually in the MDX file. Do NOT read any translation JSON files - that would defeat the purpose of independent verification.
 
-[List the documentation files that contain newly inserted Swift examples]
+## File to verify
+
+[The documentation file path]
+
+## Output
+
+Write your verification results to:
+  swift-translations/verifications/{FILENAME}.json
+
+Where {FILENAME} is the MDX filename without path or extension.
 
 ## Your tasks
 
@@ -410,13 +406,12 @@ For each Swift code block that has an accompanying test harness comment:
 
 ### 1. Recreate the test harness from scratch
 
-- Create a new Swift package in the scratchpad directory:
+- Create a new Swift package in swift-translations/verify-harness/:
   ```bash
-  cd [scratchpad directory]
-  mkdir SwiftVerification && cd SwiftVerification
+  mkdir -p swift-translations/verify-harness && cd swift-translations/verify-harness
   swift package init --type executable
   ```
-- Set up Package.swift with ably-cocoa dependency (see standard setup)
+- Set up Package.swift with ably-cocoa dependency (same as translation harness)
 - Extract the function signature from the JSX comment in the documentation
 - Create the harness in Sources/SwiftVerification/main.swift
 
@@ -436,43 +431,15 @@ Compare the Swift translation to the original JavaScript code block in the same 
 - Are comments preserved and accurate?
 - Are there any material additions or omissions?
 
-Rate faithfulness as: FAITHFUL, MINOR_DIFFERENCES (list them), or SIGNIFICANT_DEVIATION (explain)
+Rate faithfulness as: faithful, minor_differences (list them), or significant_deviation (explain)
 
-### 4. Report findings
+### 4. Write verification JSON
 
-Provide a structured report:
+Write the results to swift-translations/verifications/{FILENAME}.json following the schema at `.claude/skills/translate-examples-to-swift/schemas/verification.schema.json`.
 
-```
-## Verification Report
+### 5. Report findings
 
-### Summary
-- Files verified: [count]
-- Examples verified: [count]
-- Compilation: [X passed, Y failed]
-- Faithfulness: [X faithful, Y with differences]
-
-### Details by file
-
-#### [filename]
-
-**Example at line [N]:**
-- Compilation: PASS/FAIL
-  [If FAIL: error message]
-- Faithfulness: FAITHFUL/MINOR_DIFFERENCES/SIGNIFICANT_DEVIATION
-  [If not faithful: explanation]
-- Harness comment complete: YES/NO
-  [If NO: what's missing]
-
-[Repeat for each example]
-
-### Issues requiring attention
-
-[List any failures or significant deviations that need human review]
-
-### Recommendations
-
-[Any suggestions for improving the translations]
-```
+Provide a summary of what you verified and any issues found.
 
 ## Important
 
@@ -480,6 +447,18 @@ Provide a structured report:
 - If you cannot recreate a harness from the comment alone, note this as an issue (the comment is incomplete)
 - Be objective and thorough
 ```
+
+### Validate verification output
+
+After the verification subagent completes, validate its JSON output:
+
+```bash
+npx ajv-cli validate \
+  -s .claude/skills/translate-examples-to-swift/schemas/verification.schema.json \
+  -d swift-translations/verifications/{filename}.json
+```
+
+If validation fails, report the error.
 
 ### Handling verification results
 
@@ -522,72 +501,31 @@ If you find yourself about to report completion without having verified recent c
 
 After automated verification, generate a review file that allows human reviewers to examine translations side-by-side with their originals.
 
-### Collect the translation data
+### Write translation JSON
 
-Create a JSON file containing all translation data collected during steps 1-6. The file should follow this structure:
+Write the translation metadata to `swift-translations/translations/{FILENAME}.json` following the schema at `.claude/skills/translate-examples-to-swift/schemas/translation.schema.json`.
 
-```json
-{
-  "version": "1.0",
-  "generatedAt": "2026-01-30T10:30:00Z",
-  "summary": {
-    "filesProcessed": 2,
-    "examplesTranslated": 3,
-    "compilationPassed": 2,
-    "compilationFailed": 1
-  },
-  "files": [
-    {
-      "path": "src/pages/docs/example.mdx",
-      "examples": [
-        {
-          "id": "example-mdx-45",
-          "lineNumber": 45,
-          "original": {
-            "language": "javascript",
-            "code": "// original JavaScript code..."
-          },
-          "translation": {
-            "language": "swift",
-            "code": "// translated Swift code..."
-          },
-          "harness": {
-            "functionSignature": "func example(channel: ARTRealtimeChannel) async throws",
-            "stubTypes": null,
-            "fullContext": "import Ably\n\nfunc example(...) {\n    // example code here\n}"
-          },
-          "translationNotes": [
-            {
-              "type": "decision",
-              "message": "Used callback pattern instead of async/await"
-            },
-            {
-              "type": "deviation",
-              "message": "Added explicit error handling"
-            }
-          ],
-          "verification": {
-            "compilation": {
-              "status": "pass"
-            },
-            "faithfulness": {
-              "rating": "faithful",
-              "notes": null
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
+Validate it:
+
+```bash
+npx ajv-cli validate \
+  -s .claude/skills/translate-examples-to-swift/schemas/translation.schema.json \
+  -d swift-translations/translations/{filename}.json
 ```
 
-**Field details:**
+### Merge into consolidated JSON
 
-- `id`: Unique identifier for the example (e.g., `{filename}-{line}`)
-- `translationNotes.type`: One of `decision`, `deviation`, `info`, or `warning`
-- `verification.compilation.status`: `pass`, `fail`, or `skipped`
-- `verification.faithfulness.rating`: `faithful`, `minor_differences`, `significant_deviation`, or `not_assessed`
+Read all translation and verification JSONs and merge them into `swift-translations/consolidated.json` following the schema at `.claude/skills/translate-examples-to-swift/schemas/consolidated.schema.json`.
+
+The `translationNotes` come from the translation JSON; `original`, `translation`, `harness`, and `verification` come from the verification JSON.
+
+Validate it:
+
+```bash
+npx ajv-cli validate \
+  -s .claude/skills/translate-examples-to-swift/schemas/consolidated.schema.json \
+  -d swift-translations/consolidated.json
+```
 
 ### Generate the HTML review file
 
@@ -595,8 +533,8 @@ Use the review app generator script to create a standalone HTML file:
 
 ```bash
 .claude/skills/translate-examples-to-swift/review-app/generate-review.sh \
-  /path/to/translation-data.json \
-  /path/to/output/translation-review.html
+  swift-translations/consolidated.json \
+  swift-translations/review.html
 ```
 
 The output file can be opened directly in a browser. It provides:
@@ -631,8 +569,75 @@ Translation complete.
 
 ## Review file
 Open the review file to examine translations:
-  /path/to/translation-review.html
+  swift-translations/review.html
 
 ## Issues requiring attention
-- src/pages/docs/messages/updates-deletes.mdx:78 - Compilation failed: `updateSerial` property not found on ARTMessage
+- src/pages/docs/messages/updates-deletes.mdx:78 - Compilation failed: `updateSerial` property not found
+```
+
+---
+
+## Spawning Translation Subagents
+
+For each MDX file to translate, spawn a translation subagent:
+
+```
+Tool: Task
+subagent_type: "general-purpose"
+prompt: [see below]
+```
+
+**Translation subagent prompt template:**
+
+```
+You are a translation sub-agent. Your job is to translate JavaScript examples to Swift in a single MDX file.
+
+## File to translate
+
+[MDX file path]
+
+## Output
+
+Write your translation metadata to:
+  swift-translations/translations/{FILENAME}.json
+
+Where {FILENAME} is the MDX filename without path or extension (e.g., "citations" for citations.mdx).
+
+## Instructions
+
+Follow the translation steps documented in the skill:
+
+1. Create a Swift test harness in swift-translations/harness/
+2. For each JavaScript code block, translate to Swift
+3. Self-check compilation with `swift build` (iterate until it compiles)
+4. Insert the Swift code and harness comment into the MDX
+5. Record translation notes (decisions, deviations)
+6. Write the translation JSON
+
+## API Reference
+
+- **JavaScript SDK**: https://ably.com/docs/sdk/js/v2.0
+- **Swift/Cocoa SDK**: https://ably.com/docs/sdk/cocoa/v1.2/
+
+For details not in docs, check the ably-cocoa headers in `.build/checkouts/ably-cocoa/Source/include/Ably/` after running `swift build`.
+
+## Report back
+
+Report what you translated and any issues encountered.
+```
+
+---
+
+## JSON Schemas
+
+Schemas are in `.claude/skills/translate-examples-to-swift/schemas/`:
+
+- `translation.schema.json` - Translation sub-agent output (notes and metadata)
+- `verification.schema.json` - Verification sub-agent output (code, harness, results)
+- `consolidated.schema.json` - Final merged data for review app
+
+Validate with:
+
+```bash
+npx ajv-cli validate -s {schema} -d {data}
 ```

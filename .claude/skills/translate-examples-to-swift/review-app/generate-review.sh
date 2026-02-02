@@ -93,6 +93,14 @@ if [[ ! -f "$DATA_FILE" ]]; then
     exit 1
 fi
 
+# Validate JSON against schema
+SCHEMA="$SCRIPT_DIR/../schemas/consolidated.schema.json"
+if ! npx ajv-cli validate -s "$SCHEMA" -d "$DATA_FILE" >/dev/null 2>&1; then
+    echo "Error: Data file does not conform to schema" >&2
+    echo "Run: npx ajv-cli validate -s $SCHEMA -d $DATA_FILE" >&2
+    exit 1
+fi
+
 # Use awk to handle multi-line JSON replacement
 awk -v data_file="$DATA_FILE" '
 /<!-- TRANSLATION_DATA_PLACEHOLDER -->/ {
