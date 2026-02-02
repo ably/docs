@@ -55,6 +55,29 @@ Translation completed with 73 examples, but 4 failed verification. Both failure 
    - Or update the Swift code to use what the harness provides
    - For concurrency issues: add `@Sendable` annotations or use actors
 
+## Critical Issue: Missing Verification Harness
+
+**The `verify-accepting-user-input/` directory doesn't exist**, yet the verification agent reported compilation results (5 pass, 2 fail).
+
+This suggests the verification agent may have:
+1. Analyzed the code without actually compiling it
+2. Used a different directory that was cleaned up
+3. Fabricated the compilation results based on code analysis
+
+**Action needed**: Re-run verification for accepting-user-input.mdx and ensure it actually creates and uses a test harness.
+
+The other 10 verification directories exist:
+- verify-chain-of-thought
+- verify-citations
+- verify-human-in-the-loop
+- verify-identifying-users-and-agents
+- verify-message-per-response
+- verify-message-per-token
+- verify-online-status
+- verify-resuming-sessions
+- verify-token-rate-limits
+- verify-tool-calls
+
 ## Commands to Run
 
 ```bash
