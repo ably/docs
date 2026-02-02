@@ -224,14 +224,16 @@ For examples of how JavaScript code is typically translated to Swift (e.g., how 
 
 #### Handling mutable state with @MainActor
 
-When the JavaScript example uses mutable local variables (like `Map`, arrays, or objects that get mutated), use `@MainActor` isolation instead of creating actors. This keeps the Swift code closer to the JavaScript structure.
+**Do NOT create custom actor types** (e.g., `actor PendingPrompts { ... }` or `actor ActiveRequestsStore { ... }`). This adds unnecessary complexity and diverges from the JavaScript's simple approach.
 
-Mark the harness function with `@MainActor`. Since ably-cocoa executes callbacks on the main thread by default, you can use `MainActor.assumeIsolated { }` inside callbacks to access main-actor-isolated state without compiler errors:
+Instead, when the JavaScript example uses mutable local variables (like `Map`, arrays, or objects that get mutated), use `@MainActor` isolation with plain local variables. This keeps the Swift code close to the JavaScript structure.
+
+Mark the harness function with `@MainActor`. Since ably-cocoa executes callbacks on the main thread by default, use `MainActor.assumeIsolated { }` inside callbacks to access main-actor-isolated state:
 
 ```swift
 @MainActor
 func example(channel: ARTRealtimeChannel) {
-    // Mutable state can be simple local variables, just like in JavaScript
+    // Mutable state as simple local variables, just like in JavaScript
     var pendingPrompts: [String: String] = [:]
 
     // ably-cocoa callbacks run on main thread, so use MainActor.assumeIsolated
@@ -245,7 +247,10 @@ func example(channel: ARTRealtimeChannel) {
 }
 ```
 
-This is preferred over creating separate actor types, as it mirrors the JavaScript's straightforward mutable variable approach.
+This pattern:
+- Mirrors JavaScript's straightforward mutable variable approach
+- Avoids custom actor types, which are rarely used in typical Swift code and would be unfamiliar to most readers
+- Is simpler for readers to understand
 
 #### Nested functions
 
