@@ -44,6 +44,8 @@ export default {
   },
   aiTransport: {
     javascript: '2.11',
+    java: '1.6',
+    python: '3.0',
   },
   spaces: {
     javascript: '0.4',
