@@ -30,6 +30,21 @@ When configuring an integration rule in your Ably dashboard:
 * **Event type**: Use `channel.message` to forward chat messages and exclude presence events
 * **Enveloped messages**: Enable to receive full message metadata including `serial`, `version`, and `headers`
 
+### Namespace best practices <a id="namespace-best-practices"/>
+
+Group related chat rooms under a common namespace using colon-separated prefixes. This enables you to efficiently filter and route messages to different integrations based on their purpose.
+
+For example:
+- `gamechat:<room-id>` for game chat rooms
+- `support:<ticket-id>` for support conversations
+- `team:<team-id>` for team collaboration
+
+**Benefits of namespacing:**
+- **Targeted integrations**: Apply different processing rules to different types of rooms (e.g., AI moderation for public game chat, analytics for support chats)
+- **Simplified filtering**: Use simple regex patterns like `^gamechat:.*` to match all rooms in a namespace
+- **Cost optimization**: Only forward messages that need processing, reducing integration costs
+- **Organizational clarity**: Room names clearly indicate their purpose and context
+
 ### Example filter configuration
 
 <Code>
@@ -183,13 +198,16 @@ await room.messages.send({
   text: '@john.123 Hey, how are you?',
   metadata: {
     targetClientId: 'john.123',
-    type: 'mention
+    type: 'mention',
     location: 'London',
     timestamp: Date.now()
-  },
-  headers: {
-    'x-intent': 'notification',
-    'x-priority': 'high'
+  }
+}, {
+  extras: {
+    headers: {
+      'x-intent': 'notification',
+      'x-priority': 'high'
+    }
   }
 });
 ```
@@ -258,20 +276,50 @@ Configure a webhook integration in your Ably dashboard pointing to your endpoint
 * **Deduplication**: Handle potential duplicates using message serials - webhooks provide at-least-once delivery.
 * **Monitoring**: Use [`[meta]log` channel](/docs/metadata-stats/metadata/subscribe#log) to detect failures (see [monitoring section](#monitoring-performance)).
 
-### Example webhook handler
+## Using streaming <a id="streaming"/>
+
+[Outbound streaming](/docs/platform/integrations/streaming) enables you to stream a constant flow of chat messages to external streaming or queueing services.
+
+Streaming integrations enable you to leverage your existing streaming infrastructure with full control over retention and processing, providing massive scale capabilities for high-volume message flows.
+
+### Setup
+
+Configure streaming to your target system. See the following for platform-specific setup:
+
+* [Apache Kafka](/docs/platform/integrations/streaming/kafka) - Stream to Kafka topics
+* [AWS Kinesis](/docs/platform/integrations/streaming/kinesis) - Stream to Kinesis streams
+* [AWS SQS](/docs/platform/integrations/streaming/sqs) - Stream to SQS queues
+* [AMQP](/docs/platform/integrations/streaming/amqp) - Stream to AMQP brokers
+* [Apache Pulsar](/docs/platform/integrations/streaming/pulsar) - Stream to Pulsar topics
+* [General streaming documentation](/docs/platform/integrations/streaming) - Overview and configuration
+
+
+### Considerations
+
+* **Infrastructure**: You manage and maintain the streaming system
+* **Reliability**: Messages lost if system unavailable
+* **Complexity**: Higher operational overhead
+
+### Example Kafka consumer
 
 <Code>
 ```javascript
-async function handleWebhook(req, res) {
-  const envelope = req.body;
-  const roomName = extractRoomName(envelope.channel);
-  const messages = decodeMessages(envelope);
+const { Kafka } = require('kafkajs');
 
-  for (const message of messages) {
-    await processMessage(roomName, message);
-  }
+async function consumeFromKafka() {
+  const consumer = kafka.consumer({ groupId: 'chat-processor' });
+  await consumer.connect();
+  await consumer.subscribe({ topic: 'ably-chat-messages' });
 
-  res.status(200).send('OK');
+  await consumer.run({
+    eachMessage: async ({ message }) => {
+      const envelope = JSON.parse(message.value);
+      const roomName = extractRoomName(envelope.channel);
+      const decoded = decodeMessages(envelope);
+
+      await processMessages(roomName, decoded);
+    }
+  });
 }
 ```
 </Code>
@@ -320,7 +368,7 @@ amqp.connect(url, (err, conn) => {
     // Subscribe to the queue
     ch.consume(queueName, (item) => {
       const envelope = JSON.parse(item.content);
-      const roomName = extractRoomName(envelope.channel);
+      const roomName = envelope.channel.replace('::$chat', '');
 
       // Decode messages using Ably SDK
       const messages = Ably.Realtime.Message.fromEncodedArray(envelope.messages);
@@ -377,54 +425,6 @@ async function monitorDeadLetterQueue(appID) {
 </Code>
 
 **Note:** Only one dead letter queue exists per Ably application, shared across all queues.
-
-## Using streaming <a id="streaming"/>
-
-[Outbound streaming](/docs/platform/integrations/streaming) enables you to stream a constant flow of chat messages to external streaming or queueing services.
-
-Streaming integrations enable you to leverage your existing streaming infrastructure with full control over retention and processing, providing massive scale capabilities for high-volume message flows.
-
-### Setup
-
-Configure streaming to your target system. See the following for platform-specific setup:
-
-* [Apache Kafka](/docs/platform/integrations/streaming/kafka) - Stream to Kafka topics
-* [AWS Kinesis](/docs/platform/integrations/streaming/kinesis) - Stream to Kinesis streams
-* [AWS SQS](/docs/platform/integrations/streaming/sqs) - Stream to SQS queues
-* [AMQP](/docs/platform/integrations/streaming/amqp) - Stream to AMQP brokers
-* [Apache Pulsar](/docs/platform/integrations/streaming/pulsar) - Stream to Pulsar topics
-* [General streaming documentation](/docs/platform/integrations/streaming) - Overview and configuration
-
-
-### Considerations
-
-* **Infrastructure**: You manage and maintain the streaming system
-* **Reliability**: Messages lost if system unavailable
-* **Complexity**: Higher operational overhead
-
-### Example Kafka consumer
-
-<Code>
-```javascript
-const { Kafka } = require('kafkajs');
-
-async function consumeFromKafka() {
-  const consumer = kafka.consumer({ groupId: 'chat-processor' });
-  await consumer.connect();
-  await consumer.subscribe({ topic: 'ably-chat-messages' });
-
-  await consumer.run({
-    eachMessage: async ({ message }) => {
-      const envelope = JSON.parse(message.value);
-      const roomName = extractRoomName(envelope.channel);
-      const decoded = decodeMessages(envelope);
-
-      await processMessages(roomName, decoded);
-    }
-  });
-}
-```
-</Code>
 
 ## Monitoring integration performance <a id="monitoring-performance"/>
 

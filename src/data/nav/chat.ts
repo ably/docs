@@ -218,10 +218,6 @@ export default {
           name: 'Livestream chat',
           link: '/docs/guides/chat/build-livestream',
         },
-        {
-          name: 'Export chat messages',
-          link: '/docs/guides/chat/export-chat',
-        },
       ],
     },
   ],

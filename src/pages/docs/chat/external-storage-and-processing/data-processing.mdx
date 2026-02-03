@@ -21,7 +21,7 @@ Integrating external systems with Ably Chat enables you to extend your chat appl
 
 The typical message processing flow works as follows:
 
-1. A user sends a message to a chat room, optionally including [metadata or headers](#metadata-headers) for processing context
+1. A user sends a message to a chat room, optionally including [metadata or headers](#using-message-data) for processing context
 2. An integration rule evaluates the message based on room name pattern matching
 3. If the rule matches, Ably forwards the message to your external system
 4. Your external system processes the message and extracts relevant data
@@ -49,9 +49,13 @@ Ably provides several different integration methods, each suited to different us
 
 **Learn more:** See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#queues) for setup details and code examples.
 
-## Using metadata for structured content <a id="metadata-headers"/>
+## Using message data for processing <a id="using-message-data"/>
 
-Clients can provide context for your external services to use while processing by adding data in the [`metadata`](/docs/chat/external-storage-and-processing/data-extraction#metadata-headers) field. For example, when implementing a notification system, you might include the target user ID and notification type:
+When your integration receives messages, you have access to rich data that enables various processing patterns.
+
+### Extracting message data
+
+Clients can include metadata to provide context for your external services. For example, when implementing a notification system, you might include the target user ID and notification type:
 
 <Code>
 ```javascript
@@ -66,27 +70,7 @@ await room.messages.send({
 ```
 </Code>
 
-You can then [extract](#decoding) the metadata in your integration to trigger business logic:
-
-<Code>
-```javascript
-// use metadata in your integration to trigger notifications
-const metadata = msg.data?.metadata || {};
-if (metadata.notificationType === 'mention') {
-  await sendNotification(metadata.targetClientId, {
-    type: 'mention',
-    text: msg.data.text,
-    roomName: roomName
-  });
-}
-```
-</Code>
-
-**Important:** Metadata is not server-validated. Always treat it as untrusted user input and validate it in your integration code.
-
-## Processing messages in your integration <a id="processing"/>
-
-When your integration receives messages, extract the message data, metadata, and headers to control processing logic.
+In your integration, decode the messages and extract the relevant data:
 
 <Code>
 ```javascript
@@ -125,168 +109,39 @@ async function processIntegrationPayload(envelopeData) {
 
 For complete details on message decoding and structure, see the section on [extracting messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#decoding).
 
-## Example: Detecting @mentions for notifications <a id="example-mentions"/>
+### Available message data
 
-When users mention others in chat, you can detect these mentions and send notifications to the mentioned users.
+Each message provides the following data points:
 
-### Client sends message with metadata
+* **Message text** (`msg.data.text`): The actual message content for text analysis, command parsing, or content moderation
+* **Client ID** (`msg.clientId`): The user who sent the message, useful for attribution and user-specific actions
+* **Timestamp** (`msg.timestamp`): When the message was sent, enabling time-based processing or analytics
+* **Message ID** (`msg.id`): Unique identifier for tracking, logging, or reference
+* **Room information** (`envelopeData.channel`): Which chat room the message came from
+* **Metadata** (`msg.data.metadata`): Client-provided structured data for business context
+* **Headers** (`msg.extras.headers`): Server-controlled routing and processing flags
 
-<Code>
-```javascript
-// Client detects @mention and includes metadata
-await room.messages.send({
-  text: '@john.123 Can you review this proposal?',
-  metadata: {
-    notificationType: 'mention',
-    targetClientId: 'john.123'
-  }
-});
-```
-</Code>
+### Enabling features with metadata
 
-### Integration processes and sends notification
+Client applications can include metadata to provide context for your processing logic. This enables patterns like:
 
-<Code>
-```javascript
-const express = require('express');
-const Ably = require('ably');
+**@Mention notifications:** When a client detects that a user has mentioned another user (e.g., `@john.123`), it can include the target user's ID in the metadata. Your integration can then extract this information to trigger push notifications, emails, or other notification mechanisms to alert the mentioned user.
 
-const app = express();
-app.use(express.json());
+**Slash commands:** For commands like `/remind @user message`, clients can include the command type and parameters in metadata (e.g., `targetClientId`, `reminderTime`). Your integration processes this structured data to schedule reminders, execute actions, or trigger workflows.
 
-app.post('/webhook', async (req, res) => {
-  const envelope = req.body;
-  const messages = Ably.Realtime.Message.fromEncodedArray(envelope.messages);
+**Content categorization:** Clients can tag messages with categories or intents (e.g., `messageType: 'question'`, `category: 'support'`) to help your integration route messages to appropriate handlers, analytics pipelines, or support systems.
 
-  for (const msg of messages) {
-    const metadata = msg.data?.metadata || {};
+**Important:** Metadata comes from client applications and should always be treated as untrusted user input. Validate and sanitize metadata in your integration before using it for processing decisions.
 
-    // Validate metadata (treat as untrusted user input)
-    if (metadata.notificationType === 'mention' && metadata.targetClientId) {
-      const roomName = envelope.channel.replace('::$chat', '');
+### Enabling features with headers
 
-      // Send notification via your notification service
-      await sendPushNotification({
-        userId: metadata.targetClientId,
-        title: `New mention in ${roomName}`,
-        body: msg.data.text,
-        senderId: msg.clientId
-      });
-    }
-  }
+Unlike metadata, headers are typically set server-side or by trusted clients and can be used for routing and processing control:
 
-  res.status(200).send('OK');
-});
+**Command routing:** Use headers like `x-command: 'remind'` to route messages to specific processors without parsing message text, enabling clean separation of command handling from regular chat messages.
 
-app.listen(3000);
-```
-</Code>
+**Processing flags:** Headers can indicate whether a message should trigger specific processing (e.g., `x-translate: 'true'`, `x-moderate: 'true'`) based on room settings or user preferences.
 
-## Example: Handling slash commands <a id="example-commands"/>
-
-Process slash commands by using message headers to route to different command handlers. Commands can work naturally with @mentions in the message text.
-
-### Client sends command with header
-
-<Code>
-```javascript
-// Client sends a slash command with @mention
-await room.messages.send(
-  {
-    text: '/remind @john.123 Review the proposal by EOD',
-    metadata: {
-      targetClientId: 'john.123'
-    }
-  },
-  {
-    extras: {
-      headers: {
-        'x-command': 'remind'
-      }
-    }
-  }
-);
-```
-</Code>
-
-### Integration routes and processes command
-
-<Code>
-```javascript
-async function processIntegrationPayload(envelopeData) {
-  const messages = Ably.Realtime.Message.fromEncodedArray(envelopeData.messages);
-
-  for (const msg of messages) {
-    const headers = msg.extras?.headers || {};
-    const command = headers['x-command'];
-
-    if (command === 'remind') {
-      const metadata = msg.data?.metadata || {};
-
-      // Extract reminder text (remove command and @mention)
-      const reminderText = msg.data.text
-        .replace(/\/remind\s+/, '')
-        .replace(/@[\w.]+\s+/, '');
-
-      // Schedule reminder via your reminder service
-      await scheduleReminder({
-        targetUserId: metadata.targetClientId,
-        message: reminderText,
-        fromUserId: msg.clientId,
-        roomId: envelopeData.channel.replace('::$chat', ''),
-        createdAt: msg.timestamp
-      });
-
-      // Log command usage for analytics
-      await logCommandUsage({
-        command: 'remind',
-        userId: msg.clientId,
-        targetUserId: metadata.targetClientId,
-        timestamp: msg.timestamp
-      });
-    }
-  }
-}
-```
-</Code>
-
-## Example: Sentiment analysis <a id="example-sentiment"/>
-
-Analyze the emotional tone of messages to track conversation health or flag concerning content.
-
-<Code>
-```javascript
-async function processIntegrationPayload(envelopeData) {
-  const messages = Ably.Realtime.Message.fromEncodedArray(envelopeData.messages);
-
-  for (const msg of messages) {
-    const text = msg.data?.text;
-
-    // Analyze sentiment using your preferred service
-    const sentiment = await analyzeSentiment(text);
-
-    // Store sentiment data for analytics
-    await storeSentimentData({
-      roomId: envelopeData.channel.replace('::$chat', ''),
-      userId: msg.clientId,
-      messageId: msg.id,
-      sentiment: sentiment.score, // e.g., -1 to 1
-      timestamp: msg.timestamp
-    });
-
-    // Flag messages with very negative sentiment
-    if (sentiment.score < -0.8) {
-      await flagForModeration({
-        roomId: envelopeData.channel.replace('::$chat', ''),
-        messageId: msg.id,
-        reason: 'negative_sentiment',
-        severity: 'high'
-      });
-    }
-  }
-}
-```
-</Code>
+**Priority handling:** Mark messages with priority levels (e.g., `x-priority: 'high'`) to ensure time-sensitive messages are processed first in queue-based integrations.
 
 ## Key considerations <a id="key-considerations"/>
 
