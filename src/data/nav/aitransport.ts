@@ -79,6 +79,10 @@ export default {
           name: 'Citations',
           link: '/docs/ai-transport/messaging/citations',
         },
+        {
+          name: 'Push notifications',
+          link: '/docs/ai-transport/messaging/push-notifications',
+        },
       ],
     },
     {
