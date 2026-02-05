@@ -11,6 +11,8 @@ import {
   convertRelativeUrls,
   replaceTemplateVariables,
   calculateOutputPath,
+  getLanguageDisplayName,
+  addLanguageSubheadingsToCodeBlocks,
 } from './transpileMdxToMarkdown';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -620,6 +622,153 @@ Real prop: link: '/docs/presence'`;
       const output = calculateOutputPath('docs/chat/moderation/direct', 'bodyguard');
       expect(output).toContain('public/docs/chat/moderation/direct/bodyguard.md');
       expect(output).toMatch(/public\/docs\/chat\/moderation\/direct\/bodyguard\.md$/);
+    });
+  });
+
+  describe('getLanguageDisplayName', () => {
+    it('should capitalize simple language names', () => {
+      expect(getLanguageDisplayName('javascript')).toBe('Javascript');
+      expect(getLanguageDisplayName('kotlin')).toBe('Kotlin');
+      expect(getLanguageDisplayName('swift')).toBe('Swift');
+    });
+
+    it('should handle underscore-separated variants', () => {
+      expect(getLanguageDisplayName('realtime_javascript')).toBe('Realtime Javascript');
+      expect(getLanguageDisplayName('rest_python')).toBe('Rest Python');
+    });
+
+    it('should handle empty string', () => {
+      expect(getLanguageDisplayName('')).toBe('');
+    });
+
+    it('should handle single character', () => {
+      expect(getLanguageDisplayName('a')).toBe('A');
+    });
+  });
+
+  describe('addLanguageSubheadingsToCodeBlocks', () => {
+    it('should add subheadings to multiple code blocks within <Code> tags', () => {
+      const input = `<Code>
+\`\`\`javascript
+const x = 1;
+\`\`\`
+
+\`\`\`kotlin
+val x = 1
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Javascript');
+      expect(output).toContain('#### Kotlin');
+      expect(output).toContain('```javascript');
+      expect(output).toContain('```kotlin');
+    });
+
+    it('should add subheading to single code block within <Code> tags', () => {
+      const input = `<Code>
+\`\`\`javascript
+const x = 1;
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Javascript');
+      expect(output).toContain('```javascript');
+    });
+
+    it('should handle realtime/rest SDK variants', () => {
+      const input = `<Code>
+\`\`\`realtime_javascript
+const channel = realtime.channels.get('test');
+\`\`\`
+
+\`\`\`rest_javascript
+const channel = rest.channels.get('test');
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Realtime Javascript');
+      expect(output).toContain('#### Rest Javascript');
+    });
+
+    it('should handle jetpack and other special languages', () => {
+      const input = `<Code>
+\`\`\`kotlin
+val x = 1
+\`\`\`
+
+\`\`\`jetpack
+@Composable
+fun MyComponent() {}
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Kotlin');
+      expect(output).toContain('#### Jetpack');
+    });
+
+    it('should not modify code blocks outside <Code> tags', () => {
+      const input = `\`\`\`javascript
+const x = 1;
+\`\`\`
+
+\`\`\`kotlin
+val x = 1
+\`\`\``;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).not.toContain('####');
+      expect(output).toBe(input);
+    });
+
+    it('should handle multiple <Code> blocks in content', () => {
+      const input = `First section:
+<Code>
+\`\`\`javascript
+const a = 1;
+\`\`\`
+
+\`\`\`python
+a = 1
+\`\`\`
+</Code>
+
+Second section:
+<Code>
+\`\`\`swift
+let b = 2
+\`\`\`
+
+\`\`\`kotlin
+val b = 2
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Javascript');
+      expect(output).toContain('#### Python');
+      expect(output).toContain('#### Swift');
+      expect(output).toContain('#### Kotlin');
+    });
+
+    it('should preserve code block content', () => {
+      const input = `<Code>
+\`\`\`javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+channel.subscribe((message) => {
+  console.log(message);
+});
+\`\`\`
+
+\`\`\`python
+channel = realtime.channels.get('channel-name')
+def on_message(message):
+    print(message)
+channel.subscribe(on_message)
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain("const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');");
+      expect(output).toContain("channel = realtime.channels.get('channel-name')");
+      expect(output).toContain('console.log(message);');
+      expect(output).toContain('print(message)');
     });
   });
 });

@@ -5,6 +5,53 @@ import frontMatter from 'front-matter';
 
 const REPORTER_PREFIX = 'onPostBuild:transpileMdxToMarkdown';
 
+/**
+ * Get the display name for a language identifier
+ * Capitalizes the first letter of each word (e.g. javascript -> Javascript)
+ * Handles underscore-separated variants (e.g., realtime_javascript -> Realtime Javascript, rest_javascript -> Rest Javascript)
+ */
+function getLanguageDisplayName(lang: string): string {
+  if (!lang) return '';
+  // Split by underscore, capitalize each part, join with space
+  return lang
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+/**
+ * Add language subheadings before each code block within <Code> tags
+ * This makes it easier for LLMs to identify which language each code snippet belongs to
+ */
+function addLanguageSubheadingsToCodeBlocks(content: string): string {
+  // Match <Code> blocks (case-insensitive for the tag)
+  const codeTagRegex = /<Code>([\s\S]*?)<\/Code>/gi;
+
+  return content.replace(codeTagRegex, (match, innerContent: string) => {
+    // Find all code blocks within this <Code> tag
+    // Match ```language followed by code and closing ```
+    const codeBlockRegex = /(```(\w+)\n[\s\S]*?```)/g;
+
+    // Check if there are any code blocks
+    const codeBlocks = innerContent.match(codeBlockRegex);
+    if (!codeBlocks || codeBlocks.length === 0) {
+      // No code blocks - return as-is
+      return match;
+    }
+
+    // Replace each code block with a subheading followed by the code block
+    const transformedContent = innerContent.replace(codeBlockRegex, (codeBlock, fullMatch, lang) => {
+      const displayName = getLanguageDisplayName(lang);
+      return `#### ${displayName}\n\n${codeBlock}`;
+    });
+
+    // Ensure proper newline after <Code> tag for markdown formatting
+    // Trim leading whitespace and add two newlines (blank line before heading)
+    const trimmedContent = transformedContent.trimStart();
+    return `<Code>\n\n${trimmedContent}</Code>`;
+  });
+}
+
 interface MdxNode {
   parent: {
     relativeDirectory: string;
@@ -474,7 +521,10 @@ function transformMdxToMarkdown(
   // Stage 11: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 12: Prepend title as markdown heading
+  // Stage 12: Add language subheadings to code blocks within <Code> tags
+  content = addLanguageSubheadingsToCodeBlocks(content);
+
+  // Stage 13: Prepend title as markdown heading
   const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
   return { content: finalContent, title, intro };
@@ -601,4 +651,6 @@ export {
   replaceTemplateVariables,
   calculateOutputPath,
   transformMdxToMarkdown,
+  getLanguageDisplayName,
+  addLanguageSubheadingsToCodeBlocks,
 };
