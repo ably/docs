@@ -232,7 +232,7 @@ export default {
           external: true,
         },
         {
-          link: '/docs/api/chat-rest',
+          link: '/docs/api/rest-api',
           name: 'REST API',
         },
       ],
