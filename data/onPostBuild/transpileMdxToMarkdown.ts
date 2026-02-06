@@ -22,38 +22,76 @@ function getLanguageDisplayName(lang: string): string {
 }
 
 /**
- * Add language subheadings before each code block within <Code> tags
- * This makes it easier for LLMs to identify which language each code snippet belongs to
+ * Find the heading level of the nearest preceding heading before a given position.
+ * Used to determine the appropriate subheading level for code block language labels.
+ * Uses splitByCodeBlocks to avoid matching # comment lines inside fenced code blocks.
+ */
+function findPrecedingHeadingLevel(content: string, position: number): number {
+  const contentBefore = content.substring(0, position);
+  const headingRegex = /^(#+)\s+/gm;
+  let lastHeadingLevel = 3; // Defaults to 3 when no heading is found
+
+  // Only scan non-code-block content to avoid matching # comments in code
+  const parts = splitByCodeBlocks(contentBefore);
+  for (const part of parts) {
+    if (!part.isCodeBlock) {
+      let match;
+      while ((match = headingRegex.exec(part.content)) !== null) {
+        lastHeadingLevel = match[1].length;
+      }
+    }
+  }
+
+  return lastHeadingLevel;
+}
+
+/**
+ * Transform code blocks within a <Code> tag by adding language subheadings
+ * and removing language identifiers from fenced code blocks.
+ * Returns null if no code blocks with language identifiers are found.
+ */
+function transformCodeBlocksWithSubheadings(innerContent: string, headingPrefix: string): string | null {
+  // Match ```language followed by code and closing ```
+  // Uses [^\n`]+ to capture language identifiers with hyphens, plus signs, dots (e.g., objective-c, c++, shell-session)
+  // Supports both Unix (\n) and Windows (\r\n) line endings
+  const codeBlockRegex = /```([^\n`]+)\r?\n([\s\S]*?)```/g;
+
+  // Check if there are any code blocks with language identifiers
+  if (!innerContent.match(codeBlockRegex)) {
+    return null;
+  }
+
+  // Replace each code block with a subheading followed by the code block (without language in fence)
+  return innerContent.replace(codeBlockRegex, (_codeBlock, lang, codeContent) => {
+    const displayName = getLanguageDisplayName(lang);
+    return `${headingPrefix} ${displayName}\n\n\`\`\`\n${codeContent}\`\`\``;
+  });
+}
+
+/**
+ * Add language subheadings before each code block within <Code> tags.
+ * This makes it easier for LLMs to identify which language each code snippet belongs to.
+ * - Removes language identifier from fenced code blocks (since subheading provides this info)
+ * - Dynamically determines heading level based on preceding heading context
  */
 function addLanguageSubheadingsToCodeBlocks(content: string): string {
   // Match <Code> blocks with optional attributes (case-insensitive for the tag)
   // Handles both <Code> and <Code fixed="true"> etc.
   const codeTagRegex = /<Code\b[^>]*>([\s\S]*?)<\/Code>/gi;
 
-  return content.replace(codeTagRegex, (match, innerContent: string) => {
-    // Find all code blocks within this <Code> tag
-    // Match ```language followed by code and closing ```
-    // Uses [^\n`]+ to capture language identifiers with hyphens, plus signs, dots (e.g., objective-c, c++, shell-session)
-    // Supports both Unix (\n) and Windows (\r\n) line endings
-    const codeBlockRegex = /```([^\n`]+)\r?\n[\s\S]*?```/g;
+  return content.replace(codeTagRegex, (fullMatch, innerContent: string, offset: number) => {
+    // Calculate the appropriate heading level based on preceding headings
+    const precedingLevel = findPrecedingHeadingLevel(content, offset);
+    const headingPrefix = '#'.repeat(precedingLevel + 1);
 
-    // Check if there are any code blocks
-    const codeBlocks = innerContent.match(codeBlockRegex);
-    if (!codeBlocks || codeBlocks.length === 0) {
-      // No code blocks - return as-is
-      return match;
+    // Transform code blocks with subheadings
+    const transformedContent = transformCodeBlocksWithSubheadings(innerContent, headingPrefix);
+    if (transformedContent === null) {
+      return fullMatch; // No code blocks with language - return unchanged
     }
 
-    // Replace each code block with a subheading followed by the code block
-    const transformedContent = innerContent.replace(codeBlockRegex, (codeBlock, lang) => {
-      const displayName = getLanguageDisplayName(lang);
-      return `#### ${displayName}\n\n${codeBlock}`;
-    });
-
     // Ensure proper newline after <Code> tag for markdown formatting
-    // Trim leading whitespace and add two newlines (blank line before heading)
-    const trimmedContent = transformedContent.trimStart();
-    return `<Code>\n\n${trimmedContent}</Code>`;
+    return `<Code>\n\n${transformedContent.trimStart()}</Code>`;
   });
 }
 
@@ -652,5 +690,7 @@ export {
   calculateOutputPath,
   transformMdxToMarkdown,
   getLanguageDisplayName,
+  findPrecedingHeadingLevel,
+  transformCodeBlocksWithSubheadings,
   addLanguageSubheadingsToCodeBlocks,
 };

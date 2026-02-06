@@ -12,6 +12,8 @@ import {
   replaceTemplateVariables,
   calculateOutputPath,
   getLanguageDisplayName,
+  findPrecedingHeadingLevel,
+  transformCodeBlocksWithSubheadings,
   addLanguageSubheadingsToCodeBlocks,
 } from './transpileMdxToMarkdown';
 import * as fs from 'fs';
@@ -646,8 +648,82 @@ Real prop: link: '/docs/presence'`;
     });
   });
 
+  describe('findPrecedingHeadingLevel', () => {
+    it('should return 3 when no heading is found (so +1 gives h4 default)', () => {
+      const content = 'Some text without headings';
+      expect(findPrecedingHeadingLevel(content, content.length)).toBe(3);
+    });
+
+    it('should find h1 heading level', () => {
+      const content = '# Main Title\n\nSome content';
+      expect(findPrecedingHeadingLevel(content, content.length)).toBe(1);
+    });
+
+    it('should find h2 heading level', () => {
+      const content = '## Section\n\nSome content';
+      expect(findPrecedingHeadingLevel(content, content.length)).toBe(2);
+    });
+
+    it('should find the nearest preceding heading', () => {
+      const content = '# Title\n\n## Section\n\n### Subsection\n\nContent here';
+      expect(findPrecedingHeadingLevel(content, content.length)).toBe(3);
+    });
+
+    it('should only consider headings before the given position', () => {
+      const content = '## First\n\nContent\n\n### Second';
+      const positionBeforeSecond = content.indexOf('### Second');
+      expect(findPrecedingHeadingLevel(content, positionBeforeSecond)).toBe(2);
+    });
+
+    it('should handle h6 heading level', () => {
+      const content = '###### Deep heading\n\nContent';
+      expect(findPrecedingHeadingLevel(content, content.length)).toBe(6);
+    });
+  });
+
+  describe('transformCodeBlocksWithSubheadings', () => {
+    it('should transform code blocks with subheadings and remove language from fence', () => {
+      const input = `
+\`\`\`javascript
+const x = 1;
+\`\`\`
+`;
+      const output = transformCodeBlocksWithSubheadings(input, '###');
+      expect(output).toContain('### Javascript');
+      expect(output).toContain('```\nconst x = 1;');
+      expect(output).not.toContain('```javascript');
+    });
+
+    it('should return null when no code blocks with language identifiers', () => {
+      const input = `
+\`\`\`
+const x = 1;
+\`\`\`
+`;
+      const output = transformCodeBlocksWithSubheadings(input, '###');
+      expect(output).toBeNull();
+    });
+
+    it('should handle multiple code blocks', () => {
+      const input = `
+\`\`\`javascript
+const x = 1;
+\`\`\`
+
+\`\`\`python
+x = 1
+\`\`\`
+`;
+      const output = transformCodeBlocksWithSubheadings(input, '####');
+      expect(output).toContain('#### Javascript');
+      expect(output).toContain('#### Python');
+      expect(output).not.toContain('```javascript');
+      expect(output).not.toContain('```python');
+    });
+  });
+
   describe('addLanguageSubheadingsToCodeBlocks', () => {
-    it('should add subheadings to multiple code blocks within <Code> tags', () => {
+    it('should add subheadings to multiple code blocks within <Code> tags and remove language from fence', () => {
       const input = `<Code>
 \`\`\`javascript
 const x = 1;
@@ -660,8 +736,11 @@ val x = 1
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).toContain('#### Javascript');
       expect(output).toContain('#### Kotlin');
-      expect(output).toContain('```javascript');
-      expect(output).toContain('```kotlin');
+      // Language should be removed from fenced code blocks
+      expect(output).not.toContain('```javascript');
+      expect(output).not.toContain('```kotlin');
+      expect(output).toContain('```\nconst x = 1;');
+      expect(output).toContain('```\nval x = 1');
     });
 
     it('should handle realtime/rest SDK variants', () => {
@@ -677,6 +756,9 @@ const channel = rest.channels.get('test');
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).toContain('#### Realtime Javascript');
       expect(output).toContain('#### Rest Javascript');
+      // Language should be removed from fenced code blocks
+      expect(output).not.toContain('```realtime_javascript');
+      expect(output).not.toContain('```rest_javascript');
     });
 
     it('should handle <Code> tags with attributes like fixed="true"', () => {
@@ -687,7 +769,9 @@ const x = 1;
 </Code>`;
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).toContain('#### Javascript');
-      expect(output).toContain('```javascript');
+      // Language should be removed from fenced code blocks
+      expect(output).not.toContain('```javascript');
+      expect(output).toContain('```\nconst x = 1;');
     });
 
     it('should handle code blocks without a language identifier', () => {
@@ -756,7 +840,8 @@ channel.subscribe(on_message)
       const input = `<Code>\r\n\`\`\`javascript\r\nconst x = 1;\r\n\`\`\`\r\n</Code>`;
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).toContain('#### Javascript');
-      expect(output).toContain('```javascript');
+      // Language should be removed from fenced code blocks
+      expect(output).not.toContain('```javascript');
     });
 
     it('should handle language identifiers with hyphens', () => {
@@ -767,7 +852,8 @@ NSLog(@"Hello");
 </Code>`;
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).toContain('#### Objective-c');
-      expect(output).toContain('```objective-c');
+      // Language should be removed from fenced code blocks
+      expect(output).not.toContain('```objective-c');
     });
 
     it('should handle language identifiers with special characters', () => {
@@ -778,7 +864,41 @@ $ npm install
 </Code>`;
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).toContain('#### Shell-session');
-      expect(output).toContain('```shell-session');
+      // Language should be removed from fenced code blocks
+      expect(output).not.toContain('```shell-session');
+    });
+
+    it('should use h7 when preceded by h6 heading (no cap for LLM consumption)', () => {
+      const input = `###### Deepest Section
+
+<Code>
+\`\`\`javascript
+const x = 1;
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('####### Javascript');
+    });
+
+    it('should handle multiple <Code> blocks with different preceding headings', () => {
+      const input = `## First Section
+
+<Code>
+\`\`\`javascript
+const a = 1;
+\`\`\`
+</Code>
+
+### Nested Section
+
+<Code>
+\`\`\`python
+b = 2
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('### Javascript');
+      expect(output).toContain('#### Python');
     });
   });
 });
