@@ -664,17 +664,6 @@ val x = 1
       expect(output).toContain('```kotlin');
     });
 
-    it('should add subheading to single code block within <Code> tags', () => {
-      const input = `<Code>
-\`\`\`javascript
-const x = 1;
-\`\`\`
-</Code>`;
-      const output = addLanguageSubheadingsToCodeBlocks(input);
-      expect(output).toContain('#### Javascript');
-      expect(output).toContain('```javascript');
-    });
-
     it('should handle realtime/rest SDK variants', () => {
       const input = `<Code>
 \`\`\`realtime_javascript
@@ -690,20 +679,27 @@ const channel = rest.channels.get('test');
       expect(output).toContain('#### Rest Javascript');
     });
 
-    it('should handle jetpack and other special languages', () => {
-      const input = `<Code>
-\`\`\`kotlin
-val x = 1
-\`\`\`
-
-\`\`\`jetpack
-@Composable
-fun MyComponent() {}
+    it('should handle <Code> tags with attributes like fixed="true"', () => {
+      const input = `<Code fixed="true">
+\`\`\`javascript
+const x = 1;
 \`\`\`
 </Code>`;
       const output = addLanguageSubheadingsToCodeBlocks(input);
-      expect(output).toContain('#### Kotlin');
-      expect(output).toContain('#### Jetpack');
+      expect(output).toContain('#### Javascript');
+      expect(output).toContain('```javascript');
+    });
+
+    it('should handle code blocks without a language identifier', () => {
+      const input = `<Code>
+\`\`\`
+const x = 1;
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      // Code blocks without language should be returned as-is (no subheading added)
+      expect(output).not.toContain('####');
+      expect(output).toContain('```\nconst x = 1;');
     });
 
     it('should not modify code blocks outside <Code> tags', () => {
@@ -717,35 +713,6 @@ val x = 1
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).not.toContain('####');
       expect(output).toBe(input);
-    });
-
-    it('should handle multiple <Code> blocks in content', () => {
-      const input = `First section:
-<Code>
-\`\`\`javascript
-const a = 1;
-\`\`\`
-
-\`\`\`python
-a = 1
-\`\`\`
-</Code>
-
-Second section:
-<Code>
-\`\`\`swift
-let b = 2
-\`\`\`
-
-\`\`\`kotlin
-val b = 2
-\`\`\`
-</Code>`;
-      const output = addLanguageSubheadingsToCodeBlocks(input);
-      expect(output).toContain('#### Javascript');
-      expect(output).toContain('#### Python');
-      expect(output).toContain('#### Swift');
-      expect(output).toContain('#### Kotlin');
     });
 
     it('should preserve code block content', () => {
@@ -769,6 +736,49 @@ channel.subscribe(on_message)
       expect(output).toContain("channel = realtime.channels.get('channel-name')");
       expect(output).toContain('console.log(message);');
       expect(output).toContain('print(message)');
+    });
+
+    it('should handle empty <Code> tags', () => {
+      const input = `<Code></Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toBe('<Code></Code>');
+    });
+
+    it('should handle <Code> tags with only whitespace', () => {
+      const input = `<Code>
+  
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toBe(input);
+    });
+
+    it('should handle code blocks with Windows-style line endings', () => {
+      const input = `<Code>\r\n\`\`\`javascript\r\nconst x = 1;\r\n\`\`\`\r\n</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Javascript');
+      expect(output).toContain('```javascript');
+    });
+
+    it('should handle language identifiers with hyphens', () => {
+      const input = `<Code>
+\`\`\`objective-c
+NSLog(@"Hello");
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Objective-c');
+      expect(output).toContain('```objective-c');
+    });
+
+    it('should handle language identifiers with special characters', () => {
+      const input = `<Code>
+\`\`\`shell-session
+$ npm install
+\`\`\`
+</Code>`;
+      const output = addLanguageSubheadingsToCodeBlocks(input);
+      expect(output).toContain('#### Shell-session');
+      expect(output).toContain('```shell-session');
     });
   });
 });

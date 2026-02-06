@@ -11,7 +11,9 @@ const REPORTER_PREFIX = 'onPostBuild:transpileMdxToMarkdown';
  * Handles underscore-separated variants (e.g., realtime_javascript -> Realtime Javascript, rest_javascript -> Rest Javascript)
  */
 function getLanguageDisplayName(lang: string): string {
-  if (!lang) return '';
+  if (!lang) {
+    return '';
+  }
   // Split by underscore, capitalize each part, join with space
   return lang
     .split('_')
@@ -24,13 +26,16 @@ function getLanguageDisplayName(lang: string): string {
  * This makes it easier for LLMs to identify which language each code snippet belongs to
  */
 function addLanguageSubheadingsToCodeBlocks(content: string): string {
-  // Match <Code> blocks (case-insensitive for the tag)
-  const codeTagRegex = /<Code>([\s\S]*?)<\/Code>/gi;
+  // Match <Code> blocks with optional attributes (case-insensitive for the tag)
+  // Handles both <Code> and <Code fixed="true"> etc.
+  const codeTagRegex = /<Code\b[^>]*>([\s\S]*?)<\/Code>/gi;
 
   return content.replace(codeTagRegex, (match, innerContent: string) => {
     // Find all code blocks within this <Code> tag
     // Match ```language followed by code and closing ```
-    const codeBlockRegex = /(```(\w+)\n[\s\S]*?```)/g;
+    // Uses [^\n`]+ to capture language identifiers with hyphens, plus signs, dots (e.g., objective-c, c++, shell-session)
+    // Supports both Unix (\n) and Windows (\r\n) line endings
+    const codeBlockRegex = /```([^\n`]+)\r?\n[\s\S]*?```/g;
 
     // Check if there are any code blocks
     const codeBlocks = innerContent.match(codeBlockRegex);
@@ -40,7 +45,7 @@ function addLanguageSubheadingsToCodeBlocks(content: string): string {
     }
 
     // Replace each code block with a subheading followed by the code block
-    const transformedContent = innerContent.replace(codeBlockRegex, (codeBlock, fullMatch, lang) => {
+    const transformedContent = innerContent.replace(codeBlockRegex, (codeBlock, lang) => {
       const displayName = getLanguageDisplayName(lang);
       return `#### ${displayName}\n\n${codeBlock}`;
     });
@@ -240,9 +245,7 @@ function removeImportExportStatements(content: string): string {
  * Remove script tags that are not inside code blocks
  */
 function removeScriptTags(content: string): string {
-  return transformNonCodeBlocks(content, (text) =>
-    text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''),
-  );
+  return transformNonCodeBlocks(content, (text) => text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''));
 }
 
 /**
@@ -266,9 +269,7 @@ function removeAnchorTags(content: string): string {
  * This makes hidden type definition tables visible in markdown output
  */
 function stripHiddenFromTables(content: string): string {
-  return transformNonCodeBlocks(content, (text) =>
-    text.replace(/(<Table\s+[^>]*)\bhidden\b\s*/gi, '$1'),
-  );
+  return transformNonCodeBlocks(content, (text) => text.replace(/(<Table\s+[^>]*)\bhidden\b\s*/gi, '$1'));
 }
 
 /**
@@ -322,7 +323,6 @@ function convertImagePathsToGitHub(content: string): string {
  * Preserves: Non-Ably /docs/ links, sdk.ably.com links (API docs), already .md links
  */
 function convertDocsLinksToMarkdown(content: string): string {
-
   // Allowed hostnames for docs link conversion (exact matches only)
   const ALLOWED_DOCS_HOSTNAMES = ['ably.com', 'www.ably.com', 'ably-dev.com', 'www.ably-dev.com'];
 
