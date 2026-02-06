@@ -12,9 +12,9 @@ Chat rooms are built on Ably Pub/Sub channels, allowing you to leverage the full
 
 Ably provides three primary methods for extracting chat messages:
 
-1. **[Webhooks](#webhooks)** - Forward messages to [HTTP endpoints](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), [Google Cloud Functions](/docs/platform/integrations/webhooks/gcp-function), [Cloudflare Workers](/docs/platform/integrations/webhooks/cloudflare), and more
-2. **[Streaming](#streaming)** - Stream messages to external systems like [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), [SQS](/docs/platform/integrations/streaming/sqs), [AMQP](/docs/platform/integrations/streaming/amqp), or [Pulsar](/docs/platform/integrations/streaming/pulsar)
-3. **[Queues](#queues)** - Route messages to [Ably-managed queues](/docs/platform/integrations/queues) for consumption by your services
+1. [Webhooks](#webhooks) forward messages to [HTTP endpoints](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), [Google Cloud Functions](/docs/platform/integrations/webhooks/gcp-function), [Cloudflare Workers](/docs/platform/integrations/webhooks/cloudflare), and more.
+2. [Streaming](#streaming) sends messages to external systems like [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), [SQS](/docs/platform/integrations/streaming/sqs), [AMQP](/docs/platform/integrations/streaming/amqp), or [Pulsar](/docs/platform/integrations/streaming/pulsar).
+3. [Queues](#queues) route messages to [Ably-managed queues](/docs/platform/integrations/queues) for consumption by your services.
 
 Each method offers different trade-offs in terms of simplicity, reliability, and infrastructure requirements.
 
@@ -24,11 +24,7 @@ Integration rules can be configured to match and forward messages from specific 
 
 ### Setting up filters <a id="filter-setup"/>
 
-When configuring an integration rule in your Ably dashboard:
-
-* **Channel filter**: Use a regular expression to match room names. For example, `^support:.*` matches all rooms starting with `support:`.
-* **Event type**: Use `channel.message` to forward chat messages and exclude presence events.
-* **Enveloped messages**: Enable to receive full message metadata including `serial`, `version`, and `headers`.
+When configuring an integration rule in your Ably dashboard, set the channel filter to a regular expression that matches the room names you want to target. For example, `^support:.*` matches all rooms starting with `support:`. Set the event type to `channel.message` to forward chat messages and exclude presence events. Enable enveloped messages to receive full message metadata including `serial`, `version`, and `headers`.
 
 ### Namespace best practices <a id="namespace-best-practices"/>
 
@@ -226,18 +222,17 @@ These rule-level headers are added after the client publishes the message, so th
 Chat message `serial` and `version.serial` fields are [globally unique and lexicographically sortable](/docs/chat/rooms/messages#global-ordering) strings that enable you to correctly order chat messages even when they arrive out of sequence.
 Together with the `action` field, these properties allow you to handle message creation, updates, and deletions in the correct order.
 
-* **`serial`**: Unique identifier for the original message (remains constant across all versions)
-* **`version.serial`**: Identifier for a specific message version (only populated for updated or deleted messages)
-* **`action`**: Indicates message type (`message.created`, `message.updated`, `message.deleted`, or `message.summary` for reactions)
+* `serial` is the unique identifier for the original message and remains constant across all versions.
+* `version.serial` identifies a specific message version and is only populated for updated or deleted messages.
+* `action` indicates the message type: `message.created`, `message.updated`, `message.deleted`, or `message.summary` for reactions.
 
 When receiving messages through integrations, `version.serial` will only be present if the message has been updated or deleted (i.e., `action` is not `message.created`).
 
 ### Determining message order <a id="handle-versions"/>
 
-Use `serial` and `version.serial` fields to determine the correct order of messages and apply updates or deletions appropriately:
+Use `serial` and `version.serial` fields to determine the correct order of messages and apply updates or deletions appropriately.
 
-* **Comparing different messages**: Compare `serial` fields to determine which message was sent first. A lexicographically higher `serial` value indicates a newer message.
-* **Comparing versions of the same message**: When both messages have the same `serial` (indicating different versions of the same message), compare `version.serial` values to determine which version is newer. A lexicographically higher `version.serial` indicates a more recent update or delete operation.
+To compare different messages, compare their `serial` fields to determine which was sent first. A lexicographically higher `serial` value indicates a newer message. When both messages share the same `serial` (indicating different versions of the same message), compare their `version.serial` values instead. A lexicographically higher `version.serial` indicates a more recent update or delete operation.
 
 ### Handling out-of-order delivery
 
@@ -270,11 +265,9 @@ Configure a webhook integration in your Ably dashboard pointing to your endpoint
 
 ### Considerations
 
-* **Retry behavior**: For Lambda, AWS automatically retries failed invocations up to two times with delays (1 minute, then 2 minutes). For generic HTTP webhooks, Ably retries for a limited window.
-* **Ordering**: Messages may arrive out-of-order; use `serial` and `version.serial` to sort.
-* **Message Loss**: Messages may be dropped if retries exceed the retry window.
-* **Deduplication**: Handle potential duplicates using message serials - webhooks provide at-least-once delivery.
-* **Monitoring**: Use [`[meta]log` channel](/docs/metadata-stats/metadata/subscribe#log) to detect failures (see [monitoring section](#monitoring-performance)).
+Messages may arrive out-of-order, so use `serial` and `version.serial` to sort them correctly. Webhooks provide at-least-once delivery, meaning you should handle potential duplicates using message serials. Messages may be dropped if retries exceed the retry window.
+
+For Lambda, AWS automatically retries failed invocations up to two times with delays of 1 minute, then 2 minutes. For generic HTTP webhooks, Ably retries for a limited window. Use the [`[meta]log` channel](/docs/metadata-stats/metadata/subscribe#log) to detect failures (see [monitoring section](#monitoring-performance)).
 
 ## Using streaming <a id="streaming"/>
 
@@ -344,9 +337,7 @@ Configure streaming to your target system. See the following for platform-specif
 
 ### Considerations
 
-* **Infrastructure**: You manage and maintain the streaming system
-* **Reliability**: Messages lost if system unavailable
-* **Complexity**: Higher operational overhead
+You are responsible for managing and maintaining the streaming system. Messages will be lost if the system is unavailable, so reliability depends on your infrastructure. This approach has higher operational overhead compared to webhooks or Ably Queues.
 
 ### Example Kafka consumer
 
@@ -390,11 +381,9 @@ See [Ably queues](/docs/platform/integrations/queues) for complete setup details
 
 ### Considerations
 
-* **Queue limits**: Default maximum is 10,000 messages. Monitor queue length during peak times to avoid reaching capacity
-* **TTL**: Messages expire after 60 minutes (default/max) if not consumed
-* **Dead letter queue**: Automatically provisioned. Always consume to monitor for dropped or expired messages
-* **Throughput**: Multi-tenanted queues support up to 200 messages/second per account. For higher volumes, consider [dedicated queues or streaming](/docs/platform/integrations/queues#scalability)
-* **Ordering**: Messages maintain order per channel with a single consumer. Multiple consumers or multi-channel messages may affect ordering
+The default maximum queue size is 10,000 messages, so monitor queue length during peak times to avoid reaching capacity. Messages expire after 60 minutes (the default and maximum TTL) if not consumed. A dead letter queue is automatically provisioned and you should always consume from it to monitor for dropped or expired messages.
+
+Multi-tenanted queues support up to 200 messages per second per account. For higher volumes, consider [dedicated queues or streaming](/docs/platform/integrations/queues#scalability). Messages maintain order per channel with a single consumer, but multiple consumers or multi-channel messages may affect ordering.
 
 ### Example queue consumer (AMQP)
 
@@ -548,11 +537,9 @@ statsChannel.subscribe('update', (event) => {
 
 ### Integration monitoring best practices <a id="monitoring-best-practices"/>
 
-* **Subscribe to both channels**: Use `[meta]log` for error detection and `[meta]stats:minute` for performance monitoring
-* **Set up alerting**: Create automated alerts for integration failures or throughput anomalies
-* **Track trends**: Store statistics over time to identify patterns and capacity planning needs
-* **Filter by integration type**: Use the statistics entries to monitor specific integration methods (webhooks, queues, streaming)
-* **Correlate with external logs**: Use `requestId` from error events to correlate with your system logs
+Subscribe to both the `[meta]log` channel for error detection and `[meta]stats:minute` for performance monitoring. Set up automated alerts for integration failures or throughput anomalies, and store statistics over time to identify patterns and capacity planning needs.
+
+You can use the statistics entries to monitor specific integration methods such as webhooks, queues, and streaming independently. Use the `requestId` from error events to correlate with your own system logs.
 
 See [metadata subscriptions documentation](/docs/metadata-stats/metadata/subscribe) for complete details on available metachannels.
 
