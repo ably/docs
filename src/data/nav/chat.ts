@@ -81,7 +81,7 @@ export default {
           link: '/docs/chat/rooms/messages',
         },
         {
-          name: 'Message storage and history',
+          name: 'Message history',
           link: '/docs/chat/rooms/history',
         },
         {
@@ -111,6 +111,28 @@ export default {
         {
           name: 'Message replies',
           link: '/docs/chat/rooms/replies',
+        },
+      ],
+    },
+    {
+      name: 'External storage and processing',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/chat/external-storage-and-processing',
+          index: true,
+        },
+        {
+          name: 'Data extraction',
+          link: '/docs/chat/external-storage-and-processing/data-extraction',
+        },
+        {
+          name: 'Data processing',
+          link: '/docs/chat/external-storage-and-processing/data-processing',
+        },
+        {
+          name: 'Data storage',
+          link: '/docs/chat/external-storage-and-processing/data-storage',
         },
       ],
     },
@@ -195,10 +217,6 @@ export default {
         {
           name: 'Livestream chat',
           link: '/docs/guides/chat/build-livestream',
-        },
-        {
-          name: 'Export chat messages',
-          link: '/docs/guides/chat/export-chat',
         },
       ],
     },
