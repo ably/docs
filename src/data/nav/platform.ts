@@ -64,8 +64,7 @@ export default {
       pages: [
         {
           name: 'SDKs',
-          link: '/docs/sdks',
-          external: true,
+          link: '/docs/getting-started',
         },
         {
           name: 'Deprecation',
@@ -247,7 +246,7 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/account',
+          link: '/docs/platform/account',
           index: true,
         },
         {
@@ -358,7 +357,7 @@ export default {
       name: 'API references',
       pages: [
         {
-          link: '/docs/api/control-api',
+          link: '/docs/platform/account/control-api',
           name: 'Control API',
         },
       ],

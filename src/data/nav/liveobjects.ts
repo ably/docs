@@ -125,7 +125,7 @@ export default {
           external: true,
         },
         {
-          link: '/docs/api/liveobjects-rest',
+          link: '/docs/api/rest-api',
           name: 'REST API',
         },
       ],
