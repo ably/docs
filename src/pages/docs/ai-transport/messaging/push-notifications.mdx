@@ -1,0 +1,772 @@
+---
+title: "Push notifications for async AI tasks"
+meta_description: "Notify users when long-running AI tasks complete using Ably's push notifications. Learn how to implement async workflows where users can go offline and return later."
+meta_keywords: "AI, push notifications, async, background tasks, offline, FCM, APNs, web push, agent notifications"
+---
+
+AI agents often perform long-running tasks that users shouldn't have to wait for. Push notifications enable async workflows where users can prompt an agent, go offline, and receive an alert when the task completes. This creates a more natural interaction pattern for time-intensive operations like research, analysis, or content generation.
+
+## Why push notifications matter for AI
+
+Traditional AI chat interfaces require users to stay online while the agent works. This creates poor experiences for tasks that take minutes or hours:
+
+* **Users can't multitask** - They must keep the app open and monitor progress
+* **Sessions fail on disconnect** - If the user loses connection, they miss the response
+* **Mobile battery drain** - Keeping a realtime connection open consumes resources
+* **No cross-device continuity** - Starting on mobile, finishing on desktop requires manual checking
+
+Push notifications solve these problems by decoupling task initiation from result delivery. Users prompt the agent, close the app, and get notified when results are ready. They can then reconnect on any device to view the full response.
+
+## How push notifications work with AI Transport
+
+Ably's push notification system integrates seamlessly with AI Transport patterns. When an agent completes a background task, you publish both a realtime message (for online users) and a push notification (for offline users). The platform handles delivery to the appropriate transport automatically.
+
+The recommended pattern is **channel publishing with push extras**:
+
+1. Agent publishes task completion to the user's session channel
+2. Message includes push notification payload in `extras` field
+3. Ably delivers via realtime connection if user is online
+4. Ably delivers via push (FCM, APNs, or Web Push) if user is offline
+5. User receives notification and can resume session to view results
+
+This approach provides a unified publishing API while automatically adapting to user connectivity state.
+
+<Aside data-type="note">
+Push notifications require device registration and platform-specific setup. See the "Push notification setup" section below for configuration details before implementing these patterns.
+</Aside>
+
+## Publishing push notifications on task completion
+
+When your agent finishes a long-running task, publish a message with push notification payload to notify offline users.
+
+### Basic task completion notification
+
+<Code>
+```javascript
+// Agent completes background task
+const analysisResult = await performLongRunningAnalysis(userPrompt);
+
+// Get user's session channel
+const channel = realtime.channels.get(`ai-session:${userId}`);
+
+// Publish result with push notification
+await channel.publish({
+  name: 'task-complete',
+  data: {
+    taskId: taskId,
+    status: 'completed',
+    preview: 'Analysis complete: Found 15 key insights',
+    timestamp: Date.now()
+  },
+  extras: {
+    push: {
+      notification: {
+        title: 'AI Task Complete',
+        body: 'Your market analysis is ready to view',
+        icon: '/icons/notification-icon.png'
+      },
+      data: {
+        taskId: taskId,
+        sessionId: `ai-session:${userId}`,
+        action: 'open-task'
+      }
+    }
+  }
+});
+```
+</Code>
+
+The `extras.push` payload determines what offline users see in their notification. The `data` field provides context for deep linking when users tap the notification.
+
+### Task-specific notification routing
+
+For users with multiple concurrent agent tasks, include identifiers to route notifications correctly:
+
+<Code>
+```javascript
+// User initiated multiple research tasks
+const tasks = [
+  { id: 'task-123', type: 'research', topic: 'Market trends' },
+  { id: 'task-456', type: 'analysis', topic: 'Competitor pricing' },
+  { id: 'task-789', type: 'summary', topic: 'Q4 performance' }
+];
+
+// Agent completes one task
+async function notifyTaskComplete(task, result) {
+  const channel = realtime.channels.get(`ai-session:${task.userId}`);
+
+  await channel.publish({
+    name: 'task-complete',
+    data: {
+      taskId: task.id,
+      taskType: task.type,
+      result: result,
+      completedAt: Date.now()
+    },
+    extras: {
+      push: {
+        notification: {
+          title: `${task.type.charAt(0).toUpperCase() + task.type.slice(1)} Complete`,
+          body: `Your ${task.topic} ${task.type} is ready`,
+          // Collapse multiple notifications from same task type
+          collapseKey: `agent-${task.type}`
+        },
+        data: {
+          taskId: task.id,
+          taskType: task.type,
+          sessionId: `ai-session:${task.userId}`,
+          deepLink: `/tasks/${task.id}`
+        }
+      }
+    }
+  });
+}
+```
+</Code>
+
+The `collapseKey` ensures that multiple rapid completions replace previous notifications rather than stacking (on Android/iOS), while `data.taskId` enables precise navigation when users tap the notification.
+
+### Progressive task updates
+
+For multi-step tasks, send intermediate notifications to keep users informed:
+
+<Code>
+```javascript
+// Long-running agent task with multiple phases
+async function performResearchTask(userId, query) {
+  const channel = realtime.channels.get(`ai-session:${userId}`);
+  const taskId = generateTaskId();
+
+  // Phase 1: Data collection (notify user)
+  await notifyProgress(channel, taskId, {
+    phase: 'collecting',
+    message: 'Gathering data from 12 sources...',
+    progress: 0.3
+  });
+
+  const data = await collectData(query);
+
+  // Phase 2: Analysis (notify user)
+  await notifyProgress(channel, taskId, {
+    phase: 'analyzing',
+    message: 'Analyzing patterns and trends...',
+    progress: 0.6
+  });
+
+  const insights = await analyzeData(data);
+
+  // Phase 3: Complete (notify with full push)
+  await channel.publish({
+    name: 'task-complete',
+    data: { taskId, insights },
+    extras: {
+      push: {
+        notification: {
+          title: 'Research Complete',
+          body: 'Found key insights in your market research',
+          collapseKey: `task-${taskId}` // Replaces progress notifications
+        },
+        data: { taskId, action: 'view-results' }
+      }
+    }
+  });
+}
+
+async function notifyProgress(channel, taskId, status) {
+  await channel.publish({
+    name: 'task-progress',
+    data: { taskId, ...status },
+    // Only send push if progress is significant milestone
+    extras: status.progress > 0.5 ? {
+      push: {
+        notification: {
+          title: 'Task Update',
+          body: status.message,
+          collapseKey: `task-${taskId}` // Replaces previous progress notifications
+        }
+      }
+    } : undefined
+  });
+}
+```
+</Code>
+
+<Aside data-type="important">
+Avoid sending push notifications for every incremental update (like token streaming). Reserve push for meaningful milestones: task started, significant progress (>50% complete), or completion. Excessive notifications create poor user experiences and may trigger platform rate limits.
+</Aside>
+
+## Subscribing to push in your app
+
+Users must register their devices for push notifications before they can receive agent task alerts. The registration process varies by platform but follows a similar pattern.
+
+### Device registration
+
+<Aside data-type="important">
+For Web Push in the browser, you must explicitly load the push plugin and configure the service worker URL. The push plugin is not included by default to keep bundle sizes small. Make sure to:
+1. Import the push plugin: `import Push from 'ably/push';`
+2. Register it in `plugins: { Push }`
+3. Set `pushServiceWorkerUrl` to your service worker path
+</Aside>
+
+Each platform (Android, iOS, Web) requires initial setup and device registration:
+
+<Code>
+```javascript
+// Web Push example
+import * as Ably from 'ably';
+import Push from 'ably/push';
+
+const realtime = new Ably.Realtime({
+  clientId: userId,
+  key: 'YOUR_API_KEY',
+  plugins: {
+    Push
+  },
+  pushServiceWorkerUrl: '/service-worker.js'
+});
+
+// Check if push is supported
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+  // Request notification permission
+  const permission = await Notification.requestPermission();
+
+  if (permission === 'granted') {
+    // Activate push notifications for this device
+    await realtime.push.activate();
+
+    console.log('Push notifications enabled for AI task updates');
+  }
+}
+```
+
+```swift
+// iOS example
+import Ably
+import UserNotifications
+
+let realtime = ARTRealtime(key: "YOUR_API_KEY")
+realtime.clientId = userId
+
+// Request notification permission
+UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+    if granted {
+        DispatchQueue.main.async {
+            UIApplication.shared.registerForRemoteNotifications()
+        }
+    }
+}
+
+// Handle device token registration
+func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    realtime.push.activate(deviceToken) { error in
+        if let error = error {
+            print("Push activation failed: \(error)")
+        } else {
+            print("Push notifications enabled for AI task updates")
+        }
+    }
+}
+```
+
+```java
+// Android example
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+
+AblyRealtime realtime = new AblyRealtime("YOUR_API_KEY");
+realtime.options.clientId = userId;
+
+// Activate push (Android SDK handles FCM registration automatically)
+realtime.push.activate(this, new CompletionListener() {
+    @Override
+    public void onSuccess() {
+        Log.d("Push", "Push notifications enabled for AI task updates");
+    }
+
+    @Override
+    public void onError(ErrorInfo error) {
+        Log.e("Push", "Push activation failed: " + error.message);
+    }
+});
+```
+</Code>
+
+<Aside data-type="note">
+These examples show on-device activation (simplest approach). For server-managed activation or detailed platform-specific setup, see the <a href="/docs/push">push notifications documentation</a>.
+</Aside>
+
+### Channel subscription for push
+
+After device registration, subscribe to your AI session channel to receive push notifications:
+
+<Code>
+```javascript
+// Subscribe to session channel for push notifications
+const channel = realtime.channels.get(`ai-session:${userId}`);
+
+// Subscribe this device to channel push notifications
+await channel.push.subscribeDevice();
+
+// Subscribe to realtime messages (when app is open)
+channel.subscribe('task-complete', (message) => {
+  console.log('Task completed:', message.data);
+  displayTaskResult(message.data.taskId);
+});
+
+channel.subscribe('task-progress', (message) => {
+  updateProgressBar(message.data.progress);
+});
+```
+</Code>
+
+When the user is online, they receive realtime `task-complete` and `task-progress` messages via the subscription. When offline, they receive push notifications via their device's notification system (FCM, APNs, or Web Push).
+
+### Handling push notification taps
+
+When users tap a notification, deep link them to the specific task or conversation:
+
+<Code>
+```javascript
+// Web Push - Handle notification click in service worker
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const data = event.notification.data;
+
+  // Open or focus app window with task context
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing window if available
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus().then(client => {
+            client.postMessage({
+              type: 'OPEN_TASK',
+              taskId: data.taskId,
+              sessionId: data.sessionId
+            });
+          });
+        }
+      }
+      // Otherwise open new window
+      if (clients.openWindow) {
+        return clients.openWindow(`/tasks/${data.taskId}`);
+      }
+    })
+  );
+});
+
+// In your app, listen for messages from service worker
+navigator.serviceWorker.addEventListener('message', (event) => {
+  if (event.data.type === 'OPEN_TASK') {
+    navigateToTask(event.data.taskId, event.data.sessionId);
+  }
+});
+```
+
+```swift
+// iOS - Handle notification tap
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                          didReceive response: UNNotificationResponse,
+                          withCompletionHandler completionHandler: @escaping () -> Void) {
+    let userInfo = response.notification.request.content.userInfo
+
+    if let taskId = userInfo["taskId"] as? String,
+       let sessionId = userInfo["sessionId"] as? String {
+        // Navigate to task details
+        navigateToTask(taskId: taskId, sessionId: sessionId)
+    }
+
+    completionHandler()
+}
+```
+
+```java
+// Android - Handle notification tap via intent
+public class NotificationReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        RemoteMessage message = intent.getParcelableExtra("message");
+
+        String taskId = message.getData().get("taskId");
+        String sessionId = message.getData().get("sessionId");
+
+        // Launch activity with task context
+        Intent launchIntent = new Intent(context, TaskDetailActivity.class);
+        launchIntent.putExtra("taskId", taskId);
+        launchIntent.putExtra("sessionId", sessionId);
+        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(launchIntent);
+    }
+}
+```
+</Code>
+
+## Correlating push notifications with session state
+
+When users return after receiving a push notification, they need access to the full conversation context and task results. Use Ably's history API to hydrate session state.
+
+### Retrieving task results on reconnection
+
+<Code>
+```javascript
+// User taps notification and app reopens
+async function resumeSession(sessionId, taskId) {
+  // Connect to session channel
+  const channel = realtime.channels.get(sessionId);
+
+  // Retrieve recent messages including task completion
+  const history = await channel.history({ limit: 50 });
+
+  // Find the completed task
+  const taskComplete = history.items.find(msg =>
+    msg.name === 'task-complete' &&
+    msg.data.taskId === taskId
+  );
+
+  if (taskComplete) {
+    // Display full task results
+    displayTaskResult(taskComplete.data);
+
+    // Rebuild conversation context from history
+    const conversationHistory = history.items
+      .filter(msg => msg.name === 'agent-response' || msg.name === 'user-message')
+      .reverse();
+
+    displayConversation(conversationHistory);
+  }
+
+  // Subscribe to future messages
+  channel.subscribe();
+}
+```
+</Code>
+
+This pattern ensures users can tap a notification hours after task completion and still access the full result.
+
+### Multi-device task synchronization
+
+For users who start tasks on mobile and view results on desktop:
+
+<Code>
+```javascript
+// Mobile: User initiates task, then closes app
+async function initiateTask(userId, prompt) {
+  const channel = realtime.channels.get(`ai-session:${userId}`);
+
+  const taskId = generateTaskId();
+
+  // Store task metadata in channel presence or separate state channel
+  await channel.publish({
+    name: 'task-initiated',
+    data: {
+      taskId,
+      prompt,
+      status: 'pending',
+      initiatedAt: Date.now(),
+      initiatedFrom: 'mobile'
+    }
+  });
+
+  // User can now close app - push notification will alert on completion
+  return taskId;
+}
+
+// Desktop: User opens app, sees pending/completed tasks
+async function syncTasksOnLaunch(userId) {
+  const channel = realtime.channels.get(`ai-session:${userId}`);
+
+  // Get recent task history
+  const history = await channel.history({ limit: 100 });
+
+  const tasks = {};
+
+  // Build task state map
+  for (const msg of history.items) {
+    if (msg.name === 'task-initiated') {
+      tasks[msg.data.taskId] = {
+        ...msg.data,
+        status: 'pending'
+      };
+    }
+    if (msg.name === 'task-complete') {
+      if (tasks[msg.data.taskId]) {
+        tasks[msg.data.taskId].status = 'completed';
+        tasks[msg.data.taskId].result = msg.data.result;
+        tasks[msg.data.taskId].completedAt = msg.data.completedAt;
+      }
+    }
+  }
+
+  // Display task list with current states
+  displayTasks(Object.values(tasks));
+
+  // Subscribe to future updates
+  channel.subscribe();
+}
+```
+</Code>
+
+This synchronization pattern works across any combination of devices because all task state flows through the user's session channel.
+
+## Filtering notifications based on user state
+
+For high-frequency agents or users with multiple concurrent sessions, implement server-side filtering to reduce notification noise.
+
+### Presence-based notification filtering
+
+Check if a user is actively online before sending push notifications:
+
+<Code>
+```javascript
+// Server-side: Check presence before publishing push
+async function notifyTaskComplete(userId, taskId, result) {
+  const channel = realtime.channels.get(`ai-session:${userId}`);
+
+  // Check if user is present on the channel
+  const presence = await channel.presence.get({ clientId: userId });
+  const userIsOnline = presence.length > 0;
+
+  if (userIsOnline) {
+    // User is active - send realtime message without push
+    await channel.publish({
+      name: 'task-complete',
+      data: { taskId, result }
+      // No extras.push - user will see realtime update
+    });
+  } else {
+    // User is offline - send with push notification
+    await channel.publish({
+      name: 'task-complete',
+      data: { taskId, result },
+      extras: {
+        push: {
+          notification: {
+            title: 'AI Task Complete',
+            body: 'Your analysis is ready to view'
+          },
+          data: { taskId, sessionId: `ai-session:${userId}` }
+        }
+      }
+    });
+  }
+}
+```
+</Code>
+
+<Aside data-type="note">
+Presence checks add latency (typically 50-200ms for global presence queries). For most applications, the simpler approach is to always include push extras and let client-side logic suppress notifications when the app is active. Presence-based filtering is most valuable for high-frequency updates or when minimizing notification count is critical.
+</Aside>
+
+### Client-side notification suppression
+
+Let the client app decide whether to display notifications based on app state:
+
+<Code>
+```javascript
+// Web Push - Service worker controls notification display
+self.addEventListener('push', (event) => {
+  const data = event.data.json();
+
+  event.waitUntil(
+    // Check if any app windows are currently focused
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const hasVisibleClient = clientList.some(client => client.focused);
+
+      if (hasVisibleClient) {
+        // App is open - send message to app instead of showing notification
+        clientList.forEach(client => {
+          client.postMessage({
+            type: 'TASK_COMPLETE',
+            data: data
+          });
+        });
+      } else {
+        // App is closed/backgrounded - show notification
+        return self.registration.showNotification(data.notification.title, {
+          body: data.notification.body,
+          icon: data.notification.icon,
+          data: data.data,
+          tag: data.data.taskId // Replaces previous notifications for same task
+        });
+      }
+    })
+  );
+});
+```
+
+```swift
+// iOS - Suppress notification when app is active
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                          willPresent notification: UNNotification,
+                          withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    let userInfo = notification.request.content.userInfo
+
+    // Check if user is viewing the relevant session
+    if let sessionId = userInfo["sessionId"] as? String,
+       sessionId == currentlyViewingSessionId {
+        // User is actively viewing this session - update UI, don't show notification
+        handleTaskUpdateInApp(userInfo)
+        completionHandler([]) // No notification
+    } else {
+        // Different session or app in background - show notification
+        completionHandler([.banner, .sound, .badge])
+    }
+}
+```
+
+```java
+// Android - Control notification display in app
+@Override
+public void onMessageReceived(RemoteMessage remoteMessage) {
+    Map<String, String> data = remoteMessage.getData();
+    String sessionId = data.get("sessionId");
+
+    // Check if app is in foreground and viewing this session
+    if (isAppInForeground() && sessionId.equals(currentSessionId)) {
+        // App is active on this session - update UI directly
+        updateTaskUI(data);
+    } else {
+        // App is backgrounded or different session - show notification
+        showNotification(remoteMessage.getNotification());
+    }
+}
+```
+</Code>
+
+This client-side approach provides better user experience by avoiding duplicate notifications when users are actively engaged with the app.
+
+## Push notification setup
+
+Before using push notifications with AI Transport, complete platform-specific configuration.
+
+### Required setup steps
+
+1. **Configure push credentials** in the Ably dashboard:
+   - **Android**: Upload Firebase service account JSON file
+   - **iOS**: Upload APNs authentication key (.p8) or certificate (.p12)
+   - **Web**: VAPID keys are auto-generated by Ably on first activation
+
+2. **Enable push on your channels**:
+   - Create channel rules in dashboard to enable push for `ai-session:*` namespace
+   - Or enable push on specific channels programmatically
+
+3. **Implement device registration** in your app:
+   - Request notification permissions from users
+   - Activate push using Ably SDK (`realtime.push.activate()`)
+   - Subscribe channels to push (`channel.push.subscribeClient()`)
+
+4. **Set up notification handlers**:
+   - Web: Create service worker to handle push events
+   - iOS: Implement `UNUserNotificationCenterDelegate` methods
+   - Android: Configure FCM broadcast receiver
+
+<Aside data-type="further-reading">
+For detailed setup instructions, see the <a href="/docs/push">push notifications overview</a> and platform-specific guides: <a href="/docs/push/configure/device#android">Android setup</a>, <a href="/docs/push/configure/device#ios">iOS setup</a>, and <a href="/docs/push/configure/web">Web Push setup</a>.
+</Aside>
+
+## Platform-specific considerations
+
+While the publishing API is unified across platforms, each platform has specific behaviors to consider.
+
+### Android (FCM)
+
+- **Data-only messages**: Use `data` field without `notification` to handle message in app without displaying notification
+- **Notification channels**: Configure Android notification channels for task categories (research, analysis, etc.)
+- **Icon requirements**: Notification icon must be white-on-transparent drawable resource
+
+<Code>
+```javascript
+// Android-specific notification with data-only option
+extras: {
+  push: {
+    notification: {
+      title: 'Task Complete',
+      body: 'Your analysis is ready',
+      icon: 'notification_icon', // Must exist in Android res/drawable
+      // Android notification channel for categorization
+      channelId: 'ai_task_updates'
+    },
+    data: {
+      taskId: taskId,
+      priority: 'high'
+    }
+  }
+}
+```
+</Code>
+
+### iOS (APNs)
+
+- **Background updates**: Use `content-available` flag for silent background updates without notification
+- **Badge counts**: Update app badge to show pending task count
+- **Environment matching**: Ensure APNs environment (sandbox vs production) matches your app build
+
+<Code>
+```javascript
+// iOS-specific notification with background update
+extras: {
+  push: {
+    notification: {
+      title: 'Task Complete',
+      body: 'Your analysis is ready'
+    },
+    data: {
+      taskId: taskId
+    },
+    // iOS-specific configuration
+    apns: {
+      aps: {
+        badge: 1, // Update app badge count
+        sound: 'default',
+        // For background-only update, use content-available
+        // 'content-available': 1
+      },
+      'apns-headers': {
+        'apns-priority': '10' // High priority for immediate delivery
+      }
+    }
+  }
+}
+```
+</Code>
+
+### Web Push
+
+- **Limitations**: No sound support, icon support varies by browser
+- **Service worker**: Must remain registered to receive push when browser is closed
+- **Permission persistence**: Notification permission persists across browser sessions
+
+<Code>
+```javascript
+// Web-specific notification with action buttons
+extras: {
+  push: {
+    notification: {
+      title: 'Research Complete',
+      body: 'Found 15 key insights in your market analysis',
+      icon: '/icons/task-complete.png',
+      // Web supports custom actions (not available on mobile)
+      actions: [
+        { action: 'view', title: 'View Results' },
+        { action: 'dismiss', title: 'Dismiss' }
+      ],
+      tag: taskId, // Replaces previous notifications for same task
+      requireInteraction: false // Auto-dismiss after timeout
+    },
+    data: {
+      taskId: taskId,
+      sessionId: sessionId,
+      url: `/tasks/${taskId}` // Deep link URL
+    }
+  }
+}
+```
+</Code>
+
+## Next steps
+
+- See <a href="/docs/push/publish">push notification publishing patterns</a> for advanced targeting and batch publishing
+- Learn about <a href="/docs/ai-transport/sessions-identity/resuming-sessions">resuming sessions</a> to restore full conversation state after notifications
+- Explore <a href="/docs/ai-transport/messaging/accepting-user-input">accepting user input</a> for patterns on correlating prompts with task IDs
+- Read about <a href="/docs/storage-history/history">message history</a> for retrieving past conversation and task context
