@@ -103,54 +103,95 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
     return processChild(children);
   }, [children, replacements]);
 
-  // Check if this code block contains only a single utility language
-  const utilityLanguageOverride = useMemo(() => {
+  // Detect code block type (fe_, be_, utility, or standard)
+  const { languageOverride, detectedSdkType } = useMemo(() => {
     // Utility languages that should be shown without warning (like JSON)
-    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql', 'json'];
+    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql', 'json', 'shell', 'text'];
 
-    const childrenArray = React.Children.toArray(processedChildren);
+    // Helper to extract language from className
+    const extractLangFromClassName = (className: string | undefined): string | null => {
+      if (!className) {
+        return null;
+      }
+      const langMatch = className.match(/language-(\S+)/);
+      return langMatch ? langMatch[1] : null;
+    };
 
-    // Check if this is a single child with a utility language
-    if (childrenArray.length !== 1) {
-      return null;
+    // Recursively find all language classes in children
+    const findLanguages = (node: ReactNode): string[] => {
+      const languages: string[] = [];
+
+      React.Children.forEach(node, (child) => {
+        if (!isValidElement(child)) {
+          return;
+        }
+
+        const element = child as ReactElement<ElementProps>;
+        const props = element.props || {};
+
+        // Check className on this element
+        const lang = extractLangFromClassName(props.className);
+        if (lang) {
+          languages.push(lang);
+        }
+
+        // Recursively check children
+        if (props.children) {
+          languages.push(...findLanguages(props.children));
+        }
+      });
+
+      return languages;
+    };
+
+    const languages = findLanguages(processedChildren);
+
+    // Check for fe_/be_ prefixes
+    const hasFEPrefix = languages.some((lang) => lang.startsWith('fe_'));
+    const hasBEPrefix = languages.some((lang) => lang.startsWith('be_'));
+
+    if (hasFEPrefix && activePage.isDualLanguage) {
+      return { languageOverride: activePage.feLanguage, detectedSdkType: 'fe' as SDKType };
     }
 
-    const child = childrenArray[0];
-    if (!isValidElement(child)) {
-      return null;
+    if (hasBEPrefix && activePage.isDualLanguage) {
+      return { languageOverride: activePage.beLanguage, detectedSdkType: 'be' as SDKType };
     }
 
-    const preElement = child as ReactElement<ElementProps>;
-    const codeElement = isValidElement(preElement.props?.children)
-      ? (preElement.props.children as ReactElement<ElementProps>)
-      : null;
-
-    if (!codeElement || !codeElement.props.className) {
-      return null;
+    // Check for single utility language (existing logic)
+    if (languages.length === 1 && UTILITY_LANGUAGES.includes(languages[0])) {
+      return { languageOverride: languages[0], detectedSdkType: null };
     }
 
-    const className = codeElement.props.className as string;
-    const langMatch = className.match(/language-(\w+)/);
-    const lang = langMatch ? langMatch[1] : null;
+    return { languageOverride: null, detectedSdkType: null };
+  }, [processedChildren, activePage.isDualLanguage, activePage.feLanguage, activePage.beLanguage]);
 
-    // If it's a utility language, return the language to use as override
-    return lang && UTILITY_LANGUAGES.includes(lang) ? lang : null;
-  }, [processedChildren]);
+  // For fe/be blocks, the page-level selector controls language, so disable internal onChange
+  const handleLanguageChange = (lang: string, newSdk: SDKType | undefined) => {
+    // Don't navigate for fe/be blocks - page-level selector handles this
+    if (detectedSdkType === 'fe' || detectedSdkType === 'be') {
+      return;
+    }
+
+    if (!detectedSdkType) {
+      setSdk(newSdk ?? null);
+    }
+    navigate(`${location.pathname}?lang=${lang}`);
+  };
 
   return (
     <CodeSnippet
       {...props}
-      lang={utilityLanguageOverride || activePage.language}
-      sdk={sdk}
-      onChange={(lang, sdk) => {
-        setSdk(sdk ?? null);
-        navigate(`${location.pathname}?lang=${lang}`);
-      }}
+      lang={languageOverride || activePage.language}
+      sdk={detectedSdkType || sdk}
+      onChange={handleLanguageChange}
       className={cn(props.className, 'mb-5')}
       languageOrdering={
         activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
       }
       apiKeys={apiKeys}
+      // Hide internal language selector for fe/be blocks since page-level selector controls it
+      fixed={detectedSdkType === 'fe' || detectedSdkType === 'be'}
     >
       {processedChildren}
     </CodeSnippet>

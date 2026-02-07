@@ -56,10 +56,10 @@ export ANTHROPIC_API_KEY="your_api_key_here"
 
 Initialize an Anthropic client and use the [Messages API](https://docs.anthropic.com/en/api/messages) to stream model output as a series of events.
 
-Create a new file `publisher.mjs` with the following contents:
+Create a new file `publisher.mjs` (JavaScript) or `publisher.py` (Python) with the following contents:
 
 <Code>
-```javascript
+```be_javascript
 import Anthropic from '@anthropic-ai/sdk';
 
 // Initialize Anthropic client
@@ -88,6 +88,31 @@ async function streamAnthropicResponse(prompt) {
 
 // Usage example
 streamAnthropicResponse("Tell me a short joke");
+```
+
+```be_python
+import anthropic
+
+# Initialize Anthropic client
+client = anthropic.Anthropic()
+
+# Process each streaming event
+def process_event(event):
+    print(event)
+    # This function is updated in the next sections
+
+# Create streaming response from Anthropic
+def stream_anthropic_response(prompt: str):
+    with client.messages.stream(
+        model="claude-sonnet-4-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        for event in stream:
+            process_event(event)
+
+# Usage example
+stream_anthropic_response("Tell me a short joke")
 ```
 </Code>
 
@@ -145,10 +170,10 @@ This implementation follows the [explicit start/stop events pattern](/docs/ai-tr
 
 ### Initialize the Ably client <a id="initialize-ably"/>
 
-Add the Ably client initialization to your `publisher.mjs` file:
+Add the Ably client initialization to your publisher file:
 
 <Code>
-```javascript
+```be_javascript
 import Ably from 'ably';
 
 // Initialize Ably Realtime client
@@ -159,6 +184,16 @@ const realtime = new Ably.Realtime({
 
 // Create a channel for publishing streamed AI responses
 const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+
+```be_python
+from ably import AblyRealtime
+
+# Initialize Ably Realtime client
+realtime = AblyRealtime(key='{{API_KEY}}', echo_messages=False)
+
+# Create a channel for publishing streamed AI responses
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
 ```
 </Code>
 
@@ -180,10 +215,10 @@ Choose how to map [Anthropic streaming events](#understand-streaming-events) to 
 This implementation assumes each response contains a single text content block. For production use cases with multiple content blocks or concurrent responses, consider tracking state per message ID and content block index.
 </Aside>
 
-Update your `publisher.mjs` file to initialize the Ably client and update the `processEvent()` function to publish events to Ably:
+Update your publisher file to initialize the Ably client and update the `processEvent()` function to publish events to Ably:
 
 <Code>
-```javascript
+```be_javascript
 // Track state across events
 let responseId = null;
 
@@ -228,6 +263,35 @@ function processEvent(event) {
   }
 }
 ```
+
+```be_python
+# Track state across events
+response_id = None
+
+# Process each streaming event and publish to Ably
+def process_event(event):
+    global response_id
+
+    if event.type == 'message_start':
+        # Capture message ID when response starts
+        response_id = event.message.id
+
+        # Publish start event
+        channel.publish('start', extras={'headers': {'responseId': response_id}})
+
+    elif event.type == 'content_block_delta':
+        # Publish tokens from text deltas only
+        if hasattr(event.delta, 'text'):
+            channel.publish(
+                'token',
+                data=event.delta.text,
+                extras={'headers': {'responseId': response_id}}
+            )
+
+    elif event.type == 'message_stop':
+        # Publish stop event when response completes
+        channel.publish('stop', extras={'headers': {'responseId': response_id}})
+```
 </Code>
 
 This implementation:
@@ -253,10 +317,10 @@ node publisher.mjs
 
 Create a subscriber that receives the streaming events from Ably and reconstructs the response.
 
-Create a new file `subscriber.mjs` with the following contents:
+Create a new file `subscriber.mjs` (JavaScript) or `subscriber.py` (Python) with the following contents:
 
 <Code>
-```javascript
+```fe_javascript
 import Ably from 'ably';
 
 // Initialize Ably Realtime client
@@ -296,6 +360,47 @@ await channel.subscribe('stop', (message) => {
 });
 
 console.log('Subscriber ready, waiting for tokens...');
+```
+
+```fe_swift
+import Ably
+
+// Initialize Ably Realtime client
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+
+// Get the same channel used by the publisher
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID
+var responses: [String: String] = [:]
+
+// Handle response start
+channel.subscribe("start") { message in
+    guard let responseId = message.extras?.headers?["responseId"] as? String else { return }
+    print("\n[Response started] \(responseId)")
+    responses[responseId] = ""
+}
+
+// Handle tokens
+channel.subscribe("token") { message in
+    guard let responseId = message.extras?.headers?["responseId"] as? String,
+          let token = message.data as? String else { return }
+
+    // Append token to response
+    responses[responseId, default: ""] += token
+
+    // Display token as it arrives
+    print(token, terminator: "")
+}
+
+// Handle response stop
+channel.subscribe("stop") { message in
+    guard let responseId = message.extras?.headers?["responseId"] as? String else { return }
+    let finalText = responses[responseId] ?? ""
+    print("\n[Response completed] \(responseId)")
+}
+
+print("Subscriber ready, waiting for tokens...")
 ```
 </Code>
 
