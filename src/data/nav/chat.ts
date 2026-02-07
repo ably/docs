@@ -185,6 +185,10 @@ export default {
               name: 'AWS Lambda',
               link: '/docs/chat/moderation/custom/lambda',
             },
+            {
+              name: 'Webhook',
+              link: '/docs/chat/moderation/custom/webhook',
+            },
           ],
         },
       ],
