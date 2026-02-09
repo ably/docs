@@ -3,7 +3,15 @@ title: Chat authentication
 meta_description: "Configure authentication for Chat applications with the required capabilities."
 ---
 
-This page covers Chat-specific capabilities and room scoping. For client setup and server implementation, see [SDK setup](/docs/chat/setup).
+Chat authentication is handled by the underlying Pub/Sub SDK. You authenticate an Ably Realtime client, then pass that authenticated client into `ChatClient`.
+
+## Authentication flow
+
+1. Your auth server authenticates the user.
+2. Your auth server issues an Ably-compatible token (JWT format is recommended for most apps).
+3. The client SDK fetches tokens with `authCallback` and refreshes them automatically before expiry.
+4. The authenticated Pub/Sub client is passed into `ChatClient`.
+
 
 ## Chat capabilities
 
@@ -25,7 +33,7 @@ Capabilities are permissions that control what operations a client can perform. 
 
 ## Room-scoped capabilities
 
-You can restrict tokens to specific chat rooms. Chat rooms use a channel naming format of `your-room::$chat`:
+Capability resource specifiers for Chat rooms use the `::$chat` suffix. For example, a room called `support` maps to `support::$chat` in capability expressions.
 
 <Code>
 ```javascript
@@ -74,13 +82,9 @@ ably_jwt = jwt.encode(
 ```
 </Code>
 
-<Aside data-type='important'>
-If you use API key authentication on the client, any user can claim any `clientId`, enabling impersonation. Always use [token authentication](/docs/auth/token) in production.
-</Aside>
+## Client examples
 
-## Client setup
-
-Use `authCallback` to fetch JWTs from your auth server:
+### JavaScript
 
 <Code>
 ```javascript
@@ -90,7 +94,8 @@ import { ChatClient } from '@ably/chat';
 const realtimeClient = new Ably.Realtime({
   authCallback: async (tokenParams, callback) => {
     try {
-      const response = await fetch('/api/ably-token');
+      const response = await fetch('/api/ably-token', { credentials: 'include' });
+      if (!response.ok) throw new Error('Auth failed');
       const jwt = await response.text();
       callback(null, jwt);
     } catch (error) {
@@ -103,11 +108,101 @@ const chatClient = new ChatClient(realtimeClient);
 ```
 </Code>
 
-See [token authentication](/docs/auth/token#auth-callback) for complete examples in all languages.
+### React
 
-## Further reading
+<Code>
+```react
+import { useMemo } from 'react';
+import * as Ably from 'ably';
+import { ChatClient } from '@ably/chat';
+import { ChatClientProvider } from '@ably/chat/react';
 
-- **Token lifecycle**: Tokens expire and the SDK automatically refreshes them via your `authCallback` - see [Token authentication](/docs/auth/token)
-- **Revoke access**: You can instantly revoke tokens for compromised or banned users - see [Token revocation](/docs/auth/revocation)
-- **Dynamic permissions**: Users can get new capabilities by re-authenticating (e.g., when a moderator grants permissions) - see [Capabilities](/docs/auth/capabilities)
-- **Large capability sets**: If your capability JSON exceeds JWT size limits, use an Ably TokenRequest instead - see [Token authentication](/docs/auth/token#token-request)
+export function App() {
+  const realtimeClient = useMemo(
+    () =>
+      new Ably.Realtime({
+        authCallback: async (tokenParams, callback) => {
+          try {
+            const response = await fetch('/api/ably-token', { credentials: 'include' });
+            if (!response.ok) throw new Error('Auth failed');
+            callback(null, await response.text());
+          } catch (error) {
+            callback(error, null);
+          }
+        },
+      }),
+    []
+  );
+
+  const chatClient = useMemo(() => new ChatClient(realtimeClient), [realtimeClient]);
+
+  return (
+    <ChatClientProvider client={chatClient}>
+      <YourChatUI />
+    </ChatClientProvider>
+  );
+}
+```
+</Code>
+
+### Swift
+
+<Code>
+```swift
+import Ably
+import AblyChat
+
+let realtimeOptions = ARTClientOptions()
+realtimeOptions.authCallback = { tokenParams, callback in
+    fetchAblyJwt { result in
+        switch result {
+        case .success(let jwt):
+            callback(jwt as ARTTokenDetailsCompatible, nil)
+        case .failure(let error):
+            callback(nil, error)
+        }
+    }
+}
+
+let realtime = ARTRealtime(options: realtimeOptions)
+let chatClient = ChatClient(realtime: realtime)
+```
+</Code>
+
+### Kotlin
+
+<Code>
+```kotlin
+import com.ably.chat.ChatClient
+import io.ably.lib.realtime.AblyRealtime
+import io.ably.lib.rest.Auth
+import io.ably.lib.types.ClientOptions
+
+val realtimeClient = AblyRealtime(
+    ClientOptions().apply {
+        authCallback = Auth.TokenCallback { _ ->
+            // Return JWT string from your auth server
+            fetchAblyJwt()
+        }
+    }
+)
+
+val chatClient = ChatClient(realtimeClient)
+```
+</Code>
+
+In each example, the authenticated Pub/Sub client is passed into `ChatClient` and Chat uses that connection for authentication and token renewal.
+
+## Token lifecycle and permission updates
+
+- With `authCallback` or `authUrl`, token refresh is automatic and handled by the SDK.
+- To change a user's capabilities during an active session, issue a new token from your auth server and re-authenticate.
+- To immediately remove access, revoke issued tokens.
+- If your capability JSON is too large for JWT or must remain confidential, use native [Ably Tokens](/docs/auth/ably-tokens).
+
+<Code>
+```javascript
+// Re-authenticate to pick up updated capabilities
+await realtimeClient.auth.authorize();
+```
+</Code>

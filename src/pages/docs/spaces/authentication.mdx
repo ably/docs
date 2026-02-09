@@ -3,27 +3,36 @@ title: Spaces authentication
 meta_description: "Configure authentication for Spaces applications with the required capabilities."
 ---
 
-This page covers Spaces-specific capabilities and space scoping. For client setup and server implementation, see [SDK setup](/docs/spaces/setup).
+Spaces authentication is handled by the underlying Pub/Sub SDK. You authenticate an Ably Realtime client, then pass that authenticated client into `Spaces`.
+
+## How Spaces maps to channels
+
+A logical space is implemented using underlying Pub/Sub channels. Capability expressions should account for both channel types:
+
+- Main space channel: `your-space` (presence and member locations)
+- Cursors channel: `your-space::$cursors` (high-frequency cursor updates)
+
+## Authentication flow
+
+1. Your auth server authenticates the user.
+2. Your auth server issues an Ably-compatible token (JWT format is recommended for most apps).
+3. The client SDK fetches tokens with `authCallback` and refreshes them automatically before expiry.
+4. The authenticated Pub/Sub client is passed into `Spaces`.
+
+<Aside data-type='important'>
+Never use API keys in client-side code. API keys do not expire and are not suitable for untrusted clients.
+</Aside>
 
 ## Spaces capabilities
 
-Capabilities are permissions that control what operations a client can perform. When you create a token for a Spaces user, you specify which capabilities they have. Each Spaces feature requires specific capabilities:
-
-| Feature | Required Capabilities |
-|---------|----------------------|
-| Avatar stack (member events) | `subscribe`, `presence` |
-| Member locations | `subscribe`, `presence` |
+| Feature area | Required capabilities |
+|--------------|-----------------------|
+| Member locations and avatar stack | `subscribe`, `presence` |
 | Live cursors | `publish`, `subscribe` |
 | Component locking | `subscribe`, `presence` |
-| **All Spaces features** | `publish`, `subscribe`, `presence`, `history` |
+| History-aware collaboration | `history` |
 
 ## Space-scoped capabilities
-
-You can restrict tokens to specific spaces. Spaces uses multiple channels per space:
-- The main space channel (`your-space`) handles presence and member locations
-- A dedicated cursors channel (`your-space::$cursors`) handles live cursor positions
-
-Cursors have their own channel because cursor updates are very frequent (potentially 60+ times per second per user), while presence and location updates are less frequent. This separation improves performance.
 
 <Code>
 ```javascript
@@ -35,9 +44,7 @@ const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
 const ablyJwt = jwt.sign(
   {
     'x-ably-capability': JSON.stringify({
-      // Main space channel for presence and locations
       'your-space': ['publish', 'subscribe', 'presence', 'history'],
-      // Cursors channel
       'your-space::$cursors': ['publish', 'subscribe'],
     }),
     'x-ably-clientId': userId,
@@ -62,9 +69,7 @@ ably_jwt = jwt.encode(
         'iat': now,
         'exp': now + 3600,
         'x-ably-capability': json.dumps({
-            # Main space channel for presence and locations
             'your-space': ['publish', 'subscribe', 'presence', 'history'],
-            # Cursors channel
             'your-space::$cursors': ['publish', 'subscribe'],
         }),
         'x-ably-clientId': user_id,
@@ -76,23 +81,20 @@ ably_jwt = jwt.encode(
 ```
 </Code>
 
-<Aside data-type='important'>
-If you use API key authentication on the client, any user can claim any `clientId`, undermining the collaborative features that Spaces provides. Always use [token authentication](/docs/auth/token) in production.
-</Aside>
+## Client examples
 
-## Client setup
-
-Use `authCallback` to fetch JWTs from your auth server:
+### JavaScript
 
 <Code>
 ```javascript
 import Spaces from '@ably/spaces';
 import { Realtime } from 'ably';
 
-const client = new Realtime({
+const realtimeClient = new Realtime({
   authCallback: async (tokenParams, callback) => {
     try {
-      const response = await fetch('/api/ably-token');
+      const response = await fetch('/api/ably-token', { credentials: 'include' });
+      if (!response.ok) throw new Error('Auth failed');
       const jwt = await response.text();
       callback(null, jwt);
     } catch (error) {
@@ -101,15 +103,54 @@ const client = new Realtime({
   },
 });
 
-const spaces = new Spaces(client);
+const spaces = new Spaces(realtimeClient);
 ```
 </Code>
 
-See [token authentication](/docs/auth/token#auth-callback) for complete examples in all languages.
+### React
 
-## Further reading
+<Code>
+```react
+import { useMemo } from 'react';
+import Spaces from '@ably/spaces';
+import { Realtime } from 'ably';
 
-- **Token lifecycle**: Tokens expire and the SDK automatically refreshes them via your `authCallback` - see [Token authentication](/docs/auth/token)
-- **Revoke access**: You can instantly revoke tokens for users who leave a collaboration session - see [Token revocation](/docs/auth/revocation)
-- **Dynamic permissions**: Users can get new capabilities by re-authenticating (e.g., when granted edit access) - see [Capabilities](/docs/auth/capabilities)
-- **Large capability sets**: If your capability JSON exceeds JWT size limits, use an Ably TokenRequest instead - see [Token authentication](/docs/auth/token#token-request)
+export function App() {
+  const realtimeClient = useMemo(
+    () =>
+      new Realtime({
+        authCallback: async (tokenParams, callback) => {
+          try {
+            const response = await fetch('/api/ably-token', { credentials: 'include' });
+            if (!response.ok) throw new Error('Auth failed');
+            callback(null, await response.text());
+          } catch (error) {
+            callback(error, null);
+          }
+        },
+      }),
+    []
+  );
+
+  const spaces = useMemo(() => new Spaces(realtimeClient), [realtimeClient]);
+
+  return <YourSpacesUI spaces={spaces} />;
+}
+```
+</Code>
+
+In each example, the authenticated Pub/Sub client is passed into `Spaces` and Spaces uses that connection for authentication and token renewal.
+
+## Token lifecycle and permission updates
+
+- With `authCallback` or `authUrl`, token refresh is automatic and handled by the SDK.
+- To change a user's capabilities during an active session, issue a new token from your auth server and re-authenticate.
+- To immediately remove access, revoke issued tokens.
+- If your capability JSON is too large for JWT or must remain confidential, use native [Ably Tokens](/docs/auth/ably-tokens).
+
+<Code>
+```javascript
+// Re-authenticate to pick up updated capabilities
+await realtimeClient.auth.authorize();
+```
+</Code>

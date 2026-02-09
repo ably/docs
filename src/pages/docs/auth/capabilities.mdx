@@ -99,13 +99,13 @@ To view the capabilities for an existing API key:
 
 ## Token capabilities <a id="capabilities-token"/>
 
-Ably Tokens and JWTs are issued from an existing API key and their capabilities can, at most, match the capabilities of the issuing API key.
+Ably Tokens are issued from an existing API key and their capabilities can, at most, match the capabilities of the issuing API key. This applies whether the token is issued in JWT format or as a native Ably Token.
 
 If an API key must be shared with a third party, then it is recommended that [the principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege) is considered, assigning only the capabilities needed by that third party. Thus, any Ably requests authenticated using that API key or Ably-compatible tokens associated with that API key, will be restricted to the capabilities assigned to the API key.
 
 #### Using JWT (recommended) <a id="jwt-capabilities"/>
 
-Set capabilities in a JWT using the `x-ably-capability` claim. No Ably SDK is required—any JWT library will work:
+Set capabilities in a JWT using the `x-ably-capability` claim. No Ably SDK is required. This example uses [jsonwebtoken](https://www.npmjs.com/package/jsonwebtoken):
 
 <Code>
 ```javascript
@@ -156,7 +156,7 @@ ably_jwt = jwt.encode(
 
 #### Using TokenRequest (alternative) <a id="tokenrequest-capabilities"/>
 
-If JWT is not suitable, use the Ably SDK to create a TokenRequest with capabilities:
+Use a TokenRequest when your capability list is very large (exceeds JWT size limits) or when capabilities need to be kept confidential (JWTs can be decoded by clients):
 
 <Code>
 ```javascript
@@ -182,15 +182,17 @@ token_request = await ably.auth.create_token_request({
 ```
 </Code>
 
-See [token authentication](/docs/auth/token#token-request) for complete TokenRequest examples in all languages.
+See [Ably Tokens](/docs/auth/ably-tokens#token-request) for complete TokenRequest examples in all languages.
 
 ### Token capability determination <a id="capability-determination"/>
 
-The capabilities for tokens are determined based on those of the issuing API key and those requested by the token.
+The capabilities of the resulting token are the intersection of the requested capabilities and those of the issuing API key. The token request will fail if the intersection is empty (the token would have no rights).
+
+Note that a successful token request doesn't guarantee all requested capabilities were granted. If the issuing key's capabilities aren't known, verify the token has all required capabilities after creation.
 
 #### Ably Token without capabilities <a id="ably-token-all"/>
 
-If no capability is specified in an Ably `TokenRequest`, then the [Ably Token](/docs/auth/token#tokens) will be given the full set of capabilities assigned to the issuing key.
+If no capability is specified in an Ably `TokenRequest`, then the [Ably Token](/docs/auth/ably-tokens) will be given the full set of capabilities assigned to the issuing key.
 
 Using the following example, an API key exists with the listed capabilities. If an Ably Token is requested without specifying any capabilities then the `TokenRequest` is treated as requesting all capabilities, i.e. `{"[*]*":["*"]}`. This will result in the Ably Token receiving all the capabilities of the API key.
 
@@ -267,7 +269,7 @@ if err != nil {
 
 If a set of capabilities are requested, then the Ably Token will be assigned the intersection of the requested capability and the capability of the issuing key.
 
-Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/token#tokens) is requested and specifies a set of capabilities, then the resulting token will only receive those capabilities that intersect. The capabilities of a token cannot exceed those of the issuing API key.
+Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/ably-tokens) is requested and specifies a set of capabilities, then the resulting token will only receive those capabilities that intersect. The capabilities of a token cannot exceed those of the issuing API key.
 
 <Code>
 ```javascript
@@ -365,7 +367,7 @@ if err != nil {
 
 If a set of capabilities are requested, and the intersection between those and the API key's capabilities is empty, then the `TokenRequest` will result in an error.
 
-Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/token#tokens) is requested that specifies a set of capabilities, and there is no intersection between the capabilities of the issuing API key and requested token, then the token request will be rejected. In the following example, the callback will be returned with an error.
+Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/ably-tokens) is requested that specifies a set of capabilities, and there is no intersection between the capabilities of the issuing API key and requested token, then the token request will be rejected. In the following example, the callback will be returned with an error.
 
 <Code>
 ```javascript
@@ -427,7 +429,7 @@ if err != nil {
 
 #### Ably JWT capability determination <a id="ably-jwt"/>
 
-Capabilities are determined for [Ably JWTs](/docs/auth/token#jwt) in the following way:
+Capabilities are determined for [JWTs](/docs/auth/jwt) in the following way:
 
 * The capabilities granted to an Ably JWT will be the intersection of the capabilities within the Ably JWT and the capabilities of the associated API key.
 * If the set of capabilities within the Ably JWT have no intersection with the capabilities of the API key, then an error will instead be returned.
@@ -435,12 +437,12 @@ Capabilities are determined for [Ably JWTs](/docs/auth/token#jwt) in the followi
 ## Custom restrictions on channels <a id="custom-restrictions"/>
 
 <Aside data-type='important'>
-**JWT-only feature:** Channel-scoped user claims are only available when using [Ably JWT authentication](/docs/auth/token#choosing-jwt). They are not available with TokenRequest authentication. See [JWT-only features](/docs/auth/token#jwt-only-features) for a complete list of capabilities exclusive to JWT authentication.
+Channel-scoped user claims are only available when using [JWT authentication](/docs/auth/jwt). They are not available with Ably Tokens. See [JWT features](/docs/auth/jwt#channel-claims) for details.
 </Aside>
 
 It is possible for JWTs to contain authenticated claims for users that can be used to allow or disallow certain interactions in your channels.
 
-Messages can be annotated with trusted metadata copied from the client's authentication token by Ably servers. Clients are unable to directly publish messages with user claim metadata, and claims contained within the authentication token are signed to prevent tampering. Claims can be scoped to individual channels or to namespaces of [channels](/docs/channels). The most specific user claim will be added to the message as part of the `extras` object. Note that this does not apply to presence or metadata messages.
+Messages can be annotated with trusted metadata copied from the client's authentication token by Ably servers. Clients are unable to directly publish messages with user claim metadata, and claims contained within the authentication token are signed to prevent tampering. Claims can be scoped to individual channels or to namespaces of [channels](/docs/channels). The most specific user claim will be added to the message as part of the `extras` object. Note that this does not apply to metadata messages.
 
 To set the trusted fields you need to include `ably.channel.*` in your JWT authentication payload, for example:
 
@@ -515,7 +517,7 @@ func fromModerator(message map[string]interface{}) bool {
 ## Using JWT for per connection publish rate limits <a id="jwt-limits"/>
 
 <Aside data-type='important'>
-**JWT-only feature:** Per-connection publish rate limits are only available when using [Ably JWT authentication](/docs/auth/token#choosing-jwt). They are not available with TokenRequest authentication. See [JWT-only features](/docs/auth/token#jwt-only-features) for a complete list of capabilities exclusive to JWT authentication.
+Per-connection publish rate limits are only available when using [JWT authentication](/docs/auth/jwt). They are not available with Ably Tokens. See [JWT features](/docs/auth/jwt#rate-limits) for details.
 </Aside>
 
 JWTs may specify publish rate limits for a user on particular channels. These limits can be used to prevent any individual user from sending an excessive number of messages in a short period of time.
