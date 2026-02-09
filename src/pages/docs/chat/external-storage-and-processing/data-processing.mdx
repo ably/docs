@@ -1,54 +1,19 @@
 ---
 title: "Process messages with external systems"
-meta_description: "Process chat messages through external systems to trigger notifications, handle slash commands, analyze sentiment, moderate content, and more."
+meta_description: "Process chat messages through external systems to trigger notifications, handle slash commands, analyze sentiment, and more."
 meta_keywords: "chat processing, message processing, notifications, slash commands, sentiment analysis, chat automation, webhooks"
 ---
 
-You can process chat messages through external systems like notification services, analytics platforms, or AI tools to build powerful features. By extracting message data and metadata, you can trigger notifications, execute slash commands, analyze sentiment, moderate content, and more.
+Once you have [extracted messages from chat rooms](/docs/chat/external-storage-and-processing/data-extraction) using an integration, you can process them through external systems to build features like notifications, slash commands, sentiment analysis, and more.
 
-## Understanding the processing flow <a id="integration-flow"/>
+## Enable features with metadata and headers <a id="enable-features"/>
 
-The typical message processing flow works as follows:
+Clients can include structured [metadata and headers](/docs/chat/rooms/messages#structure) when [sending messages](/docs/chat/rooms/messages#send) to provide context for your external processing systems. This enables your integration to act on messages based on the intent signaled by the client.
 
-1. A user sends a message to a chat room, optionally including [metadata or headers](#using-message-data) for processing context
-2. An integration rule evaluates the message based on room name pattern matching
-3. If the rule matches, Ably forwards the message to your external system
-4. Your external system processes the message and extracts relevant data
-5. Based on the message content or metadata, your system can trigger actions like sending notifications, logging events, or analyzing sentiment
-
-## Choosing an integration method <a id="implementation-options"/>
-
-Ably provides several different integration methods, each suited to different use cases.
-
-### Webhooks
-
-[Outbound webhooks](/docs/platform/integrations/webhooks) are ideal for simple business logic and event-driven actions. They work well for processing @mentions or triggering custom notifications, executing lightweight business logic such as lookups and validation, and serverless architectures like AWS Lambda and Cloud Functions.
-
-See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#webhooks) for setup details and code examples.
-
-### Streaming
-
-[Outbound streaming](/docs/platform/integrations/streaming) enables massive scale and integration with existing infrastructure. This is ideal for high-throughput scenarios with large-scale chats and millions of messages, leveraging existing streaming infrastructure like Kafka or Kinesis, and building complex data pipelines and analytics.
-
-See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#streaming) for setup details and code examples.
-
-### Ably Queues
-
-[Ably Queues](/docs/platform/integrations/queues) provide strict ordering and fault-tolerant delivery. They are well suited for automated support flows where message order matters, processing sequential events like game moves or transaction steps, and fault-tolerant message processing with automatic retries.
-
-See [Extract messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#queues) for setup details and code examples.
-
-## Using message data for processing <a id="using-message-data"/>
-
-When your integration receives messages, you have access to structured data that enables various processing patterns.
-
-### Extracting message data
-
-Clients can include metadata to provide context for your external services. For example, when implementing a notification system, you might include the target user ID and notification type:
+For example, when implementing a notification system, a client might include the target user ID and notification type in the metadata:
 
 <Code>
 ```javascript
-// Client sends message with metadata
 await room.messages.send({
   text: '@john.123 Can you review this?',
   metadata: {
@@ -59,76 +24,69 @@ await room.messages.send({
 ```
 </Code>
 
-In your integration, decode the messages and extract the relevant data:
+Your integration can then extract this information to send a push notification to the mentioned user.
+
+Other patterns metadata and headers enable include:
+
+* Slash commands where clients include command type and parameters in metadata, for example `targetClientId` and `reminderTime` for a `/remind` command. Your integration processes this to schedule reminders, execute actions, or trigger workflows.
+* Content categorization where clients tag messages with categories or intents, for example `messageType: 'question'` or `category: 'support'`, to route messages to appropriate handlers or analytics pipelines.
+* Sentiment analysis where your integration forwards the message text to an AI service and stores the results for reporting or alerting.
+
+<Aside data-type='important'>
+Metadata is set by clients and is not server-validated. Always treat it as untrusted input in your integration code. For sensitive operations, make authorization decisions server-side based on user permissions rather than trusting client-provided flags.
+</Aside>
+
+See [using metadata and headers](/docs/chat/external-storage-and-processing/data-extraction#metadata-headers) in the extraction guide for more details on how metadata and headers are delivered through integrations.
+
+## Understand message data <a id="message-data"/>
+
+Each decoded message provides the following data for your processing logic. See [decoding messages](/docs/chat/external-storage-and-processing/data-extraction#decoding) for how to decode the integration envelope.
+
+* `text` is the message content, useful for text analysis, command parsing, or forwarding to external services. See [message structure](/docs/chat/rooms/messages#structure).
+* `clientId` identifies the user who sent the message, useful for attribution and user-specific actions.
+* `serial` is a unique, lexicographically sortable identifier for the message, enabling [global ordering](/docs/chat/rooms/messages#global-ordering).
+* `timestamp` indicates when the message was sent, enabling time-based processing or analytics.
+* `action` indicates the message type: `message.created`, `message.updated`, `message.deleted`, or `message.summary` for [reactions](#reactions).
+* `metadata` contains client-provided structured data. This may include [reply information](/docs/chat/rooms/replies) such as the parent message serial, author, and preview text.
+* `headers` contains key-value pairs typically used for routing and [filtering](/docs/pub-sub/advanced#filter-subscribe).
+* `version` contains version information for updates and deletes, including `version.serial` and `version.timestamp`. See [ordering updates and deletes](/docs/chat/rooms/messages#ordering-update-delete).
+* The room name can be extracted from the envelope's `channel` field. See [extracting room names](/docs/chat/external-storage-and-processing/data-extraction#extract-room).
+
+## Route messages for processing <a id="routing"/>
+
+After decoding messages from the integration envelope, route them based on their content, metadata, or headers to call different processing functions:
 
 <Code>
 ```javascript
-const Ably = require('ably');
+function routeMessage(roomName, msg) {
+  const headers = msg.extras?.headers || {};
+  const metadata = msg.data?.metadata || {};
 
-async function processIntegrationPayload(envelopeData) {
-  // Decode messages using Ably SDK
-  const decodedMessages = Ably.Realtime.Message.fromEncodedArray(envelopeData.messages);
-
-  for (const msg of decodedMessages) {
-    // Extract text content
-    const text = msg.data?.text;
-
-    // Extract headers for routing
-    const headers = msg.extras?.headers || {};
-    const command = headers['x-command'];
-
-    // Extract metadata for business context (treat as untrusted)
-    const metadata = msg.data?.metadata || {};
-    const notificationType = metadata.notificationType;
-
-    // Extract room and user information
-    const roomName = envelopeData.channel.replace('::$chat', '');
-    const senderId = msg.clientId;
-
-    // Route based on headers or metadata
-    if (command === 'remind') {
-      await handleRemindCommand(text, metadata.targetClientId, senderId);
-    } else if (notificationType === 'mention') {
-      await sendMentionNotification(metadata.targetClientId, text, roomName, senderId);
-    }
+  if (headers['x-command'] === 'remind') {
+    return handleRemindCommand(msg.data?.text, metadata.targetClientId, msg.clientId);
   }
+
+  if (metadata.notificationType === 'mention') {
+    return sendMentionNotification(metadata.targetClientId, msg.data?.text, roomName, msg.clientId);
+  }
+
+  return processStandardMessage(roomName, msg);
 }
 ```
 </Code>
 
-For complete details on message decoding and structure, see the section on [extracting messages via integrations](/docs/chat/external-storage-and-processing/data-extraction#decoding).
+Your external services may have rate limits, processing constraints, or availability issues. Implement retry logic and circuit breakers in your integration code to handle these limitations gracefully. Consider queuing failed requests for retry rather than dropping them.
 
-### Available message data
+## Handle message updates and deletes <a id="updates-and-deletes"/>
 
-Each message provides the following data points:
+When a message is updated or deleted, the integration delivers a new version with `action` set to `message.updated` or `message.deleted`. Your processing system may need to adjust previous processing. For example, if you sent a notification for a message that was subsequently deleted, you may want to retract the notification.
 
-* **Message text** (`msg.data.text`): The actual message content for text analysis, command parsing, or content moderation
-* **Client ID** (`msg.clientId`): The user who sent the message, useful for attribution and user-specific actions
-* **Timestamp** (`msg.timestamp`): When the message was sent, enabling time-based processing or analytics
-* **Message ID** (`msg.id`): Unique identifier for tracking, logging, or reference
-* **Room information** (`envelopeData.channel`): Which chat room the message came from
-* **Metadata** (`msg.data.metadata`): Client-provided structured data for business context
-* **Headers** (`msg.extras.headers`): Server-controlled routing and processing flags
+Use `serial` to identify the original message and `version.serial` to determine whether an incoming version is newer than what you have already processed. See [message ordering and versioning](/docs/chat/external-storage-and-processing/data-extraction#versioning) for details on handling out-of-order delivery.
 
-### Enabling features with metadata
+If your processing pipeline stores or forwards message content to external services, handle deletions appropriately to respect user intent and any applicable data retention policies.
 
-Client applications can include metadata to provide context for your processing logic. This enables patterns like:
+## Handle message reactions <a id="reactions"/>
 
-**@Mention notifications:** When a client detects that a user has mentioned another user (e.g., `@john.123`), it can include the target user's ID in the metadata. Your integration can then extract this information to trigger push notifications, emails, or other notification mechanisms to alert the mentioned user.
+Reaction summaries arrive as messages with `action` set to `message.summary`. If your processing needs reaction data, for example analytics on popular reactions or triggering actions when a message reaches a reaction threshold, extract reaction counts from the annotations payload.
 
-**Slash commands:** For commands like `/remind @user message`, clients can include the command type and parameters in metadata (e.g., `targetClientId`, `reminderTime`). Your integration processes this structured data to schedule reminders, execute actions, or trigger workflows.
-
-**Content categorization:** Clients can tag messages with categories or intents (e.g., `messageType: 'question'`, `category: 'support'`) to help your integration route messages to appropriate handlers, analytics pipelines, or support systems.
-
-**Important:** Metadata comes from client applications and should always be treated as untrusted user input. Validate and sanitize metadata in your integration before using it for processing decisions.
-
-## Key considerations <a id="key-considerations"/>
-
-Consider the following when integrating external systems with Ably Chat:
-
-* **Scale and reliability:** Different integration methods offer different reliability guarantees. See [choosing an integration method](#implementation-options) for guidance on webhooks, streaming, and queues
-* **External system limitations:** Your external service may have rate limits, processing constraints, or availability issues. Implement retry logic, circuit breakers, and caching to handle these limitations gracefully
-* **Cost optimization:** Only process messages that require processing. Use channel filters and metadata/headers to route messages efficiently
-* **Security:** Always validate and sanitize client-provided metadata before using it in your integration logic. Treat all client-provided data as untrusted input. For sensitive operations like payment processing or moderation actions, make authorization decisions server-side based on user permissions and authentication context rather than trusting client-provided flags
-* **Error handling:** Handle external system failures gracefully - consider fallback responses or queuing failed requests for retry
-* **Privacy:** Be mindful of what message data you store or forward to external services. Consider data retention policies and user privacy requirements when processing chat messages
+See [handling message reactions in integrations](/docs/chat/external-storage-and-processing/data-extraction#reactions) for the structure of reaction summaries, and the [reaction annotations mapping](/docs/chat/rooms/message-reactions#mapping-annotations) for how reactions map to the underlying Pub/Sub annotations.
