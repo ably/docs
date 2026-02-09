@@ -317,52 +317,6 @@ async function consumeFromKafka() {
 ```
 </Code>
 
-## Using streaming <a id="streaming"/>
-
-[Outbound streaming](/docs/platform/integrations/streaming) enables you to stream a constant flow of chat messages to external streaming or queueing services.
-
-Streaming integrations enable you to leverage your existing streaming infrastructure with full control over retention and processing, providing massive scale capabilities for high-volume message flows.
-
-### Setup
-
-Configure streaming to your target system. See the following for platform-specific setup:
-
-* [Apache Kafka](/docs/platform/integrations/streaming/kafka) - Stream to Kafka topics
-* [AWS Kinesis](/docs/platform/integrations/streaming/kinesis) - Stream to Kinesis streams
-* [AWS SQS](/docs/platform/integrations/streaming/sqs) - Stream to SQS queues
-* [AMQP](/docs/platform/integrations/streaming/amqp) - Stream to AMQP brokers
-* [Apache Pulsar](/docs/platform/integrations/streaming/pulsar) - Stream to Pulsar topics
-* [General streaming documentation](/docs/platform/integrations/streaming) - Overview and configuration
-
-
-### Considerations
-
-You are responsible for managing and maintaining the streaming system. Messages will be lost if the system is unavailable, so reliability depends on your infrastructure. This approach has higher operational overhead compared to webhooks or Ably Queues.
-
-### Example Kafka consumer
-
-<Code>
-```javascript
-const { Kafka } = require('kafkajs');
-
-async function consumeFromKafka() {
-  const consumer = kafka.consumer({ groupId: 'chat-processor' });
-  await consumer.connect();
-  await consumer.subscribe({ topic: 'ably-chat-messages' });
-
-  await consumer.run({
-    eachMessage: async ({ message }) => {
-      const envelope = JSON.parse(message.value);
-      const roomName = extractRoomName(envelope.channel);
-      const decoded = decodeMessages(envelope);
-
-      await processMessages(roomName, decoded);
-    }
-  });
-}
-```
-</Code>
-
 ## Using queues <a id="queues"/>
 
 [Ably Queues](/docs/platform/integrations/queues) are traditional message queues that enable you to consume, process, or store chat messages from your servers.
@@ -430,38 +384,11 @@ Ably automatically provisions a [dead letter queue](/docs/platform/integrations/
 * Exceed their TTL and expire
 * Cause the queue to reach maximum capacity (oldest messages dropped)
 
-**Important:** Monitor your dead letter queue to detect processing failures and capacity issues.
+The dead letter queue name follows the format `APPID:deadletter` and can be consumed using AMQP or STOMP, the same as any other queue.
 
-<Code>
-```javascript
-async function monitorDeadLetterQueue(appID) {
-  // Dead letter queue name format: APPID:deadletter
-  const dlqName = `${appID}:deadletter`;
-  // Avoid hardcoding credentials in production
-  const url = 'amqps://APPID.KEYID:SECRET@us-east-1-a-queue.ably.io/shared';
-
-  amqp.connect(url, (err, conn) => {
-    if (err) { return console.error(err); }
-
-    conn.createChannel((err, ch) => {
-      if (err) { return console.error(err); }
-
-      ch.consume(dlqName, (item) => {
-        const envelope = JSON.parse(item.content);
-        console.error('Message dropped from queue:', envelope);
-
-        // Handle failed message (alert, retry, etc.)
-        handleFailedMessage(envelope);
-
-        ch.ack(item);
-      });
-    });
-  });
-}
-```
-</Code>
-
-**Note:** Only one dead letter queue exists per Ably application, shared across all queues.
+<Aside data-type='note'>
+  Only one dead letter queue exists per Ably application, shared across all queues.
+</Aside>
 
 ## Monitoring integration performance <a id="monitoring-performance"/>
 
@@ -496,7 +423,7 @@ Integration error logs will contain a `tag` field as part of the `data` payload,
 
 The [`[meta]stats:minute` channel](/docs/metadata-stats/metadata/subscribe#stats) publishes [app-level statistics](/docs/metadata-stats/stats) every minute. Use these statistics to monitor integration throughput, message volumes, and resource usage.
 
-Subscribe to receive [statistics](docs/metadata-stats/stats#outbound) updates:
+Subscribe to receive statistics updates:
 
 <Code>
 ```javascript
