@@ -4,6 +4,7 @@ import {
   removeScriptTags,
   removeAnchorTags,
   removeJsxComments,
+  convertMethodSignatureToCode,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
   convertJsxLinkProps,
@@ -307,6 +308,50 @@ import Baz from 'qux';
       const input = '```jsx\n{/* code comment */}\n```';
       const output = removeJsxComments(input);
       expect(output).toContain('{/* code comment */}');
+    });
+  });
+
+  describe('convertMethodSignatureToCode', () => {
+    it('should convert simple MethodSignature to inline code', () => {
+      const input = '<MethodSignature>rooms.get(name, options)</MethodSignature>';
+      const output = convertMethodSignatureToCode(input);
+      expect(output).toBe('`rooms.get(name, options)`');
+    });
+
+    it('should convert template literal MethodSignature to inline code', () => {
+      const input = '<MethodSignature>{`rooms.get<RoomOptions>(name, options)`}</MethodSignature>';
+      const output = convertMethodSignatureToCode(input);
+      expect(output).toBe('`rooms.get<RoomOptions>(name, options)`');
+    });
+
+    it('should handle MethodSignature with angle brackets in template literal', () => {
+      const input = '<MethodSignature>{`Map<string, Room>`}</MethodSignature>';
+      const output = convertMethodSignatureToCode(input);
+      expect(output).toBe('`Map<string, Room>`');
+    });
+
+    it('should handle multiple MethodSignatures', () => {
+      const input = `## Method A
+<MethodSignature>methodA()</MethodSignature>
+
+## Method B
+<MethodSignature>{\`methodB<T>()\`}</MethodSignature>`;
+      const output = convertMethodSignatureToCode(input);
+      expect(output).toContain('`methodA()`');
+      expect(output).toContain('`methodB<T>()`');
+      expect(output).not.toContain('<MethodSignature>');
+    });
+
+    it('should preserve MethodSignature in code blocks', () => {
+      const input = '```jsx\n<MethodSignature>preserve this</MethodSignature>\n```';
+      const output = convertMethodSignatureToCode(input);
+      expect(output).toContain('<MethodSignature>preserve this</MethodSignature>');
+    });
+
+    it('should handle surrounding content', () => {
+      const input = 'Before\n\n<MethodSignature>method()</MethodSignature>\n\nAfter';
+      const output = convertMethodSignatureToCode(input);
+      expect(output).toBe('Before\n\n`method()`\n\nAfter');
     });
   });
 

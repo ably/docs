@@ -320,6 +320,22 @@ function removeJsxComments(content: string): string {
 }
 
 /**
+ * Convert MethodSignature components to inline code
+ * Handles both simple content and template literal syntax
+ * <MethodSignature>content</MethodSignature> → `content`
+ * <MethodSignature>{`content`}</MethodSignature> → `content`
+ */
+function convertMethodSignatureToCode(content: string): string {
+  return transformNonCodeBlocks(content, (text) =>
+    text
+      // Template literal syntax: <MethodSignature>{`content`}</MethodSignature>
+      .replace(/<MethodSignature>\{`([^`]*)`\}<\/MethodSignature>/g, '`$1`')
+      // Simple syntax: <MethodSignature>content</MethodSignature>
+      .replace(/<MethodSignature>([^<{]+)<\/MethodSignature>/g, '`$1`'),
+  );
+}
+
+/**
  * Convert image paths to GitHub raw URLs
  * Handles relative (../), absolute (/images/), and direct (images/) paths
  * Only converts paths with valid image extensions
@@ -541,28 +557,31 @@ function transformMdxToMarkdown(
   // Stage 5: Remove JSX comments
   content = removeJsxComments(content);
 
-  // Stage 6: Strip hidden attribute from tables (makes them visible in markdown)
+  // Stage 6: Convert MethodSignature components to inline code
+  content = convertMethodSignatureToCode(content);
+
+  // Stage 7: Strip hidden attribute from tables (makes them visible in markdown)
   content = stripHiddenFromTables(content);
 
-  // Stage 7: Convert image paths to GitHub URLs
+  // Stage 8: Convert image paths to GitHub URLs
   content = convertImagePathsToGitHub(content);
 
-  // Stage 8: Convert relative URLs to absolute URLs
+  // Stage 9: Convert relative URLs to absolute URLs
   content = convertRelativeUrls(content, siteUrl);
 
-  // Stage 9: Convert quoted /docs/ URLs to markdown links (for JSX props like link: '/docs/...')
+  // Stage 10: Convert quoted /docs/ URLs to markdown links (for JSX props like link: '/docs/...')
   content = convertJsxLinkProps(content, siteUrl);
 
-  // Stage 10: Convert /docs/ links to .md extension and remove ?lang= params
+  // Stage 11: Convert /docs/ links to .md extension and remove ?lang= params
   content = convertDocsLinksToMarkdown(content);
 
-  // Stage 11: Replace template variables
+  // Stage 12: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 12: Add language subheadings to code blocks within <Code> tags
+  // Stage 13: Add language subheadings to code blocks within <Code> tags
   content = addLanguageSubheadingsToCodeBlocks(content);
 
-  // Stage 13: Prepend title as markdown heading
+  // Stage 14: Prepend title as markdown heading
   const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
   return { content: finalContent, title, intro };
@@ -680,6 +699,7 @@ export {
   removeScriptTags,
   removeAnchorTags,
   removeJsxComments,
+  convertMethodSignatureToCode,
   stripHiddenFromTables,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,

@@ -21,6 +21,7 @@ import { Table, NestedTableProvider } from './mdx/NestedTable';
 import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
 import Admonition from './mdx/Admonition';
+import { MethodSignature } from './mdx/MethodSignature';
 
 import { Frontmatter, PageContextType } from './Layout';
 import { ActivePage } from './utils/nav';
@@ -285,6 +286,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
               th: Table.Head,
               td: Table.Cell,
               Tiles,
+              MethodSignature,
             }}
           >
             <PageHeader title={title} intro={intro} />
