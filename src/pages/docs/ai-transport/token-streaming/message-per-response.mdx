@@ -189,6 +189,45 @@ for (Event event : stream) {
 ```
 </Code>
 
+### Handling append failures <a id="append-failures"/>
+
+The examples above append successive tokens to a response message by pipelining the append operations — that is, the agent publishes an append operation without waiting for prior operations to complete. This is necessary in order to avoid the append rate being capped by the round-trip time from the agent to the Ably endpoint. However, this means that the agent does not await the outcome of each append operation, and that can result in the agent continuing to submit append operations after an earlier operation has failed. For example, if a rate limit is exceeded, a single append may be rejected while the following tokens continue to be accepted.
+
+The agent needs to obtain the outcome of each append operation, and take corrective action in the event that any operation failed for some reason. A simple but effective way to do this is to ensure that, if streaming of a response fails for any reason, the message is updated with the final complete response text once it is available. This means that although the streaming experience is disrupted in the case of failure, there is no consistency problem with the final result once the response completes.
+
+To detect append failures, keep a reference to each append operation and check for rejections after the stream completes:
+
+<Code>
+```javascript
+// Publish initial message and capture the serial for appending tokens
+const { serials: [msgSerial] } = await channel.publish({ name: 'response', data: '' });
+
+// Track all append operations
+const appendPromises = [];
+
+// Track the full response for recovery
+let fullResponse = '';
+
+for await (const event of stream) {
+  if (event.type === 'token') {
+    fullResponse += event.text;
+    appendPromises.push(channel.appendMessage({ serial: msgSerial, data: event.text }));
+  }
+}
+
+// Check for any failures after the stream completes
+const results = await Promise.allSettled(appendPromises);
+const failed = results.some(result => result.status === 'rejected');
+
+if (failed) {
+  // Replace the message with the full response
+  await channel.updateMessage({ serial: msgSerial, data: fullResponse });
+}
+```
+</Code>
+
+If any append fails, use `updateMessage()` to replace the message content with the complete response. This ensures subscribers receive the full response regardless of any gaps caused by failed appends. The `message.update` action replaces the entire message content, so subscribers will have the complete response after processing the update.
+
 <Aside data-type="important">
 Append only supports concatenating data of the same type as the original message. For example, if the initial message data is a string, all appended tokens must also be strings. If the initial message data is binary, all appended tokens must be binary. When streaming text content, use raw strings for the `data` field rather than JSON-encoded strings. Ably concatenates the `data` from each append, so JSON-encoding each chunk produces invalid JSON when concatenated.
 </Aside>
