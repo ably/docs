@@ -146,6 +146,10 @@ export default {
               name: 'Message per token',
               link: '/docs/guides/ai-transport/langgraph/lang-graph-message-per-token',
             },
+            {
+              name: 'Human-in-the-loop',
+              link: '/docs/guides/ai-transport/langgraph/langgraph-human-in-the-loop',
+            },
           ],
         },
         {
@@ -158,6 +162,10 @@ export default {
             {
               name: 'Message per token',
               link: '/docs/guides/ai-transport/vercel-ai-sdk/vercel-message-per-token',
+            },
+            {
+              name: 'Human-in-the-loop',
+              link: '/docs/guides/ai-transport/vercel-ai-sdk/vercel-human-in-the-loop',
             },
           ],
         },
