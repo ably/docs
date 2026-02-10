@@ -8,34 +8,57 @@ Extract chat messages from Ably Chat rooms to external systems using Ably's inte
 
 Chat rooms are built on Ably Pub/Sub channels, allowing you to leverage the full range of Ably's [platform integrations](/docs/platform/integrations) to forward messages to external systems.
 
-## Integration methods <a id="methods"/>
+## Integration types <a id="methods"/>
 
-Ably provides three primary methods for extracting chat messages:
+Ably provides three primary types of integration for extracting chat messages:
 
-1. [Webhooks](#webhooks) forward messages to [HTTP endpoints](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), [Google Cloud Functions](/docs/platform/integrations/webhooks/gcp-function), [Cloudflare Workers](/docs/platform/integrations/webhooks/cloudflare), and more.
-2. [Streaming](#streaming) sends messages to external systems like [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), [SQS](/docs/platform/integrations/streaming/sqs), [AMQP](/docs/platform/integrations/streaming/amqp), or [Pulsar](/docs/platform/integrations/streaming/pulsar).
-3. [Queues](#queues) route messages to [Ably-managed queues](/docs/platform/integrations/queues) for consumption by your services.
+* [Webhooks](#webhooks) forward messages to [HTTP endpoints](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), [Google Cloud Functions](/docs/platform/integrations/webhooks/gcp-function), and [Cloudflare Workers](/docs/platform/integrations/webhooks/cloudflare).
+* [Streaming](#streaming) sends messages to external systems like [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), [SQS](/docs/platform/integrations/streaming/sqs), [AMQP](/docs/platform/integrations/streaming/amqp), or [Pulsar](/docs/platform/integrations/streaming/pulsar).
+* [Queues](#queues) route messages to [Ably-managed queues](/docs/platform/integrations/queues) for consumption by your services.
 
-Each method offers different trade-offs in terms of simplicity, reliability, and infrastructure requirements.
+Each type offers different trade-offs in terms of simplicity, reliability, and infrastructure requirements.
 
 ## Filtering rooms <a id="filtering"/>
 
-Integration rules can be configured to match and forward messages from specific chat rooms based on channel name patterns. This enables you to configure any number of integration rules for different use cases and apply them to relevant rooms.
+Integrations can be configured to match and forward messages from specific chat rooms based on channel name patterns. This enables you to configure any number of integrations for different use cases and apply them to relevant rooms.
+
+### Channel names and room names <a id="channel-names"/>
+
+Chat rooms are underpinned by Ably Pub/Sub channels with a `::$chat` suffix added to form the full channel name. When using the Chat SDK to create or get a room, this is done automatically - you don't need to include the suffix yourself.
+
+Integration filters match against the full channel name, but you don't need to include the `::$chat` suffix in your filter pattern.
+
+<Code>
+```javascript
+// Get a chat room - the room name becomes the channel name with ::$chat suffix
+const supportRoom = await chatClient.rooms.get('chat:support');
+// Underlying channel: chat:support::$chat
+
+// Messages sent to these rooms will trigger an integration
+// if your channel filter is: ^chat:support.*
+await supportRoom.messages.send({ text: 'Need help' });
+
+// Messages sent to other channel patterns will NOT trigger the integration
+const generalRoom = await chatClient.rooms.get('chat:general');
+// Underlying channel: chat:general::$chat
+await generalRoom.messages.send({ text: 'Hi' }); // Won't trigger if filter is ^chat:support.*
+```
+</Code>
 
 ### Setting up filters <a id="filter-setup"/>
 
-When configuring an integration rule in your Ably dashboard, set the channel filter to a regular expression that matches the room names you want to target. For example, `^support:.*` matches all rooms starting with `support:`. Set the event type to `channel.message` to forward chat messages and exclude presence events. Enable enveloped messages to receive full message metadata including `serial`, `version`, and `headers`.
+When configuring an integration in your Ably dashboard, set the channel filter to a regular expression that matches the room names you want to target. For example, `^support:.*` matches all rooms starting with `support:`. Set the event type to `channel.message` to forward chat messages and exclude presence events. Enable enveloped messages to receive full message metadata including `serial`, `version`, and `headers`.
 
 #### Namespace best practices <a id="namespace-best-practices"/>
 
 Group related chat rooms under a common namespace using colon-separated prefixes. This enables you to efficiently filter and route messages to different integrations based on their purpose.
 
 For example:
-- `gamechat:<room-id>` for game chat rooms
-- `support:<ticket-id>` for support conversations
-- `team:<team-id>` for team collaboration
+- `gamechat:<room-id>` for game chat rooms.
+- `support:<ticket-id>` for support conversations.
+- `team:<team-id>` for team collaboration.
 
-If new channels are created in a name space, they will automatically be included without needing to update the filter.
+If new channels are created in a namespace, they will automatically be included without needing to update the filter.
 
 ### Example filter configuration
 
@@ -49,33 +72,11 @@ await supportRoom.messages.send({ text: 'Help needed' }); // Will trigger integr
 ```
 </Code>
 
-## Understanding channel names and room names <a id="channel-names"/>
-
-Chat rooms are underpinned by Ably Pub/Sub channels with a `::$chat` suffix added to form the full channel name. When using the Chat SDK to create or get a room, this is done automatically - you don't need to include the suffix yourself.
-
-Integration rules match against the full channel name, but you don't need to include the `::$chat` suffix in your filter pattern.
-
-<Code>
-```javascript
-// Get a chat room - the room name becomes the channel name with ::$chat suffix
-const supportRoom = await chatClient.rooms.get('chat:support');
-// Underlying channel: chat:support::$chat
-
-// Messages sent to these rooms will trigger an integration
-// if your rule's channel filter is: ^chat:support.*
-await supportRoom.messages.send({ text: 'Need help' });
-
-// Messages sent to other channel patterns will NOT trigger the integration
-const generalRoom = await chatClient.rooms.get('chat:general');
-// Underlying channel: chat:general::$chat
-await generalRoom.messages.send({ text: 'Hi' }); // Won't trigger if filter is ^chat:support.*
-```
-</Code>
-
 ## Decoding messages <a id="decoding"/>
 
-Messages received through integrations are encoded as Ably Pub/Sub messages and need to be decoded into Chat messages. The Ably-js SDK exposes [functions](#decode-data) you can use to handle this, or you can see the page on [chat integrations](/docs/chat/integrations) for more details on how to manually decode messages.
-By default, these messages are sent in an envelope containing additional structured metadata, such as the channel name, app ID, and rule ID.
+Messages received through integrations are encoded as Ably Pub/Sub messages and need to be decoded into Chat messages. The Ably Pub/Sub JavaScript SDK exposes [functions](#decode-data) you can use to handle this, or you can see the page on [chat integrations](/docs/chat/integrations) for more details on how to manually decode messages.
+
+By default, these messages are sent in an envelope containing additional structured metadata, such as the channel name, app ID, and integration ID.
 
 ### Understanding enveloped messages <a id="envelope"/>
 
@@ -122,11 +123,11 @@ function extractRoomName(channelName) {
 ```
 </Code>
 
-This room name can then be used to interact with the Chat SDK and REST API as needed.
+This room name can then be used to interact with the Chat SDK as needed.
 
 ### Decoding message data <a id="decode-data"/>
 
-You can use the Ably SDK to decode messages from the envelope:
+You can use the Ably Pub/Sub JavaScript SDK to decode messages from the envelope:
 
 <Code>
 ```javascript
@@ -175,7 +176,9 @@ await room.messages.send({
 ```
 </Code>
 
-**Important:** Metadata is not server-validated. Always treat it as untrusted user input in your integration code.
+<Aside data-type='important'>
+Metadata is not server-validated. Always treat it as untrusted user input in your integration code.
+</Aside>
 
 ### Headers
 
@@ -205,65 +208,95 @@ await room.messages.send({
 ```
 </Code>
 
-#### Adding headers at the rule level
+#### Adding headers at the integration level
 
-When configuring an integration rule in your Ably dashboard, you can specify headers to be added when the rule triggers. This allows you to attach additional metadata to messages only when they match your integration criteria.
+When configuring an integration in your Ably dashboard, you can specify headers to be added when the integration triggers. This allows you to attach additional metadata to messages only when they match your integration criteria.
 
-These rule-level headers are added after the client publishes the message, so they appear in the enveloped message received by your integration endpoint but not in the original message stored in chat history. They will also not be visible to other chat clients.
+These integration-level headers are added after the client publishes the message, so they appear in the enveloped message received by your integration endpoint but not in the original message stored in chat history. They will also not be visible to other chat clients.
 
-**Important:** Carefully validate and sanitize all data in your integration code before using it for business logic or security decisions.
+<Aside data-type='important'>
+Carefully validate and sanitize all data in your integration code before using it for business logic or security decisions.
+</Aside>
 
 ## Message ordering and versioning <a id="versioning"/>
 
-Chat message `serial` and `version.serial` fields are [globally unique and lexicographically sortable](/docs/chat/rooms/messages#global-ordering) strings that enable you to correctly order chat messages even when they arrive out of sequence.
-Together with the `action` field, these properties allow you to handle message creation, updates, and deletions in the correct order.
+Chat message `serial` and `version.serial` fields are [globally unique and lexicographically sortable](/docs/chat/rooms/messages#global-ordering) strings that enable you to correctly order chat messages even when they arrive out of sequence. Together with the `action` field, these properties allow you to handle message creation, updates, deletions, and reaction summaries in the correct order.
 
 * `serial` is the unique identifier for the original message and remains constant across all versions.
 * `version.serial` identifies a specific message version and is only populated for updated or deleted messages.
-* `action` indicates the message type: `message.created`, `message.updated`, `message.deleted`, or `message.summary` for reactions.
+* `action` indicates the message type: `message.created`, `message.updated`, `message.deleted`, or `message.summary` for [reactions](#reactions).
 
-When receiving messages through integrations, `version.serial` will only be present if the message has been updated or deleted (i.e., `action` is not `message.created`).
+When receiving messages through integrations, `version.serial` will only be present if the message has been updated or deleted. Messages with `action` set to `message.created` or `message.summary` do not have `version.serial` populated.
 
 ### Determining message order <a id="handle-versions"/>
 
-Use `serial` and `version.serial` fields to determine the correct order of messages and apply updates or deletions appropriately.
+Use `serial` and `version.serial` fields to determine the correct order of messages and apply updates or deletions appropriately. See [message versioning and sorting](/docs/chat/rooms/messages#ordering-update-delete) for a full explanation of how ordering works.
 
 To compare different messages, compare their `serial` fields to determine which was sent first. A lexicographically higher `serial` value indicates a newer message. When both messages share the same `serial` (indicating different versions of the same message), compare their `version.serial` values instead. A lexicographically higher `version.serial` indicates a more recent update or delete operation.
 
 ### Handling out-of-order delivery
 
-Messages may arrive out of order due to network conditions, retry logic, or when consuming from multiple integration sources. To handle this correctly:
+Messages may arrive out of order due to network conditions, retry logic, or when consuming from multiple integration sources. To handle this correctly, compare the incoming message against what you have stored and only process it if it is newer:
 
-1. Check if `message.serial === storedMessage.serial` to identify if they're the same message
-2. If the serials match, compare `message.version.serial > storedMessage.version.serial` to see if the incoming version is newer
-3. Only process the update or delete if the incoming version is newer than what you have stored
+<Code>
+```javascript
+function shouldProcessMessage(incoming, stored) {
+  // If this is a new message we haven't seen before, always process it
+  if (!stored) return true;
+
+  // Same message (matching serial) - check if this is a newer version
+  if (incoming.serial === stored.serial) {
+    // Only process if the incoming version is newer than what we have
+    return incoming.version?.serial > stored.version?.serial;
+  }
+
+  // Different message entirely - process it
+  return true;
+}
+```
+</Code>
 
 This approach ensures you always maintain the most recent version of each message, regardless of delivery order.
 
-Read more about [message versioning and sorting](/docs/chat/rooms/messages#ordering-update-delete) in the messages documentation.
+### Handling message reactions <a id="reactions"/>
+
+Message reactions are delivered as separate events with `action` set to `message.summary`. These events contain aggregated reaction counts in the `annotations` field, which you can use to update stored reaction totals:
+
+<Code>
+```javascript
+// Example message.summary payload
+{
+  "action": "message.summary",
+  "serial": "original-message-serial",
+  "annotations": {
+    "summary": {
+      "reaction:unique.v1": {
+        "👍": { "count": 5 },
+        "❤️": { "count": 3 }
+      }
+    }
+  }
+}
+```
+</Code>
+
+See [message reactions](/docs/chat/rooms/message-reactions) and the [reaction annotations mapping](/docs/chat/integrations#how-to-handle-message-reactions) for more details on how reactions map to the underlying Pub/Sub annotations.
 
 ## Using webhooks <a id="webhooks"/>
 
 [Outbound webhooks](/docs/platform/integrations/webhooks) enable you to forward messages to HTTP endpoints or serverless functions.
 
-Webhooks are the simplest integration method to implement, requiring no additional infrastructure beyond your webhook endpoint or serverless function. They provide automatic retry handling with configurable retry windows, and messages can be batched together to reduce invocation overhead.
+Webhooks are the simplest integration type to implement, requiring no additional infrastructure beyond your webhook endpoint or serverless function. They provide automatic retry handling with configurable retry windows, and messages can be batched together to reduce invocation overhead.
 
 ### Setup
 
-Configure a webhook integration in your Ably dashboard pointing to your endpoint. See the following for platform-specific setup guides:
-
-* [Generic HTTP webhook](/docs/platform/integrations/webhooks/generic) - Forward to any HTTP/HTTPS endpoint
-* [AWS Lambda](/docs/platform/integrations/webhooks/lambda) - Trigger Lambda functions
-* [Google Cloud Functions](/docs/platform/integrations/webhooks/gcp-function) - Invoke GCP functions
-* [Cloudflare Workers](/docs/platform/integrations/webhooks/cloudflare) - Trigger Workers
-* [General webhook documentation](/docs/platform/integrations/webhooks) - Overview and other platforms
-
+Configure a webhook integration in your Ably dashboard pointing to your endpoint. See the [webhooks documentation](/docs/platform/integrations/webhooks) for platform-specific setup guides covering generic HTTP endpoints, AWS Lambda, Google Cloud Functions, Cloudflare Workers, and other targets.
 
 ### Considerations
 
-Messages may arrive out-of-order, so use `serial` and `version.serial` to sort them correctly. Webhooks provide at-least-once delivery, meaning you should handle potential duplicates using message serials. Messages may be dropped if retries exceed the retry window.
+Messages may arrive out of order, so use `serial` and `version.serial` to sort them correctly. Webhooks provide at-least-once delivery, meaning you should handle potential duplicates using message serials. Messages may be dropped if retries exceed the retry window.
 
-For Lambda, AWS automatically retries failed invocations up to two times with delays of 1 minute, then 2 minutes. For generic HTTP webhooks, Ably retries for a limited window. Use the [`[meta]log` channel](/docs/metadata-stats/metadata/subscribe#log) to detect failures (see [monitoring section](#monitoring-performance)).
+Retry behavior varies by platform. For AWS Lambda, AWS automatically retries failed invocations up to two times with delays of 1 minute, then 2 minutes. For other webhook targets, Ably retries for a limited window. Use the [`[meta]log` channel](/docs/metadata-stats/metadata/subscribe#log) to detect failures (see [monitoring section](#monitoring-performance)).
 
 ## Using streaming <a id="streaming"/>
 
@@ -273,23 +306,15 @@ Streaming integrations enable you to leverage your existing streaming infrastruc
 
 ### Setup
 
-Configure streaming to your target system. See the following for platform-specific setup:
-
-* [Apache Kafka](/docs/platform/integrations/streaming/kafka) - Stream to Kafka topics
-* [AWS Kinesis](/docs/platform/integrations/streaming/kinesis) - Stream to Kinesis streams
-* [AWS SQS](/docs/platform/integrations/streaming/sqs) - Stream to SQS queues
-* [AMQP](/docs/platform/integrations/streaming/amqp) - Stream to AMQP brokers
-* [Apache Pulsar](/docs/platform/integrations/streaming/pulsar) - Stream to Pulsar topics
-* [General streaming documentation](/docs/platform/integrations/streaming) - Overview and configuration
-
+Configure streaming to your target system. See the [streaming documentation](/docs/platform/integrations/streaming) for platform-specific setup guides covering Kafka, Kinesis, SQS, AMQP, Pulsar, and other targets.
 
 ### Considerations
 
-* **Infrastructure**: You manage and maintain the streaming system
-* **Reliability**: Messages lost if system unavailable
-* **Complexity**: Higher operational overhead
+You manage and maintain the streaming infrastructure yourself, which means higher operational overhead compared to webhooks. Messages may be lost if the target system is unavailable, as there is no built-in retry mechanism on Ably's side. Ensure your streaming infrastructure is provisioned for the expected message volume.
 
-### Example Kafka consumer
+### Example consumer
+
+The following example shows consuming chat messages from Kafka. The same pattern applies for other streaming targets - decode the envelope and process the messages:
 
 <Code>
 ```javascript
@@ -323,9 +348,9 @@ Ably Queues provide fault-tolerant message delivery with at-least-once delivery 
 
 Configure an Ably queue integration in your dashboard:
 
-1. [Provision a queue](/docs/platform/integrations/queues#provision) with your desired region, TTL, and max length settings
-2. [Create a queue rule](/docs/platform/integrations/queues#config) to route chat messages to the queue
-3. Consume messages using [AMQP](/docs/platform/integrations/queues#amqp) or [STOMP](/docs/platform/integrations/queues#stomp) protocols
+1. [Provision a queue](/docs/platform/integrations/queues#provision) with your desired region, TTL, and max length settings.
+2. [Create a queue integration](/docs/platform/integrations/queues#config) to route chat messages to the queue.
+3. Consume messages using [AMQP](/docs/platform/integrations/queues#amqp) or [STOMP](/docs/platform/integrations/queues#stomp) protocols.
 
 See [Ably queues](/docs/platform/integrations/queues) for complete setup details.
 
@@ -376,9 +401,9 @@ amqp.connect(url, (err, conn) => {
 
 Ably automatically provisions a [dead letter queue](/docs/platform/integrations/queues#deadletter) when you create a queue. Messages are moved to the dead letter queue when they:
 
-* Are rejected by consumers (`basic.reject` or `basic.nack` with `requeue=false`)
-* Exceed their TTL and expire
-* Cause the queue to reach maximum capacity (oldest messages dropped)
+* Are rejected by consumers (`basic.reject` or `basic.nack` with `requeue=false`).
+* Exceed their TTL and expire.
+* Cause the queue to reach maximum capacity (oldest messages dropped).
 
 The dead letter queue name follows the format `APPID:deadletter` and can be consumed using AMQP or STOMP, the same as any other queue.
 
@@ -399,7 +424,7 @@ Subscribe to the `[meta]log` channel to receive error events:
 <Code>
 ```javascript
 const Ably = require('ably');
-const client = new Ably.Realtime({ key: 'YOUR_API_KEY' });
+const client = new Ably.Realtime({ key: '{{API_KEY}}' });
 
 const metaLogChannel = client.channels.get('[meta]log');
 
@@ -411,9 +436,11 @@ await metaLogChannel.subscribe((message) => {
 ```
 </Code>
 
-Integration error logs will contain a `tag` field as part of the `data` payload, indicating the integration type - for example, `reactor.generic.http`, for webhooks. This allows you to filter and categorize errors by integration method.
+Integration error logs will contain a `tag` field as part of the `data` payload, indicating the integration type - for example, `reactor.generic.http` for webhooks. This allows you to filter and categorize errors by integration type.
 
-**Note:** The `[meta]log` channel only publishes errors that cannot be directly reported to clients. For example, webhook delivery failures or queue publishing errors.
+<Aside data-type='note'>
+The `[meta]log` channel only publishes errors that cannot be directly reported to clients. For example, webhook delivery failures or queue publishing errors.
+</Aside>
 
 ### Monitor app statistics <a id="monitor-stats"/>
 
@@ -462,49 +489,6 @@ statsChannel.subscribe('update', (event) => {
 
 Subscribe to both the `[meta]log` channel for error detection and `[meta]stats:minute` for performance monitoring. Set up automated alerts for integration failures or throughput anomalies, and store statistics over time to identify patterns and capacity planning needs.
 
-You can use the statistics entries to monitor specific integration methods such as webhooks, queues, and streaming independently. Use the `requestId` from error events to correlate with your own system logs.
+You can use the statistics entries to monitor specific integration types such as webhooks, queues, and streaming independently. Use the `requestId` from error events to correlate with your own system logs.
 
 See [metadata subscriptions documentation](/docs/metadata-stats/metadata/subscribe) for complete details on available metachannels.
-
-## Handling message reactions <a id="reactions"/>
-
-Message reactions are delivered as separate events with `action: 'message.summary'`.
-
-### Reaction summary structure
-
-<Code>
-```javascript
-{
-  "action": "message.summary",
-  "serial": "original-message-serial",
-  "annotations": {
-    "summary": {
-      "reaction:unique.v1": {
-        "👍": { "count": 5 },
-        "❤️": { "count": 3 }
-      }
-    }
-  }
-}
-```
-</Code>
-
-### Processing reactions
-
-<Code>
-```javascript
-function processMessage(message) {
-  if (message.action === 'message.summary') {
-    // Handle reaction summary
-    const reactions = message.annotations?.summary?.['reaction:unique.v1'] || {};
-    updateReactionCounts(message.serial, reactions);
-    return;
-  }
-
-  // Handle regular message
-  saveMessage(message);
-}
-```
-</Code>
-
-Read more about [message reactions](/docs/chat/rooms/message-reactions) and the [reactions annotation mapping](/docs/chat/integrations#how-to-handle-message-reactions).
