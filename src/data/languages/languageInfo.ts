@@ -86,8 +86,8 @@ export default {
     label: 'Kotlin',
     syntaxHighlighterKey: 'kotlin',
   },
-  jetpack: {
-    label: 'Jetpack Compose',
+  chat_android: {
+    label: 'Android',
     syntaxHighlighterKey: 'kotlin',
   },
   realtime: {
