@@ -11,7 +11,19 @@ window.ResizeObserver = ResizeObserver;
 
 jest.mock('@ably/ui/core/utils/syntax-highlighter', () => ({
   highlightSnippet: jest.fn,
+  LINE_HIGHLIGHT_CLASSES: {
+    addition: 'code-line-addition',
+    removal: 'code-line-removal',
+    highlight: 'code-line-highlight',
+  },
+  parseLineHighlights: (lang) => ({ lang, highlights: {} }),
   registerDefaultLanguages: jest.fn,
+  splitHtmlLines: (html) => html.split('\n'),
+}));
+
+jest.mock('@ably/ui/core/Code', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 jest.mock('@ably/ui/core/utils/syntax-highlighter-registry', () => ({
