@@ -1,5 +1,23 @@
 import dotenv from 'dotenv';
 import remarkGfm from 'remark-gfm';
+import { visit } from 'unist-util-visit';
+
+/**
+ * Remark plugin that preserves the code fence meta string (everything after the
+ * language) as a `data-meta` attribute on the <code> element. MDX v2 drops the
+ * meta by default; setting data.hProperties on the MDAST node causes
+ * mdast-util-to-hast's applyData() to merge it into the HAST element properties,
+ * which then flow through to JSX props.
+ */
+const remarkCodeMeta = () => (tree: any) => {
+  visit(tree, 'code', (node: any) => {
+    if (node.meta) {
+      node.data = node.data || {};
+      node.data.hProperties = node.data.hProperties || {};
+      node.data.hProperties['data-meta'] = node.meta;
+    }
+  });
+};
 
 dotenv.config({
   path: `.env.${process.env.NODE_ENV}`,
@@ -94,6 +112,8 @@ export const plugins = [
         remarkPlugins: [
           // Add GitHub Flavored Markdown (GFM) support
           remarkGfm,
+          // Preserve code fence meta strings (e.g. highlight="...") as data-meta attributes
+          remarkCodeMeta,
         ],
       },
     },
