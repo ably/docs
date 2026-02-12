@@ -257,6 +257,10 @@ export default {
           name: 'Getting started',
           pages: [
             {
+              name: 'Web Push',
+              link: '/docs/push/getting-started/web',
+            },
+            {
               name: 'APNs',
               link: '/docs/push/getting-started/apns',
             },
