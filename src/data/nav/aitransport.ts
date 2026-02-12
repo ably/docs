@@ -91,6 +91,7 @@ export default {
     },
     {
       name: 'Guides',
+      expand: true,
       pages: [
         {
           name: 'Anthropic',
