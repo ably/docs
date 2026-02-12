@@ -77,6 +77,7 @@ export default {
   android: {
     label: 'Android',
     syntaxHighlighterKey: 'java',
+    alias: 'android-full',
   },
   flutter: {
     label: 'Flutter',
@@ -89,6 +90,7 @@ export default {
   chat_android: {
     label: 'Android',
     syntaxHighlighterKey: 'kotlin',
+    alias: 'android-full',
   },
   realtime: {
     label: 'Realtime',

@@ -3,7 +3,6 @@ import DOMPurify from 'dompurify';
 import Icon from '@ably/ui/core/Icon';
 import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/syntax-highlighter';
 import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
-import { getLanguageInfo } from '@ably/ui/core/CodeSnippet/languages';
 
 registerDefaultLanguages(languagesRegistry);
 
@@ -16,10 +15,9 @@ export const CodeBlock: FC<{ children: React.ReactNode; language: string }> = ({
   language = 'javascript',
 }) => {
   const content = children.props.children; // hack-ish, but we get the content
-  const resolvedLanguage = getLanguageInfo(language).syntaxHighlighterKey || language;
   const highlightedContent = useMemo(() => {
-    return highlightSnippet(resolvedLanguage, content);
-  }, [resolvedLanguage, content]);
+    return highlightSnippet(language, content);
+  }, [language, content]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(content);
