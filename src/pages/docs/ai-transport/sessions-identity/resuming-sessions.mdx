@@ -106,25 +106,27 @@ await channel.subscribe('prompt', (message) => {
   saveLastProcessedTimestamp(message.timestamp);
 });
 
-// Fetch history up until the point of attachment, starting from last checkpoint
+// Fetch history from the attachment point back to the last checkpoint
 let page = await channel.history({
   untilAttach: true,
   start: lastProcessedTimestamp,
-  direction: 'forwards'
 });
 
-// Paginate through all missed messages
+// Paginate through all missed messages, storing in oldest-to-newest order
+const missedMessages = [];
 while (page) {
-  for (const message of page.items) {
-    // Process the historical message
-    await processMessage(message);
-
-    // Persist the timestamp after successful processing
-    await saveLastProcessedTimestamp(message.timestamp);
-  }
+  missedMessages.unshift(...page.items.reverse());
 
   // Move to next page if available
   page = page.hasNext() ? await page.next() : null;
+}
+
+// Process messages oldest-to-newest
+for (const message of missedMessages) {
+  await processMessage(message);
+
+  // Persist the timestamp after successful processing
+  await saveLastProcessedTimestamp(message.timestamp);
 }
 ```
 ```python
@@ -155,24 +157,26 @@ def on_prompt(message):
 
 await channel.subscribe("prompt", on_prompt)
 
-# Fetch history up until the point of attachment, starting from last checkpoint
+# Fetch history from the attachment point back to the last checkpoint
 page = await channel.history(
     until_attach=True,
     start=last_processed_timestamp,
-    direction="forwards"
 )
 
-# Paginate through all missed messages
+# Paginate through all missed messages, storing in oldest-to-newest order
+missed_messages = []
 while page:
-    for message in page.items:
-        # Process the historical message
-        await process_message(message)
-
-        # Persist the timestamp after successful processing
-        await save_last_processed_timestamp(message.timestamp)
+    missed_messages = list(reversed(page.items)) + missed_messages
 
     # Move to next page if available
     page = await page.next() if page.has_next() else None
+
+# Process messages oldest-to-newest
+for message in missed_messages:
+    await process_message(message)
+
+    # Persist the timestamp after successful processing
+    await save_last_processed_timestamp(message.timestamp)
 ```
 ```java
 // Agent code
@@ -182,6 +186,10 @@ import io.ably.lib.types.ClientOptions;
 import io.ably.lib.types.Message;
 import io.ably.lib.types.PaginatedResult;
 import io.ably.lib.types.Param;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 ClientOptions options = new ClientOptions();
 options.key = System.getenv("ABLY_API_KEY");
@@ -206,26 +214,30 @@ channel.subscribe("prompt", message -> {
     saveLastProcessedTimestamp(message.timestamp);
 });
 
-// Fetch history up until the point of attachment, starting from last checkpoint
+// Fetch history from the attachment point back to the last checkpoint
 Param[] params = new Param[] {
     new Param("untilAttach", "true"),
-    new Param("start", String.valueOf(lastProcessedTimestamp)),
-    new Param("direction", "forwards")
+    new Param("start", String.valueOf(lastProcessedTimestamp))
 };
 PaginatedResult<Message> page = channel.history(params);
 
-// Paginate through all missed messages
+// Paginate through all missed messages, storing in oldest-to-newest order
+List<Message> missedMessages = new ArrayList<>();
 while (page != null) {
-    for (Message message : page.items()) {
-        // Process the historical message
-        processMessage(message);
-
-        // Persist the timestamp after successful processing
-        saveLastProcessedTimestamp(message.timestamp);
-    }
+    List<Message> items = Arrays.asList(page.items());
+    Collections.reverse(items);
+    missedMessages.addAll(0, items);
 
     // Move to next page if available
     page = page.hasNext() ? page.next() : null;
+}
+
+// Process messages oldest-to-newest
+for (Message message : missedMessages) {
+    processMessage(message);
+
+    // Persist the timestamp after successful processing
+    saveLastProcessedTimestamp(message.timestamp);
 }
 ```
 </Code>
