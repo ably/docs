@@ -16,21 +16,17 @@ To discover other approaches to token streaming, including the [message-per-resp
 
 ## Prerequisites <a id="prerequisites"/>
 
-<If clientLang="javascript">
-The client code requires Node.js 20 or higher.
+<If lang="javascript">
+Node.js 20 or higher is required.
 </If>
-<If clientLang="java">
-The client code requires Java 8 or higher.
+<If lang="python">
+Python 3.8 or higher is required.
 </If>
-
-<If agentLang="javascript">
-The agent code requires Node.js 20 or higher.
+<If lang="java">
+Java 8 or higher is required.
 </If>
-<If agentLang="python">
-The agent code requires Python 3.8 or higher.
-</If>
-<If agentLang="java">
-The agent code requires Java 8 or higher.
+<If lang="swift">
+Xcode 15 or higher is required.
 </If>
 
 You also need:
@@ -39,18 +35,8 @@ You also need:
 
 Useful links:
 - [Anthropic API documentation](https://docs.anthropic.com/en/api)
-<If lang="javascript">
-- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
-</If>
-<If clientLang="swift">
-- [Ably Swift SDK getting started](/docs/getting-started/swift)
-</If>
-<If agentLang="python">
-- [Ably Python SDK getting started](/docs/getting-started/python)
-</If>
-<If lang="java">
-- [Ably Java SDK getting started](/docs/getting-started/java)
-</If>
+- [Token streaming overview](/docs/ai-transport/token-streaming)
+- [AI Transport overview](/docs/ai-transport)
 
 ### Agent setup
 
@@ -78,7 +64,9 @@ pip install anthropic ably
 </If>
 
 <If agentLang="java">
-Create a new Maven project and add the following dependencies to your `pom.xml`:
+Create a new project and add the required dependencies.
+
+For Maven, add to your `pom.xml`:
 
 <Code>
 ```xml
@@ -94,6 +82,17 @@ Create a new Maven project and add the following dependencies to your `pom.xml`:
         <version>1.6.1</version>
     </dependency>
 </dependencies>
+```
+</Code>
+
+For Gradle, add to your `build.gradle`:
+
+<Code>
+```text
+dependencies {
+    implementation 'com.anthropic:anthropic-java:2.15.0'
+    implementation 'io.ably:ably-java:1.6.1'
+}
 ```
 </Code>
 </If>
@@ -152,6 +151,14 @@ Add the Ably Java SDK to your `pom.xml`:
 </dependency>
 ```
 </Code>
+
+For Gradle, add to your `build.gradle`:
+
+<Code>
+```text
+implementation 'io.ably:ably-java:1.6.1'
+```
+</Code>
 </If>
 
 <Aside data-type="note">
@@ -162,14 +169,11 @@ The publisher (agent) and subscriber (client) code are kept in separate projects
 
 Initialize an Anthropic client and use the [Messages API](https://docs.anthropic.com/en/api/messages) to stream model output as a series of events.
 
-<If agentLang="javascript">
-In your `ably-anthropic-agent` directory, create a new file `publisher.mjs` with the following contents:
-</If>
-<If agentLang="python">
-In your `ably-anthropic-agent` directory, create a new file `publisher.py` with the following contents:
+<If agentLang="javascript,python">
+In your `ably-anthropic-agent` directory, create a new file called <If agentLang="javascript">`publisher.mjs`</If><If agentLang="python">`publisher.py`</If> with the following contents:
 </If>
 <If agentLang="java">
-In your agent project, create a new file `Publisher.java` with the following contents:
+In your agent project, create a new file called `Publisher.java` with the following contents:
 </If>
 
 <Code>
@@ -560,14 +564,11 @@ mvn compile exec:java -Dexec.mainClass="Publisher"
 
 Create a subscriber that receives the streaming events from Ably and reconstructs the response.
 
-<If clientLang="javascript">
-In your `ably-anthropic-client` directory, create a new file `subscriber.mjs` with the following contents:
+<If clientLang="javascript,java">
+In your <If clientLang="javascript">`ably-anthropic-client`</If><If clientLang="java">client</If> project directory, create a new file called <If clientLang="javascript">`subscriber.mjs`</If><If clientLang="java">`Subscriber.java`</If> with the following contents:
 </If>
 <If clientLang="swift">
 Add the following code to your iOS or macOS app:
-</If>
-<If clientLang="java">
-In your client project, create a new file `Subscriber.java` with the following contents:
 </If>
 
 <Code>
@@ -613,6 +614,14 @@ await channel.subscribe('stop', (message) => {
 console.log('Subscriber ready, waiting for tokens...');
 ```
 
+{/* Swift example test harness
+ID: anthropic-message-per-token-1
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+@MainActor
+func example_anthropic_message_per_token_1() async throws {
+    // --- example code starts here ---
+*/}
 ```client_swift
 import Ably
 
@@ -625,40 +634,52 @@ let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
 // Track responses by ID
 var responses: [String: String] = [:]
 
-// Handle response start
-channel.subscribe("start") { message in
-    guard let extras = message.extras as? NSDictionary,
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String else { return }
-    print("\n[Response started] \(responseId)")
-    responses[responseId] = ""
-}
+// Subscribe to all events and handle by message name
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }) { message in
+        MainActor.assumeIsolated {
+            guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+                  let headers = extras["headers"] as? [String: Any],
+                  let responseID = headers["responseId"] as? String else { return }
 
-// Handle tokens
-channel.subscribe("token") { message in
-    guard let extras = message.extras as? NSDictionary,
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String,
-          let token = message.data as? String else { return }
+            switch message.name {
+            case "start":
+                // Handle response start
+                print("\n[Response started] \(responseID)")
+                responses[responseID] = ""
 
-    // Append token to response
-    responses[responseId, default: ""] += token
+            case "token":
+                // Handle tokens
+                guard let token = message.data as? String else { return }
 
-    // Display token as it arrives
-    print(token, terminator: "")
-}
+                // Append token to response
+                let currentText = responses[responseID] ?? ""
+                responses[responseID] = currentText + token
 
-// Handle response stop
-channel.subscribe("stop") { message in
-    guard let extras = message.extras as? NSDictionary,
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String else { return }
-    let finalText = responses[responseId] ?? ""
-    print("\n[Response completed] \(responseId)")
+                // Display token as it arrives
+                print(token, terminator: "")
+
+            case "stop":
+                // Handle response stop
+                let finalText = responses[responseID]
+                print("\n[Response completed] \(responseID)")
+
+            default:
+                break
+            }
+        }
+    }
 }
 
 print("Subscriber ready, waiting for tokens...")
 ```
+{/* --- end example code --- */}
 
 ```client_java
 import io.ably.lib.realtime.AblyRealtime;

@@ -167,10 +167,13 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
     return { languageOverride: undefined, detectedSdkType: undefined };
   }, [processedChildren, activePage.isDualLanguage, activePage.clientLanguage, activePage.agentLanguage]);
 
-  // For client/agent blocks, the page-level selector controls language, so disable internal onChange
   const handleLanguageChange = (lang: string, newSdk: SDKType | undefined) => {
-    // Don't navigate for client/agent blocks - page-level selector handles this
     if (detectedSdkType === 'client' || detectedSdkType === 'agent') {
+      // Update the corresponding URL param so the page-level selector stays in sync
+      const paramKey = detectedSdkType === 'client' ? 'client_lang' : 'agent_lang';
+      const params = new URLSearchParams(location.search);
+      params.set(paramKey, lang);
+      navigate(`${location.pathname}?${params.toString()}`);
       return;
     }
 
@@ -199,8 +202,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
           activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
         }
         apiKeys={apiKeys}
-        // Hide internal language selector for client/agent blocks since page-level selector controls it
-        fixed={detectedSdkType === 'client' || detectedSdkType === 'agent'}
+        fixed={false}
       >
         {processedChildren}
       </CodeSnippet>
