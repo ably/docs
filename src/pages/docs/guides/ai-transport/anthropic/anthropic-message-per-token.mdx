@@ -612,6 +612,14 @@ await channel.subscribe('stop', (message) => {
 console.log('Subscriber ready, waiting for tokens...');
 ```
 
+{/* Swift example test harness
+ID: anthropic-message-per-token-1
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+@MainActor
+func example_anthropic_message_per_token_1() async throws {
+    // --- example code starts here ---
+*/}
 ```client_swift
 import Ably
 
@@ -624,40 +632,52 @@ let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
 // Track responses by ID
 var responses: [String: String] = [:]
 
-// Handle response start
-channel.subscribe("start") { message in
-    guard let extras = message.extras as? NSDictionary,
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String else { return }
-    print("\n[Response started] \(responseId)")
-    responses[responseId] = ""
-}
+// Subscribe to all events and handle by message name
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }) { message in
+        MainActor.assumeIsolated {
+            guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+                  let headers = extras["headers"] as? [String: Any],
+                  let responseID = headers["responseId"] as? String else { return }
 
-// Handle tokens
-channel.subscribe("token") { message in
-    guard let extras = message.extras as? NSDictionary,
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String,
-          let token = message.data as? String else { return }
+            switch message.name {
+            case "start":
+                // Handle response start
+                print("\n[Response started] \(responseID)")
+                responses[responseID] = ""
 
-    // Append token to response
-    responses[responseId, default: ""] += token
+            case "token":
+                // Handle tokens
+                guard let token = message.data as? String else { return }
 
-    // Display token as it arrives
-    print(token, terminator: "")
-}
+                // Append token to response
+                let currentText = responses[responseID] ?? ""
+                responses[responseID] = currentText + token
 
-// Handle response stop
-channel.subscribe("stop") { message in
-    guard let extras = message.extras as? NSDictionary,
-          let headers = extras["headers"] as? [String: Any],
-          let responseId = headers["responseId"] as? String else { return }
-    let finalText = responses[responseId] ?? ""
-    print("\n[Response completed] \(responseId)")
+                // Display token as it arrives
+                print(token, terminator: "")
+
+            case "stop":
+                // Handle response stop
+                let finalText = responses[responseID]
+                print("\n[Response completed] \(responseID)")
+
+            default:
+                break
+            }
+        }
+    }
 }
 
 print("Subscriber ready, waiting for tokens...")
 ```
+{/* --- end example code --- */}
 
 ```client_java
 import io.ably.lib.realtime.AblyRealtime;
