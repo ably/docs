@@ -39,8 +39,8 @@ export default {
     javascript: '1.1',
     react: '1.1',
     swift: '1.0',
-    kotlin: '1.1',
-    android: '1.1',
+    kotlin: '1.2',
+    android: '1.2',
   },
   aiTransport: {
     javascript: '2.11',
