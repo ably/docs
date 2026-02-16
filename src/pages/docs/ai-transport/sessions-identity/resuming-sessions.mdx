@@ -240,6 +240,90 @@ for (Message message : missedMessages) {
     saveLastProcessedTimestamp(message.timestamp);
 }
 ```
+
+{/* Swift example test harness
+ID: resuming-sessions-1
+To verify: copy this comment into a Swift file, paste the example code into the function body, run `swift build`
+
+func example_resuming_sessions_1(
+    loadChannelName: @escaping @Sendable () async throws -> String,
+    loadLastProcessedTimestamp: @escaping @Sendable () async throws -> Date,
+    processMessage: @escaping @Sendable (ARTMessage) -> Void,
+    saveLastProcessedTimestamp: @escaping @Sendable (Date) -> Void
+) async throws {
+    // --- example code starts here ---
+*/}
+```swift
+// Agent code
+let options = ARTClientOptions(key: "{{API_KEY}}")
+options.clientId = "agent:assistant"
+let ably = ARTRealtime(options: options)
+
+// Load persisted session state
+let channelName = try await loadChannelName()
+let lastProcessedTimestamp = try await loadLastProcessedTimestamp()
+
+// Use a channel in a namespace with persistence enabled
+// to access more than 2 minutes of message history
+let channel = ably.channels.get(channelName)
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe("prompt") { message in
+    // Process the live message
+    processMessage(message)
+
+    // Persist the timestamp after successful processing
+    if let timestamp = message.timestamp {
+        saveLastProcessedTimestamp(timestamp)
+    }
+}
+
+// Fetch history up until the point of attachment, starting from last checkpoint
+let query = ARTRealtimeHistoryQuery()
+query.untilAttach = true
+query.start = lastProcessedTimestamp
+query.direction = .forwards
+
+do {
+    try channel.history(query) { page, historyError in
+        if let historyError = historyError {
+            print("Error fetching history: \(historyError.message)")
+            return
+        }
+
+        func processPage(_ currentPage: ARTPaginatedResult<ARTMessage>?) {
+            guard let currentPage = currentPage else { return }
+
+            // Paginate through all missed messages
+            for message in currentPage.items {
+                // Process the historical message
+                processMessage(message)
+
+                // Persist the timestamp after successful processing
+                if let timestamp = message.timestamp {
+                    saveLastProcessedTimestamp(timestamp)
+                }
+            }
+
+            // Move to next page if available
+            if currentPage.hasNext {
+                currentPage.next { nextPage, nextError in
+                    if let nextError = nextError {
+                        print("Error fetching next page: \(nextError.message)")
+                        return
+                    }
+                    processPage(nextPage)
+                }
+            }
+        }
+
+        processPage(page)
+    }
+} catch {
+    print("Error initiating history request: \(error.localizedDescription)")
+}
+```
+{/* --- end example code --- */}
 </Code>
 
 <Aside data-type="note">
