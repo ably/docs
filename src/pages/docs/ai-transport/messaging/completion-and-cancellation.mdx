@@ -6,7 +6,7 @@ meta_keywords: "completion signalling, cancellation, abort, streaming lifecycle,
 
 AI responses streamed using the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) or [message-per-token](/docs/ai-transport/token-streaming/message-per-token) pattern do not require explicit completion signals to function. Subscribers receive tokens as they arrive and can render them progressively. However, some applications benefit from explicitly signalling when a response is complete, or allowing users to cancel an in-progress response.
 
-## Why signal completion and cancellation <a id="why"/>
+## Benefits of completion and cancellation signals <a id="benefits"/>
 
 Explicit completion and cancellation signals are useful when your application needs to:
 
@@ -17,7 +17,7 @@ Explicit completion and cancellation signals are useful when your application ne
 
 ## Signal completion <a id="completion"/>
 
-Use [operation metadata](/docs/messages/updates-deletes) to signal that a content part or response is complete. Operation metadata is a set of key-value pairs carried on each append or update operation. Subscribers can inspect this metadata to determine the current phase of a message.
+Use [operation metadata](/docs/messages/updates-deletes#append-operation-metadata) to signal that a content part or response is complete. Operation metadata is a set of key-value pairs carried on each append or update operation. Subscribers can inspect this metadata to determine the current phase of a message.
 
 ### Content-part completion <a id="content-part-completion"/>
 
@@ -110,6 +110,10 @@ channel.appendMessage(msgSerial, "", metadata);
 ```
 </Code>
 
+<Aside data-type="note">
+The completion append does not need to be awaited. Appends to the same message serial are delivered in order, so the completion marker is guaranteed to arrive after all previous tokens for that content part.
+</Aside>
+
 ### Response-level completion <a id="response-completion"/>
 
 A single AI response may span multiple content parts, each represented as a separate Ably message with its own stream of appends. To signal that the entire response is complete, publish a discrete message after all content parts are finished. Subscribers can use this as a cue to finalize the response in the UI.
@@ -151,7 +155,7 @@ channel.publish(new Message("response-end", "", new MessageExtras(extras)));
 </Code>
 
 <Aside data-type="note">
-Await all pending append operations before publishing the response-level completion message. This ensures the completion signal arrives after the last content token.
+Await all pending append operations before publishing the response-level completion message. Appends to the same message serial are always delivered in order regardless of whether you await the acknowledgment, but create and append operations issued without awaiting the acknowledgment can race to be accepted by Ably. Without awaiting, the completion message could arrive before the last content token.
 </Aside>
 
 ### Detect completion from history <a id="detect-completion"/>
@@ -235,13 +239,13 @@ Cancellation allows users to stop an in-progress response. The subscriber publis
 
 ### How it works <a id="cancel-how"/>
 
-1. The subscriber publishes a cancellation message on the channel with a correlation ID identifying the response to cancel.
+1. The subscriber publishes a cancellation message on the channel with a response ID identifying the response to cancel.
 2. The publisher receives the cancellation message, stops generating, and flushes any pending append operations.
 3. The publisher optionally publishes a confirmation message to signal clean shutdown to other subscribers.
 
 ### Publish a cancellation request <a id="cancel-request"/>
 
-The subscriber sends a cancellation message with a `correlationId` in the message [extras](/docs/messages#properties) to identify which response to cancel:
+The subscriber sends a cancellation message with a `responseId` in the message [extras](/docs/messages#properties) to identify which response to cancel:
 
 <Code>
 ```javascript
@@ -253,7 +257,7 @@ await channel.publish({
   data: '',
   extras: {
     headers: {
-      correlationId: 'resp_abc123'
+      responseId: 'resp_abc123'
     }
   }
 });
@@ -267,7 +271,7 @@ await channel.publish(Message(
     data='',
     extras={
         'headers': {
-            'correlationId': 'resp_abc123'
+            'responseId': 'resp_abc123'
         }
     }
 ))
@@ -278,7 +282,7 @@ Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
 // Send cancellation request for a specific response
 JsonObject extras = new JsonObject();
 JsonObject headers = new JsonObject();
-headers.addProperty("correlationId", "resp_abc123");
+headers.addProperty("responseId", "resp_abc123");
 extras.add("headers", headers);
 
 channel.publish(new Message("cancel", "", new MessageExtras(extras)));
@@ -298,10 +302,10 @@ const pendingAppends = [];
 
 // Listen for cancellation requests
 await channel.subscribe('cancel', async (message) => {
-  const correlationId = message.extras?.headers?.correlationId;
+  const responseId = message.extras?.headers?.responseId;
 
   // Stop generation for the matching response
-  stopGeneration(correlationId);
+  stopGeneration(responseId);
 
   // Flush any pending appends before confirming
   await Promise.all(pendingAppends);
@@ -312,7 +316,7 @@ await channel.subscribe('cancel', async (message) => {
     data: '',
     extras: {
       headers: {
-        correlationId
+        responseId
       }
     }
   });
@@ -326,10 +330,10 @@ pending_appends = []
 
 # Listen for cancellation requests
 async def on_cancel(message):
-    correlation_id = message.extras.get('headers', {}).get('correlationId')
+    response_id = message.extras.get('headers', {}).get('responseId')
 
     # Stop generation for the matching response
-    stop_generation(correlation_id)
+    stop_generation(response_id)
 
     # Flush any pending appends before confirming
     await asyncio.gather(*pending_appends)
@@ -340,7 +344,7 @@ async def on_cancel(message):
         data='',
         extras={
             'headers': {
-                'correlationId': correlation_id
+                'responseId': response_id
             }
         }
     ))
@@ -353,10 +357,10 @@ Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
 // Listen for cancellation requests
 channel.subscribe("cancel", message -> {
     JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
-    String correlationId = headers != null ? headers.get("correlationId").getAsString() : null;
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
 
     // Stop generation for the matching response
-    stopGeneration(correlationId);
+    stopGeneration(responseId);
 
     // Flush any pending appends before confirming
     flushPendingAppends();
@@ -364,7 +368,7 @@ channel.subscribe("cancel", message -> {
     // Optionally confirm cancellation to all subscribers
     JsonObject confirmExtras = new JsonObject();
     JsonObject confirmHeaders = new JsonObject();
-    confirmHeaders.addProperty("correlationId", correlationId);
+    confirmHeaders.addProperty("responseId", responseId);
     confirmExtras.add("headers", confirmHeaders);
 
     channel.publish(new Message("cancelled", "", new MessageExtras(confirmExtras)));
