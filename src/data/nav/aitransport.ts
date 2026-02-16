@@ -79,6 +79,10 @@ export default {
           name: 'Citations',
           link: '/docs/ai-transport/messaging/citations',
         },
+        {
+          name: 'Completion and cancellation',
+          link: '/docs/ai-transport/messaging/completion-and-cancellation',
+        },
       ],
     },
     {

@@ -41,6 +41,19 @@ To enable the channel rule:
 
 The examples on this page use the `ai:` namespace prefix, which assumes you have configured the rule for `ai`.
 
+Your token or API key needs the following [capabilities](/docs/auth/capabilities) on the channel:
+
+| Capability | Purpose |
+| --- | --- |
+| `subscribe` | Receive messages |
+| `history` | Retrieve historical messages for [client hydration](#hydration) |
+| `publish` | Create new messages |
+| `message-update-own` | Append to your own messages |
+
+<Aside data-type="note">
+Use `message-update-any` instead of `message-update-own` if a different client (different `clientId`) needs to append to messages it did not create.
+</Aside>
+
 ## Publishing tokens <a id="publishing"/>
 
 Publish tokens from a [Realtime](/docs/api/realtime-sdk) client, which maintains a persistent connection to the Ably service. This allows you to publish at very high message rates with the lowest possible latencies, while preserving guarantees around message delivery order. For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
@@ -116,6 +129,10 @@ for (Event event : stream) {
 
 When publishing tokens, don't await the `channel.appendMessage()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each append would unnecessarily slow down your token stream. Messages are still published in the order that `appendMessage()` is called, so delivery order is not affected.
 
+<Aside data-type="note">
+When publishing multiple content parts in sequence, await all pending appends for the current message before creating the next message. This prevents pipelined appends from the first message interleaving with the create of the second.
+</Aside>
+
 <Code>
 ```javascript
 // ✅ Do this - append without await for maximum throughput
@@ -173,7 +190,7 @@ for (Event event : stream) {
 </Code>
 
 <Aside data-type="important">
-Append only supports concatenating data of the same type as the original message. For example, if the initial message data is a string, all appended tokens must also be strings. If the initial message data is binary, all appended tokens must be binary.
+Append only supports concatenating data of the same type as the original message. For example, if the initial message data is a string, all appended tokens must also be strings. If the initial message data is binary, all appended tokens must be binary. When streaming text content, use raw strings for the `data` field rather than JSON-encoded strings. Ably concatenates the `data` from each append, so JSON-encoding each chunk produces invalid JSON when concatenated.
 </Aside>
 
 <Aside data-type="note">
@@ -181,6 +198,10 @@ Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on 
 </Aside>
 
 This pattern allows publishing append operations for multiple concurrent model responses on the same channel. As long as you append to the correct message serial, tokens from different responses will not interfere with each other, and the final concatenated message for each response will contain only the tokens from that response.
+
+<Aside data-type="further-reading">
+To signal when a response is complete or support user-initiated cancellation, see [Completion and cancellation](/docs/ai-transport/messaging/completion-and-cancellation).
+</Aside>
 
 ### Configuring rollup behaviour <a id="rollups"/>
 
@@ -225,6 +246,10 @@ Subscribers receive different message actions depending on when they join and ho
 - `message.create`: Indicates a new response has started (i.e. a new message was created). The message `data` contains the initial content (often empty or the first token). Store this as the beginning of a new response using `serial` as the identifier.
 - `message.append`: Contains a single token fragment to append. The message `data` contains only the new token, not the full concatenated response. Append this token to the existing response identified by `serial`.
 - `message.update`: Contains the whole response up to that point. The message `data` contains the full concatenated text so far. Replace the entire response content with this data for the message identified by `serial`. This action occurs when the channel needs to resynchronize the full message state, such as after a client [resumes](/docs/connect/states#resume) from a transient disconnection.
+
+<Aside data-type="note">
+During live streaming, Ably may merge multiple rapid appends into a single delivery containing their concatenated data (append conflation), or deliver an append as a `message.update` with the full accumulated payload instead of just the delta. The subscriber code handles both cases: `message.append` contains only the new token, while `message.update` contains the full text so far and replaces the accumulated content. Do not assume that one append delivery corresponds to exactly one token.
+</Aside>
 
 <Code>
 ```javascript
