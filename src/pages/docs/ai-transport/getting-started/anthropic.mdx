@@ -1,0 +1,624 @@
+---
+title: "Getting started with Anthropic"
+meta_description: "Build a realtime AI agent with Anthropic Claude that streams tokens over Ably, handles tool calls with human-in-the-loop approval, and authenticates users with verified identities."
+meta_keywords: "AI Transport Anthropic, Ably AI agent, token streaming Claude, realtime AI, LLM streaming, AI agent tutorial, human in the loop, HITL, tool calls, Anthropic Messages API"
+redirect_from:
+  - /docs/ai-transport/getting-started
+  - /docs/ai-transport/getting-started/javascript
+---
+
+This guide will get you started with Ably AI Transport using Anthropic's Messages API.
+
+You'll learn how to authenticate users with verified identities, stream tokens from an agent to clients in realtime, and implement human-in-the-loop approval for tool calls. The agent uses Anthropic's Claude model with a `send_email` tool that requires user approval before execution.
+
+## Prerequisites
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+
+2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
+
+3. Your API key will need the `publish`, `subscribe`, and `message-update-own` capabilities.
+
+4. Enable message appends for the channel:
+   1. Go to the **Settings** tab of your app in the dashboard.
+   2. Under **Rules**, click **Add new rule**.
+   3. Enter `ai` as the channel namespace.
+   4. Check **Message annotations, updates, deletes, and appends**.
+   5. Click **Create channel rule** to save.
+
+5. Install any current LTS version of [Node.js](https://nodejs.org/en).
+
+6. Get an [Anthropic API key](https://console.anthropic.com/settings/keys).
+
+## Step 1: Project setup
+
+Create a new directory for your project and initialize it:
+
+<Code>
+```shell
+mkdir ai-agent-demo && cd ai-agent-demo
+npm init -y && npm pkg set type=module
+```
+</Code>
+
+Install the required dependencies:
+
+<Code>
+```shell
+npm install ably @anthropic-ai/sdk jsonwebtoken express
+npm install -D typescript @types/node @types/express @types/jsonwebtoken
+```
+</Code>
+
+Create a TypeScript configuration file:
+
+<Code>
+```shell
+npx tsc --init
+```
+</Code>
+
+Create a `.env` file in your project root and add your API keys:
+
+<Code>
+```shell
+echo "ABLY_API_KEY={{API_KEY}}" > .env
+echo "ANTHROPIC_API_KEY=your_anthropic_api_key" >> .env
+```
+</Code>
+
+## Step 2: Authenticate users
+
+Users authenticate with Ably using [token authentication](/docs/auth/token). Your server generates signed JWTs that establish a verified identity for each user. Agents can trust this identity because only your server can issue valid tokens.
+
+Create a file called `auth-server.ts` with an endpoint that generates signed JWTs:
+
+<Code>
+```typescript
+import express from 'express';
+import jwt from 'jsonwebtoken';
+
+const app = express();
+
+const apiKey = process.env.ABLY_API_KEY;
+if (!apiKey) {
+  throw new Error('ABLY_API_KEY environment variable is required');
+}
+
+const [keyName, keySecret] = apiKey.split(':');
+if (!keyName || !keySecret) {
+  throw new Error('ABLY_API_KEY must be in format "keyName:keySecret"');
+}
+
+app.get('/api/auth/token', (req, res) => {
+  // In production, authenticate the user and get their ID from your session
+  const userId = 'user-123';
+
+  const token = jwt.sign({
+    'x-ably-clientId': userId,
+    'ably.channel.*': 'user'
+  }, keySecret, {
+    algorithm: 'HS256',
+    keyid: keyName,
+    expiresIn: '1h'
+  });
+
+  res.type('application/jwt').send(token);
+});
+
+app.listen(3001, () => {
+  console.log('Auth server running on http://localhost:3001');
+});
+```
+</Code>
+
+<Aside data-type="note">
+In production, replace the hardcoded `userId` with your actual authentication logic that verifies user credentials.
+</Aside>
+
+The JWT includes two claims:
+- `x-ably-clientId`: Establishes a verified identity that appears on all messages the user publishes.
+- `ably.channel.*`: Assigns a role that agents can use to distinguish users from other agents on the channel.
+
+<Aside data-type="further-reading">
+For more information about establishing verified identities and roles, see [Identifying users and agents](/docs/ai-transport/sessions-identity/identifying-users-and-agents).
+</Aside>
+
+## Step 3: Create the agent
+
+The agent runs in a trusted server environment and uses [API key authentication](/docs/auth#basic-authentication). It subscribes to a channel to receive user prompts, processes them with Anthropic's Claude model, and streams responses back using the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern. When Claude requests a tool call, the agent pauses to request human approval before executing.
+
+Create a file called `agent.ts` with the setup, tool definition, and human-in-the-loop helpers:
+
+<Code>
+```typescript
+import * as Ably from 'ably';
+import Anthropic from '@anthropic-ai/sdk';
+
+const apiKey = process.env.ABLY_API_KEY;
+if (!apiKey) {
+  throw new Error('ABLY_API_KEY environment variable is required');
+}
+
+const anthropic = new Anthropic();
+
+const realtime = new Ably.Realtime({
+  key: apiKey,
+  clientId: 'ai-agent',
+  echoMessages: false,
+});
+
+const channel = realtime.channels.get('ai:conversation');
+
+// Define a tool that requires human approval
+const tools: Anthropic.Tool[] = [
+  {
+    name: 'send_email',
+    description: 'Send an email to a recipient. Always requires human approval.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        to: { type: 'string', description: 'Recipient email address' },
+        subject: { type: 'string', description: 'Email subject line' },
+        body: { type: 'string', description: 'Email body content' },
+      },
+      required: ['to', 'subject', 'body'],
+    },
+  },
+];
+
+// Track pending approval requests
+const pendingApprovals = new Map<string, (decision: string) => void>();
+
+// Listen for approval responses from users
+await channel.subscribe('approval-response', (message: Ably.Message) => {
+  const toolCallId = message.extras?.headers?.toolCallId;
+  const resolve = pendingApprovals.get(toolCallId);
+  if (resolve) {
+    pendingApprovals.delete(toolCallId);
+    resolve(message.data.decision);
+  }
+});
+
+// Request human approval for a tool call via the channel
+function requestApproval(
+  toolCallId: string,
+  toolName: string,
+  toolInput: Record<string, unknown>,
+): Promise<string> {
+  return new Promise<string>((resolve) => {
+    pendingApprovals.set(toolCallId, resolve);
+    channel.publish({
+      name: 'approval-request',
+      data: { name: toolName, arguments: toolInput },
+      extras: { headers: { toolCallId } },
+    });
+    console.log(`Awaiting approval for ${toolName} (${toolCallId})`);
+  });
+}
+
+// Execute a tool after approval
+function executeTool(name: string, input: Record<string, unknown>) {
+  if (name === 'send_email') {
+    console.log(`Sending email to ${input.to}: ${input.subject}`);
+    return { success: true, message: `Email sent to ${input.to}` };
+  }
+  return { error: `Unknown tool: ${name}` };
+}
+```
+</Code>
+
+The agent publishes `approval-request` messages to the channel when a tool call is detected, then waits for a matching `approval-response` correlated by `toolCallId`. The `executeTool` function simulates the email action. In production, replace this with actual email delivery logic.
+
+<Aside data-type="further-reading">
+For more information about HITL patterns, see [Human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop).
+</Aside>
+
+Add the streaming function to `agent.ts`. This streams Anthropic response tokens to Ably using `channel.appendMessage()`, while tracking any tool call the model requests:
+
+<Code>
+```typescript
+// Stream Anthropic response tokens to Ably, returning tool call info if any
+async function streamToAbly(
+  messages: Anthropic.MessageParam[],
+  serial: string,
+  includeTools: boolean,
+) {
+  const stream = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5',
+    max_tokens: 1024,
+    messages,
+    ...(includeTools ? { tools } : {}),
+    stream: true,
+  });
+
+  let textBlockIndex: number | null = null;
+  let currentToolUse: { id: string; name: string; index: number } | null = null;
+  let toolInput = '';
+  let stopReason: string | null = null;
+  const assistantContent: Anthropic.ContentBlockParam[] = [];
+  let accumulatedText = '';
+
+  for await (const event of stream) {
+    switch (event.type) {
+      case 'content_block_start':
+        if (event.content_block.type === 'text') {
+          textBlockIndex = event.index;
+          accumulatedText = '';
+        } else if (event.content_block.type === 'tool_use') {
+          currentToolUse = {
+            id: event.content_block.id,
+            name: event.content_block.name,
+            index: event.index,
+          };
+          toolInput = '';
+        }
+        break;
+
+      case 'content_block_delta':
+        if (event.delta.type === 'text_delta' && event.index === textBlockIndex) {
+          channel.appendMessage({ serial, data: event.delta.text });
+          accumulatedText += event.delta.text;
+        } else if (event.delta.type === 'input_json_delta') {
+          toolInput += event.delta.partial_json;
+        }
+        break;
+
+      case 'content_block_stop':
+        if (event.index === textBlockIndex && accumulatedText) {
+          assistantContent.push({ type: 'text', text: accumulatedText });
+          textBlockIndex = null;
+        }
+        if (currentToolUse && event.index === currentToolUse.index) {
+          assistantContent.push({
+            type: 'tool_use',
+            id: currentToolUse.id,
+            name: currentToolUse.name,
+            input: JSON.parse(toolInput),
+          });
+          currentToolUse = null;
+        }
+        break;
+
+      case 'message_delta':
+        stopReason = event.delta.stop_reason ?? null;
+        break;
+    }
+  }
+
+  return { stopReason, assistantContent };
+}
+```
+</Code>
+
+The function filters for `text_delta` events and appends each token to the Ably message. It also tracks `tool_use` content blocks and accumulates their JSON input. The `stopReason` indicates whether the model finished normally (`end_turn`) or wants to call a tool (`tool_use`).
+
+Add the prompt handler to the end of `agent.ts`. This ties everything together, streaming the initial response and handling tool calls with HITL approval:
+
+<Code>
+```typescript
+// Handle incoming user prompts
+await channel.subscribe('user-input', async (message: Ably.Message) => {
+  const { promptId, text } = message.data as { promptId: string; text: string };
+  const userId = message.clientId;
+  const role = message.extras?.userClaim;
+
+  console.log(`Received prompt from ${userId} (role: ${role}): ${text}`);
+
+  if (role !== 'user') {
+    console.log('Ignoring message from non-user');
+    return;
+  }
+
+  // Create the initial Ably message for streaming
+  const response = await channel.publish({
+    name: 'agent-response',
+    data: '',
+    extras: { headers: { promptId } },
+  });
+
+  const serial = response.serials[0];
+  if (!serial) {
+    console.error('No serial returned from publish');
+    return;
+  }
+
+  // Stream the response from Anthropic
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: text }];
+  const { stopReason, assistantContent } = await streamToAbly(messages, serial, true);
+
+  // Handle tool call with human-in-the-loop approval
+  if (stopReason === 'tool_use') {
+    const toolCall = assistantContent.find(
+      (c): c is Anthropic.ToolUseBlockParam => c.type === 'tool_use',
+    );
+
+    if (toolCall) {
+      const decision = await requestApproval(
+        toolCall.id,
+        toolCall.name,
+        toolCall.input as Record<string, unknown>,
+      );
+
+      let toolResult: Record<string, unknown>;
+      if (decision === 'approved') {
+        toolResult = executeTool(toolCall.name, toolCall.input as Record<string, unknown>);
+      } else {
+        toolResult = { error: 'The user rejected this action' };
+      }
+
+      // Continue the conversation with the tool result
+      const followUpMessages: Anthropic.MessageParam[] = [
+        ...messages,
+        { role: 'assistant', content: assistantContent },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: toolCall.id,
+              content: JSON.stringify(toolResult),
+            },
+          ],
+        },
+      ];
+
+      // Stream the follow-up response, appending to the same message
+      channel.appendMessage({ serial, data: '\n\n' });
+      await streamToAbly(followUpMessages, serial, false);
+    }
+  }
+
+  // Signal completion
+  await channel.publish({
+    name: 'agent-response-complete',
+    extras: { headers: { promptId } },
+  });
+
+  console.log(`Completed response for prompt ${promptId}`);
+});
+
+console.log('Agent is listening for prompts...');
+```
+</Code>
+
+The prompt handler:
+1. Verifies the sender has the `user` role.
+2. Creates an initial Ably message and captures its `serial` for appending.
+3. Streams the Anthropic response, appending text tokens in realtime.
+4. If the model requests a tool call, publishes an `approval-request` and waits for the user's decision.
+5. After approval, executes the tool and streams a follow-up response appended to the same message.
+
+## Step 4: Create the client
+
+The client uses an [`authCallback`](/docs/auth/token#auth-callback) to obtain a signed JWT from your auth server. The `clientId` from the token is automatically attached to all messages the client publishes.
+
+Create a file called `client.ts` with the connection setup and token streaming subscription:
+
+<Code>
+```typescript
+import * as Ably from 'ably';
+import crypto from 'crypto';
+import * as readline from 'readline';
+
+const realtime = new Ably.Realtime({
+  authCallback: async (
+    _tokenParams: Ably.TokenParams,
+    callback: (error: Ably.ErrorInfo | string | null, token: Ably.TokenDetails | Ably.TokenRequest | string | null) => void
+  ) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/token');
+      const token = await response.text();
+      callback(null, token);
+    } catch (error) {
+      callback(error instanceof Error ? error.message : String(error), null);
+    }
+  }
+});
+
+realtime.connection.on('connected', () => {
+  console.log('Connected to Ably as', realtime.auth.clientId);
+});
+
+const channel = realtime.channels.get('ai:conversation');
+const pendingPrompts = new Map<string, () => void>();
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+// Subscribe to streamed agent responses
+await channel.subscribe('agent-response', (message: Ably.Message) => {
+  const promptId = message.extras?.headers?.promptId;
+  if (!promptId) return;
+
+  switch (message.action) {
+    case 'message.create':
+      break;
+    case 'message.append':
+      // Write each new token as it arrives
+      process.stdout.write(message.data || '');
+      break;
+    case 'message.update':
+      // Full response after reconnection
+      console.log(message.data || '');
+      break;
+  }
+});
+```
+</Code>
+
+The client subscribes to `agent-response` messages and handles different [message actions](/docs/ai-transport/token-streaming/message-per-response):
+- `message.create`: A new response has started.
+- `message.append`: A token has been appended. Each token is written directly to the terminal as it arrives.
+- `message.update`: The full response content, received after reconnection.
+
+Add the human-in-the-loop approval handler to `client.ts`. When the agent requests approval for a tool call, the client displays the details and prompts the user:
+
+<Code>
+```typescript
+// Subscribe to approval requests for human-in-the-loop
+await channel.subscribe('approval-request', async (message: Ably.Message) => {
+  const { name, arguments: args } = message.data;
+  const toolCallId = message.extras?.headers?.toolCallId;
+
+  console.log(`\n\nAgent wants to execute: ${name}`);
+  console.log(`Arguments: ${JSON.stringify(args, null, 2)}`);
+
+  const answer = await new Promise<string>((resolve) => {
+    rl.question('Approve? (yes/no): ', resolve);
+  });
+
+  const decision = answer.toLowerCase() === 'yes' ? 'approved' : 'rejected';
+
+  await channel.publish({
+    name: 'approval-response',
+    data: { decision },
+    extras: { headers: { toolCallId } },
+  });
+
+  console.log(`Decision sent: ${decision}\n`);
+});
+```
+</Code>
+
+## Step 5: Send user prompts
+
+Each prompt includes a unique `promptId` to correlate responses. The user's `clientId` is automatically attached to the message by Ably.
+
+Add the following to the end of `client.ts`:
+
+<Code>
+```typescript
+// Subscribe to completion signals
+await channel.subscribe('agent-response-complete', (message: Ably.Message) => {
+  const promptId = message.extras?.headers?.promptId;
+  if (!promptId) return;
+
+  console.log('\n');
+  const resolve = pendingPrompts.get(promptId);
+  if (resolve) {
+    pendingPrompts.delete(promptId);
+    resolve();
+  }
+});
+
+async function sendPrompt(text: string): Promise<void> {
+  const promptId = crypto.randomUUID();
+
+  const completionPromise = new Promise<void>((resolve) => {
+    pendingPrompts.set(promptId, resolve);
+  });
+
+  await channel.publish('user-input', {
+    promptId,
+    text,
+  });
+
+  await completionPromise;
+}
+
+function askQuestion() {
+  rl.question('Enter a prompt (or "quit" to exit): ', async (text) => {
+    if (text.toLowerCase() === 'quit') {
+      rl.close();
+      realtime.close();
+      return;
+    }
+
+    await sendPrompt(text);
+    askQuestion();
+  });
+}
+
+askQuestion();
+```
+</Code>
+
+## Step 6: Run the example
+
+Open three terminal windows to run the auth server, agent, and client.
+
+Terminal 1: Start the auth server
+
+<Code>
+```shell
+npx tsx --env-file=.env auth-server.ts
+```
+</Code>
+
+You should see:
+
+<Code>
+```text
+Auth server running on http://localhost:3001
+```
+</Code>
+
+Terminal 2: Start the agent
+
+<Code>
+```shell
+npx tsx --env-file=.env agent.ts
+```
+</Code>
+
+You should see:
+
+<Code>
+```text
+Agent is listening for prompts...
+```
+</Code>
+
+Terminal 3: Run the client
+
+<Code>
+```shell
+npx tsx --env-file=.env client.ts
+```
+</Code>
+
+Try entering different prompts. For a regular response without tool calls:
+
+<Code>
+```text
+Enter a prompt (or "quit" to exit): What is the capital of France?
+
+The capital of France is Paris.
+
+Enter a prompt (or "quit" to exit):
+```
+</Code>
+
+For a response that triggers a tool call with human-in-the-loop approval:
+
+<Code>
+```text
+Enter a prompt (or "quit" to exit): Send an email to alice@example.com saying hello
+
+Agent wants to execute: send_email
+Arguments: {
+  "to": "alice@example.com",
+  "subject": "Hello",
+  "body": "Hello Alice!"
+}
+Approve? (yes/no): yes
+Decision sent: approved
+
+I've sent the email to alice@example.com with the subject "Hello".
+
+Enter a prompt (or "quit" to exit):
+```
+</Code>
+
+## Next steps
+
+Continue exploring AI Transport features:
+
+* Learn about [token streaming patterns](/docs/ai-transport/token-streaming) including [message-per-response](/docs/ai-transport/token-streaming/message-per-response) and [message-per-token](/docs/ai-transport/token-streaming/message-per-token).
+* Understand [user input](/docs/ai-transport/messaging/accepting-user-input) patterns for handling prompts and correlating responses.
+* Explore [identifying users and agents](/docs/ai-transport/sessions-identity/identifying-users-and-agents) for more advanced authentication scenarios.
+* Implement more advanced [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) workflows with role-based authorization.
+* Stream [tool call](/docs/ai-transport/messaging/tool-calls) information to build generative UI experiences.
