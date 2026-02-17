@@ -46,7 +46,7 @@ export const NestedTablePropertyRow: React.FC<NestedTablePropertyRowProps> = ({ 
 
           {/* Type name - use typeDisplay for cleaned-up rendering, fall back to raw type */}
           {(property.typeReferences.length > 0 || property.type) && (
-            <span className="text-sm text-neutral-600 font-semibold dark:text-neutral-500">
+            <span className="text-sm text-neutral-600 font-semibold dark:text-neutral-500 [&_code]:[all:unset] [&_code]:[font:inherit] [&_code]:[color:inherit]">
               {property.typeDisplay ?? property.type}
             </span>
           )}
