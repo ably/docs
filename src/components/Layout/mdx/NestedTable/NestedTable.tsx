@@ -62,8 +62,8 @@ const NestedTableWithContext: React.FC<NestedTableProps> = ({ id, hidden = false
     <div className={cn('my-6', className)}>
       <div className="border border-neutral-400 dark:border-neutral-900 rounded-lg overflow-hidden">
         <div className="divide-y divide-neutral-400 dark:divide-neutral-900">
-          {parsedProperties.map((property) => (
-            <div key={property.name} className="px-3 sm:px-5">
+          {parsedProperties.map((property, index) => (
+            <div key={property.name || `property-${index}`} className="px-3 sm:px-5">
               <NestedTablePropertyRow property={property} path={id} />
             </div>
           ))}
