@@ -28,9 +28,11 @@ export const NestedTablePropertyRow: React.FC<NestedTablePropertyRowProps> = ({ 
         {/* Header row: name, badge, and type */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Property name in monospace box - always orange */}
-          <code className="bg-orange-100 dark:bg-orange-1000 border border-orange-300 dark:border-orange-900 px-2 py-0.5 rounded text-sm font-mono text-neutral-1000 dark:text-neutral-300">
-            {property.name}
-          </code>
+          {property.name && (
+            <code className="bg-orange-100 dark:bg-orange-1000 border border-orange-300 dark:border-orange-900 px-2 py-0.5 rounded text-sm font-mono text-neutral-1000 dark:text-neutral-300">
+              {property.name}
+            </code>
+          )}
 
           {/* Required/Optional badge - only shown for 4-column tables */}
           {property.required && (
@@ -80,8 +82,8 @@ export const NestedTablePropertyRow: React.FC<NestedTablePropertyRowProps> = ({ 
                   />
                   {/* Nested properties */}
                   <div className="divide-y divide-neutral-400 dark:divide-neutral-900">
-                    {table.properties.map((nestedProperty) => (
-                      <div key={nestedProperty.name} className="px-3 sm:px-5">
+                    {table.properties.map((nestedProperty, index) => (
+                      <div key={nestedProperty.name || `property-${index}`} className="px-3 sm:px-5">
                         <NestedTablePropertyRow property={nestedProperty} path={refExpandPath} depth={depth + 1} />
                       </div>
                     ))}
