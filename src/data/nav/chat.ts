@@ -238,9 +238,53 @@ export default {
           name: 'Overview',
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-js.html',
-          name: 'JavaScript SDK',
-          external: true,
+          name: 'JavaScript',
+          pages: [
+            {
+              link: '/docs/chat/api/javascript/chat-client',
+              name: 'ChatClient',
+            },
+            {
+              link: '/docs/chat/api/javascript/connection',
+              name: 'Connection',
+            },
+            {
+              link: '/docs/chat/api/javascript/rooms',
+              name: 'Rooms',
+            },
+            {
+              link: '/docs/chat/api/javascript/room',
+              name: 'Room',
+            },
+            {
+              link: '/docs/chat/api/javascript/messages',
+              name: 'Messages',
+            },
+            {
+              link: '/docs/chat/api/javascript/message',
+              name: 'Message',
+            },
+            {
+              link: '/docs/chat/api/javascript/message-reactions',
+              name: 'MessageReactions',
+            },
+            {
+              link: '/docs/chat/api/javascript/presence',
+              name: 'Presence',
+            },
+            {
+              link: '/docs/chat/api/javascript/occupancy',
+              name: 'Occupancy',
+            },
+            {
+              link: '/docs/chat/api/javascript/typing',
+              name: 'Typing',
+            },
+            {
+              link: '/docs/chat/api/javascript/room-reactions',
+              name: 'RoomReactions',
+            },
+          ],
         },
         {
           link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-react.html',
