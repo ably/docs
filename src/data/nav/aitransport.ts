@@ -17,8 +17,20 @@ export default {
       name: 'Getting started',
       pages: [
         {
-          name: 'JavaScript',
-          link: '/docs/ai-transport/getting-started/javascript',
+          name: 'Anthropic',
+          link: '/docs/ai-transport/getting-started/anthropic',
+        },
+        {
+          name: 'OpenAI',
+          link: '/docs/ai-transport/getting-started/openai',
+        },
+        {
+          name: 'Vercel AI SDK',
+          link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
+        },
+        {
+          name: 'LangGraph',
+          link: '/docs/ai-transport/getting-started/langgraph',
         },
       ],
     },
