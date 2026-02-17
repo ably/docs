@@ -1,0 +1,1249 @@
+---
+title: "Getting started: Chat with Swift (using AsyncSequence)"
+meta_description: "A getting started guide for Ably Chat iOS that steps through some of the key features using SwiftUI with AsyncSequence for handling realtime events."
+meta_keywords: "Ably, realtime, quickstart, getting started, basics, Chat, iOS, Swift, SwiftUI, AsyncSequence"
+---
+
+This guide will help you get started with Ably Chat in a new iOS Swift application built with SwiftUI, using AsyncSequence for handling realtime events.
+
+You'll learn how to create chat rooms, send and edit messages, and implement realtime features like typing indicators and presence. You'll also cover message history, reactions, and proper connection management.
+
+![Screenshot of the completed Swift Chat application showing a web interface with connection status, a message input field, realtime message display, and a presence indicator showing online users. The interface demonstrates the key features you'll build including publishing messages, subscribing to receive messages in realtime, and tracking which clients are currently present in the channel.](../../../../images/content/screenshots/getting-started/chat-swift-getting-started-guide.png)
+
+## Prerequisites <a id="prerequisites"/>
+
+### Ably <a id="prerequisites-ably"/>
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+2. Create a [new app](https://ably.com/accounts/any/apps/new), and get your first API key. You can use the root API key that is provided by default, within the **API Keys** tab to get started.
+
+### (Optional) Install Ably CLI <a id="install-cli"/>
+
+Use the [Ably CLI](https://github.com/ably/cli) as an additional client to quickly test chat features. It can simulate other users by sending messages, entering presence, and acting as another user typing a message.
+
+1. Install the Ably CLI:
+
+<Code>
+```shell
+npm install -g @ably/cli
+```
+</Code>
+
+2. Run the following to log in to your Ably account and set the default app and API key:
+
+<Code>
+```shell
+ably login
+```
+</Code>
+
+<If loggedIn={false}>
+  <Aside data-type='note'>
+  The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.
+  </Aside>
+</If>
+
+### Create a new project <a id="prerequisites-project"/>
+
+Create a new iOS project with SwiftUI. For detailed instructions, refer to the [Apple Developer documentation](https://developer.apple.com/documentation/swiftui).
+
+1. Create a new iOS project in Xcode.
+2. Select **App** as the template
+3. Name the project **ChatExample** and set the bundle identifier to `com.example.chatexample`
+4. Set the minimum iOS deployment target to iOS 15.0 or higher
+5. Select SwiftUI as the interface and Swift as the language
+6. Add the Chat dependency to your project using Swift Package Manager:
+
+   - In Xcode, go to **File > Add Package Dependencies**
+   - Enter the repository URL: `https://github.com/ably/ably-chat-swift`
+   - Select the latest version and add it to your target
+
+## Step 1: Setting up Ably <a id="step-1"/>
+
+Replace the contents of your `ContentView.swift` file with the following code to set up the Ably client:
+
+Note that this is for example purposes only. In production, you should use [token authentication](/docs/auth/token) to avoid exposing your API keys publicly, the [`clientId`](/docs/auth/identified-clients) is used to identify the client:
+
+<Code>
+```swift
+import Ably
+import AblyChat
+import SwiftUI
+
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+
+    init() {
+        let realtimeOptions = ARTClientOptions()
+        realtimeOptions.key = "{{API_KEY}}" // In production, use token authentication
+        realtimeOptions.clientId = "my-first-client"
+        let realtime = ARTRealtime(options: realtimeOptions)
+
+        let chatClient = ChatClient(realtime: realtime)
+        self._chatClient = State(initialValue: chatClient)
+    }
+
+    var body: some View {
+        VStack {
+            Text("Hello Chat App")
+                .font(.headline)
+                .padding()
+        }
+    }
+}
+
+#Preview {
+    ContentView()
+}
+```
+</Code>
+
+## Step 2: Connect to Ably <a id="step-2"/>
+
+Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
+
+In your `ContentView.swift` file, add a connection status display using AsyncSequence. The SwiftUI `.task` modifier runs the asynchronous work when the view appears and automatically cancels it when the view disappears:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+
+    init() {
+        let realtimeOptions = ARTClientOptions()
+        realtimeOptions.key = "{{API_KEY}}"
+        realtimeOptions.clientId = "my-first-client"
+        let realtime = ARTRealtime(options: realtimeOptions)
+
+        let chatClient = ChatClient(realtime: realtime)
+        self._chatClient = State(initialValue: chatClient)
+    }
+
+    var body: some View {
+        VStack {
+            Text("Connection Status: \(connectionStatus)")
+                .font(.caption)
+                .padding()
+
+            Text("Hello Chat App")
+                .font(.headline)
+                .padding()
+        }
+        .task {
+            for await status in chatClient.connection.onStatusChange() {
+                connectionStatus = "\(status.current)"
+            }
+        }
+    }
+}
+```
+</Code>
+
+Run your application and you should see the connection status displayed.
+
+## Step 3: Create a room <a id="step-3"/>
+
+Now that you have a connection to Ably, you can create a room. Use rooms to separate and organize clients and messages into different topics, or 'chat rooms'. Rooms are the entry point for Chat, providing access to all of its features, such as messages, presence and reactions.
+
+In your project, open `ContentView.swift`, and add room status monitoring using AsyncSequence. Each subscription runs in its own `.task` modifier, which automatically cancels when the view disappears. Use `.task(id:)` for subscriptions that depend on the room being set up first - the task restarts when the id value changes:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+
+    init() {
+        let realtimeOptions = ARTClientOptions()
+        realtimeOptions.key = "{{API_KEY}}"
+        realtimeOptions.clientId = "my-first-client"
+        let realtime = ARTRealtime(options: realtimeOptions)
+
+        let chatClient = ChatClient(realtime: realtime)
+        self._chatClient = State(initialValue: chatClient)
+    }
+
+    var body: some View {
+        VStack {
+            Text("Connection Status: \(connectionStatus)")
+                .font(.caption)
+                .padding(.horizontal)
+
+            Text("Room: \(roomName), Status: \(roomStatus)")
+                .font(.caption)
+                .padding(.horizontal)
+
+            Text("Hello Chat App")
+                .font(.headline)
+                .padding()
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            for await status in room.onStatusChange() {
+                roomStatus = "\(status.current)"
+            }
+        }
+        .task {
+            for await status in chatClient.connection.onStatusChange() {
+                connectionStatus = "\(status.current)"
+            }
+        }
+    }
+
+    private func setupRoom() async {
+        do {
+            let chatRoom = try await chatClient.rooms.get(named: roomName)
+            try await chatRoom.attach()
+            self.room = chatRoom
+        } catch {
+            print("Failed to setup room: \(error)")
+        }
+    }
+}
+```
+</Code>
+
+The above code creates a room with the name `my-first-room` and sets up AsyncSequence subscriptions to monitor both connection and room status. It displays the room name and current status in the UI. Each `.task` modifier runs its subscription independently and cancels automatically when the view disappears. The `.task(id: room?.name)` modifier restarts when the room becomes available, ensuring the subscription only starts once the room is ready.
+
+<Aside data-type='note'>
+Monitoring the room status is useful for deciding when to show a loading spinner or other UI elements while waiting for the room to be created or joined.
+</Aside>
+
+## Step 4: Send a message <a id="step-4"/>
+
+Messages are how your clients interact with one another.
+
+In your project, open `ContentView.swift`, and add message functionality using AsyncSequence. The message subscription runs in its own `.task(id:)` modifier, starting automatically once the room is ready:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+    @State private var messages: [Message] = []
+    @State private var newMessage = ""
+
+    init() {
+        let realtimeOptions = ARTClientOptions()
+        realtimeOptions.key = "{{API_KEY}}"
+        realtimeOptions.clientId = "my-first-client"
+        let realtime = ARTRealtime(options: realtimeOptions)
+
+        let chatClient = ChatClient(realtime: realtime)
+        self._chatClient = State(initialValue: chatClient)
+    }
+
+    var body: some View {
+        VStack {
+            // Status bar
+            VStack {
+                Text("Connection: \(connectionStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
+            }
+            .font(.caption)
+            .padding(.horizontal)
+
+            // Messages list
+            List(messages.reversed(), id: \.serial) { message in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("\(message.clientID): \(message.text)")
+                            .font(.body)
+                        Spacer()
+                    }
+                    Text(formatTimestamp(message.timestamp))
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                .padding(.vertical, 2)
+            }
+            .listStyle(.plain)
+
+            // Message input
+            HStack {
+                TextField("Type a message...", text: $newMessage)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                Button("Send") {
+                    Task {
+                        await sendMessage()
+                    }
+                }
+                .disabled(newMessage.isEmpty)
+            }
+            .padding()
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            for await messageEvent in room.messages.subscribe() {
+                withAnimation {
+                    switch messageEvent.type {
+                    case .created:
+                        messages.append(messageEvent.message)
+                    case .updated:
+                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                            messages[index] = messageEvent.message
+                        }
+                    case .deleted:
+                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                            messages[index] = messageEvent.message
+                        }
+                    }
+                }
+            }
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            for await status in room.onStatusChange() {
+                roomStatus = "\(status.current)"
+            }
+        }
+        .task {
+            for await status in chatClient.connection.onStatusChange() {
+                connectionStatus = "\(status.current)"
+            }
+        }
+    }
+
+    private func setupRoom() async {
+        do {
+            let chatRoom = try await chatClient.rooms.get(named: roomName)
+            try await chatRoom.attach()
+            self.room = chatRoom
+        } catch {
+            print("Failed to setup room: \(error)")
+        }
+    }
+
+    private func sendMessage() async {
+        guard !newMessage.isEmpty, let room = room else { return }
+
+        do {
+            _ = try await room.messages.send(withParams: .init(text: newMessage))
+            newMessage = ""
+        } catch {
+            print("Failed to send message: \(error)")
+        }
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .medium
+        return formatter
+    }()
+
+    private func formatTimestamp(_ timestamp: Date?) -> String {
+        guard let timestamp else { return "" }
+        return Self.timeFormatter.string(from: timestamp)
+    }
+}
+```
+</Code>
+
+The UI should automatically render the new component, and you should be able to send messages to the room.
+
+Type a message in the input box and click the send button. You'll see the message appear in the chat list.
+
+You can also use the Ably CLI to send a message to the room from another environment:
+
+<Code>
+```shell
+ably rooms messages send my-first-room 'Hello from CLI!'
+```
+</Code>
+
+You'll see the message in your app's chat list. If you have sent a message via CLI, it should appear from a different client ID than the one you sent from the app.
+
+## Step 5: Edit a message <a id="step-5"/>
+
+If your client makes a typo, or needs to update their original message then they can edit it. To do this, you can extend the functionality to allow updating of messages.
+
+Update your `ContentView.swift` to add message editing capability:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+    @State private var messages: [Message] = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+
+    init() {
+        let realtimeOptions = ARTClientOptions()
+        realtimeOptions.key = "{{API_KEY}}"
+        realtimeOptions.clientId = "my-first-client"
+        let realtime = ARTRealtime(options: realtimeOptions)
+
+        let chatClient = ChatClient(realtime: realtime)
+        self._chatClient = State(initialValue: chatClient)
+    }
+
+    private var sendButtonTitle: String {
+        editingMessage != nil ? "Update" : "Send"
+    }
+
+    var body: some View {
+        VStack {
+            // Status bar
+            VStack {
+                Text("Connection: \(connectionStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
+            }
+            .font(.caption)
+            .padding(.horizontal)
+
+            // Messages list
+            List(messages.reversed(), id: \.serial) { message in
+                MessageRowView(
+                    message: message,
+                    isEditing: editingMessage?.serial == message.serial,
+                    onEdit: {
+                        editingMessage = message
+                        newMessage = message.text
+                    }
+                )
+                .buttonStyle(.plain)
+            }
+            .listStyle(.plain)
+
+            // Message input
+            HStack {
+                TextField("Type a message...", text: $newMessage)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                Button(sendButtonTitle) {
+                    Task {
+                        if editingMessage != nil {
+                            await updateMessage()
+                        } else {
+                            await sendMessage()
+                        }
+                    }
+                }
+                .disabled(newMessage.isEmpty)
+
+                if editingMessage != nil {
+                    Button("Cancel") {
+                        editingMessage = nil
+                        newMessage = ""
+                    }
+                    .foregroundColor(.red)
+                }
+            }
+            .padding()
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            // ... messages subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            // ... room status subscription remains the same ...
+        }
+        .task {
+            // ... connection status subscription remains the same ...
+        }
+    }
+
+    private func sendMessage() async {
+        guard !newMessage.isEmpty, let room = room else { return }
+
+        do {
+            _ = try await room.messages.send(withParams: .init(text: newMessage))
+            newMessage = ""
+        } catch {
+            print("Failed to send message: \(error)")
+        }
+    }
+
+    private func updateMessage() async {
+        guard !newMessage.isEmpty, let editingMessage = editingMessage, let room = room else { return }
+
+        do {
+            let updateMessageParams = UpdateMessageParams(text: newMessage)
+            _ = try await room.messages.update(withSerial: editingMessage.serial, params: updateMessageParams, details: nil)
+            self.editingMessage = nil
+            newMessage = ""
+        } catch {
+            print("Failed to update message: \(error)")
+        }
+    }
+
+    // ... setupRoom, formatTimestamp remain the same ...
+}
+
+struct MessageRowView: View {
+    let message: Message
+    let isEditing: Bool
+    let onEdit: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("\(message.clientID): \(message.text)")
+                        .font(.body)
+                        .background(isEditing ? Color.blue.opacity(0.1) : Color.clear)
+                    Text(formatTimestamp(message.timestamp))
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                Spacer()
+                Button("Edit") {
+                    onEdit()
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .medium
+        return formatter
+    }()
+
+    private func formatTimestamp(_ timestamp: Date?) -> String {
+        guard let timestamp else { return "" }
+        return Self.timeFormatter.string(from: timestamp)
+    }
+}
+```
+</Code>
+
+When you tap the "Edit" button next to a message, you can modify the text and it will send the updated message contents to the room.
+
+## Step 6: Message history and continuity <a id="step-6"/>
+
+Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The `historyBeforeSubscribe()` method is called on the subscription object before starting the `for await` loop, ensuring previously sent messages are loaded before listening for new ones. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
+
+Add a new state variable `messageSerials` and update the messages `.task(id:)` modifier in your `ContentView.swift` to load previous messages before starting the listener:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+    @State private var messages: [Message] = []
+    @State private var messageSerials: Set<String> = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+
+    // ... initialization code remains the same ...
+
+    var body: some View {
+        VStack {
+            // ... UI remains the same ...
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            let subscription = room.messages.subscribe()
+
+            // Load previous messages before listening for new ones
+            do {
+                let previousMessages = try await subscription.historyBeforeSubscribe(withParams: .init())
+                messages.append(contentsOf: previousMessages.items)
+                messageSerials.formUnion(previousMessages.items.map(\.serial))
+            } catch {
+                print("Failed to load history: \(error)")
+            }
+
+            for await messageEvent in subscription {
+                withAnimation {
+                    switch messageEvent.type {
+                    case .created:
+                        if !messageSerials.contains(messageEvent.message.serial) {
+                            messages.append(messageEvent.message)
+                            messageSerials.insert(messageEvent.message.serial)
+                        }
+                    case .updated:
+                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                            messages[index] = messageEvent.message
+                        }
+                    case .deleted:
+                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                            messages[index] = messageEvent.message
+                        }
+                    }
+                }
+            }
+        }
+        .task(id: room?.name) {
+            // ... room status subscription remains the same ...
+        }
+        .task {
+            // ... connection status subscription remains the same ...
+        }
+    }
+
+    // ... rest of the functions remain the same ...
+}
+```
+</Code>
+
+The above code will retrieve previous messages when the component loads, and set them in the state.
+
+Do the following to test this out:
+
+1. Use the Ably CLI to simulate sending some messages to the room from another client.
+2. Restart the app, this will cause the message history to load.
+3. You'll see the previous messages appear in the chat list.
+
+## Step 7: Display who is present in the room <a id="step-7"/>
+
+Display the online status of clients using the presence feature. This enables clients to be aware of one another if they are present in the same room. You can then show clients who else is online, provide a custom status update for each, and notify the room when someone enters it, or leaves it, such as by going offline.
+
+Update your `ContentView.swift` to add presence functionality using AsyncSequence:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+    @State private var messages: [Message] = []
+    @State private var messageSerials: Set<String> = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+    @State private var presenceMembers: [String] = []
+
+    // ... initialization code remains the same ...
+
+    var body: some View {
+        VStack {
+            // Status bar
+            VStack {
+                Text("Connection: \(connectionStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
+                Text("Online: \(presenceMembers.count)")
+            }
+            .font(.caption)
+            .padding(.horizontal)
+
+            // ... rest of the UI remains the same ...
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            // ... messages subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            for await _ in room.presence.subscribe() {
+                await updatePresenceMembers()
+            }
+        }
+        .task(id: room?.name) {
+            // ... room status subscription remains the same ...
+        }
+        .task {
+            // ... connection status subscription remains the same ...
+        }
+    }
+
+    private func setupRoom() async {
+        do {
+            let chatRoom = try await chatClient.rooms.get(named: roomName)
+            try await chatRoom.attach()
+            self.room = chatRoom
+
+            // Enter presence with data
+            try await chatRoom.presence.enter(withData: ["status": "📱 Online"])
+
+            // Get initial presence members
+            let members = try await chatRoom.presence.get()
+            presenceMembers = members.compactMap { $0.clientID }
+        } catch {
+            print("Failed to setup room: \(error)")
+        }
+    }
+
+    private func updatePresenceMembers() async {
+        guard let room = room else { return }
+
+        do {
+            let members = try await room.presence.get()
+            presenceMembers = members.compactMap { $0.clientID }
+        } catch {
+            print("Failed to get presence members: \(error)")
+        }
+    }
+
+    // ... rest of the functions remain the same ...
+}
+```
+</Code>
+
+You'll now see your current client ID in the count of present users.
+
+You can also use the Ably CLI to enter the room from another client by running the following command:
+
+<Code>
+```shell
+ably rooms presence enter my-first-room
+```
+</Code>
+
+## Step 8: Send a reaction <a id="step-8"/>
+
+Clients can send a reaction to a room to show their sentiment for what is happening, such as a point being scored in a sports game. These are short-lived (ephemeral) and are not stored in the room history.
+
+Update your `ContentView.swift` to add reaction functionality using AsyncSequence:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+    @State private var messages: [Message] = []
+    @State private var messageSerials: Set<String> = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+    @State private var presenceMembers: [String] = []
+    @State private var recentReactions: [String] = []
+
+    // ... initialization code remains the same ...
+
+    var body: some View {
+        VStack {
+            // Status bar
+            VStack {
+                Text("Connection: \(connectionStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
+                Text("Online: \(presenceMembers.count)")
+            }
+            .font(.caption)
+            .padding(.horizontal)
+
+            // Reactions bar
+            HStack {
+                Text("Reactions:")
+                    .font(.caption)
+
+                ForEach(["👍", "❤️", "💥", "🚀", "👎"], id: \.self) { emoji in
+                    Button(emoji) {
+                        Task {
+                            await sendReaction(name: emoji)
+                        }
+                    }
+                    .font(.title2)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal)
+
+            // Recent reactions display
+            if !recentReactions.isEmpty {
+                HStack {
+                    Text("Recent:")
+                        .font(.caption)
+                    ForEach(recentReactions.suffix(5), id: \.self) { reaction in
+                        Text(reaction)
+                            .font(.title3)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+            }
+
+            // Messages list and input remain the same...
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            // ... messages subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            // ... presence subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            for await event in room.reactions.subscribe() {
+                withAnimation {
+                    recentReactions.append(event.reaction.name)
+                    if recentReactions.count > 10 {
+                        recentReactions.removeFirst()
+                    }
+                }
+            }
+        }
+        .task(id: room?.name) {
+            // ... room status subscription remains the same ...
+        }
+        .task {
+            // ... connection status subscription remains the same ...
+        }
+    }
+
+    private func sendReaction(name: String) async {
+        guard let room = room else { return }
+
+        do {
+            try await room.reactions.send(withParams: .init(name: name))
+        } catch {
+            print("Failed to send reaction: \(error)")
+        }
+    }
+
+    // ... rest of the functions remain the same ...
+}
+```
+</Code>
+
+The above code displays a list of reactions that can be sent to the room. When you tap on a reaction, it will send it to the room and display it in the recent reactions area.
+
+You can also send a reaction to the room via the Ably CLI by running the following command:
+
+<Code>
+```shell
+ably rooms reactions send my-first-room 👍
+```
+</Code>
+
+## Step 9: Show typing indicators <a id="step-9"/>
+
+Typing indicators let other users know when someone is actively composing a message. This creates a more responsive and interactive chat experience.
+
+Update your `ContentView.swift` to add typing indicators using AsyncSequence:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+    @State private var messages: [Message] = []
+    @State private var messageSerials: Set<String> = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+    @State private var presenceMembers: [String] = []
+    @State private var recentReactions: [String] = []
+    @State private var typingUsers: [String] = []
+
+    // ... initialization and other code remains the same ...
+
+    var body: some View {
+        VStack {
+            // Status bar remains the same...
+
+            // Reactions bar remains the same...
+
+            // Recent reactions display remains the same...
+
+            // Messages list remains the same...
+
+            // Typing indicator
+            if !typingUsers.isEmpty {
+                HStack {
+                    Text("Typing: \(typingUsers.joined(separator: ", "))...")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Spacer()
+                }
+                .padding(.horizontal)
+            }
+
+            // Message input
+            HStack {
+                TextField("Type a message...", text: $newMessage)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .onChange(of: newMessage) { newValue in
+                        Task {
+                            await handleTyping(text: newValue)
+                        }
+                    }
+
+                Button(sendButtonTitle) {
+                    Task {
+                        if editingMessage != nil {
+                            await updateMessage()
+                        } else {
+                            await sendMessage()
+                        }
+                    }
+                }
+                .disabled(newMessage.isEmpty)
+
+                if editingMessage != nil {
+                    Button("Cancel") {
+                        editingMessage = nil
+                        newMessage = ""
+                    }
+                    .foregroundColor(.red)
+                }
+            }
+            .padding()
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            // ... messages subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            // ... presence subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            // ... reactions subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            for await typing in room.typing.subscribe() {
+                withAnimation {
+                    typingUsers = typing.currentlyTyping.filter { $0 != chatClient.clientID }
+                }
+            }
+        }
+        .task(id: room?.name) {
+            // ... room status subscription remains the same ...
+        }
+        .task {
+            // ... connection status subscription remains the same ...
+        }
+    }
+
+    private func handleTyping(text: String) async {
+        guard let room = room else { return }
+
+        do {
+            if text.isEmpty {
+                try await room.typing.stop()
+            } else {
+                try await room.typing.keystroke()
+            }
+        } catch {
+            print("Failed to handle typing: \(error)")
+        }
+    }
+
+    // ... rest of the functions remain the same ...
+}
+```
+</Code>
+
+Now when you type in the message field, other users will see a typing indicator. The indicator automatically stops when you stop typing or send a message.
+
+## Step 10: Display occupancy information <a id="step-10"/>
+
+Occupancy shows how many connections and presence members are currently in the room. This helps users understand the activity level of the room.
+
+Update your `ContentView.swift` to add occupancy information using AsyncSequence:
+
+<Code>
+```swift
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: (any Room)?
+    @State private var messages: [Message] = []
+    @State private var messageSerials: Set<String> = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+    @State private var presenceMembers: [String] = []
+    @State private var recentReactions: [String] = []
+    @State private var typingUsers: [String] = []
+    @State private var occupancyInfo = "Connections: 0"
+
+    // ... initialization code remains the same ...
+
+    var body: some View {
+        VStack {
+            // Status bar
+            VStack {
+                Text("Connection: \(connectionStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
+                Text("Online: \(presenceMembers.count)")
+                Text(occupancyInfo)
+            }
+            .font(.caption)
+            .padding(.horizontal)
+
+            // ... rest of the UI remains the same ...
+        }
+        .task {
+            await setupRoom()
+        }
+        .task(id: room?.name) {
+            // ... messages subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            // ... presence subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            // ... reactions subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            // ... typing subscription remains the same ...
+        }
+        .task(id: room?.name) {
+            guard let room else { return }
+            for await event in room.occupancy.subscribe() {
+                withAnimation {
+                    occupancyInfo = "Connections: \(event.occupancy.connections)"
+                }
+            }
+        }
+        .task(id: room?.name) {
+            // ... room status subscription remains the same ...
+        }
+        .task {
+            // ... connection status subscription remains the same ...
+        }
+    }
+
+    private func setupRoom() async {
+        do {
+            let chatRoom = try await chatClient.rooms.get(named: roomName, options: .init(occupancy: .init(enableEvents: true)))
+            try await chatRoom.attach()
+            self.room = chatRoom
+
+            try await chatRoom.presence.enter(withData: ["status": "📱 Online"])
+
+            let members = try await chatRoom.presence.get()
+            presenceMembers = members.compactMap { $0.clientID }
+
+            // Get initial occupancy
+            let currentOccupancy = try await chatRoom.occupancy.get()
+            occupancyInfo = "Connections: \(currentOccupancy.connections)"
+        } catch {
+            print("Failed to setup room: \(error)")
+        }
+    }
+
+    // ... rest of the functions remain the same ...
+}
+```
+</Code>
+
+The occupancy information will now show both the number of presence members and total connections in the room.
+
+## Step 11: Delete messages <a id="step-11"/>
+
+Users may want to delete messages they've sent, for example if they contain errors or inappropriate content.
+
+Update your `MessageRowView` and add delete functionality:
+
+<Code>
+```swift
+struct MessageRowView: View {
+    let message: Message
+    let isEditing: Bool
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if message.action == .messageDelete {
+                HStack {
+                    Text("Message deleted")
+                        .font(.body)
+                        .italic()
+                        .foregroundColor(.gray)
+                    Spacer()
+                }
+            } else {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("\(message.clientID): \(message.text)")
+                            .font(.body)
+                            .background(isEditing ? Color.blue.opacity(0.1) : Color.clear)
+                        Text(formatTimestamp(message.timestamp))
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+
+                    HStack {
+                        Button("Edit") {
+                            onEdit()
+                        }
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .frame(minHeight: 30)
+
+                        Button("Delete") {
+                            onDelete()
+                        }
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .frame(minHeight: 30)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .medium
+        return formatter
+    }()
+
+    private func formatTimestamp(_ timestamp: Date?) -> String {
+        guard let timestamp else { return "" }
+        return Self.timeFormatter.string(from: timestamp)
+    }
+}
+```
+</Code>
+
+Update your main `ContentView` to handle message deletion:
+
+<Code>
+```swift
+// In the messages list section, update the MessageRowView call:
+List(messages.reversed(), id: \.serial) { message in
+    MessageRowView(
+        message: message,
+        isEditing: editingMessage?.serial == message.serial,
+        onEdit: {
+            editingMessage = message
+            newMessage = message.text
+        },
+        onDelete: {
+            Task {
+                await deleteMessage(message)
+            }
+        }
+    )
+    .buttonStyle(.plain)
+}
+.listStyle(.plain)
+
+// Add this function to ContentView:
+private func deleteMessage(_ message: Message) async {
+    guard let room = room else { return }
+
+    do {
+        _ = try await room.messages.delete(withSerial: message.serial, details: nil)
+    } catch {
+        print("Failed to delete message: \(error)")
+    }
+}
+```
+</Code>
+
+Users can now delete their messages by tapping the "Delete" button. Deleted messages will appear as "Message deleted" in the chat.
+
+## Step 12: Disconnection and clean up resources <a id="step-12"/>
+
+Each `.task` modifier automatically cancels its subscription when the view disappears, so no manual subscription cleanup is needed. To handle the app lifecycle, you can use scene phase modifiers to disconnect when the app enters the background and reconnect when it becomes active again. Ably's SDK handles reconnection gracefully, so the existing subscriptions will resume receiving events automatically.
+
+Update your `ContentView.swift` to handle app lifecycle:
+
+<Code>
+```swift
+import Ably
+import AblyChat
+import SwiftUI
+
+struct ContentView: View {
+    // ... all state variables remain the same ...
+
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        VStack {
+            // ... all UI code remains the same ...
+        }
+        .task {
+            await setupRoom()
+        }
+        // ... all .task(id:) and .task subscriptions remain the same ...
+        .onChange(of: scenePhase) { newPhase in
+            Task {
+                await handleScenePhaseChange(newPhase)
+            }
+        }
+        .onDisappear {
+            Task {
+                if let room = room {
+                    try? await room.presence.leave()
+                    try? await room.detach()
+                }
+            }
+        }
+    }
+
+    private func handleScenePhaseChange(_ phase: ScenePhase) async {
+        switch phase {
+        case .background:
+            chatClient.realtime.close()
+        case .active:
+            chatClient.realtime.connect()
+            if let room = room {
+                try? await room.attach()
+            }
+        case .inactive:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    // ... all other functions remain the same ...
+}
+```
+</Code>
+
+## Next steps <a id="next-steps"/>
+
+Continue to explore the documentation with Swift as the selected language:
+
+* Understand [token authentication](/docs/auth/token) before going to production.
+* Read more about using [rooms](/docs/chat/rooms?lang=swift) and sending [messages](/docs/chat/rooms/messages?lang=swift).
+* Find out more regarding [presence](/docs/chat/rooms/presence?lang=swift).
+* Read into pulling messages from [history](/docs/chat/rooms/history?lang=swift) and providing context to new joiners.
+
+Explore the [Ably CLI](https://www.npmjs.com/package/@ably/cli) further, or check out the [Chat Swift API references](https://sdk.ably.com/builds/ably/ably-chat-swift/main/documentation/ablychat/) for additional functionality.
