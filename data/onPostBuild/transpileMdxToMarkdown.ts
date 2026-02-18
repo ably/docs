@@ -2,6 +2,8 @@ import { GatsbyNode } from 'gatsby';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import frontMatter from 'front-matter';
+import { generateNavigationFooter, mdxNodeToNavLink, buildNavLookup } from './generateMarkdownFooter';
+import type { NavContext } from './generateMarkdownFooter';
 
 const REPORTER_PREFIX = 'onPostBuild:transpileMdxToMarkdown';
 
@@ -95,7 +97,7 @@ function addLanguageSubheadingsToCodeBlocks(content: string): string {
   });
 }
 
-interface MdxNode {
+export interface MdxNode {
   parent: {
     relativeDirectory: string;
     name: string;
@@ -103,6 +105,9 @@ interface MdxNode {
   };
   internal: {
     contentFilePath: string;
+  };
+  frontmatter?: {
+    meta_description?: string;
   };
 }
 
@@ -528,11 +533,16 @@ function calculateOutputPath(relativeDirectory: string, fileName: string): strin
 }
 
 /**
- * Transform MDX content to clean Markdown
+ * Transform MDX content to clean Markdown.
+ *
+ * When navContext is provided, a navigation footer is appended as the final step
+ * (after all 14 transformation stages). This ensures the footer's absolute .md URLs
+ * are not double-processed by stages like convertDocsLinksToMarkdown() or convertRelativeUrls().
  */
 function transformMdxToMarkdown(
   sourceContent: string,
   siteUrl: string,
+  navContext?: NavContext,
 ): { content: string; title: string; intro?: string } {
   // Stage 1: Parse frontmatter
   const parsed = frontMatter<FrontMatterAttributes>(sourceContent);
@@ -582,7 +592,12 @@ function transformMdxToMarkdown(
   content = addLanguageSubheadingsToCodeBlocks(content);
 
   // Stage 14: Prepend title as markdown heading
-  const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
+  let finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
+
+  // Stage 15: Append navigation footer (after all transformations to avoid double-processing)
+  if (navContext) {
+    finalContent += generateNavigationFooter(navContext, siteUrl);
+  }
 
   return { content: finalContent, title, intro };
 }
@@ -590,7 +605,12 @@ function transformMdxToMarkdown(
 /**
  * Process a single MDX file
  */
-async function processFile(node: MdxNode, siteUrl: string, reporter: any): Promise<void> {
+async function processFile(
+  node: MdxNode,
+  siteUrl: string,
+  reporter: any,
+  navLookup: Map<string, NavContext>,
+): Promise<void> {
   const sourcePath = node.internal.contentFilePath;
   const relativeDirectory = node.parent.relativeDirectory;
   const fileName = node.parent.name;
@@ -598,8 +618,12 @@ async function processFile(node: MdxNode, siteUrl: string, reporter: any): Promi
   // Read source MDX file
   const sourceContent = await fs.readFile(sourcePath, 'utf-8');
 
-  // Transform MDX to Markdown
-  const { content } = transformMdxToMarkdown(sourceContent, siteUrl);
+  // Derive nav link from MDX node info and look up navigation context
+  const navLink = mdxNodeToNavLink(relativeDirectory, fileName);
+  const navContext = navLookup.get(navLink);
+
+  // Transform MDX to Markdown (includes navigation footer when navContext is available)
+  const { content } = transformMdxToMarkdown(sourceContent, siteUrl, navContext);
 
   // Calculate output path
   const outputPath = calculateOutputPath(relativeDirectory, fileName);
@@ -636,6 +660,9 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
           internal {
             contentFilePath
           }
+          frontmatter {
+            meta_description
+          }
         }
       }
     }
@@ -670,13 +697,16 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
 
   reporter.info(`${REPORTER_PREFIX} Found ${mdxNodes.length} MDX files to transpile`);
 
+  // Build navigation lookup (encapsulates MDX page set, meta descriptions, and nav context computation)
+  const navLookup = buildNavLookup(siteUrl, mdxNodes);
+
   let successCount = 0;
   let failureCount = 0;
 
   // Process each file
   for (const node of mdxNodes) {
     try {
-      await processFile(node, siteUrl, reporter);
+      await processFile(node, siteUrl, reporter, navLookup);
       successCount++;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
