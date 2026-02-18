@@ -1,19 +1,31 @@
 # AI Transport Guides - E2E Code
 
-Full, runnable implementations for each AI Transport guide. Each directory contains the complete publisher (server) and subscriber (client) code that the corresponding guide walks through.
+Full, runnable implementations for each AI Transport guide. Each guide directory contains language-specific subdirectories with publisher (agent) and subscriber (client) code.
+
+## Structure
+
+```
+<guide-name>/
+  javascript/          # JavaScript/TypeScript implementation
+    src/publisher.ts
+    src/subscriber.ts
+    test/e2e.test.ts
+  python/              # (future)
+  java/                # (future)
+```
 
 ## Guides
 
-| Guide | Provider | Pattern |
-|-------|----------|---------|
-| `openai-message-per-token` | OpenAI | Message per token |
-| `openai-message-per-response` | OpenAI | Message per response |
-| `anthropic-message-per-token` | Anthropic | Message per token |
-| `anthropic-message-per-response` | Anthropic | Message per response |
-| `vercel-message-per-token` | Vercel AI SDK | Message per token |
-| `vercel-message-per-response` | Vercel AI SDK | Message per response |
-| `lang-graph-message-per-token` | LangGraph | Message per token |
-| `lang-graph-message-per-response` | LangGraph | Message per response |
+| Guide | Provider | Pattern | Languages |
+|-------|----------|---------|-----------|
+| `openai-message-per-token` | OpenAI | Message per token | JavaScript |
+| `openai-message-per-response` | OpenAI | Message per response | JavaScript |
+| `anthropic-message-per-token` | Anthropic | Message per token | JavaScript |
+| `anthropic-message-per-response` | Anthropic | Message per response | JavaScript |
+| `vercel-message-per-token` | Vercel AI SDK | Message per token | JavaScript |
+| `vercel-message-per-response` | Vercel AI SDK | Message per response | JavaScript |
+| `lang-graph-message-per-token` | LangGraph | Message per token | JavaScript |
+| `lang-graph-message-per-response` | LangGraph | Message per response | JavaScript |
 
 ## Streaming patterns
 
@@ -41,10 +53,10 @@ Each guide has a publisher (streams from LLM to Ably) and a subscriber (reads fr
 
 ```bash
 # Terminal 1 - start the subscriber
-npx tsx <guide-name>/src/subscriber.ts
+npx tsx <guide-name>/javascript/src/subscriber.ts
 
 # Terminal 2 - start the publisher
-npx tsx <guide-name>/src/publisher.ts
+npx tsx <guide-name>/javascript/src/publisher.ts
 ```
 
 ## Running tests
@@ -57,5 +69,5 @@ yarn test
 yarn test:watch
 
 # Single guide
-yarn vitest run <guide-name>
+npx vitest run <guide-name>
 ```
