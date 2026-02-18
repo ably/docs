@@ -1,0 +1,430 @@
+---
+title: "Guide: Stream Anthropic responses using the message-per-response pattern"
+meta_description: "Stream tokens from the Anthropic Messages API over Ably in realtime using message appends."
+meta_keywords: "AI, token streaming, Anthropic, Claude, Messages API, AI transport, Ably, realtime, message appends"
+---
+
+This guide shows you how to stream AI responses from Anthropic's [Messages API](https://docs.anthropic.com/en/api/messages) over Ably using the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response). Specifically, it appends each response token to a single Ably message, creating a complete AI response that grows incrementally while delivering tokens in realtime.
+
+Using Ably to distribute tokens from the Anthropic SDK enables you to broadcast AI responses to thousands of concurrent subscribers with reliable message delivery and ordering guarantees. This approach stores each complete response as a single message in channel history, making it easy to retrieve conversation history without processing thousands of individual token messages.
+
+<Aside data-type="further-reading">
+To discover other approaches to token streaming, including the [message-per-token](/docs/ai-transport/token-streaming/message-per-token) pattern, see the [token streaming](/docs/ai-transport/token-streaming) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+To follow this guide, you need:
+- Node.js 20 or higher
+- An Anthropic API key
+- An Ably API key
+
+Useful links:
+- [Anthropic API documentation](https://docs.anthropic.com/en/api)
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+
+Create a new NPM package, which will contain the publisher and subscriber code:
+
+<Code>
+```shell
+mkdir ably-anthropic-example && cd ably-anthropic-example
+npm init -y
+```
+</Code>
+
+Install the required packages using NPM:
+
+<Code>
+```shell
+npm install @anthropic-ai/sdk@^0.71 ably@^2
+```
+</Code>
+
+<Aside data-type="note">
+This guide uses version 0.71.x of the Anthropic SDK. Some details of interacting with the Anthropic SDK may differ from those given here if using a different major version.
+</Aside>
+
+Export your Anthropic API key to the environment, which will be used later in the guide by the Anthropic SDK:
+
+<Code>
+```shell
+export ANTHROPIC_API_KEY="your_api_key_here"
+```
+</Code>
+
+## Step 1: Enable message appends <a id="step-1"/>
+
+Message append functionality requires "Message annotations, updates, deletes and appends" to be enabled in a [channel rule](/docs/channels#rules) associated with the channel.
+
+<Aside data-type="important">
+When the "Message annotations, updates, deletes and appends" channel rule is enabled, messages are persisted irrespective of whether or not persistence has also been explicitly enabled. This increases usage since [we charge for persisting messages](https://faqs.ably.com/how-does-ably-count-messages).
+</Aside>
+
+To enable the channel rule:
+
+1. Go to the [Ably dashboard](https://www.ably.com/dashboard) and select your app.
+2. Navigate to the "Configuration" > "Rules" section from the left-hand navigation bar.
+3. Choose "Add new rule".
+4. Enter a channel name or namespace pattern (e.g. `ai` for all channels starting with `ai:`).
+5. Select the "Message annotations, updates, deletes and appends" option from the list.
+6. Click "Create channel rule".
+
+The examples in this guide use the `ai:` namespace prefix, which assumes you have configured the rule for `ai:*`.
+
+<Aside data-type="note">
+The `ai:` namespace is just a naming convention used in this guide. There's nothing special about it - you can use any namespace pattern you like, as long as your channel name matches the configured channel rule.
+</Aside>
+
+## Step 2: Get a streamed response from Anthropic <a id="step-2"/>
+
+Initialize an Anthropic client and use the [Messages API](https://docs.anthropic.com/en/api/messages) to stream model output as a series of events.
+
+Create a new file `publisher.mjs` with the following contents:
+
+<Code>
+```javascript
+import Anthropic from '@anthropic-ai/sdk';
+
+// Initialize Anthropic client
+const anthropic = new Anthropic();
+
+// Process each streaming event
+async function processEvent(event) {
+  console.log(JSON.stringify(event));
+  // This function is updated in the next sections
+}
+
+// Create streaming response from Anthropic
+async function streamAnthropicResponse(prompt) {
+  const stream = await anthropic.messages.create({
+    model: "claude-sonnet-4-5",
+    max_tokens: 1024,
+    messages: [{ role: "user", content: prompt }],
+    stream: true,
+  });
+
+  // Iterate through streaming events
+  for await (const event of stream) {
+    await processEvent(event);
+  }
+}
+
+// Usage example
+streamAnthropicResponse("Tell me a short joke");
+```
+</Code>
+
+### Understand Anthropic streaming events <a id="understand-streaming-events"/>
+
+Anthropic's Messages API [streams](https://docs.anthropic.com/en/api/messages-streaming) model output as a series of events when you set `stream: true`. Each streamed event includes a `type` property which describes the event type. A complete text response can be constructed from the following event types:
+
+- [`message_start`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals the start of a response. Contains a `message` object with an `id` to correlate subsequent events.
+
+- [`content_block_start`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Indicates the start of a new content block. For text responses, the `content_block` will have `type: "text"`; other types may be specified, such as `"thinking"` for internal reasoning tokens. The `index` indicates the position of this item in the message's `content` array.
+
+- [`content_block_delta`](https://platform.claude.com/docs/en/build-with-claude/streaming#content-block-delta-types): Contains a single text delta in the `delta.text` field. If `delta.type === "text_delta"` the delta contains model response text; other types may be specified, such as `"thinking_delta"` for internal reasoning tokens. Use the `index` to correlate deltas relating to a specific content block.
+
+- [`content_block_stop`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals completion of a content block. Contains the `index` that identifies the content block.
+
+- [`message_delta`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Contains additional message-level metadata that may be streamed incrementally. Includes a [`delta.stop_reason`](https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons) which indicates why the model successfully completed its response generation.
+
+- [`message_stop`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals the end of the response.
+
+The following example shows the event sequence received when streaming a response:
+
+<Code>
+```json
+// 1. Message starts
+{"type":"message_start","message":{"model":"claude-sonnet-4-5-20250929","id":"msg_012zEkenyT6heaYSDvDEDdXm","type":"message","role":"assistant","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":1,"service_tier":"standard"}}}
+
+// 2. Content block starts
+{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+// 3. Text tokens stream in as delta events
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Why"}}
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" don't scientists trust atoms?\n\nBecause"}}
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" they make up everything!"}}
+
+// 4. Content block completes
+{"type":"content_block_stop","index":0}
+
+// 5. Message delta (usage stats)
+{"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":17}}
+
+// 6. Message completes
+{"type":"message_stop"}
+```
+</Code>
+
+<Aside data-type="note">
+This is only an illustrative example for a simple "text in, text out" use case and may not reflect the exact sequence of events that you observe from the Anthropic API. It also does not describe response generation errors or refusals. For complete details on all event types and their properties, see [Anthropic Streaming events](https://docs.anthropic.com/en/api/messages-streaming).
+</Aside>
+
+## Step 3: Publish streaming tokens to Ably <a id="step-3"/>
+
+Publish Anthropic streaming events to Ably using message appends to reliably and scalably distribute them to subscribers.
+
+Each AI response is stored as a single Ably message that grows as tokens are appended.
+
+### Initialize the Ably client <a id="initialize-ably"/>
+
+Add the Ably client initialization to your `publisher.mjs` file:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+
+// Create a channel for publishing streamed AI responses
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+The Ably Realtime client maintains a persistent connection to the Ably service, which allows you to publish tokens at high message rates with low latency.
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own streamed tokens, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+### Publish initial message and append tokens <a id="publish-and-append"/>
+
+When a new response begins, publish an initial message to create it. Ably assigns a [`serial`](/docs/messages#properties) identifier to the message. Use this `serial` to append each token to the message as it arrives from the Anthropic model.
+
+<Aside data-type="note">
+This implementation assumes each response contains a single text content block. It filters out thinking tokens and other non-text content blocks. For production use cases with multiple content blocks or concurrent responses, consider tracking state per message ID and content block index.
+</Aside>
+
+Update your `publisher.mjs` file to publish the initial message and append tokens:
+
+<Code>
+```javascript
+// Track state across events
+let msgSerial = null;
+let textBlockIndex = null;
+
+// Process each streaming event and publish to Ably
+async function processEvent(event) {
+  switch (event.type) {
+    case 'message_start':
+      // Publish initial empty message when response starts
+      const result = await channel.publish({
+        name: 'response',
+        data: ''
+      });
+
+      // Capture the message serial for appending tokens
+      msgSerial = result.serials[0];
+      break;
+
+    case 'content_block_start':
+      // Capture text block index when a text content block is added
+      if (event.content_block.type === 'text') {
+        textBlockIndex = event.index;
+      }
+      break;
+
+    case 'content_block_delta':
+      // Append tokens from text deltas only
+      if (event.index === textBlockIndex && event.delta.type === 'text_delta' && msgSerial) {
+        channel.appendMessage({
+          serial: msgSerial,
+          data: event.delta.text
+        });
+      }
+      break;
+
+    case 'message_stop':
+      console.log('Stream completed!');
+      break;
+  }
+}
+```
+</Code>
+
+This implementation:
+
+- Publishes an initial empty message when the response begins and captures the `serial`
+- Filters for `content_block_delta` events with `text_delta` type from text content blocks
+- Appends each token to the original message
+
+<Aside data-type="note">
+Append operations are published without `await` to maximize throughput. Ably maintains message ordering even without awaiting each append. For more information, see [Publishing tokens](/docs/ai-transport/token-streaming/message-per-response#publishing).
+</Aside>
+
+<Aside data-type="important">
+Standard Ably message [size limits](/docs/platform/pricing/limits#message) apply to the complete concatenated message. If appending a token would exceed the maximum message size, the append is rejected.
+</Aside>
+
+Run the publisher to see tokens streaming to Ably:
+
+<Code>
+```shell
+node publisher.mjs
+```
+</Code>
+
+## Step 4: Subscribe to streaming tokens <a id="step-4"/>
+
+Create a subscriber that receives the streaming tokens from Ably and reconstructs the response in realtime.
+
+Create a new file `subscriber.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Get the same channel used by the publisher
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track responses by message serial
+const responses = new Map();
+
+// Subscribe to receive messages
+await channel.subscribe((message) => {
+  switch (message.action) {
+    case 'message.create':
+      // New response started
+      console.log('\n[Response started]', message.serial);
+      responses.set(message.serial, message.data);
+      break;
+
+    case 'message.append':
+      // Append token to existing response
+      const current = responses.get(message.serial) || '';
+      responses.set(message.serial, current + message.data);
+
+      // Display token as it arrives
+      process.stdout.write(message.data);
+      break;
+
+    case 'message.update':
+      // Replace entire response content
+      responses.set(message.serial, message.data);
+      console.log('\n[Response updated with full content]');
+      break;
+  }
+});
+
+console.log('Subscriber ready, waiting for tokens...');
+```
+</Code>
+
+Subscribers receive different message actions depending on when they join and how they're retrieving messages:
+
+- `message.create`: Indicates a new response has started (i.e. a new message was created). The message `data` contains the initial content (often empty or the first token). Store this as the beginning of a new response using `serial` as the identifier.
+
+- `message.append`: Contains a single token fragment to append. The message `data` contains only the new token, not the full concatenated response. Append this token to the existing response identified by `serial`.
+
+- `message.update`: Contains the whole response up to that point. The message `data` contains the full concatenated text so far. Replace the entire response content with this data for the message identified by `serial`. This action occurs when the channel needs to resynchronize the full message state, such as after a client [resumes](/docs/connect/states#resume) from a transient disconnection.
+
+Run the subscriber in a separate terminal:
+
+<Code>
+```shell
+node subscriber.mjs
+```
+</Code>
+
+With the subscriber running, run the publisher in another terminal. The tokens stream in realtime as the Anthropic model generates them.
+
+## Step 5: Stream with multiple publishers and subscribers <a id="step-5"/>
+
+Ably's [channel-oriented sessions](/docs/ai-transport/sessions-identity#connection-oriented-vs-channel-oriented-sessions) enables multiple AI agents to publish responses and multiple users to receive them on a single channel simultaneously. Ably handles message delivery to all participants, eliminating the need to implement routing logic or manage state synchronization across connections.
+
+### Broadcasting to multiple subscribers <a id="broadcasting"/>
+
+Each subscriber receives the complete stream of tokens independently, enabling you to build collaborative experiences or multi-device applications.
+
+Run a subscriber in multiple separate terminals:
+
+<Code>
+```shell
+# Terminal 1
+node subscriber.mjs
+
+# Terminal 2
+node subscriber.mjs
+
+# Terminal 3
+node subscriber.mjs
+```
+</Code>
+
+All subscribers receive the same stream of tokens in realtime.
+
+### Publishing concurrent responses <a id="multiple-publishers"/>
+
+Multiple publishers can stream different responses concurrently on the same [channel](/docs/channels). Each response is a distinct message with its own unique `serial` identifier, so tokens from different responses are isolated to distinct messages and don't interfere with each other.
+
+To demonstrate this, run a publisher in multiple separate terminals:
+
+<Code>
+```shell
+# Terminal 1
+node publisher.mjs
+
+# Terminal 2
+node publisher.mjs
+
+# Terminal 3
+node publisher.mjs
+```
+</Code>
+
+All running subscribers receive tokens from all responses concurrently. Each subscriber correctly reconstructs each response separately using the `serial` to correlate tokens.
+
+## Step 6: Retrieve complete responses from history <a id="step-6"/>
+
+One key advantage of the message-per-response pattern is that each complete AI response is stored as a single message in channel history. This makes it efficient to retrieve conversation history without processing thousands of individual token messages.
+
+Use Ably's [rewind](/docs/channels/options/rewind) channel option to attach to the channel at some point in the recent past and automatically receive complete responses from history. Historical messages are delivered as `message.update` events containing the complete concatenated response, which then seamlessly transition to live `message.append` events for any ongoing responses:
+
+<Code>
+```javascript
+// Use rewind to receive recent historical messages
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}', {
+  params: { rewind: '2m' } // Retrieve messages from the last 2 minutes
+});
+
+const responses = new Map();
+
+await channel.subscribe((message) => {
+  switch (message.action) {
+    case 'message.create':
+      responses.set(message.serial, message.data);
+      break;
+
+    case 'message.append':
+      const current = responses.get(message.serial) || '';
+      responses.set(message.serial, current + message.data);
+      process.stdout.write(message.data);
+      break;
+
+    case 'message.update':
+      // Historical messages contain full concatenated response
+      responses.set(message.serial, message.data);
+      console.log('\n[Historical response]:', message.data);
+      break;
+  }
+});
+```
+</Code>
+
+<Aside data-type="further-reading">
+For more advanced hydration strategies, including using channel history with `untilAttach`, handling in-progress responses, and correlating with database records, see [client hydration](/docs/ai-transport/token-streaming/message-per-response#hydration) in the message-per-response documentation.
+</Aside>
+
+## Next steps
+
+- Learn more about the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response) used in this guide
+- Learn about [client hydration strategies](/docs/ai-transport/token-streaming/message-per-response#hydration) for handling late joiners and reconnections
+- Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI enabled applications
+- Explore the [message-per-token pattern](/docs/ai-transport/token-streaming/message-per-token) for explicit control over individual token messages

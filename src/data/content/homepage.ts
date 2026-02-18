@@ -38,6 +38,10 @@ export default {
         name: 'liveSync',
         link: '/docs/livesync',
       },
+      {
+        name: 'aiTransport',
+        link: '/docs/ai-transport',
+      },
     ],
   },
   examples: {

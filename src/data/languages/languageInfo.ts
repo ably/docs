@@ -76,7 +76,8 @@ export default {
   },
   android: {
     label: 'Android',
-    syntaxHighlighterKey: 'java',
+    syntaxHighlighterKey: 'kotlin',
+    alias: 'android-full',
   },
   flutter: {
     label: 'Flutter',

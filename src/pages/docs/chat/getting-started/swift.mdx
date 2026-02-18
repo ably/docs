@@ -329,11 +329,11 @@ struct ContentView: View {
                     }
                     messages.append(event.message)
                 case .updated:
-                    if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                    if let index = messages.firstIndex(where: { $0.serial == event.message.serial }) {
                         messages[index] = event.message
                     }
                 case .deleted:
-                    if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                    if let index = messages.firstIndex(where: { $0.serial == event.message.serial }) {
                         messages[index] = event.message
                     }
                 }
@@ -345,7 +345,7 @@ struct ContentView: View {
         guard !newMessage.isEmpty, let room = room else { return }
 
         do {
-            _ = try await room.messages.send(params: .init(text: newMessage))
+            _ = try await room.messages.send(withParams: .init(text: newMessage))
             newMessage = ""
         } catch {
             print("Failed to send message: \(error)")
@@ -480,7 +480,7 @@ struct ContentView: View {
         guard !newMessage.isEmpty, let room = room else { return }
 
         do {
-            _ = try await room.messages.send(params: .init(text: newMessage))
+            _ = try await room.messages.send(withParams: .init(text: newMessage))
             newMessage = ""
         } catch {
             print("Failed to send message: \(error)")
@@ -492,7 +492,7 @@ struct ContentView: View {
 
         do {
             let updateMessageParams = UpdateMessageParams(text: newMessage)
-            _ = try await room.messages.update(withSerial: editingMessage.serial params: updateMessageParams, details: nil)
+            _ = try await room.messages.update(withSerial: editingMessage.serial, params: updateMessageParams, details: nil)
             self.editingMessage = nil
             newMessage = ""
         } catch {
@@ -546,42 +546,61 @@ When you tap the "Edit" button next to a message, you can modify the text and it
 
 Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The message subscription provides `historyBeforeSubscribe()` to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
 
-Update the `setupMessages` function in your `ContentView.swift` to retrieve previous messages:
+Add a new state variable `messageSerials` and update the `setupMessages` function in your `ContentView.swift` to retrieve previous messages:
 
 <Code>
 ```swift
-private func setupMessages(room: Room) {
-    let subscription = room.messages.subscribe { event in
-        withAnimation {
-            switch event.type {
-            case .created:
-                // Only add if not already in the list
-                if !messages.contains(where: { $0.id == event.message.id }) {
-                    messages.append(event.message)
+struct ContentView: View {
+    private let roomName = "my-first-room"
+
+    @State private var chatClient: ChatClient
+    @State private var connectionStatus = ""
+    @State private var roomStatus = ""
+    @State private var room: Room?
+    @State private var messages: [Message] = []
+    @State private var messageSerials: Set<String> = []
+    @State private var newMessage = ""
+    @State private var editingMessage: Message?
+
+    // ... initialization code remains the same ...
+
+    private func setupMessages(room: Room) {
+        let subscription = room.messages.subscribe { event in
+            withAnimation {
+                switch event.type {
+                case .created:
+                    // Only add if not already in the list
+                    if !messageSerials.contains(event.message.serial) {
+                        messages.append(event.message)
+                        messageSerials.insert(event.message.serial)
+                    }
+                case .updated:
+                    if let index = messages.firstIndex(where: { $0.serial == event.message.serial }) {
+                        messages[index] = event.message
+                    }
+                case .deleted:
+                    if let index = messages.firstIndex(where: { $0.serial == event.message.serial }) {
+                        messages[index] = event.message
+                    }
                 }
-            case .updated:
-                if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
-                    messages[index] = event.message
+            }
+        }
+
+        // Get previous messages after subscribing
+        Task {
+            do {
+                let previousMessages = try await subscription.historyBeforeSubscribe(.init())
+                await MainActor.run {
+                    messages.append(contentsOf: previousMessages.items)
+                    messageSerials.formUnion(previousMessages.items.map(\.serial))
                 }
-            case .deleted:
-                if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
-                    messages[index] = event.message
-                }
+            } catch {
+                print("Failed to get previous messages: \(error)")
             }
         }
     }
 
-    // Get previous messages after subscribing
-    Task {
-        do {
-            let previousMessages = try await subscription.historyBeforeSubscribe(.init())
-            await MainActor.run {
-                messages.append(contentsOf: previousMessages.items)
-            }
-        } catch {
-            print("Failed to get previous messages: \(error)")
-        }
-    }
+    // ... rest of the functions remain the same ...
 }
 ```
 </Code>
@@ -840,7 +859,7 @@ struct ContentView: View {
         guard let room = room else { return }
 
         do {
-            try await room.reactions.send(params: .init(name: name))
+            try await room.reactions.send(withParams: .init(name: name))
         } catch {
             print("Failed to send reaction: \(error)")
         }
