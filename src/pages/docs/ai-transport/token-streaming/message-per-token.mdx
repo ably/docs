@@ -114,6 +114,69 @@ if (failed) {
   await channel.publish('response-complete', fullResponse);
 }
 ```
+
+```python
+# Track all publish operations
+publish_operations = []
+
+# Track the full response for recovery
+full_response = ''
+
+async for event in stream:
+    if event['type'] == 'token':
+        full_response += event['text']
+        publish_operations.append(channel.publish(Message(name='token', data=event['text'])))
+
+# Check for any failures after the stream completes
+results = await asyncio.gather(*publish_operations, return_exceptions=True)
+failed = any(isinstance(r, Exception) for r in results)
+
+if failed:
+    # Publish the complete response as a recovery message
+    await channel.publish(Message(name='response-complete', data=full_response))
+```
+
+```java
+// Track all publish operations
+List<CompletableFuture<Void>> publishFutures = new ArrayList<>();
+
+// Track the full response for recovery
+StringBuilder fullResponse = new StringBuilder();
+
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        fullResponse.append(event.getText());
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        channel.publish("token", event.getText(), new Callback<PublishResult>() {
+            @Override
+            public void onSuccess(PublishResult result) {
+                future.complete(null);
+            }
+
+            @Override
+            public void onError(ErrorInfo reason) {
+                future.completeExceptionally(AblyException.fromErrorInfo(reason));
+            }
+        });
+        publishFutures.add(future);
+    }
+}
+
+// Check for any failures after the stream completes
+boolean failed = false;
+for (CompletableFuture<Void> future : publishFutures) {
+    try {
+        future.get();
+    } catch (Exception e) {
+        failed = true;
+    }
+}
+
+if (failed) {
+    // Publish the complete response as a recovery message
+    channel.publish("response-complete", fullResponse.toString());
+}
+```
 </Code>
 
 If any publish fails, publish a new message with a different event type (such as `response-complete`) containing the full response. Subscribers should handle this event by replacing any tokens they have accumulated for that response:
@@ -130,6 +193,39 @@ await channel.subscribe('token', (message) => {
 // Handle recovery message that replaces all previous tokens
 await channel.subscribe('response-complete', (message) => {
   response = message.data;
+});
+```
+
+```python
+response = ''
+
+# Handle individual tokens
+def on_token(message):
+    global response
+    response += message.data
+
+await channel.subscribe('token', on_token)
+
+# Handle recovery message that replaces all previous tokens
+def on_recovery(message):
+    global response
+    response = message.data
+
+await channel.subscribe('response-complete', on_recovery)
+```
+
+```java
+StringBuilder response = new StringBuilder();
+
+// Handle individual tokens
+channel.subscribe("token", message -> {
+    response.append((String) message.data);
+});
+
+// Handle recovery message that replaces all previous tokens
+channel.subscribe("response-complete", message -> {
+    response.setLength(0);
+    response.append((String) message.data);
 });
 ```
 </Code>

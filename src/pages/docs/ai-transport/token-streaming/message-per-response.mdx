@@ -224,6 +224,91 @@ if (failed) {
   await channel.updateMessage({ serial: msgSerial, data: fullResponse });
 }
 ```
+
+```python
+# Publish initial message and capture the serial for appending tokens
+message = Message(name='response', data='')
+result = await channel.publish(message)
+msg_serial = result.serials[0]
+
+# Track all append operations
+append_operations = []
+
+# Track the full response for recovery
+full_response = ''
+
+async for event in stream:
+    if event['type'] == 'token':
+        full_response += event['text']
+        append_operations.append(
+            channel.append_message(serial=msg_serial, data=event['text'])
+        )
+
+# Check for any failures after the stream completes
+results = await asyncio.gather(*append_operations, return_exceptions=True)
+failed = any(isinstance(r, Exception) for r in results)
+
+if failed:
+    # Replace the message with the full response
+    await channel.update_message(serial=msg_serial, data=full_response)
+```
+
+```java
+// Publish initial message and capture the serial for appending tokens
+CompletableFuture<PublishResult> publishFuture = new CompletableFuture<>();
+channel.publish("response", "", new Callback<PublishResult>() {
+    @Override
+    public void onSuccess(PublishResult result) {
+        publishFuture.complete(result);
+    }
+
+    @Override
+    public void onError(ErrorInfo reason) {
+        publishFuture.completeExceptionally(AblyException.fromErrorInfo(reason));
+    }
+});
+String msgSerial = publishFuture.get().serials[0];
+
+// Track all append operations
+List<CompletableFuture<Void>> appendFutures = new ArrayList<>();
+
+// Track the full response for recovery
+StringBuilder fullResponse = new StringBuilder();
+
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        fullResponse.append(event.getText());
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        channel.appendMessage(msgSerial, event.getText(), new Callback<UpdateDeleteResult>() {
+            @Override
+            public void onSuccess(UpdateDeleteResult result) {
+                future.complete(null);
+            }
+
+            @Override
+            public void onError(ErrorInfo reason) {
+                future.completeExceptionally(AblyException.fromErrorInfo(reason));
+            }
+        });
+        appendFutures.add(future);
+    }
+}
+
+// Check for any failures after the stream completes
+boolean failed = false;
+for (CompletableFuture<Void> future : appendFutures) {
+    try {
+        future.get();
+    } catch (Exception e) {
+        failed = true;
+    }
+}
+
+if (failed) {
+    // Replace the message with the full response
+    channel.updateMessage(msgSerial, fullResponse.toString());
+}
+```
 </Code>
 
 If any append fails, use `updateMessage()` to replace the message content with the complete response. This ensures subscribers receive the full response regardless of any gaps caused by failed appends. The `message.update` action replaces the entire message content, so subscribers will have the complete response after processing the update.
