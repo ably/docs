@@ -156,7 +156,7 @@ ably_jwt = jwt.encode(
 
 #### Using TokenRequest (alternative) <a id="tokenrequest-capabilities"/>
 
-Use a TokenRequest when your capability list is very large (exceeds JWT size limits) or when capabilities need to be kept confidential (JWTs can be decoded by clients):
+Use a TokenRequest when your capability list is very large (JWTs must fit within HTTP header limits, typically around 8 KB) or when capabilities need to be kept confidential (JWTs can be decoded by clients):
 
 <Code>
 ```javascript
@@ -434,133 +434,10 @@ Capabilities are determined for [JWTs](/docs/auth/jwt) in the following way:
 * The capabilities granted to an Ably JWT will be the intersection of the capabilities within the Ably JWT and the capabilities of the associated API key.
 * If the set of capabilities within the Ably JWT have no intersection with the capabilities of the API key, then an error will instead be returned.
 
-## Custom restrictions on channels <a id="custom-restrictions"/>
+## Channel-scoped user claims <a id="custom-restrictions"/>
 
-<Aside data-type='important'>
-Channel-scoped user claims are only available when using [JWT authentication](/docs/auth/jwt). They are not available with Ably Tokens. See [JWT features](/docs/auth/jwt#channel-claims) for details.
-</Aside>
+JWTs can contain channel-scoped user claims for trusted metadata that other clients can read. See [JWT authentication — channel-scoped claims](/docs/auth/jwt#channel-claims) for details and examples.
 
-It is possible for JWTs to contain authenticated claims for users that can be used to allow or disallow certain interactions in your channels.
+## Per-connection publish rate limits <a id="jwt-limits"/>
 
-Messages can be annotated with trusted metadata copied from the client's authentication token by Ably servers. Clients are unable to directly publish messages with user claim metadata, and claims contained within the authentication token are signed to prevent tampering. Claims can be scoped to individual channels or to namespaces of [channels](/docs/channels). The most specific user claim will be added to the message as part of the `extras` object. Note that this does not apply to metadata messages.
-
-To set the trusted fields you need to include `ably.channel.*` in your JWT authentication payload, for example:
-
-<Code>
-```javascript
-  const claims = {
-    'sub': '1234567890',
-    'name': 'John Doe',
-    'x-ably-capability': <...>,
-    'x-ably-clientId': <...>,
-    'ably.channel.your-channel': 'admin', // the user is an admin for a specific channel
-    'ably.channel.your-namespace:*': 'moderator', // the user is a moderator in all channels within a namespace
-    'ably.channel.*': 'guest', // the user is a guest in all other channels
-  }
-```
-
-```python
-claims = {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "x-ably-capability": "<...>",
-    "x-ably-clientId": "<...>",
-    "ably.channel.your-channel": "admin",       # the user is an admin for a specific channel
-    "ably.channel.your-namespace:*": "moderator",  # the user is a moderator in all channels within a namespace
-    "ably.channel.*": "guest"            # the user is a guest in all other channels
-}
-```
-
-```go
-claims := map[string]interface{}{
-  "sub":                            "1234567890",
-  "name":                           "John Doe",
-  "x-ably-capability":              "<...>",
-  "x-ably-clientId":                "<...>",
-  "ably.channel.your-channel":      "admin",
-  "ably.channel.your-namespace:*":  "moderator",
-  "ably.channel.*":                 "guest",
-}
-```
-</Code>
-
-The claims from the token are copied into messages, allowing them to be checked for permission:
-
-<Code>
-```javascript
-  const fromModerator = (message) => {
-    const userClaim = message.extras && message.extras.userClaim;
-    return (userClaim && userClaim == 'moderator');
-  }
-```
-
-```python
-def from_moderator(message):
-    user_claim = message.get('extras', {}).get('userClaim')
-    return user_claim == 'moderator' if user_claim else False
-```
-
-```go
-func fromModerator(message map[string]interface{}) bool {
-	// Check if 'extras' exists and is a map
-	if extras, ok := message["extras"].(map[string]interface{}); ok {
-		// Check if 'userClaim' exists and is a string
-		if userClaim, ok := extras["userClaim"].(string); ok {
-			return userClaim == "moderator"
-		}
-	}
-	return false
-}
-```
-</Code>
-
-## Using JWT for per connection publish rate limits <a id="jwt-limits"/>
-
-<Aside data-type='important'>
-Per-connection publish rate limits are only available when using [JWT authentication](/docs/auth/jwt). They are not available with Ably Tokens. See [JWT features](/docs/auth/jwt#rate-limits) for details.
-</Aside>
-
-JWTs may specify publish rate limits for a user on particular channels. These limits can be used to prevent any individual user from sending an excessive number of messages in a short period of time.
-
-An example use case is in a large live chat where you may wish to limit users to posting messages no more than once every 10 seconds.
-
-Rate limits can be scoped to individual channels or to [channel namespaces](/docs/channels#namespaces). Note that the rate limit with the most specific scope will be applied to the user.
-
-To set rate limits for individual connections, include `ably.limits.publish.perAttachment.maxRate.<resource-name>` in your JWT authentication payload. The value of this property sets how many messages can be published per second to a channel, or namespace. For example, a value of `5` restricts the rate to 5 messages per second. A value of `0.1` restricts the rate to 1 message every 10 seconds.
-
-The following is an example of setting different rate limits for different channels:
-
-<Code>
-```javascript
-  const claims = {
-    'sub': '1234567890',
-    'name': 'John Doe',
-    'x-ably-capability': <...>,
-    'x-ably-clientId': <...>,
-    'ably.limits.publish.perAttachment.maxRate.your-channel': 10, // the user can publish 10 messages per second in a specific channel
-    'ably.limits.publish.perAttachment.maxRate.your-namespace:*': 0.1 // the user can publish a message every 10 seconds in all channels within a namespace
-  }
-```
-
-```python
-claims = {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "x-ably-capability": "<...>",
-    "x-ably-clientId": "<...>",
-    "ably.limits.publish.perAttachment.maxRate.your-channel": 10,   # the user can publish 10 messages per second in a specific channel
-    "ably.limits.publish.perAttachment.maxRate.your-namespace:*": 0.1  # the user can publish a message every 10 seconds in all channels within a namespace
-}
-```
-
-```go
-claims := map[string]interface{}{
-  "sub":                   "1234567890",
-  "name":                  "John Doe",
-  "x-ably-capability":     "<...>",
-  "x-ably-clientId":       "<...>",
-  "ably.limits.publish.perAttachment.maxRate.your-channel":      10.0, // the user can publish 10 messages per second in a specific channel
-  "ably.limits.publish.perAttachment.maxRate.your-namespace:*": 0.1, // the user can publish a message every 10 seconds in all channels within a namespace
-}
-```
-</Code>
+JWTs can specify per-connection publish rate limits to restrict how many messages a client can send. See [JWT authentication — rate limits](/docs/auth/jwt#rate-limits) for details and examples.
