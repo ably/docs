@@ -13,7 +13,7 @@ export default {
     kotlin: '1.6',
     objc: '1.2',
     php: '1.1',
-    python: '3.0',
+    python: '3.1',
     ruby: '1.2',
     swift: '1.2',
     go: '1.3',
@@ -29,7 +29,7 @@ export default {
     kotlin: '1.6',
     objc: '1.2',
     php: '1.1',
-    python: '3.0',
+    python: '3.1',
     ruby: '1.2',
     swift: '1.2',
     go: '1.3',
@@ -45,7 +45,7 @@ export default {
   aiTransport: {
     javascript: '2.11',
     java: '1.6',
-    python: '3.0',
+    python: '3.1',
   },
   spaces: {
     javascript: '0.4',
