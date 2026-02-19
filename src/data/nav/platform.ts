@@ -257,7 +257,7 @@ export default {
         },
         {
           name: 'Team',
-          link: '/docs/platform/account/teams',
+          link: '/docs/platform/account/team',
         },
         {
           name: 'Single sign-on (SSO)',
