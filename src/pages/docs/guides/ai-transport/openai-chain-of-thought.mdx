@@ -4,7 +4,7 @@ meta_description: "Stream chain-of-thought reasoning from OpenAI thinking models
 meta_keywords: "AI, chain of thought, reasoning, OpenAI, thinking models, AI transport, Ably, realtime, extended thinking"
 ---
 
-This guide shows you how to stream chain-of-thought reasoning from OpenAI's thinking models over Ably. You'll learn how to capture reasoning summaries alongside model output and distribute them to clients using both the inline and threading patterns.
+This guide shows you how to stream chain-of-thought reasoning from OpenAI's thinking models over Ably. You'll learn how to capture reasoning summaries alongside model output and distribute them to clients using the inline or threading pattern.
 
 Streaming chain-of-thought reasoning provides transparency into how the model arrives at its conclusions. Using Ably to distribute reasoning enables you to build rich user experiences that show the model's thought process in realtime, building trust and allowing users to intervene when needed.
 
@@ -104,7 +104,7 @@ The following example shows a typical event sequence:
 
 // 2. Output tokens stream in
 {"type":"response.output_text.delta","delta":"The capital of France is Paris."}
-{"type":"response.output_text.delta","delta":" Here's the reasoning:"}
+{"type":"response.output_text.delta","delta":" It has been the capital since the 10th century."}
 
 // 3. Response completes
 {"type":"response.completed","response":{...}}
@@ -113,9 +113,7 @@ The following example shows a typical event sequence:
 
 ## Step 2: Set up Ably channels <a id="step-2"/>
 
-Initialize the Ably client. The channel setup differs depending on whether you use the inline or threading pattern.
-
-Add the Ably initialization to your `agent.mjs` file:
+Initialize the Ably client and add it to your `agent.mjs` file:
 
 <Code>
 ```javascript
@@ -131,11 +129,17 @@ const realtime = new Ably.Realtime({
 Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own reasoning and output messages, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
 </Aside>
 
-## Step 3: Stream reasoning with the inline pattern <a id="step-3"/>
+## Step 3: Stream and subscribe to reasoning <a id="step-3"/>
+
+There are two patterns for distributing reasoning to clients. The inline pattern publishes reasoning and output to the same channel, maintaining relative message order. The threading pattern publishes reasoning to a separate channel, keeping the main channel clean and reducing bandwidth for clients that don't need to view reasoning. Choose the pattern that fits your use case.
+
+Both examples use the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern, which streams tokens into a single message that grows over time. This provides efficient history storage while still delivering tokens in realtime.
+
+### Inline pattern <a id="inline"/>
 
 The inline pattern publishes both reasoning and output messages to the same channel. This simplifies channel management and maintains the relative order of messages.
 
-This example uses the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern, which streams tokens into a single message that grows over time. This provides efficient history storage while still delivering tokens in realtime.
+#### Publish <a id="inline-publish"/>
 
 Add the inline streaming function to `agent.mjs`:
 
@@ -171,9 +175,9 @@ async function streamInline(prompt) {
 ```
 </Code>
 
-The `publish` call creates an initial empty message and returns its `serial`. Subsequent `appendMessage` calls add tokens to that message. Don't await `appendMessage` calls - Ably batches acknowledgments for efficiency.
+The `publish` call creates an initial empty message and returns its `serial`. Subsequent `appendMessage` calls add tokens to that message. Don't await `appendMessage` calls - this maximizes throughput by allowing the next token to be sent without waiting for confirmation of the previous one.
 
-## Step 4: Subscribe to inline reasoning <a id="step-4"/>
+#### Subscribe <a id="inline-subscribe"/>
 
 Create a subscriber that receives both reasoning and output messages on the same channel. The subscriber handles three message actions: `message.create` for new messages, `message.append` for token deltas, and `message.update` for resynchronization after disconnections.
 
@@ -250,9 +254,11 @@ node client-inline.mjs
 ```
 </Code>
 
-## Step 5: Stream reasoning with the threading pattern <a id="step-5"/>
+### Threading pattern <a id="threading"/>
 
-The threading pattern publishes reasoning to a separate channel. This allows clients to subscribe to reasoning alongside output, while keeping them on separate channels for flexibility.
+The threading pattern publishes reasoning to a separate channel from model output. This keeps the main channel focused on final responses and reduces bandwidth by delivering reasoning only when clients choose to view it.
+
+#### Publish <a id="threading-publish"/>
 
 Add the threading streaming function to `agent.mjs`:
 
@@ -310,7 +316,7 @@ The reasoning channel name includes the `responseId`, creating a unique channel 
 Ably channels are [created when used](/docs/channels#use), so you can dynamically create unique reasoning channels on demand.
 </Aside>
 
-## Step 6: Subscribe to threaded reasoning <a id="step-6"/>
+#### Subscribe <a id="threading-subscribe"/>
 
 Create a subscriber that receives output on the main channel and automatically subscribes to the reasoning channel when a response starts.
 
@@ -430,7 +436,7 @@ node client-threaded.mjs
 
 When a response starts, the client automatically subscribes to the reasoning channel and displays both reasoning and output as they stream in.
 
-## Step 7: Run the agent <a id="step-7"/>
+## Step 4: Run the agent <a id="step-4"/>
 
 Add a main function to run the agent with either pattern:
 
