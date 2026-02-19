@@ -13,6 +13,7 @@ import { IconName } from '@ably/ui/core/Icon/types';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
 import ExamplesList from '../Examples/ExamplesList';
+import { GuidesList } from '../Guides';
 import Link from '../Link';
 import { InkeepSearchBar } from '../SearchBar/InkeepSearchBar';
 import { secondaryButtonClassName, iconButtonClassName, tooltipContentClassName } from './utils/styles';
@@ -30,9 +31,12 @@ const desktopTabs = [
   <Link key="examples" to="/examples" className="p-4">
     Examples
   </Link>,
+  <Link key="guides" to="/guides" className="p-4">
+    Guides
+  </Link>,
 ];
 
-const mobileTabs = ['Documentation', 'Examples'];
+const mobileTabs = ['Documentation', 'Examples', 'Guides'];
 
 const helpResourcesItems = [
   {
@@ -166,7 +170,11 @@ const Header: React.FC = () => {
           options={{
             underline: false,
             flexibleTabHeight: true,
-            defaultTabIndex: location.pathname.includes('/examples') ? 1 : 0,
+            defaultTabIndex: location.pathname.includes('/guides')
+              ? 2
+              : location.pathname.includes('/examples')
+                ? 1
+                : 0,
           }}
         />
         {isMobileMenuOpen && (
@@ -184,6 +192,7 @@ const Header: React.FC = () => {
               contents={[
                 <LeftSidebar inHeader key="nav-mobile-documentation-tab" />,
                 <ExamplesList key="nav-mobile-examples-tab" />,
+                <GuidesList key="nav-mobile-guides-tab" />,
               ]}
               rootClassName="h-full overflow-y-hidden min-h-[3.1875rem] flex flex-col"
               contentClassName="h-full overflow-y-scroll"
