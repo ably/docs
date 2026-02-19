@@ -48,17 +48,17 @@ ably login
 Create a new iOS project with SwiftUI. For detailed instructions, refer to the [Apple Developer documentation](https://developer.apple.com/documentation/swiftui).
 
 1. Create a new iOS project in Xcode.
-2. Select **App** as the template
-3. Name the project **ChatExample** and set the bundle identifier to `com.example.chatexample`
-4. Set the minimum iOS deployment target to iOS 15.0 or higher
-5. Select SwiftUI as the interface and Swift as the language
+2. Select **App** as the template.
+3. Name the project **ChatExample** and set the bundle identifier to `com.example.chatexample`.
+4. Set the minimum iOS deployment target to iOS 15.0 or higher.
+5. Select SwiftUI as the interface and Swift as the language.
 6. Add the Chat dependency to your project using Swift Package Manager:
 
-   - In Xcode, go to **File > Add Package Dependencies**
-   - Enter the repository URL: `https://github.com/ably/ably-chat-swift`
-   - Select the latest version and add it to your target
+   - In Xcode, go to **File > Add Package Dependencies**.
+   - Enter the repository URL: `https://github.com/ably/ably-chat-swift`.
+   - Select the latest version and add it to your target.
 
-## Step 1: Setting up Ably <a id="step-1"/>
+## Step 1: Set up Ably <a id="step-1"/>
 
 Replace the contents of your `ContentView.swift` file with the following code to set up the Ably client:
 
@@ -260,7 +260,7 @@ struct ContentView: View {
             .padding(.horizontal)
 
             // Messages list
-            List(messages.reversed(), id: \.serial) { message in
+            List(messages.reversed(), id: \.id) { message in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("\(message.clientID): \(message.text)")
@@ -300,11 +300,11 @@ struct ContentView: View {
                     case .created:
                         messages.append(messageEvent.message)
                     case .updated:
-                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                        if let index = messages.firstIndex(where: { $0.id == messageEvent.message.id }) {
                             messages[index] = messageEvent.message
                         }
                     case .deleted:
-                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                        if let index = messages.firstIndex(where: { $0.id == messageEvent.message.id }) {
                             messages[index] = messageEvent.message
                         }
                     }
@@ -417,10 +417,10 @@ struct ContentView: View {
             .padding(.horizontal)
 
             // Messages list
-            List(messages.reversed(), id: \.serial) { message in
+            List(messages.reversed(), id: \.id) { message in
                 MessageRowView(
                     message: message,
-                    isEditing: editingMessage?.serial == message.serial,
+                    isEditing: editingMessage?.id == message.id,
                     onEdit: {
                         editingMessage = message
                         newMessage = message.text
@@ -538,13 +538,13 @@ struct MessageRowView: View {
 ```
 </Code>
 
-When you tap the "Edit" button next to a message, you can modify the text and it will send the updated message contents to the room.
+When you tap the "Edit" button next to a message, you can modify the text and send the updated message contents to the room.
 
 ## Step 6: Message history and continuity <a id="step-6"/>
 
 Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The `historyBeforeSubscribe()` method is called on the subscription object before starting the `for await` loop, ensuring previously sent messages are loaded before listening for new ones. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
 
-Add a new state variable `messageSerials` and update the messages `.task(id:)` modifier in your `ContentView.swift` to load previous messages before starting the listener:
+Add a new state variable `messageIds` and update the messages `.task(id:)` modifier in your `ContentView.swift` to load previous messages before starting the listener:
 
 <Code>
 ```swift
@@ -556,7 +556,7 @@ struct ContentView: View {
     @State private var roomStatus = ""
     @State private var room: (any Room)?
     @State private var messages: [Message] = []
-    @State private var messageSerials: Set<String> = []
+    @State private var messageIds: Set<String> = []
     @State private var newMessage = ""
     @State private var editingMessage: Message?
 
@@ -577,7 +577,7 @@ struct ContentView: View {
             do {
                 let previousMessages = try await subscription.historyBeforeSubscribe(withParams: .init())
                 messages.append(contentsOf: previousMessages.items)
-                messageSerials.formUnion(previousMessages.items.map(\.serial))
+                messageIds.formUnion(previousMessages.items.map(\.id))
             } catch {
                 print("Failed to load history: \(error)")
             }
@@ -586,16 +586,16 @@ struct ContentView: View {
                 withAnimation {
                     switch messageEvent.type {
                     case .created:
-                        if !messageSerials.contains(messageEvent.message.serial) {
+                        if !messageIds.contains(messageEvent.message.id) {
                             messages.append(messageEvent.message)
-                            messageSerials.insert(messageEvent.message.serial)
+                            messageIds.insert(messageEvent.message.id)
                         }
                     case .updated:
-                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                        if let index = messages.firstIndex(where: { $0.id == messageEvent.message.id }) {
                             messages[index] = messageEvent.message
                         }
                     case .deleted:
-                        if let index = messages.firstIndex(where: { $0.serial == messageEvent.message.serial }) {
+                        if let index = messages.firstIndex(where: { $0.id == messageEvent.message.id }) {
                             messages[index] = messageEvent.message
                         }
                     }
@@ -615,12 +615,12 @@ struct ContentView: View {
 ```
 </Code>
 
-The above code will retrieve previous messages when the component loads, and set them in the state.
+The above code retrieves previous messages when the component loads, and sets them in the state.
 
 Do the following to test this out:
 
 1. Use the Ably CLI to simulate sending some messages to the room from another client.
-2. Restart the app, this will cause the message history to load.
+2. Restart the app to load the message history.
 3. You'll see the previous messages appear in the chat list.
 
 ## Step 7: Display who is present in the room <a id="step-7"/>
@@ -639,7 +639,7 @@ struct ContentView: View {
     @State private var roomStatus = ""
     @State private var room: (any Room)?
     @State private var messages: [Message] = []
-    @State private var messageSerials: Set<String> = []
+    @State private var messageIds: Set<String> = []
     @State private var newMessage = ""
     @State private var editingMessage: Message?
     @State private var presenceMembers: [String] = []
@@ -738,7 +738,7 @@ struct ContentView: View {
     @State private var roomStatus = ""
     @State private var room: (any Room)?
     @State private var messages: [Message] = []
-    @State private var messageSerials: Set<String> = []
+    @State private var messageIds: Set<String> = []
     @State private var newMessage = ""
     @State private var editingMessage: Message?
     @State private var presenceMembers: [String] = []
@@ -834,7 +834,7 @@ struct ContentView: View {
 ```
 </Code>
 
-The above code displays a list of reactions that can be sent to the room. When you tap on a reaction, it will send it to the room and display it in the recent reactions area.
+The above code displays a list of reactions that can be sent to the room. When you tap on a reaction, it sends it to the room and displays it in the recent reactions area.
 
 You can also send a reaction to the room via the Ably CLI by running the following command:
 
@@ -846,7 +846,7 @@ ably rooms reactions send my-first-room 👍
 
 ## Step 9: Show typing indicators <a id="step-9"/>
 
-Typing indicators let other users know when someone is actively composing a message. This creates a more responsive and interactive chat experience.
+Typing indicators display which users are currently composing a message.
 
 Update your `ContentView.swift` to add typing indicators using AsyncSequence:
 
@@ -860,7 +860,7 @@ struct ContentView: View {
     @State private var roomStatus = ""
     @State private var room: (any Room)?
     @State private var messages: [Message] = []
-    @State private var messageSerials: Set<String> = []
+    @State private var messageIds: Set<String> = []
     @State private var newMessage = ""
     @State private var editingMessage: Message?
     @State private var presenceMembers: [String] = []
@@ -894,7 +894,7 @@ struct ContentView: View {
             HStack {
                 TextField("Type a message...", text: $newMessage)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .onChange(of: newMessage) { newValue in
+                    .onChange(of: newMessage) { _, newValue in
                         Task {
                             await handleTyping(text: newValue)
                         }
@@ -968,7 +968,7 @@ struct ContentView: View {
 ```
 </Code>
 
-Now when you type in the message field, other users will see a typing indicator. The indicator automatically stops when you stop typing or send a message.
+Now when you type in the message field, other users see a typing indicator. The indicator automatically stops when you stop typing or send a message.
 
 ## Step 10: Display occupancy information <a id="step-10"/>
 
@@ -986,7 +986,7 @@ struct ContentView: View {
     @State private var roomStatus = ""
     @State private var room: (any Room)?
     @State private var messages: [Message] = []
-    @State private var messageSerials: Set<String> = []
+    @State private var messageIds: Set<String> = []
     @State private var newMessage = ""
     @State private var editingMessage: Message?
     @State private var presenceMembers: [String] = []
@@ -1065,7 +1065,7 @@ struct ContentView: View {
 ```
 </Code>
 
-The occupancy information will now show both the number of presence members and total connections in the room.
+The occupancy information now shows both the number of presence members and total connections in the room.
 
 ## Step 11: Delete messages <a id="step-11"/>
 
@@ -1143,10 +1143,10 @@ Update your main `ContentView` to handle message deletion:
 <Code>
 ```swift
 // In the messages list section, update the MessageRowView call:
-List(messages.reversed(), id: \.serial) { message in
+List(messages.reversed(), id: \.id) { message in
     MessageRowView(
         message: message,
-        isEditing: editingMessage?.serial == message.serial,
+        isEditing: editingMessage?.id == message.id,
         onEdit: {
             editingMessage = message
             newMessage = message.text
@@ -1174,11 +1174,11 @@ private func deleteMessage(_ message: Message) async {
 ```
 </Code>
 
-Users can now delete their messages by tapping the "Delete" button. Deleted messages will appear as "Message deleted" in the chat.
+Users can now delete their messages by tapping the "Delete" button. Deleted messages appear as "Message deleted" in the chat.
 
-## Step 12: Disconnection and clean up resources <a id="step-12"/>
+## Step 12: Disconnect and clean up resources <a id="step-12"/>
 
-Each `.task` modifier automatically cancels its subscription when the view disappears, so no manual subscription cleanup is needed. To handle the app lifecycle, you can use scene phase modifiers to disconnect when the app enters the background and reconnect when it becomes active again. Ably's SDK handles reconnection gracefully, so the existing subscriptions will resume receiving events automatically.
+Each `.task` modifier automatically cancels its subscription when the view disappears, so no manual subscription cleanup is needed. To handle the app lifecycle, you can use scene phase modifiers to disconnect when the app enters the background and reconnect when it becomes active again. Ably's SDK handles reconnection gracefully, so the existing subscriptions resume receiving events automatically.
 
 Update your `ContentView.swift` to handle app lifecycle:
 
@@ -1201,7 +1201,7 @@ struct ContentView: View {
             await setupRoom()
         }
         // ... all .task(id:) and .task subscriptions remain the same ...
-        .onChange(of: scenePhase) { newPhase in
+        .onChange(of: scenePhase) { _, newPhase in
             Task {
                 await handleScenePhaseChange(newPhase)
             }
@@ -1219,9 +1219,9 @@ struct ContentView: View {
     private func handleScenePhaseChange(_ phase: ScenePhase) async {
         switch phase {
         case .background:
-            chatClient.realtime.close()
+            chatClient.realtime.connection.close()
         case .active:
-            chatClient.realtime.connect()
+            chatClient.realtime.connection.connect()
             if let room = room {
                 try? await room.attach()
             }
