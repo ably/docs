@@ -170,9 +170,28 @@ The `subscribe()` method takes the following parameters:
 
 | Property | Description | Type |
 | --- | --- | --- |
-| unique | Reactions counted with the "unique" strategy (one per client per message). | `Map<string, number>` |
-| distinct | Reactions counted with the "distinct" strategy (one of each type per client). | `Map<string, number>` |
-| multiple | Reactions counted with the "multiple" strategy (unlimited per client). | `Map<string, number>` |
+| unique | Reactions counted with the "unique" strategy (one per client per message). Maps reaction name to summary. | <Table id='SummaryClientIdList'/> |
+| distinct | Reactions counted with the "distinct" strategy (one of each type per client). Maps reaction name to summary. | <Table id='SummaryClientIdList'/> |
+| multiple | Reactions counted with the "multiple" strategy (unlimited per client). Maps reaction name to summary. | <Table id='SummaryClientIdCounts'/> |
+
+</Table>
+
+<Table id='SummaryClientIdList' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| total | The total number of clients who have reacted with this name. | Number |
+| clientIds | A list of the client IDs of all clients who have reacted with this name. | String[] |
+
+</Table>
+
+<Table id='SummaryClientIdCounts' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| total | The total count of reactions with this name across all clients. | Number |
+| clientIds | A map of client ID to the count each client has contributed. | `Record<string, number>` |
+| totalUnidentified | The total count from unidentified clients not included in `clientIds`. | Number |
 
 </Table>
 
@@ -194,7 +213,11 @@ Call `unsubscribe()` to stop receiving reaction summary events.
 
 Subscribes to individual reaction events, receiving notifications each time a user adds or removes a reaction. This provides more granular updates than the summary subscription.
 
-The room must be [attached](/docs/chat/api/javascript/room#attach) to receive raw reaction events.
+The room must be [attached](/docs/chat/api/javascript/room#attach) to receive raw reaction events. Raw message reactions must also be enabled when [creating the room](/docs/chat/api/javascript/rooms#get) by setting `rawMessageReactions: true` in the `MessagesOptions`.
+
+<Aside data-type='note'>
+Raw reactions are not suitable for the purpose of displaying message reaction counts as their effect on the reactions summary depends on the previous reactions.
+</Aside>
 
 <Code>
 ```javascript
@@ -296,9 +319,11 @@ Returns a promise. The promise is fulfilled with the reaction data for the speci
 
 <Code>
 ```javascript
-import { MessageReactionType } from '@ably/chat';
+import { MessageReactionType, MessageReactionRawEventType } from '@ably/chat';
 
-const room = await chatClient.rooms.get('my-room');
+const room = await chatClient.rooms.get('my-room', {
+  messages: { rawMessageReactions: true }
+});
 await room.attach();
 
 // Subscribe to reaction summaries
@@ -306,14 +331,14 @@ const { unsubscribe: unsubscribeSummary } = room.messages.reactions.subscribe((e
   const { messageSerial, reactions } = event;
 
   // Update UI with reaction counts
-  reactions.distinct.forEach((count, name) => {
-    console.log(`${name}: ${count}`);
-  });
+  for (const [name, summary] of Object.entries(reactions.distinct)) {
+    console.log(`${name}: ${summary.total} reactions from ${summary.clientIds.length} clients`);
+  }
 });
 
 // Subscribe to individual reaction events for animations
 const { unsubscribe: unsubscribeRaw } = room.messages.reactions.subscribeRaw((event) => {
-  if (event.type === 'reaction.create') {
+  if (event.type === MessageReactionRawEventType.Create) {
     // Show reaction animation
     showReactionAnimation(event.reaction.name, event.reaction.clientId);
   }
