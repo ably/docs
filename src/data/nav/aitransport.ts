@@ -51,6 +51,10 @@ export default {
           link: '/docs/ai-transport/sessions-identity/online-status',
         },
         {
+          name: 'Push notifications',
+          link: '/docs/ai-transport/sessions-identity/push-notifications',
+        },
+        {
           name: 'Resuming sessions',
           link: '/docs/ai-transport/sessions-identity/resuming-sessions',
         },
