@@ -1,0 +1,522 @@
+---
+title: "Guide: Implement human-in-the-loop with Vercel AI SDK"
+meta_description: "Implement human-in-the-loop workflows with the Vercel AI SDK using Ably for real-time approval requests and role-based authorization."
+meta_keywords: "AI, human in the loop, HITL, Vercel AI SDK, tool calling, approval workflow, AI transport, Ably, realtime, JWT claims, authorization"
+---
+
+This guide shows you how to implement [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) (HITL) workflows with the [Vercel AI SDK](https://ai-sdk.dev/docs) using Ably for real-time approval requests and role-based authorization. Specifically, it demonstrates how to pause tool execution when sensitive actions are requested, route approval requests to human approvers over Ably channels, and proceed based on the decision.
+
+Using Ably to coordinate human-in-the-loop workflows enables real-time communication between AI agents and human approvers with reliable message delivery. This approach leverages Ably's [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) for role-based authorization, ensuring only authorized users can approve specific actions.
+
+<Aside data-type="further-reading">
+To learn more about human-in-the-loop patterns and authorization concepts, see the [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+To follow this guide, you need:
+- Node.js 20 or higher
+- A Vercel AI Gateway API key (or an API key for your preferred provider)
+- An Ably API key
+
+Useful links:
+- [Vercel AI SDK documentation](https://ai-sdk.dev/docs)
+- [Vercel AI SDK tool calling](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling)
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+
+Create a new NPM package, which will contain the agent, client, and server code:
+
+<Code>
+```shell
+mkdir ably-vercel-hitl && cd ably-vercel-hitl
+npm init -y
+```
+</Code>
+
+Install the required packages using NPM:
+
+<Code>
+```shell
+npm install ai@^6 ably@^2 express jsonwebtoken zod
+```
+</Code>
+
+<Aside data-type="note">
+This guide uses version 6.x of the AI SDK. You can use any model from any [supported provider](https://ai-sdk.dev/providers/ai-sdk-providers) by specifying it as a string (e.g., `'openai/gpt-4o'`, `'anthropic/claude-sonnet-4'`).
+</Aside>
+
+Export your API keys to the environment:
+
+<Code>
+```shell
+export AI_GATEWAY_API_KEY="your_ai_gateway_api_key_here"
+export ABLY_API_KEY="your_ably_api_key_here"
+```
+</Code>
+
+## Step 1: Define tools with approval requirements <a id="step-1"/>
+
+Create an agent with tools that require human approval before execution. The Vercel AI SDK allows you to define tools and control their execution flow.
+
+Create a new file `agent.mjs` with the following contents:
+
+<Code>
+```javascript
+import { generateText, tool } from "ai";
+import { z } from "zod";
+
+// Define tools - some require approval, others don't
+const tools = {
+  // This tool executes automatically (no approval needed)
+  getDraftPosts: tool({
+    description: "Get a list of draft blog posts from the CMS",
+    parameters: z.object({}),
+    execute: async () => {
+      return ["Draft 1: Introduction to AI", "Draft 2: Ably is awesome"];
+    },
+  }),
+
+  // This tool requires human approval (no execute function)
+  publishBlogPost: tool({
+    description: "Publish a blog post to the website. This action requires human approval.",
+    parameters: z.object({
+      title: z.string().describe("Title that identifies the blog post in the CMS"),
+    }),
+    // No execute function - requires manual handling
+  }),
+};
+
+// Track which tools require approval
+const toolsRequiringApproval = ["publishBlogPost"];
+
+export { tools, toolsRequiringApproval };
+```
+</Code>
+
+Tools without an `execute` function will not run automatically. Instead, they return their parameters, allowing you to implement approval logic before execution.
+
+## Step 2: Set up Ably for approval requests <a id="step-2"/>
+
+Add Ably to the agent to publish approval requests when sensitive tool calls are detected.
+
+Update your `agent.mjs` file to include Ably and the approval flow:
+
+<Code>
+```javascript
+import { generateText, tool } from "ai";
+import { z } from "zod";
+import Ably from "ably";
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: process.env.ABLY_API_KEY,
+  echoMessages: false,
+});
+
+// Wait for connection to be established
+await realtime.connection.once("connected");
+
+// Create a channel for HITL communication
+const channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+// Track pending approval requests
+const pendingApprovals = new Map();
+
+// Define tools
+const tools = {
+  getDraftPosts: tool({
+    description: "Get a list of draft blog posts from the CMS",
+    parameters: z.object({}),
+    execute: async () => {
+      return ["Draft 1: Introduction to AI", "Draft 2: Ably is awesome"];
+    },
+  }),
+
+  publishBlogPost: tool({
+    description: "Publish a blog post to the website. This action requires human approval.",
+    parameters: z.object({
+      title: z.string().describe("Title that identifies the blog post in the CMS"),
+    }),
+  }),
+};
+
+// Track which tools require approval
+const toolsRequiringApproval = ["publishBlogPost"];
+
+// Send a message to request approval for a tool call
+async function requestHumanApproval(toolCall) {
+  const approvalPromise = new Promise((resolve, reject) => {
+    pendingApprovals.set(toolCall.toolCallId, { toolCall, resolve, reject });
+  });
+
+  console.log("Sending approval request:", toolCall.toolName);
+  await channel.publish({
+    name: "approval-request",
+    data: {
+      tool: toolCall.toolName,
+      arguments: toolCall.args,
+    },
+    extras: {
+      headers: {
+        toolCallId: toolCall.toolCallId,
+      },
+    },
+  });
+
+  return approvalPromise;
+}
+```
+</Code>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own approval requests, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+## Step 3: Subscribe to approval responses <a id="step-3"/>
+
+Set up a subscription to receive approval decisions from human approvers. Verify the approver's role using [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) embedded in the JWT.
+
+Add the approval response handling to your `agent.mjs` file:
+
+<Code>
+```javascript
+// Role hierarchy for authorization
+const roleHierarchy = ["editor", "publisher", "admin"];
+
+// Minimum role required to approve each tool
+const approvalPolicies = {
+  publishBlogPost: "publisher",
+};
+
+// Check if the approver's role meets the minimum required role
+function canApprove(approverRole, requiredRole) {
+  const approverLevel = roleHierarchy.indexOf(approverRole);
+  const requiredLevel = roleHierarchy.indexOf(requiredRole);
+  return approverLevel >= requiredLevel;
+}
+
+// Subscribe to approval responses and resolve pending requests
+async function subscribeApprovalResponses() {
+  await channel.subscribe("approval-response", async (message) => {
+    const response = message.data;
+    const toolCallId = message.extras?.headers?.toolCallId;
+    const pending = pendingApprovals.get(toolCallId);
+
+    if (!pending) return;
+
+    const requiredRole = approvalPolicies[pending.toolCall.toolName];
+
+    // Get the trusted role from the JWT claim
+    const approverRole = message.extras?.userClaim;
+
+    // Verify the approver's role meets the minimum required role
+    if (!canApprove(approverRole, requiredRole)) {
+      pending.reject(
+        new Error(`Approver role '${approverRole}' insufficient for required '${requiredRole}'`)
+      );
+      pendingApprovals.delete(toolCallId);
+      return;
+    }
+
+    // Process the decision
+    if (response.decision === "approved") {
+      pending.resolve(`Action approved by user with role ${approverRole}`);
+    } else {
+      pending.reject(new Error(`Action rejected by user with role ${approverRole}`));
+    }
+
+    pendingApprovals.delete(toolCallId);
+  });
+}
+```
+</Code>
+
+<Aside data-type="further-reading">
+For more information about role-based authorization using JWT claims, see [Identifying users and agents](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims).
+</Aside>
+
+## Step 4: Execute tools with approval <a id="step-4"/>
+
+Add logic to execute tools that require approval. After receiving approval, execute the actual tool logic.
+
+Add the tool execution logic to your `agent.mjs` file:
+
+<Code>
+```javascript
+// Execute the actual tool logic after approval
+async function executeToolAfterApproval(toolCall) {
+  switch (toolCall.toolName) {
+    case "publishBlogPost":
+      console.log("Publishing blog post:", toolCall.args.title);
+      return `Successfully published blog post: ${toolCall.args.title}`;
+    default:
+      throw new Error(`Unknown tool: ${toolCall.toolName}`);
+  }
+}
+
+// Process tool calls that require approval
+async function processToolCallsWithApproval(toolCalls) {
+  const toolResults = [];
+
+  for (const toolCall of toolCalls) {
+    if (toolsRequiringApproval.includes(toolCall.toolName)) {
+      try {
+        // Request and wait for approval
+        await requestHumanApproval(toolCall);
+
+        // Execute the tool after approval
+        const result = await executeToolAfterApproval(toolCall);
+        toolResults.push({
+          toolCallId: toolCall.toolCallId,
+          result,
+        });
+      } catch (error) {
+        toolResults.push({
+          toolCallId: toolCall.toolCallId,
+          result: `Error: ${error.message}`,
+        });
+      }
+    }
+  }
+
+  return toolResults;
+}
+```
+</Code>
+
+## Step 5: Run the agent with HITL <a id="step-5"/>
+
+Complete the agent by adding a function to run it with the human-in-the-loop workflow. The agent uses a loop to handle multi-step tool calling with approval.
+
+Add the agent execution logic to your `agent.mjs` file:
+
+<Code>
+```javascript
+async function runAgent(prompt) {
+  await subscribeApprovalResponses();
+
+  console.log("Running agent with prompt:", prompt);
+
+  let messages = [{ role: "user", content: prompt }];
+  let continueLoop = true;
+
+  while (continueLoop) {
+    const response = await generateText({
+      model: "openai/gpt-4o",
+      messages,
+      tools,
+      maxSteps: 1, // Process one step at a time for HITL
+    });
+
+    // Check for tool calls that need approval
+    const pendingToolCalls = response.steps
+      .flatMap((step) => step.toolCalls)
+      .filter((tc) => toolsRequiringApproval.includes(tc.toolName));
+
+    if (pendingToolCalls.length > 0) {
+      // Process tools requiring approval
+      const toolResults = await processToolCallsWithApproval(pendingToolCalls);
+
+      // Add the tool results to the conversation
+      messages = [
+        ...messages,
+        { role: "assistant", content: response.text, toolCalls: pendingToolCalls },
+        ...toolResults.map((tr) => ({
+          role: "tool",
+          toolCallId: tr.toolCallId,
+          content: tr.result,
+        })),
+      ];
+    } else if (response.finishReason === "tool-calls") {
+      // Automatic tools were called, continue the loop
+      messages = response.messages;
+    } else {
+      // No more tool calls, we're done
+      continueLoop = false;
+      console.log("\nAgent completed. Final response:");
+      console.log(response.text);
+    }
+  }
+
+  realtime.close();
+}
+
+runAgent("Publish the blog post called 'Ably is awesome'");
+```
+</Code>
+
+## Step 6: Create the client for human approvers <a id="step-6"/>
+
+Create a client application that human approvers use to receive and respond to approval requests.
+
+Create a new file `client.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from "ably";
+import readline from "readline";
+
+// Set up readline for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+// Initialize Ably with authentication
+const realtime = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch("http://localhost:3001/api/auth/token");
+      const token = await response.text();
+      callback(null, token);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+
+realtime.connection.on("connected", () => console.log("Connected to Ably"));
+
+// Create a channel for HITL communication
+const channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+// Subscribe to approval requests and prompt for user decision
+await channel.subscribe("approval-request", (message) => {
+  const request = message.data;
+  const toolCallId = message.extras?.headers?.toolCallId;
+
+  console.log("\n--- Approval Request ---");
+  console.log("Tool:", request.tool);
+  console.log("Arguments:", JSON.stringify(request.arguments, null, 2));
+
+  rl.question("Approve this action? (y/n): ", async (answer) => {
+    const decision = answer.toLowerCase() === "y" ? "approved" : "rejected";
+
+    await channel.publish({
+      name: "approval-response",
+      data: {
+        decision,
+      },
+      extras: {
+        headers: {
+          toolCallId,
+        },
+      },
+    });
+
+    console.log(`Decision sent: ${decision}`);
+  });
+});
+
+console.log("Client ready. Waiting for approval requests...");
+```
+</Code>
+
+The client authenticates using a JWT that contains the user's role as a claim. When approval requests arrive, the user can approve or reject them, and the decision is published back to the channel.
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` in the client options to prevent approval responses from being echoed back to the approver, avoiding billing for echoed messages.
+</Aside>
+
+## Step 7: Set up the authentication server <a id="step-7"/>
+
+Create an authentication server that issues JWTs with role claims for approvers.
+
+Create a new file `server.mjs` with the following contents:
+
+<Code>
+```javascript
+import express from "express";
+import jwt from "jsonwebtoken";
+
+const app = express();
+
+// Mock authentication middleware
+// Replace with your actual authentication logic
+function authenticateUser(req, res, next) {
+  // In production, verify user credentials and look up their role
+  req.session = { userId: "user123", role: "publisher" };
+  next();
+}
+
+// Return the claims payload to embed in the signed JWT
+function getJWTClaims(userId, role) {
+  return {
+    "x-ably-clientId": userId,
+    "ably.channel.*": role,
+  };
+}
+
+// Auth endpoint for clients to obtain a signed JWT
+app.get("/api/auth/token", authenticateUser, (req, res) => {
+  const [keyName, keySecret] = process.env.ABLY_API_KEY.split(":");
+
+  // Sign a JWT using the secret part of the Ably API key
+  const token = jwt.sign(
+    getJWTClaims(req.session.userId, req.session.role),
+    keySecret,
+    {
+      algorithm: "HS256",
+      keyid: keyName,
+      expiresIn: "1h",
+    }
+  );
+
+  res.type("application/jwt").send(token);
+});
+
+app.listen(3001, () => {
+  console.log("Auth server running on http://localhost:3001");
+});
+```
+</Code>
+
+The server embeds the user's role as a [user claim](/docs/auth/capabilities#custom-restrictions-on-channels-) in the JWT. The `ably.channel.*` claim makes the role available in message extras, allowing the agent to verify authorization.
+
+<Aside data-type="important">
+In production, implement proper authentication and look up user roles from your database or identity provider. Never hardcode roles as shown in this example.
+</Aside>
+
+## Step 8: Test the HITL workflow <a id="step-8"/>
+
+Run all three components to test the complete human-in-the-loop workflow.
+
+Start the authentication server:
+
+<Code>
+```shell
+node server.mjs
+```
+</Code>
+
+In a separate terminal, start the client:
+
+<Code>
+```shell
+node client.mjs
+```
+</Code>
+
+In another terminal, run the agent:
+
+<Code>
+```shell
+node agent.mjs
+```
+</Code>
+
+The workflow proceeds as follows:
+
+1. The agent receives the prompt and determines it needs to call the `publishBlogPost` tool.
+2. The agent publishes an approval request to the Ably channel.
+3. The client receives the request and prompts the user for a decision.
+4. The user approves or rejects the action.
+5. The client publishes the decision with the user's role in the JWT claims.
+6. The agent verifies the user's role and proceeds accordingly.
+
+## Next steps
+
+- Learn more about the [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) pattern used in this guide
+- Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI-enabled applications
+- Explore [user claims](/docs/ai-transport/sessions-identity/identifying-users-and-agents#user-claims) for role-based authorization
+- Learn about [Vercel AI SDK streaming](/docs/guides/ai-transport/vercel-message-per-response) for token-by-token delivery
