@@ -105,7 +105,7 @@ export default {
             },
             {
               name: 'Human-in-the-loop',
-              link: '/docs/guides/ai-transport/anthropic-human-in-the-loop',
+              link: '/docs/guides/ai-transport/anthropic/anthropic-human-in-the-loop',
             },
           ],
         },
@@ -122,7 +122,7 @@ export default {
             },
             {
               name: 'Human-in-the-loop',
-              link: '/docs/guides/ai-transport/openai-human-in-the-loop',
+              link: '/docs/guides/ai-transport/openai/openai-human-in-the-loop',
             },
           ],
         },
