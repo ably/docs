@@ -1,0 +1,975 @@
+---
+title: "Guide: Anthropic human-in-the-loop approval with Ably"
+meta_description: "Build a human-in-the-loop approval flow for Anthropic tool use with Ably, enabling realtime approval requests and role-based access control."
+meta_keywords: "AI, human-in-the-loop, Anthropic, Claude, Messages API, tool use, AI transport, Ably, realtime, approval, HITL"
+---
+
+This guide shows you how to build a human-in-the-loop (HITL) approval flow for Anthropic [tool use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) using Ably as the realtime transport layer. Specifically, when an AI agent calls a tool, the agent publishes an approval request over Ably and waits for a human to approve or reject it before proceeding.
+
+Using Ably to transport approval requests and responses enables you to decouple the AI agent from the human approver, supporting scenarios where approvers are on different devices, networks, or platforms. Ably provides reliable delivery so that approval requests are never lost, even if the approver is temporarily disconnected.
+
+<Aside data-type="further-reading">
+To learn more about human-in-the-loop patterns, see the [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+<If client_lang="javascript">
+The client code requires Node.js 20 or higher.
+</If>
+<If client_lang="swift">
+The client code requires Xcode 15 or higher.
+</If>
+<If client_lang="java">
+The client code requires Java 11 or higher.
+</If>
+
+<If agent_lang="javascript">
+The agent code requires Node.js 20 or higher.
+</If>
+<If agent_lang="python">
+The agent code requires Python 3.8 or higher.
+</If>
+<If agent_lang="java">
+The agent code requires Java 11 or higher.
+</If>
+
+You also need:
+- An Anthropic API key
+- An Ably API key
+
+Useful links:
+- [Anthropic API documentation](https://docs.anthropic.com/en/api)
+<If client_or_agent_lang="javascript">
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+</If>
+<If client_lang="swift">
+- [Ably Swift SDK getting started](/docs/getting-started/swift)
+</If>
+<If agent_lang="python">
+- [Ably Python SDK getting started](/docs/getting-started/python)
+</If>
+<If client_or_agent_lang="java">
+- [Ably Java SDK getting started](/docs/getting-started/java)
+</If>
+
+### Agent setup
+
+<If agent_lang="javascript">
+Create a new npm package for the agent code:
+
+<Code>
+```shell
+mkdir ably-anthropic-agent && cd ably-anthropic-agent
+npm init -y
+npm install @anthropic-ai/sdk ably
+```
+</Code>
+</If>
+
+<If agent_lang="python">
+Create a new directory and install the required packages:
+
+<Code>
+```shell
+mkdir ably-anthropic-agent && cd ably-anthropic-agent
+pip install anthropic ably
+```
+</Code>
+</If>
+
+<If agent_lang="java">
+Create a new Maven project and add the following dependencies to your `pom.xml`:
+
+<Code>
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.anthropic</groupId>
+        <artifactId>anthropic-java</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+    <dependency>
+        <groupId>io.ably</groupId>
+        <artifactId>ably-java</artifactId>
+        <version>1.2.46</version>
+    </dependency>
+</dependencies>
+```
+</Code>
+</If>
+
+Export your Anthropic API key to the environment:
+
+<Code>
+```shell
+export ANTHROPIC_API_KEY="your_api_key_here"
+```
+</Code>
+
+### Client setup
+
+<If client_lang="javascript">
+Create a new npm package for the client (approver) code, or use the same project as the agent if both are JavaScript:
+
+<Code>
+```shell
+mkdir ably-anthropic-client && cd ably-anthropic-client
+npm init -y
+npm install ably
+```
+</Code>
+</If>
+
+<If client_lang="swift">
+Add the Ably SDK to your iOS or macOS project using Swift Package Manager. In Xcode, go to File > Add Package Dependencies and add:
+
+<Code>
+```text
+https://github.com/ably/ably-cocoa
+```
+</Code>
+
+Or add it to your `Package.swift`:
+
+<Code>
+```client_swift
+dependencies: [
+    .package(url: "https://github.com/ably/ably-cocoa", from: "1.2.0")
+]
+```
+</Code>
+</If>
+
+<If client_lang="java">
+Add the Ably Java SDK to your `pom.xml`:
+
+<Code>
+```xml
+<dependency>
+    <groupId>io.ably</groupId>
+    <artifactId>ably-java</artifactId>
+    <version>1.2.46</version>
+</dependency>
+```
+</Code>
+</If>
+
+<Aside data-type="note">
+The agent and client code are kept in separate projects. In production, the agent typically runs on a server while the client runs in a browser, mobile app, or other frontend environment. If you're using JavaScript for both, you can optionally combine them into a single project for testing.
+</Aside>
+
+## Step 1: Define a tool for Anthropic <a id="step-1"/>
+
+Define a tool that requires human approval before execution. In this example, the tool publishes a blog post, an action that should be reviewed by a human before it proceeds.
+
+<If agent_lang="javascript">
+In your `ably-anthropic-agent` directory, create a new file `agent.mjs` with the following contents:
+</If>
+<If agent_lang="python">
+In your `ably-anthropic-agent` directory, create a new file `agent.py` with the following contents:
+</If>
+<If agent_lang="java">
+In your agent project, create a new file `Agent.java` with the following contents:
+</If>
+
+<Code>
+```agent_javascript
+import Anthropic from '@anthropic-ai/sdk';
+
+// Initialize Anthropic client
+const anthropic = new Anthropic();
+
+// Define a tool that requires human approval
+const tools = [
+  {
+    name: 'publish_blog_post',
+    description: 'Publish a blog post to the website. Requires human approval.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Title of the blog post to publish',
+        },
+      },
+      required: ['title'],
+    },
+  },
+];
+
+// Function that executes the approved action
+function publishBlogPost(args) {
+  console.log(`Publishing blog post: ${args.title}`);
+  return { published: true, title: args.title };
+}
+
+// Send a prompt to Anthropic with tool definitions
+async function callAnthropic(prompt) {
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5',
+    max_tokens: 1024,
+    tools,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  return response;
+}
+```
+
+```agent_python
+import anthropic
+
+# Initialize Anthropic client
+client = anthropic.Anthropic()
+
+# Define a tool that requires human approval
+tools = [
+    {
+        'name': 'publish_blog_post',
+        'description': 'Publish a blog post to the website. Requires human approval.',
+        'input_schema': {
+            'type': 'object',
+            'properties': {
+                'title': {
+                    'type': 'string',
+                    'description': 'Title of the blog post to publish',
+                },
+            },
+            'required': ['title'],
+        },
+    },
+]
+
+
+# Function that executes the approved action
+def publish_blog_post(args):
+    print(f'Publishing blog post: {args["title"]}')
+    return {'published': True, 'title': args['title']}
+
+
+# Send a prompt to Anthropic with tool definitions
+def call_anthropic(prompt):
+    response = client.messages.create(
+        model='claude-sonnet-4-5',
+        max_tokens=1024,
+        tools=tools,
+        messages=[{'role': 'user', 'content': prompt}],
+    )
+
+    return response
+```
+
+```agent_java
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.models.messages.*;
+
+public class Agent {
+    // Initialize Anthropic client
+    private static final AnthropicClient client = AnthropicOkHttpClient.fromEnv();
+
+    // Function that executes the approved action
+    private static Map<String, Object> publishBlogPost(String title) {
+        System.out.println("Publishing blog post: " + title);
+        return Map.of("published", true, "title", title);
+    }
+
+    // Send a prompt to Anthropic with tool definitions
+    private static Message callAnthropic(String prompt) {
+        MessageCreateParams params = MessageCreateParams.builder()
+            .model(Model.CLAUDE_SONNET_4_5)
+            .maxTokens(1024)
+            .addTool(Tool.builder()
+                .name("publish_blog_post")
+                .description("Publish a blog post to the website. Requires human approval.")
+                .inputSchema(Tool.InputSchema.builder()
+                    .putAdditionalProperty("type", JsonValue.from("object"))
+                    .putAdditionalProperty("properties", JsonValue.from(Map.of(
+                        "title", Map.of(
+                            "type", "string",
+                            "description", "Title of the blog post to publish"
+                        )
+                    )))
+                    .putAdditionalProperty("required", JsonValue.from(List.of("title")))
+                    .build())
+                .build())
+            .addUserMessage(prompt)
+            .build();
+
+        return client.messages().create(params);
+    }
+}
+```
+</Code>
+
+The `publish_blog_post` tool is defined with a schema that Anthropic uses to decide when and how to call it. When Claude determines that the tool should be used, it returns a `tool_use` content block rather than a text response.
+
+## Step 2: Initialize Ably and publish approval requests <a id="step-2"/>
+
+When the agent receives a `tool_use` response from Anthropic, publish the tool call details as an approval request over Ably. The agent then waits for a human to approve or reject the action before proceeding.
+
+Add the Ably client initialization and approval request logic to your agent file:
+
+<Code>
+```agent_javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false,
+});
+
+// Create a channel for approval messages
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track pending approvals
+const pendingApprovals = new Map();
+
+// Request human approval for a tool use via Ably
+async function requestHumanApproval(toolUse) {
+  const approvalPromise = new Promise((resolve, reject) => {
+    pendingApprovals.set(toolUse.id, { resolve, reject });
+  });
+
+  await channel.publish({
+    name: 'approval-request',
+    data: {
+      tool: toolUse.name,
+      arguments: toolUse.input,
+    },
+    extras: {
+      headers: {
+        toolCallId: toolUse.id,
+      },
+    },
+  });
+
+  console.log(`Approval request sent for: ${toolUse.name}`);
+  return approvalPromise;
+}
+```
+
+```agent_python
+from ably import AblyRealtime
+import asyncio
+
+# Initialize Ably Realtime client
+realtime = AblyRealtime(key='{{API_KEY}}', transport_params={'echo': 'false'})
+
+# Create a channel for approval messages
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+
+# Track pending approvals
+pending_approvals = {}
+
+
+# Request human approval for a tool use via Ably
+async def request_human_approval(tool_use):
+    loop = asyncio.get_event_loop()
+    future = loop.create_future()
+    pending_approvals[tool_use['id']] = future
+
+    await channel.publish(
+        'approval-request',
+        {
+            'tool': tool_use['name'],
+            'arguments': tool_use['input'],
+        },
+    )
+
+    print(f'Approval request sent for: {tool_use["name"]}')
+    return await future
+```
+
+```agent_java
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+import io.ably.lib.types.ClientOptions;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+
+// Initialize Ably Realtime client
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+options.echoMessages = false;
+AblyRealtime realtime = new AblyRealtime(options);
+
+// Create a channel for approval messages
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+// Track pending approvals
+Map<String, CompletableFuture<Boolean>> pendingApprovals = new ConcurrentHashMap<>();
+
+// Request human approval for a tool use via Ably
+CompletableFuture<Boolean> requestHumanApproval(String toolCallId, String toolName, Map<String, Object> arguments) {
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    pendingApprovals.put(toolCallId, future);
+
+    io.ably.lib.types.Message message = new io.ably.lib.types.Message();
+    message.name = "approval-request";
+    message.data = Map.of("tool", toolName, "arguments", arguments);
+    channel.publish(message);
+
+    System.out.println("Approval request sent for: " + toolName);
+    return future;
+}
+```
+</Code>
+
+The agent publishes the tool name and arguments as an `approval-request` message over Ably. The `toolCallId` is included in the message extras as a header, allowing the approval response to be correlated back to the original request.
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own messages, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+## Step 3: Subscribe to approval responses on the agent <a id="step-3"/>
+
+The agent subscribes to `approval-response` messages on the same channel. When a response arrives, it resolves or rejects the pending promise based on the human's decision.
+
+Add the approval response handler to your agent file:
+
+<Code>
+```agent_javascript
+// Subscribe to approval responses and resolve pending promises
+channel.subscribe('approval-response', (message) => {
+  const { decision } = message.data;
+  const toolCallId = message.extras?.headers?.toolCallId;
+  const pending = pendingApprovals.get(toolCallId);
+
+  if (!pending) return;
+
+  if (decision === 'approved') {
+    pending.resolve({ approved: true });
+  } else {
+    pending.reject(new Error('Action rejected by approver'));
+  }
+  pendingApprovals.delete(toolCallId);
+});
+
+// Process a tool use: request approval then execute
+async function processToolUse(toolUse) {
+  if (toolUse.name === 'publish_blog_post') {
+    await requestHumanApproval(toolUse);
+    return publishBlogPost(toolUse.input);
+  }
+  throw new Error(`Unknown tool: ${toolUse.name}`);
+}
+
+// Run the agent: send prompt to Anthropic, handle tool use with approval
+async function runAgent(prompt) {
+  const response = await callAnthropic(prompt);
+
+  const toolUseBlocks = response.content.filter(
+    (block) => block.type === 'tool_use',
+  );
+
+  const results = [];
+  for (const toolUse of toolUseBlocks) {
+    try {
+      const result = await processToolUse(toolUse);
+      results.push({ success: true, result });
+    } catch (err) {
+      results.push({ success: false, error: err.message });
+    }
+  }
+
+  return results;
+}
+
+// Usage example
+const results = await runAgent('Publish the blog post called "Introducing our new API"');
+console.log('Results:', results);
+realtime.close();
+```
+
+```agent_python
+# Subscribe to approval responses and resolve pending promises
+async def on_approval_response(message):
+    decision = message.data.get('decision')
+    tool_call_id = message.extras.get('headers', {}).get('toolCallId')
+    future = pending_approvals.get(tool_call_id)
+
+    if not future:
+        return
+
+    if decision == 'approved':
+        future.set_result({'approved': True})
+    else:
+        future.set_exception(Exception('Action rejected by approver'))
+    del pending_approvals[tool_call_id]
+
+
+await channel.subscribe('approval-response', on_approval_response)
+
+
+# Process a tool use: request approval then execute
+async def process_tool_use(tool_use):
+    if tool_use['name'] == 'publish_blog_post':
+        await request_human_approval(tool_use)
+        return publish_blog_post(tool_use['input'])
+    raise Exception(f'Unknown tool: {tool_use["name"]}')
+
+
+# Run the agent: send prompt to Anthropic, handle tool use with approval
+async def run_agent(prompt):
+    response = call_anthropic(prompt)
+
+    tool_use_blocks = [
+        block for block in response.content if block.type == 'tool_use'
+    ]
+
+    results = []
+    for tool_use in tool_use_blocks:
+        try:
+            result = await process_tool_use({
+                'id': tool_use.id,
+                'name': tool_use.name,
+                'input': tool_use.input,
+            })
+            results.append({'success': True, 'result': result})
+        except Exception as err:
+            results.append({'success': False, 'error': str(err)})
+
+    return results
+
+
+# Usage example
+results = asyncio.run(run_agent('Publish the blog post called "Introducing our new API"'))
+print('Results:', results)
+realtime.close()
+```
+
+```agent_java
+// Subscribe to approval responses and resolve pending promises
+channel.subscribe("approval-response", message -> {
+    Map<String, Object> data = (Map<String, Object>) message.data;
+    String decision = (String) data.get("decision");
+    String toolCallId = message.extras != null ?
+        (String) message.extras.get("headers", Map.class).get("toolCallId") : null;
+
+    CompletableFuture<Boolean> future = pendingApprovals.get(toolCallId);
+    if (future == null) return;
+
+    if ("approved".equals(decision)) {
+        future.complete(true);
+    } else {
+        future.completeExceptionally(new Exception("Action rejected by approver"));
+    }
+    pendingApprovals.remove(toolCallId);
+});
+
+// Run the agent: send prompt to Anthropic, handle tool use with approval
+public static void main(String[] args) throws Exception {
+    Message response = callAnthropic("Publish the blog post called 'Introducing our new API'");
+
+    for (ContentBlock block : response.content()) {
+        if (block.isToolUse()) {
+            ToolUseBlock toolUse = block.asToolUse();
+            CompletableFuture<Boolean> approval = requestHumanApproval(
+                toolUse.id(), toolUse.name(), (Map<String, Object>) toolUse.input()
+            );
+
+            try {
+                approval.get(); // Wait for approval
+                Map<String, Object> result = publishBlogPost(
+                    (String) ((Map<String, Object>) toolUse.input()).get("title")
+                );
+                System.out.println("Result: " + result);
+            } catch (Exception e) {
+                System.out.println("Rejected: " + e.getMessage());
+            }
+        }
+    }
+
+    realtime.close();
+}
+```
+</Code>
+
+When `requestHumanApproval` is called, the agent blocks until the corresponding approval response arrives over Ably. If the response is `approved`, the tool executes. If `rejected`, the agent skips execution and records the rejection.
+
+## Step 4: Subscribe to approval requests on the client <a id="step-4"/>
+
+Create a client that subscribes to approval requests from the agent and presents them to a human for review.
+
+<If client_lang="javascript">
+In your `ably-anthropic-client` directory, create a new file `client.mjs` with the following contents:
+</If>
+<If client_lang="swift">
+Add the following code to your iOS or macOS app:
+</If>
+<If client_lang="java">
+In your client project, create a new file `Client.java` with the following contents:
+</If>
+
+<Code>
+```client_javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Get the same channel used by the agent
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Subscribe to approval requests
+channel.subscribe('approval-request', (message) => {
+  const request = message.data;
+  const toolCallId = message.extras?.headers?.toolCallId;
+
+  console.log('\n========================================');
+  console.log('APPROVAL REQUEST');
+  console.log(`Tool: ${request.tool}`);
+  console.log(`Arguments: ${JSON.stringify(request.arguments, null, 2)}`);
+  console.log('========================================');
+
+  // In a real application, present this to the user in a UI
+  // For this example, auto-approve after displaying the request
+  respondToApproval(toolCallId, 'approved');
+});
+
+// Publish an approval response (approve or reject)
+async function respondToApproval(toolCallId, decision) {
+  await channel.publish({
+    name: 'approval-response',
+    data: { decision },
+    extras: {
+      headers: { toolCallId },
+    },
+  });
+
+  console.log(`Decision sent: ${decision}`);
+}
+
+console.log('Waiting for approval requests...');
+```
+
+```client_swift
+import Ably
+
+// Initialize Ably Realtime client
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+
+// Get the same channel used by the agent
+let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
+
+// Subscribe to approval requests
+channel.subscribe("approval-request") { message in
+    guard let data = message.data as? [String: Any],
+          let tool = data["tool"] as? String,
+          let arguments = data["arguments"] as? [String: Any] else { return }
+
+    let toolCallId = (message.extras?.toJSON()?["headers"] as? [String: Any])?["toolCallId"] as? String ?? ""
+
+    print("\n========================================")
+    print("APPROVAL REQUEST")
+    print("Tool: \(tool)")
+    print("Arguments: \(arguments)")
+    print("========================================")
+
+    // In a real application, present this to the user in a UI
+    // For this example, auto-approve after displaying the request
+    respondToApproval(channel: channel, toolCallId: toolCallId, decision: "approved")
+}
+
+// Publish an approval response (approve or reject)
+func respondToApproval(channel: ARTRealtimeChannel, toolCallId: String, decision: String) {
+    let extras: [String: Any] = ["headers": ["toolCallId": toolCallId]]
+    let message = ARTMessage(name: "approval-response", data: ["decision": decision])
+    message.extras = extras as ARTJsonCompatible
+    channel.publish([message])
+
+    print("Decision sent: \(decision)")
+}
+
+print("Waiting for approval requests...")
+```
+
+```client_java
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+import io.ably.lib.types.ClientOptions;
+import io.ably.lib.types.Message;
+import java.util.Map;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        // Initialize Ably Realtime client
+        ClientOptions options = new ClientOptions("{{API_KEY}}");
+        AblyRealtime realtime = new AblyRealtime(options);
+
+        // Get the same channel used by the agent
+        Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+        // Subscribe to approval requests
+        channel.subscribe("approval-request", message -> {
+            Map<String, Object> data = (Map<String, Object>) message.data;
+            String tool = (String) data.get("tool");
+            Map<String, Object> arguments = (Map<String, Object>) data.get("arguments");
+            String toolCallId = message.extras != null ?
+                (String) ((Map<String, Object>) message.extras.get("headers", Map.class)).get("toolCallId") : "";
+
+            System.out.println("\n========================================");
+            System.out.println("APPROVAL REQUEST");
+            System.out.println("Tool: " + tool);
+            System.out.println("Arguments: " + arguments);
+            System.out.println("========================================");
+
+            // In a real application, present this to the user in a UI
+            // For this example, auto-approve after displaying the request
+            respondToApproval(channel, toolCallId, "approved");
+        });
+
+        System.out.println("Waiting for approval requests...");
+
+        // Keep the application running
+        Thread.currentThread().join();
+    }
+
+    // Publish an approval response (approve or reject)
+    private static void respondToApproval(Channel channel, String toolCallId, String decision) {
+        try {
+            Message message = new Message();
+            message.name = "approval-response";
+            message.data = Map.of("decision", decision);
+            channel.publish(message);
+
+            System.out.println("Decision sent: " + decision);
+        } catch (Exception e) {
+            System.err.println("Error sending response: " + e.getMessage());
+        }
+    }
+}
+```
+</Code>
+
+The client subscribes to `approval-request` messages and displays the tool name and arguments. In a production application, you would present this information in a user interface and let the human make a decision. This example auto-approves for demonstration purposes.
+
+<If client_lang="javascript,java">
+Run the client in a separate terminal:
+</If>
+
+<If client_lang="javascript">
+<Code>
+```shell
+cd ably-anthropic-client
+node client.mjs
+```
+</Code>
+</If>
+
+<If client_lang="swift">
+Build and run your iOS or macOS app in Xcode.
+</If>
+
+<If client_lang="java">
+<Code>
+```shell
+mvn compile exec:java -Dexec.mainClass="Client"
+```
+</Code>
+</If>
+
+<If client_lang="javascript,java">
+With the client running, run the agent in another terminal. The approval request appears on the client in realtime, and the response is sent back to the agent.
+</If>
+<If client_lang="swift">
+With the client running, run the agent in a terminal. The approval request appears on the client in realtime, and the response is sent back to the agent.
+</If>
+
+## Step 5: Add role-based access control <a id="step-5"/>
+
+In production, not every user should be able to approve every action. Add role-based access control to the agent so it validates the approver's role before accepting the decision.
+
+Update the approval response handler in the agent to check roles:
+
+<Code>
+```agent_javascript
+// Define role hierarchy and approval policies
+const roleHierarchy = ['editor', 'publisher', 'admin'];
+const approvalPolicies = {
+  publish_blog_post: { minRole: 'publisher' },
+};
+
+function canApprove(approverRole, requiredRole) {
+  return roleHierarchy.indexOf(approverRole) >= roleHierarchy.indexOf(requiredRole);
+}
+
+// Updated subscription with role checking
+channel.subscribe('approval-response', (message) => {
+  const { decision, approverRole } = message.data;
+  const toolCallId = message.extras?.headers?.toolCallId;
+  const pending = pendingApprovals.get(toolCallId);
+
+  if (!pending) return;
+
+  // Check if the approver has sufficient permissions
+  const policy = approvalPolicies['publish_blog_post'];
+  if (approverRole && !canApprove(approverRole, policy.minRole)) {
+    pending.reject(
+      new Error(`Approver role '${approverRole}' insufficient for '${policy.minRole}'`),
+    );
+    pendingApprovals.delete(toolCallId);
+    return;
+  }
+
+  if (decision === 'approved') {
+    pending.resolve({ approved: true, approverRole });
+  } else {
+    pending.reject(new Error(`Action rejected by ${approverRole}`));
+  }
+  pendingApprovals.delete(toolCallId);
+});
+```
+
+```agent_python
+# Define role hierarchy and approval policies
+role_hierarchy = ['editor', 'publisher', 'admin']
+approval_policies = {
+    'publish_blog_post': {'min_role': 'publisher'},
+}
+
+
+def can_approve(approver_role, required_role):
+    return role_hierarchy.index(approver_role) >= role_hierarchy.index(required_role)
+
+
+# Updated subscription with role checking
+async def on_approval_response(message):
+    decision = message.data.get('decision')
+    approver_role = message.data.get('approverRole')
+    tool_call_id = message.extras.get('headers', {}).get('toolCallId')
+    future = pending_approvals.get(tool_call_id)
+
+    if not future:
+        return
+
+    # Check if the approver has sufficient permissions
+    policy = approval_policies.get('publish_blog_post', {})
+    if approver_role and not can_approve(approver_role, policy.get('min_role', '')):
+        future.set_exception(
+            Exception(f'Approver role "{approver_role}" insufficient for "{policy["min_role"]}"')
+        )
+        del pending_approvals[tool_call_id]
+        return
+
+    if decision == 'approved':
+        future.set_result({'approved': True, 'approver_role': approver_role})
+    else:
+        future.set_exception(Exception(f'Action rejected by {approver_role}'))
+    del pending_approvals[tool_call_id]
+
+
+await channel.subscribe('approval-response', on_approval_response)
+```
+
+```agent_java
+// Define role hierarchy and approval policies
+List<String> roleHierarchy = List.of("editor", "publisher", "admin");
+Map<String, String> approvalPolicies = Map.of("publish_blog_post", "publisher");
+
+boolean canApprove(String approverRole, String requiredRole) {
+    return roleHierarchy.indexOf(approverRole) >= roleHierarchy.indexOf(requiredRole);
+}
+
+// Updated subscription with role checking
+channel.subscribe("approval-response", message -> {
+    Map<String, Object> data = (Map<String, Object>) message.data;
+    String decision = (String) data.get("decision");
+    String approverRole = (String) data.get("approverRole");
+    String toolCallId = message.extras != null ?
+        (String) ((Map<String, Object>) message.extras.get("headers", Map.class)).get("toolCallId") : null;
+
+    CompletableFuture<Boolean> future = pendingApprovals.get(toolCallId);
+    if (future == null) return;
+
+    // Check if the approver has sufficient permissions
+    String requiredRole = approvalPolicies.get("publish_blog_post");
+    if (approverRole != null && !canApprove(approverRole, requiredRole)) {
+        future.completeExceptionally(
+            new Exception("Approver role '" + approverRole + "' insufficient for '" + requiredRole + "'")
+        );
+        pendingApprovals.remove(toolCallId);
+        return;
+    }
+
+    if ("approved".equals(decision)) {
+        future.complete(true);
+    } else {
+        future.completeExceptionally(new Exception("Action rejected by " + approverRole));
+    }
+    pendingApprovals.remove(toolCallId);
+});
+```
+</Code>
+
+The role hierarchy defines an ordered list of roles with increasing permissions. When an approval response arrives, the agent checks whether the approver's role meets the minimum requirement defined in `approvalPolicies`. If the role is insufficient, the approval is rejected regardless of the decision.
+
+Update the client to include the approver's role when responding:
+
+<Code>
+```client_javascript
+// Publish an approval response with the approver's role
+async function respondToApproval(toolCallId, decision, approverRole) {
+  await channel.publish({
+    name: 'approval-response',
+    data: { decision, approverRole },
+    extras: {
+      headers: { toolCallId },
+    },
+  });
+
+  console.log(`Decision sent: ${decision} (role: ${approverRole})`);
+}
+
+// Example: approve as a publisher
+respondToApproval(toolCallId, 'approved', 'publisher');
+```
+
+```client_swift
+// Publish an approval response with the approver's role
+func respondToApproval(channel: ARTRealtimeChannel, toolCallId: String, decision: String, approverRole: String) {
+    let extras: [String: Any] = ["headers": ["toolCallId": toolCallId]]
+    let message = ARTMessage(name: "approval-response", data: ["decision": decision, "approverRole": approverRole])
+    message.extras = extras as ARTJsonCompatible
+    channel.publish([message])
+
+    print("Decision sent: \(decision) (role: \(approverRole))")
+}
+
+// Example: approve as a publisher
+respondToApproval(channel: channel, toolCallId: toolCallId, decision: "approved", approverRole: "publisher")
+```
+
+```client_java
+// Publish an approval response with the approver's role
+private static void respondToApproval(Channel channel, String toolCallId, String decision, String approverRole) {
+    try {
+        Message message = new Message();
+        message.name = "approval-response";
+        message.data = Map.of("decision", decision, "approverRole", approverRole);
+        channel.publish(message);
+
+        System.out.println("Decision sent: " + decision + " (role: " + approverRole + ")");
+    } catch (Exception e) {
+        System.err.println("Error sending response: " + e.getMessage());
+    }
+}
+
+// Example: approve as a publisher
+respondToApproval(channel, toolCallId, "approved", "publisher");
+```
+</Code>
+
+<Aside data-type="important">
+In production, do not trust the client to self-report its role. Use Ably [token authentication](/docs/auth/token) with [capabilities](/docs/auth/capabilities) to enforce permissions server-side, or validate the role using Ably's `userClaim` from the message extras.
+</Aside>
+
+## Next steps
+
+- Learn more about [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) patterns in AI applications
+- Explore [tool calls](/docs/ai-transport/messaging/tool-calls) for other agent-to-tool communication patterns
+- Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI-enabled applications
+- Learn about [token authentication](/docs/auth/token) for secure role-based access control
