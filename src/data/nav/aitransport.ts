@@ -14,6 +14,27 @@ export default {
       index: true,
     },
     {
+      name: 'Getting started',
+      pages: [
+        {
+          name: 'Anthropic',
+          link: '/docs/ai-transport/getting-started/anthropic',
+        },
+        {
+          name: 'OpenAI',
+          link: '/docs/ai-transport/getting-started/openai',
+        },
+        {
+          name: 'Vercel AI SDK',
+          link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
+        },
+        {
+          name: 'LangGraph',
+          link: '/docs/ai-transport/getting-started/langgraph',
+        },
+      ],
+    },
+    {
       name: 'Token streaming',
       pages: [
         {
