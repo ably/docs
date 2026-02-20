@@ -97,11 +97,11 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/anthropic-message-per-response',
+              link: '/docs/guides/ai-transport/anthropic/anthropic-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/anthropic-message-per-token',
+              link: '/docs/guides/ai-transport/anthropic/anthropic-message-per-token',
             },
           ],
         },
@@ -110,11 +110,11 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/openai-message-per-response',
+              link: '/docs/guides/ai-transport/openai/openai-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/openai-message-per-token',
+              link: '/docs/guides/ai-transport/openai/openai-message-per-token',
             },
           ],
         },
@@ -123,11 +123,11 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/lang-graph-message-per-response',
+              link: '/docs/guides/ai-transport/langgraph/lang-graph-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/lang-graph-message-per-token',
+              link: '/docs/guides/ai-transport/langgraph/lang-graph-message-per-token',
             },
           ],
         },
@@ -136,11 +136,11 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/vercel-message-per-response',
+              link: '/docs/guides/ai-transport/vercel-ai-sdk/vercel-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/vercel-message-per-token',
+              link: '/docs/guides/ai-transport/vercel-ai-sdk/vercel-message-per-token',
             },
           ],
         },
