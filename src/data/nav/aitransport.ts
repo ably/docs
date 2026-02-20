@@ -103,6 +103,10 @@ export default {
               name: 'Message per token',
               link: '/docs/guides/ai-transport/anthropic/anthropic-message-per-token',
             },
+            {
+              name: 'Human-in-the-loop',
+              link: '/docs/guides/ai-transport/anthropic-human-in-the-loop',
+            },
           ],
         },
         {
