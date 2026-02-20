@@ -1,0 +1,1013 @@
+---
+title: "Guide: Stream Anthropic responses using the message-per-response pattern"
+meta_description: "Stream tokens from the Anthropic Messages API over Ably in realtime using message appends."
+meta_keywords: "AI, token streaming, Anthropic, Claude, Messages API, AI transport, Ably, realtime, message appends"
+redirect_from:
+  - /docs/guides/ai-transport/anthropic-message-per-response
+---
+
+This guide shows you how to stream AI responses from Anthropic's [Messages API](https://docs.anthropic.com/en/api/messages) over Ably using the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response). Specifically, it appends each response token to a single Ably message, creating a complete AI response that grows incrementally while delivering tokens in realtime.
+
+Using Ably to distribute tokens from the Anthropic SDK enables you to broadcast AI responses to thousands of concurrent subscribers with reliable message delivery and ordering guarantees. This approach stores each complete response as a single message in channel history, making it easy to retrieve conversation history without processing thousands of individual token messages.
+
+<Aside data-type="further-reading">
+To discover other approaches to token streaming, including the [message-per-token](/docs/ai-transport/token-streaming/message-per-token) pattern, see the [token streaming](/docs/ai-transport/token-streaming) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+<If client_lang="javascript">
+The client code requires Node.js 20 or higher.
+</If>
+<If client_lang="swift">
+The client code requires Xcode 15 or higher.
+</If>
+<If client_lang="java">
+The client code requires Java 11 or higher.
+</If>
+
+<If agent_lang="javascript">
+The agent code requires Node.js 20 or higher.
+</If>
+<If agent_lang="python">
+The agent code requires Python 3.8 or higher.
+</If>
+<If agent_lang="java">
+The agent code requires Java 11 or higher.
+</If>
+
+You also need:
+- An Anthropic API key
+- An Ably API key
+
+Useful links:
+- [Anthropic API documentation](https://docs.anthropic.com/en/api)
+<If client_or_agent_lang="javascript">
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+</If>
+<If client_lang="swift">
+- [Ably Swift SDK getting started](/docs/getting-started/swift)
+</If>
+<If agent_lang="python">
+- [Ably Python SDK getting started](/docs/getting-started/python)
+</If>
+<If client_or_agent_lang="java">
+- [Ably Java SDK getting started](/docs/getting-started/java)
+</If>
+
+### Agent setup
+
+<If agent_lang="javascript">
+Create a new npm package for the agent (publisher) code:
+
+<Code>
+```shell
+mkdir ably-anthropic-agent && cd ably-anthropic-agent
+npm init -y
+npm install @anthropic-ai/sdk ably
+```
+</Code>
+</If>
+
+<If agent_lang="python">
+Create a new directory and install the required packages:
+
+<Code>
+```shell
+mkdir ably-anthropic-agent && cd ably-anthropic-agent
+pip install anthropic ably
+```
+</Code>
+</If>
+
+<If agent_lang="java">
+Create a new Maven project and add the following dependencies to your `pom.xml`:
+
+<Code>
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.anthropic</groupId>
+        <artifactId>anthropic-java</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+    <dependency>
+        <groupId>io.ably</groupId>
+        <artifactId>ably-java</artifactId>
+        <version>1.2.46</version>
+    </dependency>
+</dependencies>
+```
+</Code>
+</If>
+
+Export your Anthropic API key to the environment:
+
+<Code>
+```shell
+export ANTHROPIC_API_KEY="your_api_key_here"
+```
+</Code>
+
+### Client setup
+
+<If client_lang="javascript">
+Create a new npm package for the client (subscriber) code, or use the same project as the agent if both are JavaScript:
+
+<Code>
+```shell
+mkdir ably-anthropic-client && cd ably-anthropic-client
+npm init -y
+npm install ably
+```
+</Code>
+</If>
+
+<If client_lang="swift">
+Add the Ably SDK to your iOS or macOS project using Swift Package Manager. In Xcode, go to File > Add Package Dependencies and add:
+
+<Code>
+```text
+https://github.com/ably/ably-cocoa
+```
+</Code>
+
+Or add it to your `Package.swift`:
+
+<Code>
+```client_swift
+dependencies: [
+    .package(url: "https://github.com/ably/ably-cocoa", from: "1.2.0")
+]
+```
+</Code>
+</If>
+
+<If client_lang="java">
+Add the Ably Java SDK to your `pom.xml`:
+
+<Code>
+```xml
+<dependency>
+    <groupId>io.ably</groupId>
+    <artifactId>ably-java</artifactId>
+    <version>1.2.46</version>
+</dependency>
+```
+</Code>
+</If>
+
+<Aside data-type="note">
+The publisher (agent) and subscriber (client) code are kept in separate projects. In production, the agent typically runs on a server while the client runs in a browser, mobile app, or other frontend environment. If you're using JavaScript for both, you can optionally combine them into a single project for testing.
+</Aside>
+
+## Step 1: Enable message appends <a id="step-1"/>
+
+Message append functionality requires "Message annotations, updates, deletes and appends" to be enabled in a [channel rule](/docs/channels#rules) associated with the channel.
+
+<Aside data-type="important">
+When the "Message annotations, updates, deletes and appends" channel rule is enabled, messages are persisted irrespective of whether or not persistence has also been explicitly enabled. This increases usage since [we charge for persisting messages](https://faqs.ably.com/how-does-ably-count-messages).
+</Aside>
+
+To enable the channel rule:
+
+1. Go to the [Ably dashboard](https://www.ably.com/dashboard) and select your app.
+2. Navigate to the "Configuration" > "Rules" section from the left-hand navigation bar.
+3. Choose "Add new rule".
+4. Enter a channel name or namespace pattern (e.g. `ai` for all channels starting with `ai:`).
+5. Select the "Message annotations, updates, deletes and appends" option from the list.
+6. Click "Create channel rule".
+
+The examples in this guide use the `ai:` namespace prefix, which assumes you have configured the rule for `ai:*`.
+
+<Aside data-type="note">
+The `ai:` namespace is just a naming convention used in this guide. There's nothing special about it - you can use any namespace pattern you like, as long as your channel name matches the configured channel rule.
+</Aside>
+
+## Step 2: Get a streamed response from Anthropic <a id="step-2"/>
+
+Initialize an Anthropic client and use the [Messages API](https://docs.anthropic.com/en/api/messages) to stream model output as a series of events.
+
+<If agent_lang="javascript">
+In your `ably-anthropic-agent` directory, create a new file `publisher.mjs` with the following contents:
+</If>
+<If agent_lang="python">
+In your `ably-anthropic-agent` directory, create a new file `publisher.py` with the following contents:
+</If>
+<If agent_lang="java">
+In your agent project, create a new file `Publisher.java` with the following contents:
+</If>
+
+<Code>
+```agent_javascript
+import Anthropic from '@anthropic-ai/sdk';
+
+// Initialize Anthropic client
+const anthropic = new Anthropic();
+
+// Process each streaming event
+async function processEvent(event) {
+  console.log(JSON.stringify(event));
+  // This function is updated in the next sections
+}
+
+// Create streaming response from Anthropic
+async function streamAnthropicResponse(prompt) {
+  const stream = await anthropic.messages.create({
+    model: "claude-sonnet-4-5",
+    max_tokens: 1024,
+    messages: [{ role: "user", content: prompt }],
+    stream: true,
+  });
+
+  // Iterate through streaming events
+  for await (const event of stream) {
+    await processEvent(event);
+  }
+}
+
+// Usage example
+streamAnthropicResponse("Tell me a short joke");
+```
+
+```agent_python
+import asyncio
+import anthropic
+
+# Initialize Anthropic client
+client = anthropic.AsyncAnthropic()
+
+# Process each streaming event
+async def process_event(event):
+    print(event)
+    # This function is updated in the next sections
+
+# Create streaming response from Anthropic
+async def stream_anthropic_response(prompt: str):
+    async with client.messages.stream(
+        model="claude-sonnet-4-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        async for event in stream:
+            await process_event(event)
+
+# Usage example
+asyncio.run(stream_anthropic_response("Tell me a short joke"))
+```
+
+```agent_java
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.core.http.StreamResponse;
+import com.anthropic.models.messages.*;
+
+public class Publisher {
+    // Initialize Anthropic client
+    private static final AnthropicClient client = AnthropicOkHttpClient.fromEnv();
+
+    // Process each streaming event
+    private static void processEvent(RawMessageStreamEvent event) {
+        System.out.println(event);
+        // This method is updated in the next sections
+    }
+
+    // Create streaming response from Anthropic
+    public static void streamAnthropicResponse(String prompt) {
+        MessageCreateParams params = MessageCreateParams.builder()
+            .model(Model.CLAUDE_SONNET_4_5)
+            .maxTokens(1024)
+            .addUserMessage(prompt)
+            .build();
+
+        try (StreamResponse<RawMessageStreamEvent> stream =
+                client.messages().createStreaming(params)) {
+            stream.stream().forEach(Publisher::processEvent);
+        }
+    }
+
+    public static void main(String[] args) {
+        streamAnthropicResponse("Tell me a short joke");
+    }
+}
+```
+</Code>
+
+### Understand Anthropic streaming events <a id="understand-streaming-events"/>
+
+Anthropic's Messages API [streams](https://docs.anthropic.com/en/api/messages-streaming) model output as a series of events when you set `stream: true`. Each streamed event includes a `type` property which describes the event type. A complete text response can be constructed from the following event types:
+
+- [`message_start`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals the start of a response. Contains a `message` object with an `id` to correlate subsequent events.
+
+- [`content_block_start`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Indicates the start of a new content block. For text responses, the `content_block` will have `type: "text"`; other types may be specified, such as `"thinking"` for internal reasoning tokens. The `index` indicates the position of this item in the message's `content` array.
+
+- [`content_block_delta`](https://platform.claude.com/docs/en/build-with-claude/streaming#content-block-delta-types): Contains a single text delta in the `delta.text` field. If `delta.type === "text_delta"` the delta contains model response text; other types may be specified, such as `"thinking_delta"` for internal reasoning tokens. Use the `index` to correlate deltas relating to a specific content block.
+
+- [`content_block_stop`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals completion of a content block. Contains the `index` that identifies the content block.
+
+- [`message_delta`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Contains additional message-level metadata that may be streamed incrementally. Includes a [`delta.stop_reason`](https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons) which indicates why the model successfully completed its response generation.
+
+- [`message_stop`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals the end of the response.
+
+The following example shows the event sequence received when streaming a response:
+
+<Code>
+```json
+// 1. Message starts
+{"type":"message_start","message":{"model":"claude-sonnet-4-5-20250929","id":"msg_012zEkenyT6heaYSDvDEDdXm","type":"message","role":"assistant","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":1,"service_tier":"standard"}}}
+
+// 2. Content block starts
+{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+// 3. Text tokens stream in as delta events
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Why"}}
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" don't scientists trust atoms?\n\nBecause"}}
+{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" they make up everything!"}}
+
+// 4. Content block completes
+{"type":"content_block_stop","index":0}
+
+// 5. Message delta (usage stats)
+{"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":17}}
+
+// 6. Message completes
+{"type":"message_stop"}
+```
+</Code>
+
+<Aside data-type="note">
+This is only an illustrative example for a simple "text in, text out" use case and may not reflect the exact sequence of events that you observe from the Anthropic API. It also does not describe response generation errors or refusals. For complete details on all event types and their properties, see [Anthropic Streaming events](https://docs.anthropic.com/en/api/messages-streaming).
+</Aside>
+
+## Step 3: Publish streaming tokens to Ably <a id="step-3"/>
+
+Publish Anthropic streaming events to Ably using message appends to reliably and scalably distribute them to subscribers.
+
+Each AI response is stored as a single Ably message that grows as tokens are appended.
+
+### Initialize the Ably client <a id="initialize-ably"/>
+
+Add the Ably client initialization to your publisher file:
+
+<Code>
+```agent_javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+
+// Create a channel for publishing streamed AI responses
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+```
+
+```agent_python
+from ably import AblyRealtime
+
+# Initialize Ably Realtime client
+realtime = AblyRealtime(key='{{API_KEY}}', transport_params={'echo': 'false'})
+
+# Create a channel for publishing streamed AI responses
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+```
+
+```agent_java
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+import io.ably.lib.types.ClientOptions;
+
+// Initialize Ably Realtime client
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+options.echoMessages = false;
+AblyRealtime realtime = new AblyRealtime(options);
+
+// Create a channel for publishing streamed AI responses
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+```
+</Code>
+
+The Ably Realtime client maintains a persistent connection to the Ably service, which allows you to publish tokens at high message rates with low latency.
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own streamed tokens, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+### Publish initial message and append tokens <a id="publish-and-append"/>
+
+When a new response begins, publish an initial message to create it. Ably assigns a [`serial`](/docs/messages#properties) identifier to the message. Use this `serial` to append each token to the message as it arrives from the Anthropic model.
+
+<Aside data-type="note">
+This implementation assumes each response contains a single text content block. It filters out thinking tokens and other non-text content blocks. For production use cases with multiple content blocks or concurrent responses, consider tracking state per message ID and content block index.
+</Aside>
+
+Update your publisher file to publish the initial message and append tokens:
+
+<Code>
+```agent_javascript
+// Track state across events
+let msgSerial = null;
+let textBlockIndex = null;
+
+// Process each streaming event and publish to Ably
+async function processEvent(event) {
+  switch (event.type) {
+    case 'message_start':
+      // Publish initial empty message when response starts
+      const result = await channel.publish({
+        name: 'response',
+        data: ''
+      });
+
+      // Capture the message serial for appending tokens
+      msgSerial = result.serials[0];
+      break;
+
+    case 'content_block_start':
+      // Capture text block index when a text content block is added
+      if (event.content_block.type === 'text') {
+        textBlockIndex = event.index;
+      }
+      break;
+
+    case 'content_block_delta':
+      // Append tokens from text deltas only
+      if (event.index === textBlockIndex && event.delta.type === 'text_delta' && msgSerial) {
+        channel.appendMessage({
+          serial: msgSerial,
+          data: event.delta.text
+        });
+      }
+      break;
+
+    case 'message_stop':
+      console.log('Stream completed!');
+      break;
+  }
+}
+```
+
+```agent_python
+from ably.types.message import Message
+
+# Track state across events
+msg_serial = None
+text_block_index = None
+
+# Process each streaming event and publish to Ably
+async def process_event(event):
+    global msg_serial, text_block_index
+
+    if event.type == 'message_start':
+        # Publish initial empty message when response starts
+        result = await channel.publish('response', '')
+
+        # Capture the message serial for appending tokens
+        msg_serial = result.serials[0]
+
+    elif event.type == 'content_block_start':
+        # Capture text block index when a text content block is added
+        if event.content_block.type == 'text':
+            text_block_index = event.index
+
+    elif event.type == 'content_block_delta':
+        # Append tokens from text deltas only
+        if (event.index == text_block_index and
+            hasattr(event.delta, 'text') and
+            msg_serial):
+            await channel.append_message(
+                Message(serial=msg_serial, data=event.delta.text)
+            )
+
+    elif event.type == 'message_stop':
+        print('Stream completed!')
+```
+
+```agent_java
+// Track state across events
+private static String msgSerial = null;
+private static Long textBlockIndex = null;
+
+// Process each streaming event and publish to Ably
+private static void processEvent(RawMessageStreamEvent event) throws AblyException {
+    if (event.isMessageStart()) {
+        // Publish initial empty message when response starts
+        io.ably.lib.types.Message message = new io.ably.lib.types.Message("response", "");
+        CompletionListener listener = new CompletionListener() {
+            @Override
+            public void onSuccess() {}
+            @Override
+            public void onError(ErrorInfo reason) {}
+        };
+        channel.publish(message, listener);
+
+        // Capture the message serial for appending tokens
+        // Note: In production, use the callback to get the serial
+        msgSerial = message.serial;
+
+    } else if (event.isContentBlockStart()) {
+        // Capture text block index when a text content block is added
+        ContentBlockStartEvent blockStart = event.asContentBlockStart();
+        if (blockStart.contentBlock().isText()) {
+            textBlockIndex = blockStart.index();
+        }
+
+    } else if (event.isContentBlockDelta()) {
+        // Append tokens from text deltas only
+        ContentBlockDeltaEvent delta = event.asContentBlockDelta();
+        if (delta.index().equals(textBlockIndex) &&
+            delta.delta().isTextDelta() &&
+            msgSerial != null) {
+            String text = delta.delta().asTextDelta().text();
+            channel.appendMessage(msgSerial, text);
+        }
+
+    } else if (event.isMessageStop()) {
+        System.out.println("Stream completed!");
+    }
+}
+```
+</Code>
+
+This implementation:
+
+- Publishes an initial empty message when the response begins and captures the `serial`
+- Filters for `content_block_delta` events with `text_delta` type from text content blocks
+- Appends each token to the original message
+
+<If agent_lang="javascript">
+<Aside data-type="note">
+Append operations are published without `await` to maximize throughput. Ably maintains message ordering even without awaiting each append. For more information, see [Publishing tokens](/docs/ai-transport/token-streaming/message-per-response#publishing).
+</Aside>
+</If>
+
+<Aside data-type="important">
+Standard Ably message [size limits](/docs/platform/pricing/limits#message) apply to the complete concatenated message. If appending a token would exceed the maximum message size, the append is rejected.
+</Aside>
+
+Run the publisher to see tokens streaming to Ably:
+
+<If agent_lang="javascript">
+<Code>
+```shell
+cd ably-anthropic-agent
+node publisher.mjs
+```
+</Code>
+</If>
+
+<If agent_lang="python">
+<Code>
+```shell
+cd ably-anthropic-agent
+python publisher.py
+```
+</Code>
+</If>
+
+<If agent_lang="java">
+<Code>
+```shell
+mvn compile exec:java -Dexec.mainClass="Publisher"
+```
+</Code>
+</If>
+
+## Step 4: Subscribe to streaming tokens <a id="step-4"/>
+
+Create a subscriber that receives the streaming tokens from Ably and reconstructs the response in realtime.
+
+<If client_lang="javascript">
+In your `ably-anthropic-client` directory, create a new file `subscriber.mjs` with the following contents:
+</If>
+<If client_lang="swift">
+Add the following code to your iOS or macOS app:
+</If>
+<If client_lang="java">
+In your client project, create a new file `Subscriber.java` with the following contents:
+</If>
+
+<Code>
+```client_javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Get the same channel used by the publisher
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track responses by message serial
+const responses = new Map();
+
+// Subscribe to receive messages
+await channel.subscribe((message) => {
+  switch (message.action) {
+    case 'message.create':
+      // New response started
+      console.log('\n[Response started]', message.serial);
+      responses.set(message.serial, message.data);
+      break;
+
+    case 'message.append':
+      // Append token to existing response
+      const current = responses.get(message.serial) || '';
+      responses.set(message.serial, current + message.data);
+
+      // Display token as it arrives
+      process.stdout.write(message.data);
+      break;
+
+    case 'message.update':
+      // Replace entire response content
+      responses.set(message.serial, message.data);
+      console.log('\n[Response updated with full content]');
+      break;
+  }
+});
+
+console.log('Subscriber ready, waiting for tokens...');
+```
+
+```client_swift
+import Ably
+
+// Initialize Ably Realtime client
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+
+// Get the same channel used by the publisher
+let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by message serial
+var responses: [String: String] = [:]
+
+// Subscribe to receive messages
+channel.subscribe { message in
+    guard let serial = message.serial else { return }
+
+    switch message.action {
+    case .create:
+        // New response started
+        print("\n[Response started] \(serial)")
+        responses[serial] = message.data as? String ?? ""
+
+    case .messageAppend:
+        // Append token to existing response
+        let current = responses[serial] ?? ""
+        let token = message.data as? String ?? ""
+        responses[serial] = current + token
+
+        // Display token as it arrives
+        print(token, terminator: "")
+
+    case .update:
+        // Replace entire response content
+        responses[serial] = message.data as? String ?? ""
+        print("\n[Response updated with full content]")
+
+    default:
+        break
+    }
+}
+
+print("Subscriber ready, waiting for tokens...")
+```
+
+```client_java
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+import io.ably.lib.types.ClientOptions;
+import io.ably.lib.types.Message;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Subscriber {
+    // Track responses by message serial
+    private static final Map<String, String> responses = new HashMap<>();
+
+    public static void main(String[] args) throws Exception {
+        // Initialize Ably Realtime client
+        ClientOptions options = new ClientOptions("{{API_KEY}}");
+        AblyRealtime realtime = new AblyRealtime(options);
+
+        // Get the same channel used by the publisher
+        Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}");
+
+        // Subscribe to receive messages
+        channel.subscribe(message -> {
+            String serial = message.serial;
+            if (serial == null) return;
+
+            switch (message.action) {
+                case MESSAGE_CREATE:
+                    // New response started
+                    System.out.println("\n[Response started] " + serial);
+                    responses.put(serial, message.data != null ? message.data.toString() : "");
+                    break;
+
+                case MESSAGE_APPEND:
+                    // Append token to existing response
+                    String current = responses.getOrDefault(serial, "");
+                    String token = message.data != null ? message.data.toString() : "";
+                    responses.put(serial, current + token);
+
+                    // Display token as it arrives
+                    System.out.print(token);
+                    break;
+
+                case MESSAGE_UPDATE:
+                    // Replace entire response content
+                    responses.put(serial, message.data != null ? message.data.toString() : "");
+                    System.out.println("\n[Response updated with full content]");
+                    break;
+            }
+        });
+
+        System.out.println("Subscriber ready, waiting for tokens...");
+
+        // Keep the application running
+        Thread.currentThread().join();
+    }
+}
+```
+</Code>
+
+Subscribers receive different message actions depending on when they join and how they're retrieving messages:
+
+- `message.create`: Indicates a new response has started (i.e. a new message was created). The message `data` contains the initial content (often empty or the first token). Store this as the beginning of a new response using `serial` as the identifier.
+
+- `message.append`: Contains a single token fragment to append. The message `data` contains only the new token, not the full concatenated response. Append this token to the existing response identified by `serial`.
+
+- `message.update`: Contains the whole response up to that point. The message `data` contains the full concatenated text so far. Replace the entire response content with this data for the message identified by `serial`. This action occurs when the channel needs to resynchronize the full message state, such as after a client [resumes](/docs/connect/states#resume) from a transient disconnection.
+
+<If client_lang="javascript,java">
+Run the subscriber in a separate terminal:
+</If>
+
+<If client_lang="javascript">
+<Code>
+```shell
+cd ably-anthropic-client
+node subscriber.mjs
+```
+</Code>
+</If>
+
+<If client_lang="swift">
+Build and run your iOS or macOS app in Xcode.
+</If>
+
+<If client_lang="java">
+<Code>
+```shell
+mvn compile exec:java -Dexec.mainClass="Subscriber"
+```
+</Code>
+</If>
+
+<If client_lang="javascript,java">
+With the subscriber running, run the publisher in another terminal. The tokens stream in realtime as the Anthropic model generates them.
+</If>
+<If client_lang="swift">
+With the subscriber running, run the publisher in a terminal. The tokens stream in realtime as the Anthropic model generates them.
+</If>
+
+## Step 5: Stream with multiple publishers and subscribers <a id="step-5"/>
+
+Ably's [channel-oriented sessions](/docs/ai-transport/sessions-identity#connection-oriented-vs-channel-oriented-sessions) enables multiple AI agents to publish responses and multiple users to receive them on a single channel simultaneously. Ably handles message delivery to all participants, eliminating the need to implement routing logic or manage state synchronization across connections.
+
+### Broadcasting to multiple subscribers <a id="broadcasting"/>
+
+Each subscriber receives the complete stream of tokens independently, enabling you to build collaborative experiences or multi-device applications.
+
+<If client_lang="javascript,java">
+Run a subscriber in multiple separate terminals:
+</If>
+
+<If client_lang="javascript">
+<Code>
+```shell
+# Terminal 1
+cd ably-anthropic-client && node subscriber.mjs
+
+# Terminal 2
+cd ably-anthropic-client && node subscriber.mjs
+
+# Terminal 3
+cd ably-anthropic-client && node subscriber.mjs
+```
+</Code>
+</If>
+
+<If client_lang="java">
+<Code>
+```shell
+# Terminal 1
+mvn compile exec:java -Dexec.mainClass="Subscriber"
+
+# Terminal 2
+mvn compile exec:java -Dexec.mainClass="Subscriber"
+
+# Terminal 3
+mvn compile exec:java -Dexec.mainClass="Subscriber"
+```
+</Code>
+</If>
+
+<If client_lang="swift">
+Run multiple instances of your iOS or macOS app, or run on multiple devices/simulators.
+</If>
+
+All subscribers receive the same stream of tokens in realtime.
+
+### Publishing concurrent responses <a id="multiple-publishers"/>
+
+Multiple publishers can stream different responses concurrently on the same [channel](/docs/channels). Each response is a distinct message with its own unique `serial` identifier, so tokens from different responses are isolated to distinct messages and don't interfere with each other.
+
+To demonstrate this, run a publisher in multiple separate terminals:
+
+<If agent_lang="javascript">
+<Code>
+```shell
+# Terminal 1
+cd ably-anthropic-agent && node publisher.mjs
+
+# Terminal 2
+cd ably-anthropic-agent && node publisher.mjs
+
+# Terminal 3
+cd ably-anthropic-agent && node publisher.mjs
+```
+</Code>
+</If>
+
+<If agent_lang="python">
+<Code>
+```shell
+# Terminal 1
+cd ably-anthropic-agent && python publisher.py
+
+# Terminal 2
+cd ably-anthropic-agent && python publisher.py
+
+# Terminal 3
+cd ably-anthropic-agent && python publisher.py
+```
+</Code>
+</If>
+
+<If agent_lang="java">
+<Code>
+```shell
+# Terminal 1
+mvn compile exec:java -Dexec.mainClass="Publisher"
+
+# Terminal 2
+mvn compile exec:java -Dexec.mainClass="Publisher"
+
+# Terminal 3
+mvn compile exec:java -Dexec.mainClass="Publisher"
+```
+</Code>
+</If>
+
+All running subscribers receive tokens from all responses concurrently. Each subscriber correctly reconstructs each response separately using the `serial` to correlate tokens.
+
+## Step 6: Retrieve complete responses from history <a id="step-6"/>
+
+One key advantage of the message-per-response pattern is that each complete AI response is stored as a single message in channel history. This makes it efficient to retrieve conversation history without processing thousands of individual token messages.
+
+Use Ably's [rewind](/docs/channels/options/rewind) channel option to attach to the channel at some point in the recent past and automatically receive complete responses from history. Historical messages are delivered as `message.update` events containing the complete concatenated response, which then seamlessly transition to live `message.append` events for any ongoing responses.
+
+<If client_lang="javascript">
+Update your `subscriber.mjs` file in the `ably-anthropic-client` directory to use the `rewind` option when getting the channel:
+</If>
+<If client_lang="swift">
+Update your subscriber code to use the `rewind` option when getting the channel:
+</If>
+<If client_lang="java">
+Update your `Subscriber.java` file to use the `rewind` option when getting the channel:
+</If>
+
+<Code>
+```client_javascript
+// Use rewind to receive recent historical messages
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}', {
+  params: { rewind: '2m' } // Retrieve messages from the last 2 minutes
+});
+
+const responses = new Map();
+
+await channel.subscribe((message) => {
+  switch (message.action) {
+    case 'message.create':
+      responses.set(message.serial, message.data);
+      break;
+
+    case 'message.append':
+      const current = responses.get(message.serial) || '';
+      responses.set(message.serial, current + message.data);
+      process.stdout.write(message.data);
+      break;
+
+    case 'message.update':
+      // Historical messages contain full concatenated response
+      responses.set(message.serial, message.data);
+      console.log('\n[Historical response]:', message.data);
+      break;
+  }
+});
+```
+
+```client_swift
+// Use rewind to receive recent historical messages
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.params = ["rewind": "2m"] // Retrieve messages from the last 2 minutes
+
+let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}", options: channelOptions)
+
+var responses: [String: String] = [:]
+
+channel.subscribe { message in
+    guard let serial = message.serial else { return }
+
+    switch message.action {
+    case .create:
+        responses[serial] = message.data as? String ?? ""
+
+    case .messageAppend:
+        let current = responses[serial] ?? ""
+        let token = message.data as? String ?? ""
+        responses[serial] = current + token
+        print(token, terminator: "")
+
+    case .update:
+        // Historical messages contain full concatenated response
+        responses[serial] = message.data as? String ?? ""
+        print("\n[Historical response]: \(responses[serial] ?? "")")
+
+    default:
+        break
+    }
+}
+```
+
+```client_java
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+import io.ably.lib.types.ClientOptions;
+import io.ably.lib.types.ChannelOptions;
+import io.ably.lib.types.Param;
+import java.util.HashMap;
+import java.util.Map;
+
+// Use rewind to receive recent historical messages
+ClientOptions clientOptions = new ClientOptions("{{API_KEY}}");
+AblyRealtime realtime = new AblyRealtime(clientOptions);
+
+ChannelOptions channelOptions = new ChannelOptions();
+channelOptions.params = new Param[] {
+    new Param("rewind", "2m") // Retrieve messages from the last 2 minutes
+};
+
+Channel channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}", channelOptions);
+
+Map<String, String> responses = new HashMap<>();
+
+channel.subscribe(message -> {
+    String serial = message.serial;
+    if (serial == null) return;
+
+    switch (message.action) {
+        case MESSAGE_CREATE:
+            responses.put(serial, message.data != null ? message.data.toString() : "");
+            break;
+
+        case MESSAGE_APPEND:
+            String current = responses.getOrDefault(serial, "");
+            String token = message.data != null ? message.data.toString() : "";
+            responses.put(serial, current + token);
+            System.out.print(token);
+            break;
+
+        case MESSAGE_UPDATE:
+            // Historical messages contain full concatenated response
+            responses.put(serial, message.data != null ? message.data.toString() : "");
+            System.out.println("\n[Historical response]: " + responses.get(serial));
+            break;
+    }
+});
+```
+</Code>
+
+<Aside data-type="further-reading">
+For more advanced hydration strategies, including using channel history with `untilAttach`, handling in-progress responses, and correlating with database records, see [client hydration](/docs/ai-transport/token-streaming/message-per-response#hydration) in the message-per-response documentation.
+</Aside>
+
+## Next steps
+
+- Learn more about the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response) used in this guide
+- Learn about [client hydration strategies](/docs/ai-transport/token-streaming/message-per-response#hydration) for handling late joiners and reconnections
+- Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI enabled applications
+- Explore the [message-per-token pattern](/docs/ai-transport/token-streaming/message-per-token) for explicit control over individual token messages

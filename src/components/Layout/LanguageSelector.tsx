@@ -8,7 +8,7 @@ import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/u
 import { track } from '@ably/ui/core/insights';
 import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
-import { useLayoutContext } from 'src/contexts/layout-context';
+import { useLayoutContext, CLIENT_LANGUAGES, AGENT_LANGUAGES } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
 import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 import * as Select from '../ui/Select';
@@ -20,7 +20,7 @@ type LanguageSelectorOptionData = {
   version: string;
 };
 
-export const LanguageSelector = () => {
+const SingleLanguageSelector = () => {
   const { activePage } = useLayoutContext();
   const location = useLocation();
   const languageVersions = languageData[activePage.product ?? 'pubsub'];
@@ -162,4 +162,194 @@ export const LanguageSelector = () => {
       </Select.Root>
     </div>
   );
+};
+
+type DualLanguageDropdownProps = {
+  label: string;
+  paramName: 'client_lang' | 'agent_lang';
+  languages: LanguageKey[];
+  selectedLanguage: LanguageKey | undefined;
+};
+
+const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }: DualLanguageDropdownProps) => {
+  const { activePage } = useLayoutContext();
+  const location = useLocation();
+  const languageVersions = languageData[activePage.product ?? 'aiTransport'];
+
+  const options: LanguageSelectorOptionData[] = useMemo(
+    () =>
+      languages
+        .filter((lang) => languageVersions[lang])
+        .map((lang) => ({
+          label: lang,
+          value: `${lang}-${languageVersions[lang]}`,
+          version: languageVersions[lang],
+        })),
+    [languages, languageVersions],
+  );
+
+  const [value, setValue] = useState<string>('');
+
+  useEffect(() => {
+    const defaultOption = options.find((option) => option.label === selectedLanguage) || options[0];
+    if (defaultOption) {
+      setValue(defaultOption.value);
+    }
+  }, [selectedLanguage, options]);
+
+  const selectedOption = useMemo(() => options.find((option) => option.value === value), [options, value]);
+
+  const handleValueChange = (newValue: string) => {
+    setValue(newValue);
+
+    const option = options.find((opt) => opt.value === newValue);
+    if (option) {
+      track('language_selector_changed', {
+        language: option.label,
+        type: paramName,
+        location: location.pathname,
+      });
+
+      // Preserve existing URL params and update the relevant one
+      const params = new URLSearchParams(location.search);
+      params.set(paramName, option.label);
+      navigate(`${location.pathname}?${params.toString()}`);
+    }
+  };
+
+  if (!selectedOption) {
+    return <Skeleton className="w-[140px] h-5 my-[9px]" />;
+  }
+
+  const selectedLang = languageInfo[selectedOption.label];
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="ui-text-overline2 normal-case text-neutral-700 dark:text-neutral-600 whitespace-nowrap">
+        {label}
+      </span>
+      <Select.Root value={value} onValueChange={handleValueChange}>
+        <Select.Trigger
+          className={cn(
+            'border-none inline-flex items-center group/lang-dropdown focus-base rounded px-0',
+            options.length > 1 ? 'cursor-pointer' : 'cursor-auto',
+          )}
+          style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
+          aria-label={`Select ${label.toLowerCase()} language`}
+          disabled={options.length === 1}
+        >
+          <div className="ui-text-label4 text-left leading-none text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 flex gap-2 items-center">
+            <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+            <span className="text-neutral-900 dark:text-neutral-400 font-semibold">{selectedLang?.label}</span>
+            <Badge color="neutral" size="xs" className="my-px">
+              v{selectedOption.version}
+            </Badge>
+          </div>
+          {options.length > 1 && (
+            <Select.Icon className="flex items-center pl-2 text-red-orange cursor-pointer">
+              <Icon
+                name="icon-gui-chevron-down-micro"
+                size="20px"
+                additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
+              />
+            </Select.Icon>
+          )}
+        </Select.Trigger>
+
+        <Select.Portal>
+          <Select.Content
+            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft z-40"
+            position="popper"
+            align="end"
+            sideOffset={4}
+          >
+            <Select.Viewport
+              className="p-2"
+              style={{
+                maxHeight: componentMaxHeight(
+                  HEADER_HEIGHT,
+                  HEADER_BOTTOM_MARGIN,
+                  LANGUAGE_SELECTOR_HEIGHT,
+                  INKEEP_ASK_BUTTON_HEIGHT,
+                ),
+              }}
+            >
+              <p className="ui-text-overline2 text-left p-2 pb-3 text-neutral-700 dark:text-neutral-600">{label}</p>
+              {options.map((option) => {
+                const lang = languageInfo[option.label];
+                return (
+                  <Select.Item
+                    key={option.value}
+                    value={option.value}
+                    className={cn(
+                      'ui-text-label4 text-left leading-none w-full text-neutral-900 dark:text-neutral-400',
+                      'hover:text-neutral-1300 dark:hover:text-neutral-000 transition-colors',
+                      'p-2 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer',
+                      'flex gap-2 items-center rounded outline-none',
+                      'focus:bg-neutral-100 dark:focus:bg-neutral-1200',
+                      'data-[highlighted]:bg-neutral-100 dark:data-[highlighted]:bg-neutral-1200 focus-base',
+                    )}
+                  >
+                    <div className="flex items-center gap-2 flex-1">
+                      <Icon size="20px" name={`icon-tech-${lang?.alias ?? option.label}` as IconName} />
+                      {lang?.label}
+                    </div>
+                    <Badge color="neutral" size="xs" className="my-px hover:bg-neutral-000 w-9 justify-center">
+                      v{option.version}
+                    </Badge>
+                    {option.value === value ? (
+                      <Select.ItemIndicator className="w-4 h-4 flex items-center justify-center">
+                        <Icon
+                          name="icon-gui-check-outline"
+                          size="16px"
+                          color="text-neutral-1000 dark:text-neutral-300"
+                        />
+                      </Select.ItemIndicator>
+                    ) : (
+                      <div className="w-4 h-4" aria-hidden={option.value === value} />
+                    )}
+                  </Select.Item>
+                );
+              })}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      </Select.Root>
+    </div>
+  );
+};
+
+const DualLanguageSelector = () => {
+  const { activePage } = useLayoutContext();
+
+  return (
+    <div
+      className="flex items-center gap-6 md:relative w-full text-right md:text-left"
+      style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
+    >
+      <DualLanguageDropdown
+        label="Client"
+        paramName="client_lang"
+        languages={CLIENT_LANGUAGES}
+        selectedLanguage={activePage.clientLanguage}
+      />
+      <DualLanguageDropdown
+        label="Agent"
+        paramName="agent_lang"
+        languages={AGENT_LANGUAGES}
+        selectedLanguage={activePage.agentLanguage}
+      />
+    </div>
+  );
+};
+
+// Main export - renders appropriate selector based on page type
+export const LanguageSelector = () => {
+  const { activePage } = useLayoutContext();
+
+  if (activePage.isDualLanguage) {
+    return <DualLanguageSelector />;
+  }
+
+  return <SingleLanguageSelector />;
 };

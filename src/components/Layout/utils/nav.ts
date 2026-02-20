@@ -14,6 +14,10 @@ export type ActivePage = {
   language: LanguageKey | null;
   product: ProductKey | null;
   template: PageTemplate;
+  // Dual language support for AI Transport guides
+  clientLanguage?: LanguageKey;
+  agentLanguage?: LanguageKey;
+  isDualLanguage?: boolean;
 };
 
 /**
