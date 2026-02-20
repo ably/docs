@@ -1,0 +1,129 @@
+---
+title: "Data storage"
+meta_description: "Store chat messages from Ably Chat in your own data store for long-term retention, compliance, and analytics."
+meta_keywords: "chat storage, data storage, data retention, compliance, analytics, message history, chat export"
+---
+
+Store chat messages from Ably Chat in your own data store for long-term retention, compliance, analytics, or to maintain your data store as the canonical source of truth.
+
+While Ably Chat provides flexible data retention for messages (30 days by default, up to a year on request), this page discusses options for longer-term storage and additional control over your chat data.
+
+## What Ably Chat history gives you <a id="history-endpoint"/>
+
+You can fetch the message history of a chat room using the [Chat History endpoint](/docs/api/chat-rest#tag/rooms/paths/~1chat~1%7Bversion%7D~1rooms~1%7BroomName%7D~1messages/get) or the [Chat SDK](/docs/chat/rooms/history). The chat room history endpoint is a paginated HTTP endpoint that allows you to retrieve messages from a chat room. The Chat SDK provides a convenient way to fetch the history of a chat room.
+
+The intended use of the chat history endpoint is to retrieve messages for pre-filling a chat window, not for continuous ingestion into other systems. As a result, there are some important things to consider:
+- The history endpoint is not a changelog, it is a snapshot of the messages in the room at the time the request is made. It returns only the latest version of each message.
+- The history API returns messages in their canonical global order (sorted by `serial`).
+- During some offline period, to capture all updates and deletes that may have occurred, you will need to re-fetch all messages each time, which can be impractical for long-running chats with large message histories.
+- The maximum retention period for chat messages is 365 days (on request). Messages older than this will not be available via the history endpoint.
+
+## Why store chat data externally? <a id="why"/>
+
+Ably Chat history is designed for pre-filling chat windows and retrieving recent messages. If your requirements go beyond this, storing chat data in your own data store gives you full control over retention, querying, and how that data is used.
+
+Common reasons to use external storage include:
+
+- Meeting compliance and legal requirements such as data retention policies and audit trails.
+- Building analytics, dashboards, or training ML models from chat data.
+- Implementing features like full-text search that need flexible access to message history.
+- Retaining data beyond Ably Chat's maximum retention period of 365 days.
+
+Maintaining your own data store also allows you to treat it as the canonical source of truth, giving you the ability to query, transform, and serve chat data in whatever way your application needs.
+
+### Key considerations <a id="key-considerations"/>
+
+Before choosing an [implementation approach](#implementation-approaches), it is worth thinking through how your data store will handle the volume and nature of chat data. The decisions you make around schema design, scale, and consistency will shape how reliably your system performs and how easily you can build features on top of it.
+
+#### Data store schema design <a id="schema-design"/>
+
+Design your schema to support the features you need while keeping scale and reliability in mind. An early consideration is whether you need to store all versions of messages or just the latest version (see [full version history or latest version](#version-history) below), and whether to store full message objects or normalized relational data.
+
+New messages, updates, and deletes will arrive concurrently, so your data store must handle this. Reduce roundtrips and manage locks to handle race conditions, and plan indexes for efficient queries on room name, timestamp, serial, and version serial.
+
+#### Scale and reliability <a id="scale-reliability"/>
+
+The volume of chat messages can vary significantly depending on your application. Ensure your data store can handle the expected messages per second and plan for scaling consumers during peak times. Write-optimized databases or batch writes can help with sustained write volume. Design your retrieval queries to efficiently fetch messages for chat windows or search results under load.
+
+#### Data latency and consistency <a id="latency-consistency"/>
+
+When using integrations, there will be a small delay between a message being published and it arriving in your data store. This delay is typically milliseconds to seconds depending on the integration type, with additional time for the write itself. In practice this means your data store will be eventually consistent with Ably Chat, not immediately in sync, and clients querying your data store may briefly see stale data after a message is sent.
+
+If you need your data store to be immediately consistent, consider [publishing via your own servers](#publish-via-own).
+
+#### Messages beyond retention period <a id="retention-period"/>
+
+If you are storing messages for longer than Ably Chat's retention period, you will eventually need to serve messages from your own data store alongside messages from Ably Chat history. Plan how you will merge messages from these two sources into a single view, and consider whether you need to indicate to users which messages came from long-term storage.
+
+## Implementation approaches <a id="implementation-approaches"/>
+
+Choose the approach that fits your requirements:
+
+### 1. Using integrations (recommended) <a id="using-integrations"/>
+
+Extract messages via [webhooks, queues, or streaming](/docs/chat/external-storage-and-processing/data-extraction) and save them to your data store. This is the recommended approach for most use cases.
+
+This approach provides a proven, scalable solution that leverages Ably's infrastructure with multiple integration types to choose from and built-in monitoring and error handling.
+
+Use this approach when you want reliable, continuous ingestion, you're comfortable with eventual consistency (milliseconds to seconds delay), and you need to store messages from ongoing or long-running chats.
+
+
+### 2. Publishing via your own servers <a id="publish-via-own"/>
+
+Proxy message publishing through your own servers to save messages as they're produced. This gives you immediate consistency (no integration delay) and the opportunity to add validation or business logic before publishing. You can publish messages directly via the Chat REST API or Chat SDK.
+
+However, your servers become part of the critical publish path (affecting availability and latency), you must handle updates, deletes, and all consistency issues yourself, and keeping both systems in sync across all failure scenarios is complex. Message reactions still require using integrations, as you will not have access to reaction summaries otherwise.
+
+Use this approach when your data store must be immediately consistent, you need to validate or transform messages before publishing, or you already proxy messages through your servers for other reasons.
+
+### 3. Using the Chat History endpoint <a id="using-history"/>
+
+Fetch completed chat histories using the [Chat History endpoint](/docs/api/chat-rest#tag/rooms/paths/~1chat~1%7Bversion%7D~1rooms~1%7BroomName%7D~1messages/get) or [Chat SDK](/docs/chat/rooms/history). This is a simple solution requiring no integration setup, and is well-suited for chats with clear start and end times such as support tickets or game sessions.
+
+The history endpoint returns only the latest version of each message (not a full changelog), so it is impractical for long-running chats where you need all updates and deletes. You will need to decide when to trigger the export, for example when a support ticket is closed or a game session ends. The metachannel [`[meta]channel.lifecycle`](/docs/metadata-stats/metadata/subscribe#channel-lifecycle) provides events when channels are opened and closed, which can help with this.
+
+You can import the same room multiple times, deduplicating by `serial` and `version.serial`.
+
+## Storing messages <a id="storing-messages"/>
+
+After [extracting messages via integrations](/docs/chat/external-storage-and-processing/data-extraction), you need to make decisions about how to store them in your data store.
+
+### Full version history or just the latest version? <a id="version-history"/>
+
+Do you need all versions of a message or just the latest version?
+  - Messages are uniquely identified by their `serial`. Message versions are identified by the message's `version.serial` property.
+  - Lexicographically higher `version.serial` means a newer version.
+  - If you need to store all versions of a message, uniquely index by `roomName`, `serial` and `version.serial`.
+  - If you only need the latest version of a message, uniquely index by `roomName` and `serial`, and only update if the received `version.serial` is greater than what you have stored. This handles out-of-order delivery.
+  - When performing a message search or lookup, do you want to return only the latest version of each message, even if you store the full version history?
+  - If you are looking to hydrate chat windows from your own data store, think of how to efficiently retrieve the latest version of each message for a time window. For example, this can be implemented via a separate table or by iterating through all versions and filtering old versions out.
+
+<Code>
+  ```javascript
+  const saveMessageVersion = (roomName, message) => {
+  if (message.action === 'message.summary') {
+  // summary events are not part of the message version history, so discard
+  return;
+}
+
+  // Pseudo-code: only insert if you don't already have this message version
+  // Implementation depends on your database's upsert/conflict handling capabilities
+  await insertIfNotExists(roomName, message.serial, message.version.serial, message);
+};
+  ```
+</Code>
+
+Read more about [message versioning and sorting](/docs/chat/rooms/messages#ordering-update-delete) in the messages documentation.
+
+### How to store message reactions? <a id="store-reactions"/>
+
+If you need to store message reactions you need to consider the following:
+
+1. Do you need to store only the current state of the reactions, historic snapshots of the current state, or the full history of all individual reactions?
+ - If you only need the current state (latest summary), simply save the values provided in the latest message with action `message.summary`. Uniquely index by `roomName` and `serial`.
+ - If you need to store historic snapshots, store all `message.summary` events for every message. Note that when a message receives many reactions in a short amount of time, summaries can be rolled up for cost and bandwidth optimisation, so not every reaction gets a summary event published.
+2. Do you have a requirement to store the list of clientIds who reacted to a message, or just the totals?
+ - If you only need the totals, simply use the values provided in each message with action `message.summary`.
+ - If you need the list of clientIds who reacted, use the values from reaction summaries.
+
+If you do not need to store message reactions, you can simply discard them. Never store the `reactions` (or `annotations`) field and ignore messages with action `message.summary`.
