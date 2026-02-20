@@ -219,16 +219,16 @@ export default {
               name: 'ChatClient',
             },
             {
+              link: '/docs/chat/api/javascript/connection',
+              name: 'Connection',
+            },
+            {
               link: '/docs/chat/api/javascript/rooms',
               name: 'Rooms',
             },
             {
               link: '/docs/chat/api/javascript/room',
               name: 'Room',
-            },
-            {
-              link: '/docs/chat/api/javascript/connection',
-              name: 'Connection',
             },
             {
               link: '/docs/chat/api/javascript/messages',
