@@ -7,13 +7,16 @@ Use these instructions to install, authenticate and instantiate the Spaces SDK.
 
 ## Authenticate <a id="authenticate"/>
 
-An [API key](/docs/auth#api-keys) is required to authenticate with Ably. API keys are used either to authenticate directly with Ably using [basic authentication](/docs/auth/basic), or to generate tokens for untrusted clients using [token authentication](/docs/auth/token).
-
 <Aside data-type='important'>
-The examples use [basic authentication](/docs/auth/basic) to demonstrate features for convenience. In your own applications, basic authentication should never be used on the client-side as it exposes your Ably API key. Instead use [token authentication](/docs/auth/token).
+Client-side applications must use [token authentication](/docs/auth/token). API keys should never be exposed in client-side code because they don't expire and cannot be scoped to specific users.
 </Aside>
 
-[Sign up](https://ably.com/sign-up) to Ably to create an API key in the [dashboard](https://ably.com/dashboard) or use the [Control API](/docs/platform/account/control-api) to create an API programmatically.
+Spaces requires an authenticated client with a `clientId` to identify users. The recommended approach is:
+
+1. **Client-side apps** (browsers, mobile apps): Use [JWT authentication](/docs/auth/jwt) with `authCallback` to fetch JWTs from your server
+2. **Server-side apps** (Node.js, Python, etc.): Use your API key directly
+
+[Sign up](https://ably.com/sign-up) to Ably to create an API key in the [dashboard](https://ably.com/dashboard) or use the [Control API](/docs/platform/account/control-api) to create an API programmatically. Your server will use this key to issue tokens to clients.
 
 API keys and tokens have a set of capabilities assigned to them that specify which operations, such as `subscribe` or `publish` can be performed on which resources. To use the Spaces SDK, the API key requires the following [capabilities](/docs/auth/capabilities):
 
@@ -21,6 +24,16 @@ API keys and tokens have a set of capabilities assigned to them that specify whi
 * Subscribe
 * Presence
 * History
+
+For space-scoped capabilities and channel architecture details, see [Spaces authentication](/docs/spaces/authentication).
+
+### Client identification <a id="client-identification"/>
+
+Every Spaces client must have a `clientId` - this is a **hard requirement**. The Spaces SDK uses the `clientId` to identify users in the avatar stack, track their locations, display their cursors, and manage component locking.
+
+Your auth server sets the `clientId` when creating tokens. This ensures users can't impersonate each other - the identity is controlled server-side, not by the client.
+
+If you try to connect without a `clientId`, the connection will fail.
 
 ## Install <a id="install"/>
 
@@ -64,21 +77,128 @@ Reference the Ably JavaScript SDK and the Spaces SDK within the `<head>` of your
 
 ## Instantiate <a id="instantiate"/>
 
-Instantiate a realtime client using the Ably JavaScript SDK and pass the generated client into the Spaces constructor:
+Authentication is configured on the Ably JavaScript SDK client, which the Spaces client wraps. The Spaces SDK itself doesn't handle authentication directly - it uses the authenticated connection from the underlying Ably client.
+
+Instantiate a realtime client using the Ably JavaScript SDK and pass the generated client into the Spaces constructor.
+
+### Client-side authentication (recommended) <a id="client-side-auth"/>
+
+Use token authentication for browsers and mobile apps. Your auth server endpoint validates the user and returns an Ably token with the appropriate `clientId`:
 
 <Code>
 ```javascript
+// Client-side: Token authentication (recommended for browsers)
+
 // If installing via NPM
-const client = new Realtime({key: "<API-key>", clientId: "<client-ID>"});
+const client = new Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token');
+      const token = await response.text();
+      callback(null, token);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
 const spaces = new Spaces(client);
 
 // If installing via CDN
-const client = new Ably.Realtime({key: "<API-key>", clientId: "<client-ID>"});
+const client = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token');
+      const token = await response.text();
+      callback(null, token);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
 const spaces = new Spaces(client);
 ```
 </Code>
 
-A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Ably JavaScript SDK to further customize the connection, however at a minimum you must set your API key and provide a `clientId` so that the client is [identified](/docs/auth/identified-clients).
+Your auth server endpoint (`/api/ably-token`) should authenticate the user and return a token with the user's `clientId`. See the [token authentication](/docs/auth/token) documentation for server implementation examples.
+
+### Server-side authentication <a id="server-side-auth"/>
+
+For server-side applications or local development, you can use an API key directly:
+
+<Code>
+```javascript
+// Server-side only: API key authentication
+// WARNING: Never use this in client-side code (browsers, mobile apps)
+const client = new Realtime({
+  key: process.env.ABLY_API_KEY,
+  clientId: 'server-process-1'
+});
+const spaces = new Spaces(client);
+```
+</Code>
+
+A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Ably JavaScript SDK to further customize the connection. When using token authentication, the `clientId` is set by your auth server. When using API key authentication server-side, you must provide a `clientId` so that the client is [identified](/docs/auth/identified-clients).
+
+### Using Ably JWT (alternative) <a id="jwt-auth"/>
+
+If you have existing JWT-based authentication infrastructure (Auth0, Firebase, Cognito, or custom), you can create Ably JWTs directly without using the Ably SDK on your server:
+
+#### Server (no Ably SDK required)
+
+<Code>
+```javascript
+import jwt from 'jsonwebtoken';
+
+const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
+
+app.get('/api/ably-jwt', async (req, res) => {
+  // Your existing auth middleware validates the user
+  const userId = req.user.id;
+
+  const ablyJwt = jwt.sign(
+    {
+      'x-ably-capability': JSON.stringify({
+        '*': ['publish', 'subscribe', 'presence', 'history'],
+      }),
+      'x-ably-clientId': userId,
+    },
+    keySecret,
+    { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
+  );
+
+  res.send(ablyJwt);
+});
+```
+</Code>
+
+#### Client
+
+<Code>
+```javascript
+const client = new Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-jwt', {
+        headers: { 'Authorization': `Bearer ${yourAppJwt}` },
+      });
+      const jwt = await response.text();
+      callback(null, jwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+const spaces = new Spaces(client);
+```
+</Code>
+
+**Why choose JWT for Spaces?**
+- No Ably SDK required on your server
+- Integrates with existing Auth0/Firebase/Cognito flows
+- Supports [channel-scoped claims](/docs/auth/capabilities#custom-restrictions) for user metadata
+- Eliminates client round-trip to Ably
+
+See [Token authentication](/docs/auth/token#choosing) for detailed guidance on when to use JWT vs Ably Tokens.
 
 <Aside data-type='note'>
 Only the promises version of the Ably JavaScript is supported when using Spaces, not the callback version.

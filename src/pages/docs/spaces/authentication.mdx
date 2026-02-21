@@ -1,0 +1,382 @@
+---
+title: Spaces authentication
+meta_description: "Configure authentication for Spaces applications with the required capabilities."
+---
+
+Spaces authentication is handled by the underlying Pub/Sub SDK. You authenticate an Ably Realtime client, then pass that authenticated client into `Spaces`.
+
+## How Spaces maps to channels
+
+A logical space is implemented using underlying Pub/Sub channels. Capability expressions should account for both channel types:
+
+- Main space channel: `your-space` (presence and member locations)
+- Cursors channel: `your-space-cursors` (high-frequency cursor updates)
+
+## Authentication flow
+
+1. Your auth server authenticates the user.
+2. Your auth server issues an Ably-compatible token (JWT format is recommended for most apps).
+3. The client SDK fetches tokens with `authCallback` and refreshes them automatically before expiry.
+4. The authenticated Pub/Sub client is passed into `Spaces`.
+
+<Aside data-type='important'>
+Never use API keys in client-side code. API keys do not expire and are not suitable for untrusted clients.
+</Aside>
+
+## Spaces capabilities
+
+| Feature area | Required capabilities |
+|--------------|-----------------------|
+| Member locations and avatar stack | `subscribe`, `presence` |
+| Live cursors | `publish`, `subscribe` |
+| Component locking | `subscribe`, `presence` |
+| History-aware collaboration | `history` |
+
+## Space-scoped capabilities
+
+<Code>
+```javascript
+// Server-side JWT with space-scoped capabilities
+import jwt from 'jsonwebtoken';
+
+const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
+
+const ablyJwt = jwt.sign(
+  {
+    'x-ably-capability': JSON.stringify({
+      'your-space': ['publish', 'subscribe', 'presence', 'history'],
+      'your-space-cursors': ['publish', 'subscribe'],
+    }),
+    'x-ably-clientId': userId,
+  },
+  keySecret,
+  { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
+);
+```
+
+```python
+# Server-side JWT with space-scoped capabilities
+import jwt
+import json
+import time
+import os
+
+key_name, key_secret = os.environ['ABLY_API_KEY'].split(':')
+
+now = int(time.time())
+ably_jwt = jwt.encode(
+    {
+        'iat': now,
+        'exp': now + 3600,
+        'x-ably-capability': json.dumps({
+            'your-space': ['publish', 'subscribe', 'presence', 'history'],
+            'your-space-cursors': ['publish', 'subscribe'],
+        }),
+        'x-ably-clientId': user_id,
+    },
+    key_secret,
+    algorithm='HS256',
+    headers={'kid': key_name}
+)
+```
+
+```go
+// Server-side JWT with space-scoped capabilities
+header := map[string]string{
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": keyName,
+}
+
+currentTime := time.Now().Unix()
+claims := map[string]interface{}{
+    "iat":                currentTime,
+    "exp":                currentTime + 3600,
+    "x-ably-capability":  `{"your-space":["publish","subscribe","presence","history"],"your-space-cursors":["publish","subscribe"]}`,
+    "x-ably-clientId":    userId,
+}
+
+// Sign using HS256 with your API key secret
+```
+
+```ruby
+# Server-side JWT with space-scoped capabilities
+require 'jwt'
+
+key_name, key_secret = ENV['ABLY_API_KEY'].split(':')
+
+now = Time.now.to_i
+payload = {
+  'iat' => now,
+  'exp' => now + 3600,
+  'x-ably-capability' => '{"your-space":["publish","subscribe","presence","history"],"your-space-cursors":["publish","subscribe"]}',
+  'x-ably-clientId' => user_id
+}
+
+ably_jwt = JWT.encode(payload, key_secret, 'HS256', { 'kid' => key_name })
+```
+
+```php
+// Server-side JWT with space-scoped capabilities
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'kid' => $keyName
+];
+$currentTime = time();
+$claims = [
+    'iat' => $currentTime,
+    'exp' => $currentTime + 3600,
+    'x-ably-capability' => '{"your-space":["publish","subscribe","presence","history"],"your-space-cursors":["publish","subscribe"]}',
+    'x-ably-clientId' => $userId
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$signature = hash_hmac('sha256', $base64Header . '.' . $base64Claims, $keySecret, true);
+$jwt = $base64Header . '.' . $base64Claims . '.' . base64_encode($signature);
+```
+
+```java
+Map<String, Object> headerClaims = new HashMap<>();
+headerClaims.put("typ", "JWT");
+headerClaims.put("alg", "HS256");
+headerClaims.put("kid", keyName);
+
+long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
+Map<String, Object> claims = new HashMap<>();
+claims.put("iat", currentTimeInSeconds);
+claims.put("exp", currentTimeInSeconds + 3600);
+claims.put("x-ably-capability", "{\"your-space\":[\"publish\",\"subscribe\",\"presence\",\"history\"],\"your-space-cursors\":[\"publish\",\"subscribe\"]}");
+claims.put("x-ably-clientId", userId);
+
+Algorithm algorithm = Algorithm.HMAC256(keySecret);
+String token = JWT.create()
+        .withHeader(headerClaims)
+        .withPayload(claims)
+        .sign(algorithm);
+```
+
+```csharp
+// Server-side JWT with space-scoped capabilities
+var header = new Dictionary<string, object>
+{
+    { "typ", "JWT" },
+    { "alg", "HS256" },
+    { "kid", keyName }
+};
+
+var currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+var claims = new Dictionary<string, object>
+{
+    { "iat", currentTime },
+    { "exp", currentTime + 3600 },
+    { "x-ably-capability", "{\"your-space\":[\"publish\",\"subscribe\",\"presence\",\"history\"],\"your-space-cursors\":[\"publish\",\"subscribe\"]}" },
+    { "x-ably-clientId", userId }
+};
+
+// Sign using HS256 with your API key secret
+```
+</Code>
+
+## Client examples
+
+<Code>
+```realtime_javascript
+import Spaces from '@ably/spaces';
+import { Realtime } from 'ably';
+
+const realtimeClient = new Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token', { credentials: 'include' });
+      if (!response.ok) throw new Error('Auth failed');
+      const jwt = await response.text();
+      callback(null, jwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+
+const spaces = new Spaces(realtimeClient);
+```
+
+```react
+import { useMemo } from 'react';
+import Spaces from '@ably/spaces';
+import { Realtime } from 'ably';
+
+export function App() {
+  const realtimeClient = useMemo(
+    () =>
+      new Realtime({
+        authCallback: async (tokenParams, callback) => {
+          try {
+            const response = await fetch('/api/ably-token', { credentials: 'include' });
+            if (!response.ok) throw new Error('Auth failed');
+            callback(null, await response.text());
+          } catch (error) {
+            callback(error, null);
+          }
+        },
+      }),
+    []
+  );
+
+  const spaces = useMemo(() => new Spaces(realtimeClient), [realtimeClient]);
+
+  return <YourSpacesUI spaces={spaces} />;
+}
+```
+
+```realtime_swift
+import Ably
+
+let realtimeOptions = ARTClientOptions()
+realtimeOptions.authCallback = { tokenParams, callback in
+    fetchAblyJwt { result in
+        switch result {
+        case .success(let jwt):
+            callback(jwt as ARTTokenDetailsCompatible, nil)
+        case .failure(let error):
+            callback(nil, error)
+        }
+    }
+}
+
+let realtime = ARTRealtime(options: realtimeOptions)
+let spaces = Spaces(realtime: realtime)
+```
+
+```realtime_kotlin
+import io.ably.lib.realtime.AblyRealtime
+import io.ably.lib.rest.Auth
+import io.ably.lib.types.ClientOptions
+
+val realtimeClient = AblyRealtime(
+    ClientOptions().apply {
+        authCallback = Auth.TokenCallback { _ ->
+            // Return JWT string from your auth server
+            fetchAblyJwt()
+        }
+    }
+)
+
+val spaces = Spaces(realtimeClient)
+```
+
+```realtime_java
+ClientOptions options = new ClientOptions();
+options.authCallback = new Auth.TokenCallback() {
+    @Override
+    public Object getTokenRequest(Auth.TokenParams params) throws AblyException {
+        // Make HTTP request to your auth server and return JWT string
+        return fetchJwtFromServer();
+    }
+};
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```realtime_python
+import aiohttp
+
+async def get_ably_jwt(*args, **kwargs):
+    async with aiohttp.ClientSession() as session:
+        async with session.get('/api/ably-token') as response:
+            if response.status != 200:
+                raise Exception(f"Auth failed: {response.status}")
+            return await response.text()
+
+realtime = AblyRealtime(auth_callback=get_ably_jwt)
+```
+
+```realtime_nodejs
+const { Realtime } = require('ably');
+const Spaces = require('@ably/spaces');
+
+const realtimeClient = new Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token');
+      if (!response.ok) throw new Error('Auth failed');
+      callback(null, await response.text());
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+
+const spaces = new Spaces(realtimeClient);
+```
+
+```realtime_flutter
+final clientOptions = ably.ClientOptions(
+    authCallback: (tokenParams) async {
+        // Fetch JWT from your auth server
+        return await fetchJwtFromServer();
+    },
+);
+final realtime = ably.Realtime(options: clientOptions);
+```
+
+```realtime_csharp
+ClientOptions options = new ClientOptions();
+options.AuthCallback = async tokenParams =>
+{
+    // Make HTTP request to your auth server and return JWT string
+    return await FetchJwtFromServerAsync();
+};
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```realtime_go
+client, err := ably.NewRealtime(
+    ably.WithAuthCallback(func(ctx context.Context, params ably.TokenParams) (ably.Tokener, error) {
+        // Fetch JWT from your auth server
+        jwt, err := fetchJwtFromServer()
+        if err != nil {
+            return nil, err
+        }
+        return ably.TokenString(jwt), nil
+    }))
+```
+
+```realtime_ruby
+realtime = Ably::Realtime.new(auth_callback: -> (token_params) {
+  # Fetch JWT from your auth server
+  fetch_jwt_from_server()
+})
+```
+
+```realtime_objc
+ARTClientOptions *options = [[ARTClientOptions alloc] init];
+options.authCallback = ^(ARTTokenParams *tokenParams, void (^callback)(id<ARTTokenDetailsCompatible>, NSError *)) {
+    [self fetchAblyJwt:^(NSString *jwt, NSError *error) {
+        if (error) {
+            callback(nil, error);
+        } else {
+            callback(jwt, nil);
+        }
+    }];
+};
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithOptions:options];
+```
+</Code>
+
+In each example, the authenticated Pub/Sub client is passed into `Spaces` and Spaces uses that connection for authentication and token renewal.
+
+## Token lifecycle and permission updates
+
+- With `authCallback` or `authUrl`, token refresh is automatic and handled by the SDK.
+- To change a user's capabilities during an active session, issue a new token from your auth server and re-authenticate:
+
+<Code>
+```javascript
+// Re-authenticate to pick up updated capabilities
+await realtimeClient.auth.authorize();
+```
+</Code>
+
+- To immediately remove access, [revoke issued tokens](/docs/auth/revocation).
+- If your capability JSON is too large for JWT or must remain confidential, use native [Ably Tokens](/docs/auth/ably-tokens).

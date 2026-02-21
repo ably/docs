@@ -98,6 +98,16 @@ export default {
         {
           name: 'Token auth',
           link: '/docs/auth/token',
+          pages: [
+            {
+              name: 'JWTs',
+              link: '/docs/auth/jwt',
+            },
+            {
+              name: 'Ably Tokens',
+              link: '/docs/auth/ably-tokens',
+            },
+          ],
         },
         {
           name: 'Token revocation',

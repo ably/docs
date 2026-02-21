@@ -103,75 +103,96 @@ Ably Tokens and JWTs are issued from an existing API key and their capabilities 
 
 If an API key must be shared with a third party, then it is recommended that [the principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege) is considered, assigning only the capabilities needed by that third party. Thus, any Ably requests authenticated using that API key or Ably-compatible tokens associated with that API key, will be restricted to the capabilities assigned to the API key.
 
-Capabilities can be set when creating a token or token request, as shown in the following example:
+#### Using JWT (recommended) <a id="jwt-capabilities"/>
+
+Set capabilities in a JWT using the `x-ably-capability` claim. No Ably SDK is required. This example uses [jsonwebtoken](https://www.npmjs.com/package/jsonwebtoken):
 
 <Code>
 ```javascript
-  var tokenParams = { clientId: 'foo', capability: JSON.stringify(capability) };
-  const tokenRequest = await ably.auth.createTokenRequest(tokenParams);
+// Server-side: Create JWT with capabilities using any JWT library
+import jwt from 'jsonwebtoken';
+
+const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
+
+const ablyJwt = jwt.sign(
+  {
+    'x-ably-capability': JSON.stringify({
+      'your-namespace:*': ['publish', 'subscribe', 'presence'],
+      'notifications': ['subscribe'],
+    }),
+    'x-ably-clientId': userId,
+  },
+  keySecret,
+  { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
+);
 ```
 
 ```python
-token_params = {
-    'client_id': 'foo',
-    'capability': json.dumps(capability)
-}
+# Server-side: Create JWT with capabilities using any JWT library
+import jwt
+import json
+import time
+import os
 
-token_request = await ably_rest.auth.create_token_request(token_params)
-```
+key_name, key_secret = os.environ['ABLY_API_KEY'].split(':')
 
-```php
-$tokenParams = [
-    'clientId' => 'client@example.com',
-    'capability' => json_encode($capability)
-];
-$tokenRequest = $rest->auth->createTokenRequest($tokenParams);
-```
-
-```go
-rest, _ := ably.NewREST(
-  ably.WithKey("xVLyHw.I2jW-g:dOTlhEt-nIubVAPMAUJnGv-_F8BZ7xNYnXdajpGaISg"))
-
-// Define the capability
-capability := map[string][]string{
-  "*": {"*"},
-}
-
-capabilityJSON, err := json.Marshal(capability)
-if err != nil {
-  log.Fatalf("Failed to marshal capability: %v", err)
-}
-
-// Define the token parameters
-tokenParams := &ably.TokenParams{
-  ClientID:   "foo",
-  Capability: string(capabilityJSON),
-}
-
-// Create a token request
-tokenRequest, err := rest.Auth.CreateTokenRequest(tokenParams)
-if err != nil {
-  log.Fatalf("Failed to create token request: %v", err)
-}
-```
-
-```flutter
-final tokenParams = ably.TokenParams(
-  clientId: 'foo',
-  capability: jsonEncode(capability),
-);
-
-final tokenRequest = await rest.auth.createTokenRequest(tokenParams: tokenParams);
+now = int(time.time())
+ably_jwt = jwt.encode(
+    {
+        'iat': now,
+        'exp': now + 3600,
+        'x-ably-capability': json.dumps({
+            'your-namespace:*': ['publish', 'subscribe', 'presence'],
+            'notifications': ['subscribe'],
+        }),
+        'x-ably-clientId': user_id,
+    },
+    key_secret,
+    algorithm='HS256',
+    headers={'kid': key_name}
+)
 ```
 </Code>
 
+#### Using TokenRequest (alternative) <a id="tokenrequest-capabilities"/>
+
+Use a TokenRequest when your capability list is very large (JWTs must fit within HTTP header limits, typically around 8 KB) or when capabilities need to be kept confidential (JWTs can be decoded by clients):
+
+<Code>
+```javascript
+// Server-side with Ably SDK
+const ably = new Ably.Rest(process.env.ABLY_API_KEY);
+const tokenRequest = await ably.auth.createTokenRequest({
+  clientId: 'user-123',
+  capability: JSON.stringify({
+    'your-namespace:*': ['publish', 'subscribe'],
+  }),
+});
+```
+
+```python
+# Server-side with Ably SDK
+ably = AblyRest(os.environ['ABLY_API_KEY'])
+token_request = await ably.auth.create_token_request({
+    'client_id': 'user-123',
+    'capability': json.dumps({
+        'your-namespace:*': ['publish', 'subscribe'],
+    }),
+})
+```
+</Code>
+
+See [Ably Tokens](/docs/auth/ably-tokens#token-request) for complete TokenRequest examples in all languages.
+
 ### Token capability determination <a id="capability-determination"/>
 
-The capabilities for tokens are determined based on those of the issuing API key and those requested by the token.
+The capabilities of the resulting token are the intersection of the requested capabilities and those of the issuing API key. The token request will fail if the intersection is empty (the token would have no rights).
+
+Note that a successful token request doesn't guarantee all requested capabilities were granted. If the issuing key's capabilities aren't known, verify the token has all required capabilities after creation.
 
 #### Ably Token without capabilities <a id="ably-token-all"/>
 
-If no capability is specified in an Ably `TokenRequest`, then the [Ably Token](/docs/auth/token#tokens) will be given the full set of capabilities assigned to the issuing key.
+If no capability is specified in an Ably `TokenRequest`, then the [Ably Token](/docs/auth/ably-tokens) will be given the full set of capabilities assigned to the issuing key.
 
 Using the following example, an API key exists with the listed capabilities. If an Ably Token is requested without specifying any capabilities then the `TokenRequest` is treated as requesting all capabilities, i.e. `{"[*]*":["*"]}`. This will result in the Ably Token receiving all the capabilities of the API key.
 
@@ -179,8 +200,8 @@ Using the following example, an API key exists with the listed capabilities. If 
 ```javascript
   // API key capabilities:
   {
-    'chat': ['publish', 'subscribe', 'presence'],
-    'status': ['subscribe']
+    'your-namespace': ['publish', 'subscribe', 'presence'],
+    'notifications': ['subscribe']
   }
 
   // Token request that doesn't specify any capabilities:
@@ -188,19 +209,19 @@ Using the following example, an API key exists with the listed capabilities. If 
 
   // Resulting token capabilities:
   {
-    'chat': ['publish', 'subscribe', 'presence'],
-    'status': ['subscribe']
+    'your-namespace': ['publish', 'subscribe', 'presence'],
+    'notifications': ['subscribe']
   }
 ```
 
 ```python
 # API key capabilities:
 # {
-#   "chat": ["publish", "subscribe", "presence"],
-#   "status": ["subscribe"]
+#   "your-namespace": ["publish", "subscribe", "presence"],
+#   "notifications": ["subscribe"]
 # }
 
-// Token request that doesn't specify any capabilities:
+# Token request that doesn't specify any capabilities:
 token = await ably.auth.create_token_request(
 {
     "clientId": "client@example.com",
@@ -209,37 +230,16 @@ token = await ably.auth.create_token_request(
 
 # Resulting token capabilities:
 # {
-# "chat": ["publish", "subscribe", "presence"],
-# "status": ["subscribe"]
+# "your-namespace": ["publish", "subscribe", "presence"],
+# "notifications": ["subscribe"]
 # }
-```
-
-```php
-// API key capabilities:
-//{
-//  'chat': ['publish', 'subscribe', 'presence'],
-//  'status': ['subscribe']
-//}
-
-// Token request that doesn't specify any capabilities:
-$tokenParams = [
-    'clientId' => 'client@example.com',
-    'ttl' => 3600 * 1000, // ms
-];
-$tokenRequest = $rest->auth->requestToken($tokenParams);
-
-// Resulting token capabilities:
-//{
-//  'chat': ['publish', 'subscribe', 'presence'],
-//  'status': ['subscribe']
-//}
 ```
 
 ```go
 // API key capabilities:
 // {
-//   "chat": ["publish", "subscribe", "presence"],
-//   "status": ["subscribe"]
+//   "your-namespace": ["publish", "subscribe", "presence"],
+//   "notifications": ["subscribe"]
 // }
 
 rest, _ := ably.NewREST(
@@ -259,24 +259,8 @@ if err != nil {
 
 // Resulting token capabilities:
 // {
-// "chat": ["publish", "subscribe", "presence"],
-// "status": ["subscribe"]
-// }
-```
-
-```flutter
-// API key capabilities:
-// {
-//    'chat': ['publish', 'subscribe', 'presence'],
-//    'status': ['subscribe']
-// }
-
-final tokenRequest = await realtime.auth.requestToken(tokenParams: tokenParams);
-
-// Resulting token capabilities:
-// {
-//    'chat': ['publish', 'subscribe', 'presence'],
-//    'status': ['subscribe']
+// "your-namespace": ["publish", "subscribe", "presence"],
+// "notifications": ["subscribe"]
 // }
 ```
 </Code>
@@ -285,44 +269,44 @@ final tokenRequest = await realtime.auth.requestToken(tokenParams: tokenParams);
 
 If a set of capabilities are requested, then the Ably Token will be assigned the intersection of the requested capability and the capability of the issuing key.
 
-Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/token#tokens) is requested and specifies a set of capabilities, then the resulting token will only receive those capabilities that intersect. The capabilities of a token cannot exceed those of the issuing API key.
+Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/ably-tokens) is requested and specifies a set of capabilities, then the resulting token will only receive those capabilities that intersect. The capabilities of a token cannot exceed those of the issuing API key.
 
 <Code>
 ```javascript
   // API key capabilities:
   {
-    'chat:*': ['publish', 'subscribe', 'presence'],
-    'status': ['subscribe', 'history'],
+    'your-namespace:*': ['publish', 'subscribe', 'presence'],
+    'notifications': ['subscribe', 'history'],
     'alerts': ['subscribe']
   }
 
   // Token request that specifies capabilities:
   const tokenDetails = await auth.requestToken({ capability: {
-    'chat:bob': ['subscribe'], // only 'subscribe' intersects
-    'status': ['*'], // '*'' intersects with 'subscribe'
-    'secret': ['publish', 'subscribe'] // key does not have access to 'secret' channel
+    'your-namespace:user-123': ['subscribe'], // only 'subscribe' intersects
+    'notifications': ['*'], // '*'' intersects with 'subscribe'
+    'private': ['publish', 'subscribe'] // key does not have access to 'private' channel
   }});
 
   // Resulting token capabilities:
   {
-    'chat:bob': ['subscribe'],
-    'status': ['subscribe', 'history']
+    'your-namespace:user-123': ['subscribe'],
+    'notifications': ['subscribe', 'history']
   }
 ```
 
 ```python
 # API key capabilities:
 # {
-#   "chat:*": ["publish", "subscribe", "presence"],
-#   "status": ["subscribe", "history"],
+#   "your-namespace:*": ["publish", "subscribe", "presence"],
+#   "notifications": ["subscribe", "history"],
 #   "alerts": ["subscribe"]
 # }
 
 # Token request that specifies capabilities:
 capabilities = {
-    "chat:bob": ["subscribe"],  # only "subscribe" intersects
-    "status": ["*"],  # "*" intersects with "subscribe"
-    "secret": ["publish", "subscribe"]  # key does not have access to "secret" channel
+    "your-namespace:user-123": ["subscribe"],  # only "subscribe" intersects
+    "notifications": ["*"],  # "*" intersects with "subscribe"
+    "private": ["publish", "subscribe"]  # key does not have access to "private" channel
 }
 
 token_details = await ably_rest.auth.request_token({
@@ -331,48 +315,16 @@ token_details = await ably_rest.auth.request_token({
 
 # Resulting token capabilities:
 # {
-#   "chat:bob": ["subscribe"],
-#   "status": ["subscribe", "history"]
+#   "your-namespace:user-123": ["subscribe"],
+#   "notifications": ["subscribe", "history"]
 # }
-```
-
-```php
-/**
-  * API key capabilities:
-  * {
-  *   'chat:*': ['publish', 'subscribe', 'presence'],
-  *   'status': ['subscribe', 'history'],
-  *   'alerts': ['subscribe']
-  * }
-  */
-
-// Token request that specifies capabilities:
-$capabilities = [
-    'chat:bob' => ['subscribe'],  // only 'subscribe' intersects
-    'status' => ['*'],  // '*' intersects with 'subscribe'
-    'secret' => ['publish', 'subscribe']  // key does not have access to 'secret' channel
-];
-
-$tokenDetails = $rest
-    ->auth
-    ->requestToken(
-        ['capability' => json_encode($capabilities)]
-    );
-
-/**
-  * Resulting token capabilities:
-  * {
-  *   'chat:bob': ['subscribe'],
-  *   'status': ['subscribe', 'history']
-  * }
-  */
 ```
 
 ```go
 // API key capabilities:
 // {
-//   "chat:*": ["publish", "subscribe", "presence"],
-//   "status": ["subscribe", "history"],
+//   "your-namespace:*": ["publish", "subscribe", "presence"],
+//   "notifications": ["subscribe", "history"],
 //   "alerts": ["subscribe"]
 // }
 
@@ -382,9 +334,9 @@ rest, _ := ably.NewREST(
 
 // Define the capabilities
 capabilities := map[string][]string{
-  "chat:bob": {"subscribe"},
-  "status":   {"*"},
-  "secret":   {"publish", "subscribe"},
+  "your-namespace:user-123": {"subscribe"},
+  "notifications":           {"*"},
+  "private":                 {"publish", "subscribe"},
 }
 
 capabilitiesJSON, err := json.Marshal(capabilities)
@@ -405,34 +357,8 @@ if err != nil {
 
 // Resulting token capabilities:
 // {
-//   "chat:bob": ["subscribe"],
-//   "status": ["subscribe", "history"]
-// }
-```
-
-```flutter
-// API key capabilities:
-// {
-//   'chat:bob': ['subscribe'],
-//   'status': ['*'],
-//   'secret': ['publish', 'subscribe']
-// }
-
-final tokenParams = ably.TokenParams(
-  capability: jsonEncode({
-    'chat:bob': ['subscribe'],
-    'status': ['*'],
-    'secret': ['publish', 'subscribe']
-  }),
-);
-
-final tokenDetails = await rest.auth.requestToken(tokenParams: tokenParams);
-
-// Resulting token capabilities:
-// {
-//   'chat:bob': ['subscribe'],
-//   'secret': ['publish','subscribe']
-//   'status': ['subscribe', 'history']
+//   "your-namespace:user-123": ["subscribe"],
+//   "notifications": ["subscribe", "history"]
 // }
 ```
 </Code>
@@ -441,56 +367,38 @@ final tokenDetails = await rest.auth.requestToken(tokenParams: tokenParams);
 
 If a set of capabilities are requested, and the intersection between those and the API key's capabilities is empty, then the `TokenRequest` will result in an error.
 
-Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/token#tokens) is requested that specifies a set of capabilities, and there is no intersection between the capabilities of the issuing API key and requested token, then the token request will be rejected. In the following example, the callback will be returned with an error.
+Using the following example, an API key exists with the listed capabilities. If an [Ably Token](/docs/auth/ably-tokens) is requested that specifies a set of capabilities, and there is no intersection between the capabilities of the issuing API key and requested token, then the token request will be rejected. In the following example, the callback will be returned with an error.
 
 <Code>
 ```javascript
   // API key capabilities:
   {
-    'chat': ['*']
+    'your-namespace': ['*']
   }
 
   // Token request that specifies capabilities:
   const tokenDetails = await auth.requestToken({ capability: {
-    'status': ['*']
+    'other-namespace': ['*']
   }});
 ```
 
 ```python
 # API key capabilities:
 # {
-#   "chat": ["*"]
+#   "your-namespace": ["*"]
 # }
 
 token_details = await ably_rest.auth.request_token({
     'capability': json.dumps({
-        {
-            "status": ["*"]
-        }
+        "other-namespace": ["*"]
     })
 })
-```
-
-```php
-/**
-  * API key capabilities:
-  * {
-  *   'chat': ['*']
-  * }
-  */
-
-// Token request that specifies capabilities:
-$tokenDetails = $rest
-    ->auth
-    ->requestToken(
-        ['capability' => json_encode(['status' => ['*']])]
-    );
 ```
 
 ```go
 // API key capabilities:
 // {
-//   "chat": ["*"]
+//   "your-namespace": ["*"]
 // }
 
 rest, _ := ably.NewREST(
@@ -498,7 +406,7 @@ rest, _ := ably.NewREST(
 
 // Define the capabilities
 capabilities := map[string][]string{
-  "status": {"*"},
+  "other-namespace": {"*"},
 }
 
 capabilitiesJSON, err := json.Marshal(capabilities)
@@ -517,201 +425,19 @@ if err != nil {
   log.Fatalf("Failed to request token: %v", err)
 }
 ```
-
-```flutter
-// API key capabilities:
-// {
-//   'status': ['*']
-// }
-final tokenParams = ably.TokenParams(
-  capability: jsonEncode({
-    'status': ['*']
-  }),
-);
-
-final tokenDetails = await realtime.auth.requestToken(tokenParams: tokenParams);
-```
 </Code>
 
 #### Ably JWT capability determination <a id="ably-jwt"/>
 
-Capabilities are determined for [Ably JWTs](/docs/auth/token#jwt) in the following way:
+Capabilities are determined for [JWTs](/docs/auth/jwt) in the following way:
 
 * The capabilities granted to an Ably JWT will be the intersection of the capabilities within the Ably JWT and the capabilities of the associated API key.
 * If the set of capabilities within the Ably JWT have no intersection with the capabilities of the API key, then an error will instead be returned.
 
-## Custom restrictions on channels <a id="custom-restrictions"/>
+## Channel-scoped user claims <a id="custom-restrictions"/>
 
-It is possible for JWTs to contain authenticated claims for users that can be used to allow or disallow certain interactions in your channels.
+JWTs can contain channel-scoped user claims for trusted metadata that other clients can read. See [JWT authentication — channel-scoped claims](/docs/auth/jwt#channel-claims) for details and examples.
 
-Messages can be annotated with trusted metadata copied from the client's authentication token by Ably servers. Clients are unable to directly publish messages with user claim metadata, and claims contained within the authentication token are signed to prevent tampering. Claims can be scoped to individual channels or to namespaces of [channels](/docs/channels). The most specific user claim will be added to the message as part of the `extras` object. Note that this does not apply to presence or metadata messages.
+## Per-connection publish rate limits <a id="jwt-limits"/>
 
-To set the trusted fields you need to include `ably.channel.*` in your JWT authentication payload, for example:
-
-<Code>
-```javascript
-  const claims = {
-    'sub': '1234567890',
-    'name': 'John Doe',
-    'x-ably-capability': <...>,
-    'x-ably-clientId': <...>,
-    'ably.channel.chat1': 'admin', // the user is an admin for the chat1 channel
-    'ably.channel.chat:*': 'moderator', // the user is a moderator in channels within the chat namespace
-    'ably.channel.*': 'guest', // the user is a guest in all other channels
-  }
-```
-
-```python
-claims = {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "x-ably-capability": "<...>",
-    "x-ably-clientId": "<...>",
-    "ably.channel.chat1": "admin",       # the user is an admin for the chat1 channel
-    "ably.channel.chat:*": "moderator",  # the user is a moderator in channels within the chat namespace
-    "ably.channel.*": "guest"            # the user is a guest in all other channels
-}
-```
-
-```php
-$claims = [
-    'sub' => '1234567890',
-    'name' => 'John Doe',
-    'x-ably-capability' => '<...>',
-    'x-ably-clientId' => '<...>',
-    'ably.channel.chat1' => 'admin',         // the user is an admin for the chat1 channel
-    'ably.channel.chat =>*' => 'moderator',  // the user is a moderator in channels within the chat namespace
-    'ably.channel.*' => 'guest'              // the user is a guest in all other channels
-];
-```
-
-```go
-claims := map[string]interface{}{
-  "sub":                   "1234567890",
-  "name":                  "John Doe",
-  "x-ably-capability":     "<...>",
-  "x-ably-clientId":       "<...>",
-  "ably.channel.chat1":    "admin",
-  "ably.channel.chat:*":   "moderator",
-  "ably.channel.*":        "guest",
-}
-```
-
-```flutter
-final claims = {
-  'sub': '1234567890',
-  'name': 'John Doe',
-  'x-ably-capability': '<...>',
-  'x-ably-clientId': '<...>',
-  'ably.channel.chat1': 'admin',
-  'ably.channel.chat:*': 'moderator',
-  'ably.channel.*': 'guest',
-};
-```
-</Code>
-
-The claims from the token are copied into messages, allowing them to be checked for permission:
-
-<Code>
-```javascript
-  const fromModerator = (message) => {
-    const userClaim = message.extras && message.extras.userClaim;
-    return (userClaim && userClaim == 'moderator');
-  }
-```
-
-```python
-def from_moderator(message):
-    user_claim = message.get('extras', {}).get('userClaim')
-    return user_claim == 'moderator' if user_claim else False
-```
-
-```go
-func fromModerator(message map[string]interface{}) bool {
-	// Check if 'extras' exists and is a map
-	if extras, ok := message["extras"].(map[string]interface{}); ok {
-		// Check if 'userClaim' exists and is a string
-		if userClaim, ok := extras["userClaim"].(string); ok {
-			return userClaim == "moderator"
-		}
-	}
-	return false
-}
-```
-
-```flutter
-bool fromModerator(Message message) {
-  final userClaim = message.extras['userClaim'];
-  return userClaim != null && userClaim == 'moderator';
-}
-```
-</Code>
-
-## Using JWT for per connection publish rate limits <a id="jwt-limits"/>
-
-JWTs may specify publish rate limits for a user on particular channels. These limits can be used to prevent any individual user from sending an excessive number of messages in a short period of time.
-
-An example use case is in a large live chat where you may wish to limit users to posting messages no more than once every 10 seconds.
-
-Rate limits can be scoped to individual channels or to [channel namespaces](/docs/channels#namespaces). Note that the rate limit with the most specific scope will be applied to the user.
-
-To set rate limits for individual connections, include `ably.limits.publish.perAttachment.maxRate.<resource-name>` in your JWT authentication payload. The value of this property sets how many messages can be published per second to a channel, or namespace. For example, a value of `5` restricts the rate to 5 messages per second. A value of `0.1` restricts the rate to 1 message every 10 seconds.
-
-The following is an example of setting different rate limits for different channels:
-
-<Code>
-```javascript
-  const claims = {
-    'sub': '1234567890',
-    'name': 'John Doe',
-    'x-ably-capability': <...>,
-    'x-ably-clientId': <...>,
-    'ably.limits.publish.perAttachment.maxRate.chat1': 10, // the user can publish 10 messages per second in channel chat1
-    'ably.limits.publish.perAttachment.maxRate.chat:*': 0.1 // the user can publish a message every 10 seconds in all channels within the chat namespace
-  }
-```
-
-```python
-claims = {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "x-ably-capability": "<...>",
-    "x-ably-clientId": "<...>",
-    "ably.limits.publish.perAttachment.maxRate.chat1": 10,   # the user can publish 10 messages per second in channel chat1
-    "ably.limits.publish.perAttachment.maxRate.chat:*": 0.1  # the user can publish a message every 10 seconds in all channels within the chat namespace
-}
-```
-
-```php
-$claims = [
-    'sub' => '1234567890',
-    'name' => 'John Doe',
-    'x-ably-capability' => '<...>',
-    'x-ably-clientId' => '<...>',
-    'ably.limits.publish.perAttachment.maxRate.chat1' => 10, // the user can publish 10 messages per second in channel chat1
-    'ably.limits.publish.perAttachment.maxRate.chat:*' => 0.1 // the user can publish a message every 10 seconds in all channels within the chat namespace
-]
-```
-
-```go
-claims := map[string]interface{}{
-  "sub":                   "1234567890",
-  "name":                  "John Doe",
-  "x-ably-capability":     "<...>",
-  "x-ably-clientId":       "<...>",
-  "ably.limits.publish.perAttachment.maxRate.chat1":    10.0, // the user can publish 10 messages per second in channel chat1
-  "ably.limits.publish.perAttachment.maxRate.chat:*": 0.1, // the user can publish a message every 10 seconds in all channels within the chat namespace
-}
-```
-
-```flutter
-final claims = {
-  'sub': '1234567890',
-  'name': 'John Doe',
-  'x-ably-capability': '<...>', // Replace with actual capability
-  'x-ably-clientId': '<...>', // Replace with actual client ID
-  'ably.limits.publish.perAttachment.maxRate.chat1': 10, // the user can publish 10 messages per second in channel chat1
-  'ably.limits.publish.perAttachment.maxRate.chat:*': 0.1 // the user can publish a message every 10 seconds in all channels within the chat namespace
-};
-```
-</Code>
+JWTs can specify per-connection publish rate limits to restrict how many messages a client can send. See [JWT authentication — rate limits](/docs/auth/jwt#rate-limits) for details and examples.

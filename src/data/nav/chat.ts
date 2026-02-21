@@ -59,6 +59,10 @@ export default {
           link: '/docs/chat/setup',
         },
         {
+          name: 'Authentication',
+          link: '/docs/chat/authentication',
+        },
+        {
           name: 'Connections',
           link: '/docs/chat/connect',
         },
