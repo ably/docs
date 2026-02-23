@@ -22,6 +22,10 @@ export default {
           link: '/docs/spaces/setup',
         },
         {
+          name: 'Authentication',
+          link: '/docs/spaces/authentication',
+        },
+        {
           name: 'React Hooks',
           link: '/docs/spaces/react',
         },
