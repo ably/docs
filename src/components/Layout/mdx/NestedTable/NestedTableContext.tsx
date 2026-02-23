@@ -5,7 +5,8 @@ export interface TableProperty {
   required?: 'required' | 'optional'; // Optional - not present in 2 or 3 column tables
   description: ReactNode; // ReactNode to preserve markdown elements (links, lists, etc.)
   type?: ReactNode; // ReactNode to preserve markdown elements (links, etc.) - not present in 2 column tables
-  typeReference?: string; // ID of referenced table, if type is a table reference
+  typeReferences: string[]; // IDs of all referenced tables (empty array if none)
+  typeDisplay?: ReactNode; // Cleaned-up display for the type cell (Table elements replaced with their ID text)
 }
 
 export interface TableData {
@@ -61,7 +62,8 @@ export const NestedTableProvider: React.FC<NestedTableProviderProps> = ({ childr
         (prop, i) =>
           prop.name !== data.properties[i]?.name ||
           prop.required !== data.properties[i]?.required ||
-          prop.typeReference !== data.properties[i]?.typeReference,
+          prop.typeReferences.length !== data.properties[i]?.typeReferences.length ||
+          prop.typeReferences.some((ref, j) => ref !== data.properties[i]?.typeReferences[j]),
       );
     if (hasChanged) {
       registryRef.current.set(id, data);

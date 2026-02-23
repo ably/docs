@@ -6,7 +6,7 @@ meta_keywords: "citations, references, source attribution, message annotations, 
 
 AI agents often draw information from external sources such as documents, web pages, or databases. Citations to those sources enable users to verify information, explore sources in detail, and understand where responses came from. Ably's [message annotations](/docs/messages/annotations) provide a model-agnostic, structured way to attach source citations to AI responses without modifying the response content. It enables clients to append information to existing messages on a channel.
 
-This pattern works when publishing complete responses as messages on a channel or when streaming responses using the [message-per-response](/docs/ai-transport/message-per-response) pattern.
+This pattern works when publishing complete responses as messages on a channel or when streaming responses using the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern.
 
 ## Why citations matter <a id="why"/>
 
@@ -21,7 +21,7 @@ Including citations on AI responses provides:
 
 Use [message annotations](/docs/messages/annotations) to attach source metadata to AI response messages without modifying the response content:
 
-1. The agent publishes an AI response as a single message, or builds it incrementally using [message appends](/docs/ai-transport/message-per-response).
+1. The agent publishes an AI response as a single message, or builds it incrementally using [message appends](/docs/ai-transport/token-streaming/message-per-response).
 2. The agent publishes one or more annotations to attach citations to the response message, each referencing the response message [`serial`](/docs/messages#properties).
 3. Ably automatically aggregates annotations and generates summaries showing total counts and groupings (for example, by source domain name).
 4. Clients receive citation summaries automatically and can optionally subscribe to individual annotation events for detailed citation data as part of the realtime stream. Alternatively, clients can obtain annotations for a given message via the REST API.
@@ -179,10 +179,45 @@ citation2.type = "citations:multiple.v1";
 citation2.data = citation2Data;
 channel.annotations.publish(msgSerial, citation2);
 ```
+```python
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+
+# Publish the AI response message
+response = 'The James Webb Space Telescope launched in December 2021 and its first images were released in July 2022.'
+publish_result = await channel.publish('response', response)
+msg_serial = publish_result.serials[0]
+
+# Add citations by annotating the response message
+citation1 = Annotation(
+    type='citations:multiple.v1',
+    name='science.nasa.gov',
+    data={
+        'url': 'https://science.nasa.gov/mission/webb/',
+        'title': 'James Webb Space Telescope - NASA Science',
+        'startOffset': 43,
+        'endOffset': 56,
+        'snippet': 'Webb launched on Dec. 25th 2021'
+    }
+)
+await channel.annotations.publish(msg_serial, citation1)
+
+citation2 = Annotation(
+    type='citations:multiple.v1',
+    name='en.wikipedia.org',
+    data={
+        'url': 'https://en.wikipedia.org/wiki/James_Webb_Space_Telescope',
+        'title': 'James Webb Space Telescope - Wikipedia',
+        'startOffset': 95,
+        'endOffset': 104,
+        'snippet': "The telescope's first image was released to the public on 11 July 2022."
+    }
+)
+await channel.annotations.publish(msg_serial, citation2)
+```
 </Code>
 
 <Aside data-type="note">
-When streaming response tokens using the [message-per-response](/docs/ai-transport/message-per-response) pattern, you can publish citations while the response is still streaming since the `serial` of the response message becomes known after you [publish the initial message](/docs/ai-transport/token-streaming/message-per-response#publishing).
+When streaming response tokens using the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern, you can publish citations while the response is still streaming since the `serial` of the response message becomes known after you [publish the initial message](/docs/ai-transport/token-streaming/message-per-response#publishing).
 </Aside>
 
 <Aside data-type="note">
@@ -228,6 +263,17 @@ channel.subscribe(message -> {
         }
     }
 });
+```
+```python
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}')
+
+def message_handler(message):
+    if message.action == MessageAction.MESSAGE_SUMMARY:
+        citations = message.annotations.summary.get('citations:multiple.v1')
+        if citations:
+            print('Citation summary:', citations)
+
+await channel.subscribe(message_handler)
 ```
 </Code>
 
@@ -300,6 +346,20 @@ channel.annotations.subscribe(annotation -> {
         // Output: Citation: James Webb Space Telescope - Wikipedia (https://en.wikipedia.org/wiki/James_Webb_Space_Telescope)
     }
 });
+```
+```python
+channel_options = ChannelOptions(modes=[ChannelMode.ANNOTATION_SUBSCRIBE])
+channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}', channel_options)
+
+def annotation_handler(annotation):
+    if (annotation.action == AnnotationAction.ANNOTATION_CREATE and
+        annotation.type == 'citations:multiple.v1'):
+        url = annotation.data['url']
+        title = annotation.data['title']
+        print(f"Citation: {title} ({url})")
+        # Output: Citation: James Webb Space Telescope - Wikipedia (https://en.wikipedia.org/wiki/James_Webb_Space_Telescope)
+
+await channel.annotations.subscribe(annotation_handler)
 ```
 </Code>
 

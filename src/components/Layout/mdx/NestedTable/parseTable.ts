@@ -1,4 +1,4 @@
-import { ReactNode, ReactElement, Children, isValidElement } from 'react';
+import { ReactNode, ReactElement, Children, isValidElement, cloneElement } from 'react';
 import { TableProperty } from './NestedTableContext';
 import { Table as BaseTable } from '../Table';
 
@@ -8,12 +8,6 @@ import { Table as BaseTable } from '../Table';
  * Examples: RoomOptions, PresenceConfig, MessageData, StatusEnum
  */
 const TYPE_REFERENCE_PATTERN = /^[A-Z][a-zA-Z0-9]*(Options|Config|Settings|Data|Info|Params|Type|Enum)$/;
-
-/**
- * Pattern for explicit table reference syntax in markdown cells.
- * Matches: <Table id='TypeName'/> or <Table id="TypeName"/>
- */
-const EXPLICIT_TABLE_REFERENCE_PATTERN = /<Table\s+id=["']([^"']+)["']\s*\/?>/i;
 
 /**
  * Extracts text content from React children recursively
@@ -50,21 +44,20 @@ function getTypeName(element: ReactElement): string {
 }
 
 /**
- * Finds a Table element in children and returns its id prop
+ * Finds all Table elements in children and returns their id props
  */
-function findTableElementId(children: ReactNode): string | undefined {
+function findAllTableElementIds(children: ReactNode): string[] {
+  const ids: string[] = [];
+
   if (!children) {
-    return undefined;
+    return ids;
   }
 
   if (Array.isArray(children)) {
     for (const child of children) {
-      const result = findTableElementId(child);
-      if (result) {
-        return result;
-      }
+      ids.push(...findAllTableElementIds(child));
     }
-    return undefined;
+    return ids;
   }
 
   if (isValidElement(children)) {
@@ -73,48 +66,98 @@ function findTableElementId(children: ReactNode): string | undefined {
 
     // Check if this is a Table element with an id
     if ((typeName === 'Table' || typeName === 'NestedTable') && element.props.id) {
-      return element.props.id;
+      ids.push(element.props.id);
     }
 
     // Recurse into children
-    return findTableElementId(element.props.children);
+    ids.push(...findAllTableElementIds(element.props.children));
   }
 
-  return undefined;
+  return ids;
 }
 
 /**
- * Checks if a type cell contains a Table reference.
+ * Finds all Table references in type text.
  * Supports two syntaxes:
- * 1. Explicit: <Table id='TypeName'/> or <Table id="TypeName"/>
- * 2. Implicit: PascalCase names ending in recognized suffixes (see TYPE_REFERENCE_PATTERN)
+ * 1. Explicit: <Table id='TypeName'/> or <Table id="TypeName"/> (may appear multiple times)
+ * 2. Implicit: PascalCase names ending in recognized suffixes (only when entire text is one type name)
  */
-function extractTableReference(typeText: string): string | undefined {
+function extractAllTableReferences(typeText: string): string[] {
   const trimmed = typeText.trim();
 
-  // Check for explicit <Table id='X'/> syntax (rendered as text in markdown cells)
-  const explicitMatch = trimmed.match(EXPLICIT_TABLE_REFERENCE_PATTERN);
-  if (explicitMatch) {
-    return explicitMatch[1];
+  // Check for explicit <Table id='X'/> syntax (may appear multiple times)
+  const matches = [...trimmed.matchAll(/<Table\s+id=["']([^"']+)["']\s*\/?>/gi)];
+  if (matches.length > 0) {
+    return matches.map((m) => m[1]);
   }
 
-  // Check for implicit type name reference
+  // Fallback: implicit type name reference (only when the entire text is one type name)
   if (TYPE_REFERENCE_PATTERN.test(trimmed)) {
-    return trimmed;
+    return [trimmed];
   }
 
-  return undefined;
+  return [];
+}
+
+/**
+ * Walks React children and replaces Table/NestedTable elements with their ID as plain text.
+ * Produces a clean display like "PresenceData or String" from mixed React children.
+ */
+function buildTypeDisplay(children: ReactNode): ReactNode {
+  if (!children) {
+    return children;
+  }
+
+  if (typeof children === 'string' || typeof children === 'number') {
+    return children;
+  }
+
+  if (Array.isArray(children)) {
+    return children.map((child, i) => {
+      const result = buildTypeDisplay(child);
+      if (isValidElement(result)) {
+        return cloneElement(result, { key: i });
+      }
+      return result;
+    });
+  }
+
+  if (isValidElement(children)) {
+    const element = children as ReactElement<{ id?: string; children?: ReactNode }>;
+    const typeName = getTypeName(element);
+
+    // Replace Table/NestedTable elements with their ID as plain text
+    if ((typeName === 'Table' || typeName === 'NestedTable') && element.props.id) {
+      return element.props.id;
+    }
+
+    // For other elements, recurse into their children
+    if (element.props.children) {
+      const newChildren = buildTypeDisplay(element.props.children);
+      return cloneElement(element, {}, newChildren);
+    }
+  }
+
+  return children;
 }
 
 /**
  * Extracts type information from a table cell's children.
- * Returns both the ReactNode for display and any detected type reference.
+ * Returns the ReactNode for display, all detected type references, and a cleaned-up display.
  */
-function extractTypeInfo(cellChildren: ReactNode): { type: ReactNode; typeReference: string | undefined } {
+function extractTypeInfo(cellChildren: ReactNode): {
+  type: ReactNode;
+  typeReferences: string[];
+  typeDisplay: ReactNode | undefined;
+} {
   const typeText = extractText(cellChildren).trim();
-  const tableElementId = findTableElementId(cellChildren);
-  const typeReference = tableElementId || extractTableReference(typeText);
-  return { type: cellChildren, typeReference };
+  const elementIds = findAllTableElementIds(cellChildren);
+  const typeReferences = elementIds.length > 0 ? elementIds : extractAllTableReferences(typeText);
+
+  // Build a cleaned-up display if there are references that need replacing
+  const typeDisplay = typeReferences.length > 0 ? buildTypeDisplay(cellChildren) : undefined;
+
+  return { type: cellChildren, typeReferences, typeDisplay };
 }
 
 /**
@@ -208,14 +251,15 @@ export function parseTableChildren(children: ReactNode): TableProperty[] {
       const name = extractText(nameCell?.props?.children);
       const requiredText = extractText(requiredCell?.props?.children).toLowerCase();
       const description = descriptionCell?.props?.children;
-      const { type, typeReference } = extractTypeInfo(typeCell?.props?.children);
+      const { type, typeReferences, typeDisplay } = extractTypeInfo(typeCell?.props?.children);
 
       properties.push({
         name: name.trim(),
         required: requiredText.includes('required') ? 'required' : 'optional',
         description,
         type,
-        typeReference,
+        typeReferences,
+        typeDisplay,
       });
     } else if (cells.length === 3) {
       // 3 columns: Name | Description | Type
@@ -225,13 +269,14 @@ export function parseTableChildren(children: ReactNode): TableProperty[] {
 
       const name = extractText(nameCell?.props?.children);
       const description = descriptionCell?.props?.children;
-      const { type, typeReference } = extractTypeInfo(typeCell?.props?.children);
+      const { type, typeReferences, typeDisplay } = extractTypeInfo(typeCell?.props?.children);
 
       properties.push({
         name: name.trim(),
         description,
         type,
-        typeReference,
+        typeReferences,
+        typeDisplay,
       });
     } else if (cells.length === 2) {
       // 2 columns: Name | Description
@@ -244,6 +289,7 @@ export function parseTableChildren(children: ReactNode): TableProperty[] {
       properties.push({
         name: name.trim(),
         description,
+        typeReferences: [],
       });
     }
   });

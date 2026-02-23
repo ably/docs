@@ -76,7 +76,8 @@ export default {
   },
   android: {
     label: 'Android',
-    syntaxHighlighterKey: 'java',
+    syntaxHighlighterKey: 'kotlin',
+    alias: 'android-full',
   },
   flutter: {
     label: 'Flutter',
@@ -84,10 +85,6 @@ export default {
   },
   kotlin: {
     label: 'Kotlin',
-    syntaxHighlighterKey: 'kotlin',
-  },
-  jetpack: {
-    label: 'Jetpack Compose',
     syntaxHighlighterKey: 'kotlin',
   },
   realtime: {

@@ -240,6 +240,15 @@ export default {
           index: true,
         },
         {
+          name: 'Getting started',
+          pages: [
+            {
+              name: 'APNs',
+              link: '/docs/push/getting-started/apns',
+            },
+          ],
+        },
+        {
           name: 'Configure and activate',
           pages: [
             {
@@ -331,6 +340,10 @@ export default {
         {
           name: 'Data streaming',
           link: '/docs/guides/pub-sub/data-streaming',
+        },
+        {
+          name: 'Dashboards and visualizations',
+          link: '/docs/guides/pub-sub/dashboards-and-visualizations',
         },
       ],
     },

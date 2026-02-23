@@ -7,7 +7,7 @@ Token streaming with message-per-response is a pattern where every token generat
 
 This pattern is useful for chat-style applications where you want each complete AI response stored as a single message in history, making it easy to retrieve and display multi-response conversation history. Each agent response becomes a single message that grows as tokens are appended, allowing clients joining mid-stream to catch up efficiently without processing thousands of individual tokens.
 
-The message-per-response pattern includes [automatic rate limit protection](/docs/ai-transport/token-rate-limits#per-response) through rollups, making it the recommended approach for most token streaming use cases.
+The message-per-response pattern includes [automatic rate limit protection](/docs/ai-transport/token-streaming/token-rate-limits#per-response) through rollups, making it the recommended approach for most token streaming use cases.
 
 ## How it works <a id="how-it-works"/>
 
@@ -40,6 +40,19 @@ To enable the channel rule:
 6. Click "Create channel rule".
 
 The examples on this page use the `ai:` namespace prefix, which assumes you have configured the rule for `ai`.
+
+Your token or API key needs the following [capabilities](/docs/auth/capabilities) on the channel:
+
+| Capability | Purpose |
+| --- | --- |
+| `subscribe` | Receive messages |
+| `history` | Retrieve historical messages for [client hydration](#hydration) |
+| `publish` | Create new messages |
+| `message-update-own` | Append to your own messages |
+
+<Aside data-type="note">
+Use `message-update-any` instead of `message-update-own` if a different client (different `clientId`) needs to append to messages it did not create.
+</Aside>
 
 ## Publishing tokens <a id="publishing"/>
 
@@ -116,6 +129,10 @@ for (Event event : stream) {
 
 When publishing tokens, don't await the `channel.appendMessage()` call. Ably rolls up acknowledgments and debounces them for efficiency, which means awaiting each append would unnecessarily slow down your token stream. Messages are still published in the order that `appendMessage()` is called, so delivery order is not affected.
 
+<Aside data-type="note">
+When publishing multiple content parts in sequence, await all pending appends for the current message before creating the next message. This prevents pipelined appends from the first message interleaving with the create of the second.
+</Aside>
+
 <Code>
 ```javascript
 // ✅ Do this - append without await for maximum throughput
@@ -172,8 +189,132 @@ for (Event event : stream) {
 ```
 </Code>
 
+### Handling append failures <a id="append-failures"/>
+
+The examples above append successive tokens to a response message by pipelining the append operations — that is, the agent publishes an append operation without waiting for prior operations to complete. This is necessary in order to avoid the append rate being capped by the round-trip time from the agent to the Ably endpoint. However, this means that the agent does not await the outcome of each append operation, and that can result in the agent continuing to submit append operations after an earlier operation has failed. For example, if a rate limit is exceeded, a single append may be rejected while the following tokens continue to be accepted.
+
+The agent needs to obtain the outcome of each append operation, and take corrective action in the event that any operation failed for some reason. A simple but effective way to do this is to ensure that, if streaming of a response fails for any reason, the message is updated with the final complete response text once it is available. This means that although the streaming experience is disrupted in the case of failure, there is no consistency problem with the final result once the response completes.
+
+To detect append failures, keep a reference to each append operation and check for rejections after the stream completes:
+
+<Code>
+```javascript
+// Publish initial message and capture the serial for appending tokens
+const { serials: [msgSerial] } = await channel.publish({ name: 'response', data: '' });
+
+// Track all append operations
+const appendPromises = [];
+
+// Track the full response for recovery
+let fullResponse = '';
+
+for await (const event of stream) {
+  if (event.type === 'token') {
+    fullResponse += event.text;
+    appendPromises.push(channel.appendMessage({ serial: msgSerial, data: event.text }));
+  }
+}
+
+// Check for any failures after the stream completes
+const results = await Promise.allSettled(appendPromises);
+const failed = results.some(result => result.status === 'rejected');
+
+if (failed) {
+  // Replace the message with the full response
+  await channel.updateMessage({ serial: msgSerial, data: fullResponse });
+}
+```
+
+```python
+# Publish initial message and capture the serial for appending tokens
+message = Message(name='response', data='')
+result = await channel.publish(message)
+msg_serial = result.serials[0]
+
+# Track all append operations
+append_operations = []
+
+# Track the full response for recovery
+full_response = ''
+
+async for event in stream:
+    if event['type'] == 'token':
+        full_response += event['text']
+        append_operations.append(
+            channel.append_message(serial=msg_serial, data=event['text'])
+        )
+
+# Check for any failures after the stream completes
+results = await asyncio.gather(*append_operations, return_exceptions=True)
+failed = any(isinstance(r, Exception) for r in results)
+
+if failed:
+    # Replace the message with the full response
+    await channel.update_message(serial=msg_serial, data=full_response)
+```
+
+```java
+// Publish initial message and capture the serial for appending tokens
+CompletableFuture<PublishResult> publishFuture = new CompletableFuture<>();
+channel.publish("response", "", new Callback<PublishResult>() {
+    @Override
+    public void onSuccess(PublishResult result) {
+        publishFuture.complete(result);
+    }
+
+    @Override
+    public void onError(ErrorInfo reason) {
+        publishFuture.completeExceptionally(AblyException.fromErrorInfo(reason));
+    }
+});
+String msgSerial = publishFuture.get().serials[0];
+
+// Track all append operations
+List<CompletableFuture<Void>> appendFutures = new ArrayList<>();
+
+// Track the full response for recovery
+StringBuilder fullResponse = new StringBuilder();
+
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        fullResponse.append(event.getText());
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        channel.appendMessage(msgSerial, event.getText(), new Callback<UpdateDeleteResult>() {
+            @Override
+            public void onSuccess(UpdateDeleteResult result) {
+                future.complete(null);
+            }
+
+            @Override
+            public void onError(ErrorInfo reason) {
+                future.completeExceptionally(AblyException.fromErrorInfo(reason));
+            }
+        });
+        appendFutures.add(future);
+    }
+}
+
+// Check for any failures after the stream completes
+boolean failed = false;
+for (CompletableFuture<Void> future : appendFutures) {
+    try {
+        future.get();
+    } catch (Exception e) {
+        failed = true;
+    }
+}
+
+if (failed) {
+    // Replace the message with the full response
+    channel.updateMessage(msgSerial, fullResponse.toString());
+}
+```
+</Code>
+
+If any append fails, use `updateMessage()` to replace the message content with the complete response. This ensures subscribers receive the full response regardless of any gaps caused by failed appends. The `message.update` action replaces the entire message content, so subscribers will have the complete response after processing the update.
+
 <Aside data-type="important">
-Append only supports concatenating data of the same type as the original message. For example, if the initial message data is a string, all appended tokens must also be strings. If the initial message data is binary, all appended tokens must be binary.
+Append only supports concatenating data of the same type as the original message. For example, if the initial message data is a string, all appended tokens must also be strings. If the initial message data is binary, all appended tokens must be binary. When streaming text content, use raw strings for the `data` field rather than JSON-encoded strings. Ably concatenates the `data` from each append, so JSON-encoding each chunk produces invalid JSON when concatenated.
 </Aside>
 
 <Aside data-type="note">
@@ -181,6 +322,10 @@ Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on 
 </Aside>
 
 This pattern allows publishing append operations for multiple concurrent model responses on the same channel. As long as you append to the correct message serial, tokens from different responses will not interfere with each other, and the final concatenated message for each response will contain only the tokens from that response.
+
+<Aside data-type="further-reading">
+To signal when a response is complete or support user-initiated cancellation, see [Completion and cancellation](/docs/ai-transport/messaging/completion-and-cancellation).
+</Aside>
 
 ### Configuring rollup behaviour <a id="rollups"/>
 
@@ -215,7 +360,7 @@ The `appendRollupWindow` parameter controls how many tokens are combined into ea
 The default 40ms window strikes a balance, delivering tokens at 25 messages per second - smooth enough for a great user experience while allowing you to run two simultaneous response streams on a single connection. If you need to support more concurrent streams, increase the rollup window (up to 500ms), accepting that tokens will arrive in more noticeable batches. Alternatively, instantiate a separate Ably client which uses its own connection, giving you access to additional message rate capacity.
 
 <Aside data-type="further-reading">
-For more details on rate limits and rollup behavior, see [Token streaming limits](/docs/ai-transport/token-rate-limits#rollup).
+For more details on rate limits and rollup behavior, see [Token streaming limits](/docs/ai-transport/token-streaming/token-rate-limits#rollup).
 </Aside>
 
 ## Subscribing to token streams <a id="subscribing"/>
@@ -225,6 +370,10 @@ Subscribers receive different message actions depending on when they join and ho
 - `message.create`: Indicates a new response has started (i.e. a new message was created). The message `data` contains the initial content (often empty or the first token). Store this as the beginning of a new response using `serial` as the identifier.
 - `message.append`: Contains a single token fragment to append. The message `data` contains only the new token, not the full concatenated response. Append this token to the existing response identified by `serial`.
 - `message.update`: Contains the whole response up to that point. The message `data` contains the full concatenated text so far. Replace the entire response content with this data for the message identified by `serial`. This action occurs when the channel needs to resynchronize the full message state, such as after a client [resumes](/docs/connect/states#resume) from a transient disconnection.
+
+<Aside data-type="note">
+During live streaming, Ably may merge multiple rapid appends into a single delivery containing their concatenated data (append conflation), or deliver an append as a `message.update` with the full accumulated payload instead of just the delta. The subscriber code handles both cases: `message.append` contains only the new token, while `message.update` contains the full text so far and replaces the accumulated content. Do not assume that one append delivery corresponds to exactly one token.
+</Aside>
 
 <Code>
 ```javascript
@@ -444,9 +593,8 @@ await channel.subscribe((message) => {
 // Fetch history up until the point of attachment
 let page = await channel.history({ untilAttach: true });
 
-// Paginate backwards through history
+// Paginate through all historical messages
 while (page) {
-  // Messages are newest-first
   for (const message of page.items) {
     // message.data contains the full concatenated text
     responses.set(message.serial, message.data);
@@ -482,9 +630,8 @@ await channel.subscribe(on_message)
 # Fetch history up until the point of attachment
 page = await channel.history(until_attach=True)
 
-# Paginate backwards through history
+# Paginate through all historical messages
 while page:
-    # Messages are newest-first
     for message in page.items:
         # message.data contains the full concatenated text
         responses[message.serial] = message.data
@@ -520,9 +667,8 @@ channel.subscribe(message -> {
 // Fetch history up until the point of attachment
 PaginatedResult<Message> page = channel.history(new Param("untilAttach", "true"));
 
-// Paginate backwards through history
+// Paginate through all historical messages
 while (page != null) {
-    // Messages are newest-first
     for (Message message : page.items()) {
         // message.data contains the full concatenated text
         responses.put(message.serial, (String) message.data);
@@ -773,7 +919,7 @@ Alternatively, instead of including `responseId` in message [`extras`](/docs/mes
 
 #### Hydrate using history
 
-Load completed responses from your database, then use [channel history](/docs/storage-history/history) with the [`untilAttach` option](/docs/storage-history/history#continuous-history) to catch up on any in-progress responses. Use the timestamp of the last completed response to start pagination from that point forward, ensuring continuity with live message delivery.
+Load completed responses from your database, then use [channel history](/docs/storage-history/history) with the [`untilAttach` option](/docs/storage-history/history#continuous-history) to catch up on any in-progress responses. Use the timestamp of the last completed response as a lower bound, so that only messages after that timestamp are retrieved, ensuring continuity with live message delivery.
 
 <Code>
 ```javascript
@@ -823,7 +969,6 @@ await channel.subscribe((message) => {
 let page = await channel.history({
   untilAttach: true,
   start: latestTimestamp,
-  direction: 'forwards'
 });
 
 // Paginate through all missed messages
@@ -887,7 +1032,6 @@ await channel.subscribe(on_message)
 page = await channel.history(
     until_attach=True,
     start=latest_timestamp,
-    direction='forwards'
 )
 
 # Paginate through all missed messages
@@ -952,8 +1096,7 @@ channel.subscribe(message -> {
 // Fetch history from the last completed response until attachment
 PaginatedResult<Message> page = channel.history(
     new Param("untilAttach", "true"),
-    new Param("start", String.valueOf(latestTimestamp)),
-    new Param("direction", "forwards")
+    new Param("start", String.valueOf(latestTimestamp))
 );
 
 // Paginate through all missed messages

@@ -82,8 +82,158 @@ for (Event event : stream) {
 
 This approach maximizes throughput while maintaining ordering guarantees, allowing you to stream tokens as fast as your AI model generates them.
 
+### Handling publish failures <a id="publish-failures"/>
+
+The examples above publish successive tokens by pipelining the publish operations — that is, the agent publishes a token without waiting for prior operations to complete. This is necessary in order to avoid the publish rate being capped by the round-trip time from the agent to the Ably endpoint. However, this means that the agent does not await the outcome of each publish operation, and that can result in the agent continuing to publish tokens after an earlier publish has failed. For example, if a rate limit is exceeded, a single token may be rejected while the following tokens continue to be accepted.
+
+The agent needs to obtain the outcome of each publish operation, and take corrective action in the event that any operation failed for some reason. A simple but effective way to do this is to ensure that, if streaming fails for any reason, a recovery message containing the complete response text is published once it is available. This means that although the streaming experience is disrupted in the case of failure, subscribers can replace their accumulated tokens with the complete response.
+
+To detect publish failures, keep a reference to each publish operation and check for rejections after the stream completes:
+
+<Code>
+```javascript
+// Track all publish operations
+const publishPromises = [];
+
+// Track the full response for recovery
+let fullResponse = '';
+
+for await (const event of stream) {
+  if (event.type === 'token') {
+    fullResponse += event.text;
+    publishPromises.push(channel.publish('token', event.text));
+  }
+}
+
+// Check for any failures after the stream completes
+const results = await Promise.allSettled(publishPromises);
+const failed = results.some(result => result.status === 'rejected');
+
+if (failed) {
+  // Publish the complete response as a recovery message
+  await channel.publish('response-complete', fullResponse);
+}
+```
+
+```python
+# Track all publish operations
+publish_operations = []
+
+# Track the full response for recovery
+full_response = ''
+
+async for event in stream:
+    if event['type'] == 'token':
+        full_response += event['text']
+        publish_operations.append(channel.publish(Message(name='token', data=event['text'])))
+
+# Check for any failures after the stream completes
+results = await asyncio.gather(*publish_operations, return_exceptions=True)
+failed = any(isinstance(r, Exception) for r in results)
+
+if failed:
+    # Publish the complete response as a recovery message
+    await channel.publish(Message(name='response-complete', data=full_response))
+```
+
+```java
+// Track all publish operations
+List<CompletableFuture<Void>> publishFutures = new ArrayList<>();
+
+// Track the full response for recovery
+StringBuilder fullResponse = new StringBuilder();
+
+for (Event event : stream) {
+    if (event.getType().equals("token")) {
+        fullResponse.append(event.getText());
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        channel.publish("token", event.getText(), new Callback<PublishResult>() {
+            @Override
+            public void onSuccess(PublishResult result) {
+                future.complete(null);
+            }
+
+            @Override
+            public void onError(ErrorInfo reason) {
+                future.completeExceptionally(AblyException.fromErrorInfo(reason));
+            }
+        });
+        publishFutures.add(future);
+    }
+}
+
+// Check for any failures after the stream completes
+boolean failed = false;
+for (CompletableFuture<Void> future : publishFutures) {
+    try {
+        future.get();
+    } catch (Exception e) {
+        failed = true;
+    }
+}
+
+if (failed) {
+    // Publish the complete response as a recovery message
+    channel.publish("response-complete", fullResponse.toString());
+}
+```
+</Code>
+
+If any publish fails, publish a new message with a different event type (such as `response-complete`) containing the full response. Subscribers should handle this event by replacing any tokens they have accumulated for that response:
+
+<Code>
+```javascript
+let response = '';
+
+// Handle individual tokens
+await channel.subscribe('token', (message) => {
+  response += message.data;
+});
+
+// Handle recovery message that replaces all previous tokens
+await channel.subscribe('response-complete', (message) => {
+  response = message.data;
+});
+```
+
+```python
+response = ''
+
+# Handle individual tokens
+def on_token(message):
+    global response
+    response += message.data
+
+await channel.subscribe('token', on_token)
+
+# Handle recovery message that replaces all previous tokens
+def on_recovery(message):
+    global response
+    response = message.data
+
+await channel.subscribe('response-complete', on_recovery)
+```
+
+```java
+StringBuilder response = new StringBuilder();
+
+// Handle individual tokens
+channel.subscribe("token", message -> {
+    response.append((String) message.data);
+});
+
+// Handle recovery message that replaces all previous tokens
+channel.subscribe("response-complete", message -> {
+    response.setLength(0);
+    response.append((String) message.data);
+});
+```
+</Code>
+
+When streaming multiple concurrent responses, include a `responseId` in message [`extras`](/docs/messages#properties) so subscribers can correctly associate the recovery message with the tokens it replaces. See [token stream with multiple responses](#multiple-responses) for details on correlating messages.
+
 <Aside data-type="important">
-Unlike the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern, the message-per-token pattern requires you to [manage rate limits directly](/docs/ai-transport/token-rate-limits#per-token).
+Unlike the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern, the message-per-token pattern requires you to [manage rate limits directly](/docs/ai-transport/token-streaming/token-rate-limits#per-token).
 </Aside>
 
 <Aside data-type="note">
