@@ -41,6 +41,82 @@ When setting the capabilities for Chat, you can apply them to specific chat room
 
 For more guidance, see the [capabilities documentation](/docs/auth/capabilities).
 
+## User claims <a id="user-claims"/>
+
+<If lang="javascript,react">
+
+User claims enable you to attach server-signed metadata to a user's authentication token that is automatically included on all events they produce in a chat room. This metadata is set server-side via [JWT claims](/docs/auth/token#jwt) and cannot be modified by clients, making it suitable for trusted information such as display names, roles, or custom attributes.
+
+User claims are scoped to individual chat rooms using the `ably.room.<roomName>` key in the JWT payload. The value is an arbitrary string, commonly a JSON-encoded object. When a user publishes a message, enters presence, sends a typing indicator, or sends a reaction in a matching room, the claim is automatically copied by Ably servers into the `userClaim` field of the event.
+
+### Set user claims in your JWT <a id="set-user-claims"/>
+
+Include an `ably.room.<roomName>` key in your JWT claims when generating tokens on your server:
+
+<Code>
+```javascript
+const claims = {
+  'x-ably-capability': JSON.stringify({ '*': ['*'] }),
+  'x-ably-clientId': 'user-123',
+  'ably.room.my-chat-room': JSON.stringify({ display_name: 'Alice', role: 'moderator' }),
+  iat: Math.floor(Date.now() / 1000),
+  exp: Math.floor(Date.now() / 1000) + 3600,
+};
+```
+</Code>
+
+You can also use wildcard patterns to apply claims across multiple rooms:
+
+| Pattern | Description |
+| ------- | ----------- |
+| `ably.room.my-chat-room` | Applies to the `my-chat-room` room only. |
+| `ably.room.support:*` | Applies to all rooms in the `support` namespace. |
+| `ably.room.*` | Applies to all rooms. |
+
+When multiple patterns match a room, the most specific claim is used.
+
+### Read user claims from events <a id="read-user-claims"/>
+
+The `userClaim` field is available on messages, presence members, typing events, room reactions, and message reactions. For example, to read the claim from a message:
+
+<Code>
+```javascript
+room.messages.subscribe((event) => {
+  const { userClaim } = event.message;
+  if (userClaim) {
+    const parsed = JSON.parse(userClaim);
+    console.log(`Message from ${parsed.display_name} (${parsed.role})`);
+  }
+});
+```
+
+```react
+import { useMessages } from '@ably/chat/react';
+
+const MyComponent = () => {
+  useMessages({
+    listener: (event) => {
+      const { userClaim } = event.message;
+      if (userClaim) {
+        const parsed = JSON.parse(userClaim);
+        console.log(`Message from ${parsed.display_name} (${parsed.role})`);
+      }
+    },
+  });
+
+  return <div>...</div>;
+};
+```
+</Code>
+
+<Aside data-type='note'>
+The `userClaim` value is always a string. If you encode a JSON object in the claim, you must parse it on the client. The value is only present if the publishing user's token contained a matching claim for the room.
+</Aside>
+
+For more details on how user claims work at the platform level, including channel-scoped claims and matching rules, see the [custom restrictions](/docs/auth/capabilities#custom-restrictions) documentation.
+
+</If>
+
 ## Install <a id="install"/>
 
 The Chat SDK is built on top of the Ably Pub/Sub SDK and uses that to establish a connection with Ably.
