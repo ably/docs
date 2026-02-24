@@ -13,7 +13,7 @@ const LLMS_TXT_PREAMBLE = `# Ably Documentation
 
 - **Global Edge Network**: Ultra-low latency realtime messaging delivered through a globally distributed edge network
 - **Enterprise Scale**: Built to handle millions of concurrent connections with guaranteed message delivery
-- **Multiple Products**: Pub/Sub, Chat, LiveSync, LiveObjects and Spaces
+- **Multiple Products**: Pub/Sub, AI Transport, Chat, LiveSync, LiveObjects and Spaces
 - **Developer-Friendly SDKs**: SDKs available for JavaScript, Node.js, Java, Python, Go, Objective-C, Swift, Csharp, PHP, Flutter, Ruby, React, React Native, and Kotlin
 
 `;
