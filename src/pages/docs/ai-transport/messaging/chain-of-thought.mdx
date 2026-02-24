@@ -1,0 +1,547 @@
+---
+title: "Chain of thought"
+meta_description: "Stream chain-of-thought reasoning from thinking models in AI applications"
+meta_keywords: "chain of thought, thinking models, extended thinking, reasoning transparency, reasoning streams, thought process, AI transparency, separate channels, model reasoning, tool calls, reasoning tokens"
+---
+
+Modern AI applications stream chain-of-thought reasoning from thinking models alongside their output. Rather than immediately generating output, thinking models work through problems step-by-step, evaluating different approaches and refining their reasoning before and during output generation. Exposing this reasoning provides transparency into how the model arrived at its output, enabling richer user experiences and deeper insights into model behavior.
+
+## What is chain-of-thought? <a id="what"/>
+
+Chain-of-thought is the model's internal reasoning process as it works through a problem. Modern thinking models output this reasoning as a stream of messages that show how they evaluate options, consider trade-offs, and plan their approach while generating output.
+
+A single response from the model may consist of multiple output messages interleaved with reasoning messages, which are all associated with the same model response.
+
+As an application developer, you decide what reasoning to surface and to whom. You may choose to expose all reasoning, filter or summarize it (for example, via a separate model call), or keep internal thinking entirely private.
+
+Surfacing chain-of-thought reasoning provides:
+
+- Trust and transparency: Users can see how the AI reached its conclusions, building confidence in the output
+- Better user experience: Displaying reasoning in realtime provides feedback that the model is making progress during longer operations
+- Enhanced steerability: Users can intervene and redirect the model based on its reasoning so far, guiding it toward better outcomes
+
+## Streaming patterns <a id="patterns"/>
+
+As an application developer, you decide how to surface chain-of-thought reasoning to end users. Ably's pub/sub model is flexible and can accommodate any messaging pattern you choose. Below are a few common patterns used in modern AI applications, each showing both agent-side publishing and client-side subscription. Choose the approach that fits your use case, or create your own variation.
+
+### Inline pattern <a id="inline"/>
+
+In the inline pattern, agents publish reasoning messages to the same channel as model output messages.
+
+By publishing all content to a single channel, the inline pattern:
+
+- Simplifies channel management by consolidating all conversation content in one place
+- Maintains relative order of reasoning and model output messages as the model generates them
+- Supports retrieving reasoning and response messages together from history
+
+#### Publish
+
+Publish both reasoning and model output messages to a single channel.
+
+In the example below, the `responseId` is included in the message [extras](/docs/messages#properties) to allow subscribers to correlate all messages belonging to the same response. The message [`name`](/docs/messages#properties) allows the client distinguish between the different message types:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Example: stream returns events like:
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for await (const event of stream) {
+  if (event.type === 'reasoning') {
+    // Publish reasoning messages
+    await channel.publish({
+      name: 'reasoning',
+      data: event.text,
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  } else if (event.type === 'message') {
+    // Publish model output messages
+    await channel.publish({
+      name: 'message',
+      data: event.text,
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  }
+}
+```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like:
+# { 'type': 'reasoning', 'text': "Let's break down the problem: 27 * 12", 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'First, I can split this into 27 * 10 + 27 * 2', 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'That gives us 270 + 54 = 324', 'responseId': 'resp_abc123' }
+# { 'type': 'message', 'text': '27 * 12 = 324', 'responseId': 'resp_abc123' }
+
+async for event in stream:
+    if event['type'] == 'reasoning':
+        # Publish reasoning messages
+        await channel.publish(Message(
+            name='reasoning',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        ))
+    elif event['type'] == 'message':
+        # Publish model output messages
+        await channel.publish(Message(
+            name='message',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        ))
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like:
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for (Event event : stream) {
+    JsonObject extras = new JsonObject();
+    JsonObject headers = new JsonObject();
+    headers.addProperty("responseId", event.getResponseId());
+    extras.add("headers", headers);
+
+    if (event.getType().equals("reasoning")) {
+        // Publish reasoning messages
+        channel.publish(new Message("reasoning", event.getText(), new MessageExtras(extras)));
+    } else if (event.getType().equals("message")) {
+        // Publish model output messages
+        channel.publish(new Message("message", event.getText(), new MessageExtras(extras)));
+    }
+}
+```
+</Code>
+
+<Aside data-type="note">
+To learn how to stream individual tokens as they are generated, see the [token streaming](/docs/ai-transport/token-streaming) documentation.
+</Aside>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own reasoning and output messages, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+#### Subscribe
+
+Subscribe to both reasoning and model output messages on the same channel.
+
+In the example below, the `responseId` from the message [`extras`](/docs/api/realtime-sdk/messages#extras) is used to group reasoning and model output messages belonging to the same response. The message [`name`](/docs/messages#properties) allows the client distinguish between the different message types:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Track responses by ID, each containing reasoning messages and final response
+const responses = new Map();
+
+// Subscribe to all events on the channel
+await channel.subscribe((message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn('Message missing responseId');
+    return;
+  }
+
+  // Initialize response object if needed
+  if (!responses.has(responseId)) {
+    responses.set(responseId, {
+      reasoning: [],
+      message: ''
+    });
+  }
+
+  const response = responses.get(responseId);
+
+  // Handle each message type
+  switch (message.name) {
+    case 'message':
+      response.message = message.data;
+      break;
+    case 'reasoning':
+      response.reasoning.push(message.data);
+      break;
+  }
+
+  // Display the reasoning and response for this turn
+  console.log(`Response ${responseId}:`, response);
+});
+```
+```python
+channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by ID, each containing reasoning messages and final response
+responses = {}
+
+# Subscribe to all events on the channel
+def on_message(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Message missing responseId')
+        return
+
+    # Initialize response object if needed
+    if response_id not in responses:
+        responses[response_id] = {
+            'reasoning': [],
+            'message': ''
+        }
+
+    response = responses[response_id]
+
+    # Handle each message type
+    if message.name == 'message':
+        response['message'] = message.data
+    elif message.name == 'reasoning':
+        response['reasoning'].append(message.data)
+
+    # Display the reasoning and response for this turn
+    print(f'Response {response_id}:', response)
+
+await channel.subscribe(on_message)
+```
+```java
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by ID, each containing reasoning messages and final response
+Map<String, Response> responses = new ConcurrentHashMap<>();
+
+// Subscribe to all events on the channel
+channel.subscribe(message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Message missing responseId");
+        return;
+    }
+
+    // Initialize response object if needed
+    responses.putIfAbsent(responseId, new Response());
+    Response response = responses.get(responseId);
+
+    // Handle each message type
+    switch (message.name) {
+        case "message":
+            response.setMessage((String) message.data);
+            break;
+        case "reasoning":
+            response.getReasoning().add((String) message.data);
+            break;
+    }
+
+    // Display the reasoning and response for this turn
+    System.out.println("Response " + responseId + ": " + response);
+});
+```
+</Code>
+
+<Aside data-type="further-reading">
+To learn about hydrating responses from channel history, including using `rewind` or `untilAttach`, handling in-progress responses, and correlating with database records, see client hydration in the [message-per-response](/docs/ai-transport/token-streaming/message-per-response#hydration) and [message-per-token](/docs/ai-transport/token-streaming/message-per-token#hydration) documentation.
+</Aside>
+
+### Threading pattern <a id="threading"/>
+
+In the threading pattern, agents publish reasoning messages to a separate channel from model output messages. The reasoning channel name is communicated to clients, allowing them to discover where to obtain reasoning content on demand.
+
+By separating reasoning into its own channel, the threading pattern:
+
+- Keeps the main channel clean and focused on final responses without reasoning output cluttering the conversation history
+- Reduces bandwidth usage by delivering reasoning messages only when users choose to view them
+- Works well for long reasoning threads, where not all the detail needs to be immediately surfaced to the user, but is helpful to see on demand
+
+#### Publish
+
+Publish model output messages to the main conversation channel and reasoning messages to a dedicated reasoning channel. The reasoning channel name includes the response ID, creating a unique reasoning channel per response.
+
+In the example below, the agent sends a `start` control message on the main channel at the beginning of each response, which includes the response ID in the message [`extras`](/docs/api/realtime-sdk/messages#extras). Clients can derive the reasoning channel name from the response ID, allowing them to discover and subscribe to the stream of reasoning messages on demand:
+
+<Aside data-type="note">
+Ably channels are [created when used](/docs/channels#use), so you can dynamically create unique reasoning channels on demand.
+</Aside>
+
+<Code>
+```javascript
+const conversationChannel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Example: stream returns events like:
+// { type: 'start', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for await (const event of stream) {
+  if (event.type === 'start') {
+    // Publish response start control message
+    await conversationChannel.publish({
+      name: 'start',
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  } else if (event.type === 'reasoning') {
+    // Publish reasoning to separate reasoning channel
+    const reasoningChannel = realtime.channels.get(`{{RANDOM_CHANNEL_NAME}}:${event.responseId}`);
+
+    await reasoningChannel.publish({
+      name: 'reasoning',
+      data: event.text
+    });
+  } else if (event.type === 'message') {
+    // Publish model output to main channel
+    await conversationChannel.publish({
+      name: 'message',
+      data: event.text,
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  }
+}
+```
+```python
+conversation_channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Example: stream returns events like:
+# { 'type': 'start', 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': "Let's break down the problem: 27 * 12", 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'First, I can split this into 27 * 10 + 27 * 2', 'responseId': 'resp_abc123' }
+# { 'type': 'reasoning', 'text': 'That gives us 270 + 54 = 324', 'responseId': 'resp_abc123' }
+# { 'type': 'message', 'text': '27 * 12 = 324', 'responseId': 'resp_abc123' }
+
+async for event in stream:
+    if event['type'] == 'start':
+        # Publish response start control message
+        await conversation_channel.publish(Message(
+            name='start',
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        ))
+    elif event['type'] == 'reasoning':
+        # Publish reasoning to separate reasoning channel
+        reasoning_channel = realtime.channels.get(f"{{{{RANDOM_CHANNEL_NAME}}}}:{event['responseId']}")
+
+        await reasoning_channel.publish(
+            name='reasoning',
+            data=event['text']
+        )
+    elif event['type'] == 'message':
+        # Publish model output to main channel
+        await conversation_channel.publish(Message(
+            name='message',
+            data=event['text'],
+            extras={
+                'headers': {
+                    'responseId': event['responseId']
+                }
+            }
+        ))
+```
+```java
+Channel conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Example: stream returns events like:
+// { type: 'start', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: "Let's break down the problem: 27 * 12", responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'First, I can split this into 27 * 10 + 27 * 2', responseId: 'resp_abc123' }
+// { type: 'reasoning', text: 'That gives us 270 + 54 = 324', responseId: 'resp_abc123' }
+// { type: 'message', text: '27 * 12 = 324', responseId: 'resp_abc123' }
+
+for (Event event : stream) {
+    if (event.getType().equals("start")) {
+        // Publish response start control message
+        JsonObject extras = new JsonObject();
+        JsonObject headers = new JsonObject();
+        headers.addProperty("responseId", event.getResponseId());
+        extras.add("headers", headers);
+
+        conversationChannel.publish("start", null, extras);
+    } else if (event.getType().equals("reasoning")) {
+        // Publish reasoning to separate reasoning channel
+        Channel reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:" + event.getResponseId());
+
+        reasoningChannel.publish("reasoning", event.getText());
+    } else if (event.getType().equals("message")) {
+        // Publish model output to main channel
+        JsonObject extras = new JsonObject();
+        JsonObject headers = new JsonObject();
+        headers.addProperty("responseId", event.getResponseId());
+        extras.add("headers", headers);
+
+        conversationChannel.publish("message", event.getText(), extras);
+    }
+}
+```
+</Code>
+
+<Aside data-type="note">
+To learn how to stream individual tokens as they are generated, see the [token streaming](/docs/ai-transport/token-streaming) documentation.
+</Aside>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own reasoning and output messages, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+#### Subscribe
+
+Subscribe to the main conversation channel to receive control messages and model output. Subscribe to the reasoning channel on demand, for example in response to a click event.
+
+In the example below, `responseId` from the message [`extras`](/docs/api/realtime-sdk/messages#extras) is used to derive the reasoning channel name, allowing clients to subscribe to the reasoning channel on demand to retrieve the reasoning associated with a response:
+
+<Code>
+```javascript
+const conversationChannel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Track responses by ID
+const responses = new Map();
+
+// Subscribe to all messages on the main channel
+await conversationChannel.subscribe((message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn('Message missing responseId');
+    return;
+  }
+
+  // Handle response start control message
+  if (message.name === 'start') {
+    responses.set(responseId, '');
+  }
+
+  // Handle model output message
+  if (message.name === 'message') {
+    responses.set(responseId, message.data);
+  }
+});
+
+// Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+async function onClickViewReasoning(responseId) {
+  // Derive reasoning channel name from responseId and
+  // use rewind to retrieve historical reasoning
+  const reasoningChannel = realtime.channels.get(`{{RANDOM_CHANNEL_NAME}}:${responseId}`, {
+    params: { rewind: '2m' }
+  });
+
+  // Subscribe to reasoning messages
+  await reasoningChannel.subscribe((message) => {
+    console.log(`[Reasoning]: ${message.data}`);
+  });
+}
+```
+```python
+conversation_channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+
+# Track responses by ID
+responses = {}
+
+# Subscribe to all messages on the main channel
+def on_message(message):
+    response_id = message.extras.get('headers', {}).get('responseId')
+
+    if not response_id:
+        print('Message missing responseId')
+        return
+
+    # Handle response start control message
+    if message.name == 'start':
+        responses[response_id] = ''
+
+    # Handle model output message
+    if message.name == 'message':
+        responses[response_id] = message.data
+
+await conversation_channel.subscribe(on_message)
+
+# Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+async def on_click_view_reasoning(response_id):
+    # Derive reasoning channel name from responseId and
+    # use rewind to retrieve historical reasoning
+    reasoning_channel = realtime.channels.get(
+        f'{{{{RANDOM_CHANNEL_NAME}}}}:{response_id}',
+        params={'rewind': '2m'}
+    )
+
+    # Subscribe to reasoning messages
+    def on_reasoning(message):
+        print(f'[Reasoning]: {message.data}')
+
+    await reasoning_channel.subscribe(on_reasoning)
+```
+```java
+Channel conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Track responses by ID
+Map<String, String> responses = new ConcurrentHashMap<>();
+
+// Subscribe to all messages on the main channel
+conversationChannel.subscribe(message -> {
+    JsonObject headers = message.extras.asJsonObject().get("headers").getAsJsonObject();
+    String responseId = headers != null ? headers.get("responseId").getAsString() : null;
+
+    if (responseId == null) {
+        System.err.println("Message missing responseId");
+        return;
+    }
+
+    // Handle response start control message
+    if (message.name.equals("start")) {
+        responses.put(responseId, "");
+    }
+
+    // Handle model output message
+    if (message.name.equals("message")) {
+        responses.put(responseId, (String) message.data);
+    }
+});
+
+// Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+void onClickViewReasoning(String responseId) {
+    // Derive reasoning channel name from responseId and
+    // use rewind to retrieve historical reasoning
+    ChannelOptions options = new ChannelOptions();
+    options.params = Map.of("rewind", "2m");
+    Channel reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:" + responseId, options);
+
+    // Subscribe to reasoning messages
+    reasoningChannel.subscribe(message -> {
+        System.out.println("[Reasoning]: " + message.data);
+    });
+}
+```
+</Code>
+
+<Aside data-type="further-reading">
+For more advanced hydration strategies, including using channel history with `untilAttach`, handling in-progress responses, and correlating with database records, see client hydration in the [message-per-response](/docs/ai-transport/token-streaming/message-per-response#hydration) and [message-per-token](/docs/ai-transport/token-streaming/message-per-token#hydration) documentation.
+</Aside>

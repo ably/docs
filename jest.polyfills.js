@@ -19,3 +19,13 @@ Reflect.set(globalThis, 'Request', Request);
 Reflect.set(globalThis, 'Response', Response);
 Reflect.set(globalThis, 'Headers', Headers);
 Reflect.set(globalThis, 'FormData', FormData);
+
+// Polyfill BroadcastChannel for MSW 2.x
+const { BroadcastChannel } = require('node:worker_threads');
+Reflect.set(globalThis, 'BroadcastChannel', BroadcastChannel);
+
+// Polyfill Web Streams API for MSW 2.x
+const { ReadableStream, WritableStream, TransformStream } = require('node:stream/web');
+Reflect.set(globalThis, 'ReadableStream', ReadableStream);
+Reflect.set(globalThis, 'WritableStream', WritableStream);
+Reflect.set(globalThis, 'TransformStream', TransformStream);

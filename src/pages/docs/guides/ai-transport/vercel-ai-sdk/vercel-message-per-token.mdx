@@ -1,0 +1,357 @@
+---
+title: "Guide: Stream Vercel AI SDK responses using the message-per-token pattern"
+meta_description: "Stream tokens from the Vercel AI SDK over Ably in realtime."
+meta_keywords: "AI, token streaming, Vercel, AI SDK, AI transport, Ably, realtime"
+redirect_from:
+  - /docs/guides/ai-transport/vercel-message-per-token
+---
+
+This guide shows you how to stream AI responses from the [Vercel AI SDK](https://ai-sdk.dev/docs/ai-sdk-core/generating-text) over Ably using the [message-per-token pattern](/docs/ai-transport/token-streaming/message-per-token). Specifically, it implements the [explicit start/stop events approach](/docs/ai-transport/token-streaming/message-per-token#explicit-events), which publishes each response token as an individual message, along with explicit lifecycle events to signal when responses begin and end.
+
+Using Ably to distribute tokens from the Vercel AI SDK enables you to broadcast AI responses to thousands of concurrent subscribers with reliable message delivery and ordering guarantees, ensuring that each client receives the complete response stream with all tokens delivered in order. This approach decouples your AI inference from client connections, enabling you to scale agents independently and handle reconnections gracefully.
+
+<Aside data-type="further-reading">
+To discover other approaches to token streaming, including the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern, see the [token streaming](/docs/ai-transport/token-streaming) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+To follow this guide, you need:
+- Node.js 20 or higher
+- A Vercel AI Gateway API key
+- An Ably API key
+
+Useful links:
+- [Vercel AI Gateway documentation](https://vercel.com/docs/ai-gateway)
+- [Vercel AI SDK documentation](https://ai-sdk.dev/docs)
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+
+Create a new NPM package, which will contain the publisher and subscriber code:
+
+<Code>
+```shell
+mkdir ably-vercel-message-per-token && cd ably-vercel-message-per-token
+npm init -y
+```
+</Code>
+
+Install the required packages using NPM:
+
+<Code>
+```shell
+npm install ai@^6 ably@^2
+```
+</Code>
+
+<Aside data-type="note">
+This guide uses version 6.x of the AI SDK. You can use any model from any [supported provider](https://ai-sdk.dev/providers/ai-sdk-providers) by specifying it as a string (e.g., `'openai/gpt-4o'`, `'anthropic/claude-sonnet-4'`). Some details of interacting with the SDK may differ if using a different major version.
+</Aside>
+
+Export your Vercel AI Gateway API key to the environment, which will be used later in the guide by the Vercel AI SDK:
+
+<Code>
+```shell
+export AI_GATEWAY_API_KEY="your_api_key_here"
+```
+</Code>
+
+## Step 1: Get a streamed response from Vercel AI SDK <a id="step-1"/>
+
+Initialize the Vercel AI SDK and use [`streamText`](https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text) to stream model output as a series of events.
+
+Create a new file `publisher.mjs` with the following contents:
+
+<Code>
+```javascript
+import { streamText } from 'ai';
+
+// Process each streaming event
+function processEvent(event) {
+  console.log(JSON.stringify(event));
+  // This function is updated in the next sections
+}
+
+// Create streaming response from Vercel AI SDK
+async function streamVercelResponse(prompt) {
+  const result = streamText({
+    model: 'openai/gpt-4o',
+    prompt: prompt,
+  });
+
+  // Iterate through streaming events using fullStream
+  for await (const event of result.fullStream) {
+    processEvent(event);
+  }
+}
+
+// Usage example
+streamVercelResponse("Tell me a short joke");
+```
+</Code>
+
+### Understand Vercel AI SDK streaming events <a id="understand-streaming-events"/>
+
+The Vercel AI SDK's [`streamText`](https://ai-sdk.dev/docs/ai-sdk-core/generating-text#streamtext) function provides a [`fullStream`](https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property) property that returns all stream events. Each event includes a `type` property which describes the event type. A complete text response can be constructed from the following event types:
+
+- [`text-start`](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol#text-start-part): Signals the start of a text response. Contains an `id` to correlate subsequent events.
+
+- [`text-delta`](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol#text-delta-part): Contains a single text token in the `text` field. These events represent incremental text chunks as the model generates them.
+
+- [`text-end`](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol#text-end-part): Signals the completion of a text response.
+
+The following example shows the event sequence received when streaming a response:
+
+<Code>
+```json
+// 1. Stream initialization
+{"type":"start"}
+{"type":"start-step","request":{...}}
+{"type":"text-start","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","providerMetadata":{...}}
+
+// 2. Text tokens stream in as delta events
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":"Why"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" don't"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" skeleton"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":"s"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" fight"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" each"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" other"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":"?\n\n"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":"They"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" don't"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" have"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" the"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":" guts"}
+{"type":"text-delta","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","text":"!"}
+
+// 3. Stream completion
+{"type":"text-end","id":"msg_0cc4da489ab9d4d101696f97d7c9548196a04f71d10a3a4c99","providerMetadata":{...}}
+{"type":"finish-step","finishReason":"stop","usage":{"inputTokens":12,"outputTokens":15,"totalTokens":27,"reasoningTokens":0,"cachedInputTokens":0},"providerMetadata":{...}}
+{"type":"finish","finishReason":"stop","totalUsage":{"inputTokens":12,"outputTokens":15,"totalTokens":27,"reasoningTokens":0,"cachedInputTokens":0}}
+```
+</Code>
+
+<Aside data-type="note">
+This is only an illustrative example for a simple "text in, text out" use case and may not reflect the exact sequence of events that you observe from the Vercel AI SDK. The SDK also supports other event types such as `reasoning-delta` for chain-of-thought reasoning, `tool-call` for function calling, and `error` for handling failures. For complete details on all event types and their properties, see [Vercel AI SDK fullStream reference](https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text#full-stream).
+</Aside>
+
+## Step 2: Publish streaming events to Ably <a id="step-2"/>
+
+Publish Vercel AI SDK streaming events to Ably to reliably and scalably distribute them to subscribers.
+
+This implementation follows the [explicit start/stop events pattern](/docs/ai-transport/token-streaming/message-per-token#explicit-events), which provides clear response boundaries.
+
+### Initialize the Ably client <a id="initialize-ably"/>
+
+Add the Ably client initialization to your `publisher.mjs` file:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+
+// Create a channel for publishing streamed AI responses
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+The Ably Realtime client maintains a persistent connection to the Ably service, which allows you to publish tokens at high message rates with low latency.
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own streamed tokens, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+### Map Vercel AI SDK streaming events to Ably messages <a id="map-events"/>
+
+Choose how to map [Vercel AI SDK streaming events](#understand-streaming-events) to Ably [messages](/docs/messages). You can choose any mapping strategy that suits your application's needs. This guide uses the following pattern as an example:
+
+- `start`: Signals the beginning of a response
+- `token`: Contains the incremental text content for each delta
+- `stop`: Signals the completion of a response
+
+Update your `publisher.mjs` file to initialize the Ably client and update the `processEvent()` function to publish events to Ably:
+
+<Code>
+```javascript
+// Track response ID across events
+let responseId = null;
+
+// Process each streaming event and publish to Ably
+function processEvent(event) {
+  switch (event.type) {
+    case 'text-start':
+      // Capture response ID from text-start event
+      responseId = event.id;
+
+      // Publish start event with response ID
+      channel.publish({
+        name: 'start',
+        extras: {
+          headers: { responseId }
+        }
+      });
+      break;
+
+    case 'text-delta':
+      // Publish each text delta as a token
+      channel.publish({
+        name: 'token',
+        data: event.text,
+        extras: {
+          headers: { responseId }
+        }
+      });
+      break;
+
+    case 'text-end':
+      // Publish stop event when stream completes
+      channel.publish({
+        name: 'stop',
+        extras: {
+          headers: { responseId }
+        }
+      });
+      break;
+  }
+}
+```
+</Code>
+
+This implementation:
+
+- Captures the `responseId` from the `text-start` event
+- Publishes a `start` event at the beginning of the response
+- Filters for `text-delta` events and publishes them as `token` events
+- Publishes a `stop` event when the response completes using the `text-end` event
+- All published events include the `responseId` in message [`extras`](/docs/messages#properties) to allow the client to correlate events relating to a particular response
+
+<Aside data-type="note">
+This implementation publishes Ably messages without `await` to maximize throughput. Ably maintains message ordering even without awaiting each publish. For more information, see [Publishing tokens](/docs/ai-transport/token-streaming/message-per-token#publishing).
+</Aside>
+
+Run the publisher to see tokens streaming to Ably:
+
+<Code>
+```shell
+node publisher.mjs
+```
+</Code>
+
+## Step 3: Subscribe to streaming tokens <a id="step-3"/>
+
+Create a subscriber that receives the streaming events from Ably and reconstructs the response.
+
+Create a new file `subscriber.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Get the same channel used by the publisher
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Track responses by ID
+const responses = new Map();
+
+// Handle response start
+await channel.subscribe('start', (message) => {
+  const responseId = message.extras?.headers?.responseId;
+  console.log('\n[Response started]', responseId);
+  responses.set(responseId, '');
+});
+
+// Handle tokens
+await channel.subscribe('token', (message) => {
+  const responseId = message.extras?.headers?.responseId;
+  const token = message.data;
+
+  // Append token to response
+  const currentText = responses.get(responseId) || '';
+  responses.set(responseId, currentText + token);
+
+  // Display token as it arrives
+  process.stdout.write(token);
+});
+
+// Handle response stop
+await channel.subscribe('stop', (message) => {
+  const responseId = message.extras?.headers?.responseId;
+  const finalText = responses.get(responseId);
+
+  console.log('\n[Response completed]', responseId);
+});
+
+console.log('Subscriber ready, waiting for tokens...');
+```
+</Code>
+
+Run the subscriber in a separate terminal:
+
+<Code>
+```shell
+node subscriber.mjs
+```
+</Code>
+
+With the subscriber running, run the publisher in another terminal. The tokens stream in realtime as the AI model generates them.
+
+## Step 4: Stream with multiple publishers and subscribers <a id="step-4"/>
+
+Ably's [channel-oriented sessions](/docs/ai-transport/sessions-identity#connection-oriented-vs-channel-oriented-sessions) enables multiple AI agents to publish responses and multiple users to receive them on a single channel simultaneously. Ably handles message delivery to all participants, eliminating the need to implement routing logic or manage state synchronization across connections.
+
+### Broadcasting to multiple subscribers <a id="broadcasting"/>
+
+Each subscriber receives the complete stream of tokens independently, enabling you to build collaborative experiences or multi-device applications.
+
+Run a subscriber in multiple separate terminals:
+
+<Code>
+```shell
+# Terminal 1
+node subscriber.mjs
+
+# Terminal 2
+node subscriber.mjs
+
+# Terminal 3
+node subscriber.mjs
+```
+</Code>
+
+All subscribers receive the same stream of tokens in realtime.
+
+### Publishing concurrent responses <a id="multiple-publishers"/>
+
+The implementation uses `responseId` in message [`extras`](/docs/messages#properties) to correlate tokens with their originating response. This enables multiple publishers to stream different responses concurrently on the same [channel](/docs/channels), with each subscriber correctly tracking all responses independently.
+
+To demonstrate this, run a publisher in multiple separate terminals:
+
+<Code>
+```shell
+# Terminal 1
+node publisher.mjs
+
+# Terminal 2
+node publisher.mjs
+
+# Terminal 3
+node publisher.mjs
+```
+</Code>
+
+All running subscribers receive tokens from all responses concurrently. Each subscriber correctly reconstructs each response separately using the `responseId` to correlate tokens.
+
+## Next steps
+
+- Learn more about the [message-per-token pattern](/docs/ai-transport/token-streaming/message-per-token) used in this guide
+- Learn about [client hydration strategies](/docs/ai-transport/token-streaming/message-per-token#hydration) for handling late joiners and reconnections
+- Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI enabled applications
+- Explore the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response) for storing complete AI responses as single messages in history

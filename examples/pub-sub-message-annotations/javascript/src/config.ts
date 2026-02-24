@@ -1,6 +1,6 @@
 export const urlParams = new URLSearchParams(window.location.search);
 export const clientId = urlParams.get('clientId') || 'user1';
-// Remember to enable the "Annotations, updates, and deletes" channel rule for the channel
+// Remember to enable the "Annotations, updates, deletes, and appends" channel rule for the channel
 // namespace you're using (the first colon-delimited segment, here, "annotation")
 export const channelName = `annotation:${import.meta.env.VITE_NAME ?? 'annotation:pub-sub-message-annotations'}`;
 

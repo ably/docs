@@ -195,7 +195,7 @@ export default {
           link: '/docs/messages/annotations',
         },
         {
-          name: 'Updates and deletes',
+          name: 'Updates, deletes and appends',
           link: '/docs/messages/updates-deletes',
         },
       ],
@@ -238,6 +238,15 @@ export default {
           name: 'Overview',
           link: '/docs/push',
           index: true,
+        },
+        {
+          name: 'Getting started',
+          pages: [
+            {
+              name: 'APNs',
+              link: '/docs/push/getting-started/apns',
+            },
+          ],
         },
         {
           name: 'Configure and activate',
@@ -322,6 +331,19 @@ export default {
         {
           name: 'Push notifications',
           link: '/docs/faq/push-faqs',
+        },
+      ],
+    },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Data streaming',
+          link: '/docs/guides/pub-sub/data-streaming',
+        },
+        {
+          name: 'Dashboards and visualizations',
+          link: '/docs/guides/pub-sub/dashboards-and-visualizations',
         },
       ],
     },

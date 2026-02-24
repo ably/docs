@@ -1,0 +1,253 @@
+---
+title: Resuming sessions
+description: How clients and agents reconnect to ongoing AI Transport sessions after network interruptions or service restarts
+meta_keywords: "session resumption, reconnection, hydration, presence sync, conversation history, channel history, untilAttach, durable execution, agent restart, message recovery, failover"
+---
+
+AI Transport uses a channel-oriented model where sessions persist independently of individual connections. Both users and agents can disconnect and rejoin without ending the session. When users or agents rejoin, they need to resume the session from where they left off.
+
+An agent or user might resume an existing session when:
+
+- A user goes offline or navigates away before returning, expecting to see the latest conversation state
+- An agent goes offline and comes back online when the user returns
+- An agent resumes after a failover or service restart
+
+## Hydrating presence
+
+When you attach to a channel, Ably automatically syncs the complete current presence set to your client. You can then query the presence set or subscribe to presence events without any additional hydration steps. This works the same way for both users and agents.
+
+For details on obtaining the synced presence set, see [Viewing who is online](/docs/ai-transport/sessions-identity/online-status#viewing-presence).
+
+## User resumes a session
+
+Users resume by reattaching to the same session channel and hydrating the conversation transcript, in-progress model output, or other session state.
+
+### Hydrating conversation history
+
+The hydration strategy you choose depends on your application model and your chosen approach to token streaming. Clients typically hydrate conversation state using one of these patterns:
+
+- Hydrate entirely from the channel: Use [rewind](/docs/channels/options/rewind) or [history](/docs/storage-history/history) to obtain previous messages on the channel.
+- Hydrate in-progress responses from the channel: Load completed messages from your database and catch up on any in-progress responses from the channel.
+
+For detailed examples of hydrating the token stream, see the token streaming documentation:
+- [Message-per-response hydration](/docs/ai-transport/token-streaming/message-per-response#hydration)
+- [Message-per-token hydration](/docs/ai-transport/token-streaming/message-per-token#hydration)
+
+## Agent resumes a session
+
+When an agent restarts, it needs to resume from where it left off. This involves two distinct concerns:
+
+1. Recovering the agent's execution state: The current step in the workflow, local variables, function call results, pending operations, and any other state needed to continue execution. This state is internal to the agent and typically not visible to users.
+
+2. Catching up on session activity: Any user messages, events, or other activity that occurred while the agent was offline.
+
+These are separate problems requiring different solutions. Agent execution state is handled by your application and you choose how to persist and restore the internal state your agent needs to resume.
+
+<Aside data-type="further-reading">
+An emerging pattern for handling agent execution state is **durable execution** - frameworks such as [Temporal](https://temporal.io/), [Vercel workflow](https://vercel.com/docs/workflow), or [LangGraph](https://docs.langchain.com/oss/python/langgraph/durable-execution) that automatically checkpoint execution state and restore it after restarts. These systems help you build resumable agents by handling the complexities of state persistence and recovery. AI Transport complements durable execution by providing the channel and history primitives your agent reconnects to after resuming.
+</Aside>
+
+Ably provides access to channel message history, enabling agents to retrieve any messages sent while they were offline. When your agent comes back online, it reattaches to the same channel and catches up on messages it missed. This channel-oriented model provides several key benefits:
+
+- Guaranteed message delivery: Clients can continue publishing messages even while the agent faults and relocates since the channel exists independently of the agent
+- Reliable catch-up: The agent can retrieve any messages published during the interim when it comes back online
+- Ordered delivery: Messages are delivered in the order they were published, ensuring agents process events in the correct sequence
+- Channel-based addressing: The agent only needs the channel name to reconnect, no need to track individual client connections or manage connection state
+
+### Catching up on messages using history
+
+When an agent resumes, it needs to retrieve messages published while it was offline. Use [channel history](/docs/storage-history/history) with the [`untilAttach` option](/docs/storage-history/history#continuous-history) to catch up on historical messages while preserving continuity with live message delivery.
+
+<Aside data-type="note">
+Clients require the [`history`](/docs/auth/capabilities) capability on the channel to retrieve message history.
+</Aside>
+
+#### Persisted session state
+
+Your agent should persist the following state to enable resumption:
+
+- Channel name: The channel the agent was processing
+- Last processed timestamp: The timestamp of the last message successfully processed by the agent
+
+This state allows the agent to reconnect to the correct channel and retrieve only the messages it missed.
+
+#### Catching up with continuity
+
+The recommended pattern uses `untilAttach` to paginate backwards through history while maintaining continuity with live message delivery. This ensures no messages are lost between history retrieval and subscription.
+
+<Aside data-type="note">
+By default, channels retain messages for 2 minutes without persistence enabled. For longer-term history, enable [persistence](/docs/storage-history/storage#all-message-persistence) on a channel namespace.
+</Aside>
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from 'ably';
+
+const ably = new Ably.Realtime({
+  key: process.env.ABLY_API_KEY,
+  clientId: 'agent:assistant'
+});
+
+// Load persisted session state
+const channelName = await loadChannelName();
+const lastProcessedTimestamp = await loadLastProcessedTimestamp();
+
+// Use a channel in a namespace with persistence enabled
+// to access more than 2 minutes of message history
+const channel = ably.channels.get(channelName);
+
+// Subscribe to live messages (implicitly attaches the channel)
+await channel.subscribe('prompt', (message) => {
+  // Process the live message
+  processMessage(message);
+
+  // Persist the timestamp after successful processing
+  saveLastProcessedTimestamp(message.timestamp);
+});
+
+// Fetch history from the attachment point back to the last checkpoint
+let page = await channel.history({
+  untilAttach: true,
+  start: lastProcessedTimestamp,
+});
+
+// Paginate through all missed messages, storing in oldest-to-newest order
+const missedMessages = [];
+while (page) {
+  missedMessages.unshift(...page.items.reverse());
+
+  // Move to next page if available
+  page = page.hasNext() ? await page.next() : null;
+}
+
+// Process messages oldest-to-newest
+for (const message of missedMessages) {
+  await processMessage(message);
+
+  // Persist the timestamp after successful processing
+  await saveLastProcessedTimestamp(message.timestamp);
+}
+```
+```python
+# Agent code
+import os
+from ably import AblyRealtime
+
+ably = AblyRealtime(
+    key=os.environ.get("ABLY_API_KEY"),
+    client_id="agent:assistant"
+)
+
+# Load persisted session state
+channel_name = await load_channel_name()
+last_processed_timestamp = await load_last_processed_timestamp()
+
+# Use a channel in a namespace with persistence enabled
+# to access more than 2 minutes of message history
+channel = ably.channels.get(channel_name)
+
+# Subscribe to live messages (implicitly attaches the channel)
+def on_prompt(message):
+    # Process the live message
+    process_message(message)
+
+    # Persist the timestamp after successful processing
+    save_last_processed_timestamp(message.timestamp)
+
+await channel.subscribe("prompt", on_prompt)
+
+# Fetch history from the attachment point back to the last checkpoint
+page = await channel.history(
+    until_attach=True,
+    start=last_processed_timestamp,
+)
+
+# Paginate through all missed messages, storing in oldest-to-newest order
+missed_messages = []
+while page:
+    missed_messages = list(reversed(page.items)) + missed_messages
+
+    # Move to next page if available
+    page = await page.next() if page.has_next() else None
+
+# Process messages oldest-to-newest
+for message in missed_messages:
+    await process_message(message)
+
+    # Persist the timestamp after successful processing
+    await save_last_processed_timestamp(message.timestamp)
+```
+```java
+// Agent code
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+import io.ably.lib.types.ClientOptions;
+import io.ably.lib.types.Message;
+import io.ably.lib.types.PaginatedResult;
+import io.ably.lib.types.Param;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+ClientOptions options = new ClientOptions();
+options.key = System.getenv("ABLY_API_KEY");
+options.clientId = "agent:assistant";
+
+AblyRealtime ably = new AblyRealtime(options);
+
+// Load persisted session state
+String channelName = loadChannelName();
+long lastProcessedTimestamp = loadLastProcessedTimestamp();
+
+// Use a channel in a namespace with persistence enabled
+// to access more than 2 minutes of message history
+Channel channel = ably.channels.get(channelName);
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe("prompt", message -> {
+    // Process the live message
+    processMessage(message);
+
+    // Persist the timestamp after successful processing
+    saveLastProcessedTimestamp(message.timestamp);
+});
+
+// Fetch history from the attachment point back to the last checkpoint
+Param[] params = new Param[] {
+    new Param("untilAttach", "true"),
+    new Param("start", String.valueOf(lastProcessedTimestamp))
+};
+PaginatedResult<Message> page = channel.history(params);
+
+// Paginate through all missed messages, storing in oldest-to-newest order
+List<Message> missedMessages = new ArrayList<>();
+while (page != null) {
+    List<Message> items = Arrays.asList(page.items());
+    Collections.reverse(items);
+    missedMessages.addAll(0, items);
+
+    // Move to next page if available
+    page = page.hasNext() ? page.next() : null;
+}
+
+// Process messages oldest-to-newest
+for (Message message : missedMessages) {
+    processMessage(message);
+
+    // Persist the timestamp after successful processing
+    saveLastProcessedTimestamp(message.timestamp);
+}
+```
+</Code>
+
+<Aside data-type="note">
+Live messages can arrive via the subscription while you are still processing historical messages. Your agent should handle this by queueing live messages and processing them only after all historical messages have been processed.
+</Aside>
+
+This pattern provides guaranteed continuity between historical and live message processing by ensuring that:
+
+1. The subscription starts receiving live messages immediately when you subscribe
+2. History retrieval stops exactly at the point the channel attached
+3. No messages are lost between the end of history and the start of live delivery
