@@ -36,8 +36,8 @@ export default {
     laravel: '1.0',
   },
   chat: {
-    javascript: '1.1',
-    react: '1.1',
+    javascript: '1.2',
+    react: '1.2',
     swift: '1.1',
     kotlin: '1.2',
     android: '1.2',
