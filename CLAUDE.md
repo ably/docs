@@ -125,6 +125,34 @@ channel = rest.channels.get('channelName')
 </Code>
 ```
 
+### Line Highlighting
+
+Add `highlight="..."` to a code fence to highlight specific lines. Supports individual lines and ranges, with optional `+` (addition/green) or `-` (removal/orange) prefixes. Unprefixed lines get a neutral blue highlight.
+
+```mdx
+<Code>
+```javascript highlight="+1-2,3,-5-6,7-8"
+const client = new Ably.Realtime('your-api-key');
+const channel = client.channels.get('my-channel');
+channel.unsubscribe();
+// This line has no highlight
+console.log('done');
+console.log('highlighted');
+console.log('neutral range start');
+console.log('neutral range end');
+```
+</Code>
+```
+
+Syntax:
+- `3`: highlight line 3 (blue)
+- `1-6`: highlight lines 1 through 6 (blue)
+- `+3` or `+1-6`: addition highlight (green)
+- `-3` or `-1-6`: removal highlight (orange)
+- Comma-separated for multiple specs
+
+Note: The `highlight` meta is stripped from code fences when compiling markdown for LLMs.
+
 ### Variables in Codeblocks
 
 - `{{API_KEY}}`: Demo API key or user's key selector

@@ -118,6 +118,32 @@ To use nested codeblocks when describing features that are available to the real
     ```
 ```
 
+### Line Highlighting
+
+Add `highlight="..."` after the language identifier to highlight specific lines. Supports individual lines and ranges, with optional `+` (addition/green) or `-` (removal/orange) prefixes. Unprefixed lines get a neutral blue highlight.
+
+```plaintext
+    ```javascript highlight="+1-2,3,-5-6,7-8"
+    const client = new Ably.Realtime('your-api-key');
+    const channel = client.channels.get('my-channel');
+    channel.unsubscribe();
+    // This line has no highlight
+    console.log('done');
+    console.log('highlighted');
+    console.log('neutral range start');
+    console.log('neutral range end');
+    ```
+```
+
+Syntax:
+- `3`: highlight line 3 (blue)
+- `1-6`: highlight lines 1 through 6 (blue)
+- `+3` or `+1-6`: addition highlight (green)
+- `-3` or `-1-6`: removal highlight (orange)
+- Comma-separated for multiple specs
+
+Note: The `highlight` meta is stripped from code fences when compiling markdown for LLMs.
+
 ### In-line code
 
 In-line code should be written between `@` symbols. For example, `the @get()@ method`.

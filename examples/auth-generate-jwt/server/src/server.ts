@@ -1,9 +1,11 @@
 import express from 'express';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import crypto from 'crypto';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../../.env.local') });
 
 const app = express();
@@ -21,8 +23,6 @@ function base64urlEncode(str: string) {
 }
 
 app.get('/generate-jwt', async (_req, res) => {
-  console.log('1 - /generate-jwt endpoint called');
-
   const ablyApiKey = process.env.VITE_ABLY_KEY || '';
   const [apiKeyName, apiKeySecret] = ablyApiKey.split(':');
   try {
@@ -51,8 +51,7 @@ app.get('/generate-jwt', async (_req, res) => {
     const signature = base64urlEncode(hmac.digest('base64'));
     const ablyJwt = base64Header + '.' + base64Claims + '.' + signature;
 
-    console.log('2 - JWT generated: ', ablyJwt);
-    res.json(ablyJwt);
+    res.type('application/jwt').send(ablyJwt);
   } catch (error) {
     res.status(500).json({ error: 'Failed to generate token' });
   }

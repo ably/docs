@@ -78,6 +78,8 @@ const ExamplesRenderer = ({
     Object.entries(files).forEach(([languageKey, languageFiles]) => {
       result[languageKey as LanguageKey] = updateAblyConnectionKey(languageFiles, apiKey, {
         NAME: getRandomChannelName(), // Use CHANNEL_NAME as env var key
+        AUTH_TOKEN_URL: process.env.GATSBY_AUTH_TOKEN_URL || '',
+        AUTH_JWT_URL: process.env.GATSBY_AUTH_JWT_URL || '',
       });
     });
     return result;

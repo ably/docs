@@ -1,12 +1,19 @@
 # Request an Ably Token to authenticate clients
 
+> **Important:** Only use an Ably Token when:
+> - Your capability list is too large and exceeds JWT size limits (JWTs must fit within HTTP header limits, typically around 8 KB).
+> - You need to keep your capability list confidential, as JWTs can be decoded by clients.
+> - You already have a JWT-based auth system and want to embed Ably tokens within your existing JWTs.
+>
+> For all other use cases, [JWTs](/docs/auth/token#jwt) are the recommended authentication method.
+
 Use an Ably Token to securely authenticate your users.
 
 Ably Tokens enable you to grant users access to the Ably platform. They are used to issue time-limited credentials that securely authorize users, and manage which resources each user has access to.
 
-Authentication is the first step for an application to communicate with Ably. The application initializes a client and calls a predefined `authUrl` endpoint on your backend server. This endpoint uses an API key to request a token from Ably and returns it to the requesting client. When the token nears expiry, the `authUrl` is automatically invoked to request a new token.
+Authentication is the first step for an application to communicate with Ably. The application initializes a client with an `authCallback` that fetches credentials from your backend server. This endpoint uses an API key to request a token from Ably and returns it to the requesting client. When the token nears expiry, the `authCallback` is automatically invoked to request a new token.
 
-Authentication is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub SDK provides the authentication mechanism that is utilized by all Ably products. It provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
+Authentication is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub SDK provides the authentication mechanism that is utilized by all Ably products.
 
 ## Resources
 
