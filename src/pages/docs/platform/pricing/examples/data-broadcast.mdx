@@ -2,84 +2,80 @@
 title: Data broadcast pricing example
 meta_description: "A pricing example that uses Ably Pub/Sub for data broadcast. Example shows how message conflation reduces message costs from ~$1,800 to ~$370/month for 10K users across 50 matches."
 meta_keywords: "sports betting, live odds, realtime odds updates, message conflation, Pub/Sub pricing, betting platform, live sports data, odds streaming, realtime data delivery, Ably Pub/Sub pricing"
-intro: "This Pub/Sub example demonstrates consumption-based pricing for a realtime data broadcast – a single source publishing frequent updates to many subscribers."
+intro: "This example shows pricing for a sports betting data broadcast with live odds updates. It uses Ably's per-message and per-minute billing model, and demonstrates how message conflation reduces costs when only the latest value matters. This example uses a sports betting scenario where odds are updated and fanned out to bettors. The same pattern applies to any broadcast where only the latest value matters, such as stock tickers, live scores, auction platforms and transport arrivals."
 ---
-This example uses a sports betting scenario where odds are updated and fanned out to bettors. The same pattern applies to any broadcast where only the latest value matters, such as stock tickers, live scores, auction platforms and transport arrivals.
 
-## Assumptions
+## Scenario
 
-- 10,000 monthly active users
-- 50 live matches per month
-- 200 concurrent viewers per match
-- 2-hour match duration
-- 60-minute average session duration
-- 10 raw odds updates per second from data provider
-- Message conflation enabled (500ms interval)
+- **Monthly active users:** 10,000
+- **Live matches:** 50 per month
+- **Users per match:** 200
+- **Session duration:** 60 minutes average
+- **Odds updates:** 10 per second from data provider
 
-These assumptions generate:
-- [147,600,000 messages](#messages)
-- [2,400,000 connection minutes](#minutes)
-- [4,800,000 channel minutes](#minutes)
+**Total cost: $378.00/month**
 
-<Aside data-type='note'>
-Conflation intervals are configurable from 100ms to 500ms – lower intervals reduce latency; higher intervals reduce message volume and costs.
-</Aside>
+---
 
-## Cost summary
+## Cost breakdown
 
-The high-level cost breakdown for this scenario. Messages are billed for both inbound (published to Ably) and outbound (delivered to subscribers).
+The following breakdown shows the cost of connections, channels and messages in this scenario.
 
-| Item | Calculation | Cost |
-|------|-------------|------|
-| Messages (with conflation) | (3,600,000 inbound + 144,000,000 outbound = 147,600,000) × $2.50/M | $369 |
-| Connection minutes | 2,400,000 × $1.00/M | $2.40 |
-| Channel minutes | 4,800,000 × $1.00/M | $4.80 |
-| Package fee |  | [See plans](/docs/platform/pricing) |
-| **Total** |  | **~$376.20/month** |
+## How messages are counted
 
-## Message breakdown <a id="messages"/>
+Every message has an inbound (published to Ably) and outbound (delivered to subscribers) component. Both are billed.
 
-How the message total is calculated. Conflation reduces outbound delivery from 10 updates/sec to 2 updates/sec (500ms interval).
+One odds update sent to 200 viewers = 201 messages (one sent to Ably + 200 delivered to viewers).
 
-| Item | Calculation | Messages |
-|------|-------------|------|
-| Inbound (from data provider) | 10 updates/sec × 7,200 sec × 50 matches | 3,600,000 |
-| Outbound (to viewers, with conflation) | 2 updates/sec × 7,200 sec × 200 viewers × 50 matches | 144,000,000 |
-| **Total** |  | **147,600,000** |
+**Reducing cost with conflation**
 
+[Message conflation](https://ably.com/docs/channels/options/conflation) removes redundant and outdated messages by only sending the latest message to subscribers, within a specific time frame. Published messages are aggregated for a set period of time, such as every 500ms, evaluated against a conflation key with all but the most recent being discarded and sent to subscribers. For live odds, this is ideal, as users need the current price, not a history of changes.
 
-## Connection and channel minutes <a id="minutes"/>
+In this example, conflation reduces outbound delivery from 10 updates/sec to 2 updates/sec (500ms interval), **saving approximately 80%** at this scale.
 
-The following table shows how connection and channel minute costs are calculated in this example:
+| Message type              | Calculation                                            | Messages    |
+|---------------------------|--------------------------------------------------------|-------------|
+| Sent (from data provider) | 10 updates/sec × 7,200 sec × 50 matches                | 3,600,000   |
+| Delivered (to viewers)    | 2 updates/sec × 7,200 sec × 200 viewers × 50 matches   | 144,000,000 |
+| **Total messages**        | 3,600,000 + 144,000,000                                | 147,600,000 |
+| **Total message cost**    | 147,600,000 × $2.50/M                                  | **$370.00** |
 
-| Metric | Calculation | Monthly | Cost |
-|--------|-------------|---------|------|
-| Connection minutes | 10,000 users × 4 sessions × 60 mins | 2,400,000 | $2.40 |
-| Channel minutes | 40,000 sessions × 60 mins × 2 channels | 4,800,000 | $4.80 |
+---
 
+## How connection and channel minutes are counted
 
-## Why conflation, not batching?
+Both connection minutes and channel minutes are rounded up per million minutes used.
 
-For live betting, [message conflation](/docs/messages#conflation) is the right optimization because:
+### Connection minutes
 
-- Old odds are semantically stale — batching would group outdated prices together
-- Users need the latest price, not a history of price changes
-- Conflation reduces both inbound and outbound message costs
+[Connection minutes](https://ably.com/docs/pricing) are billed based on how long users remain connected.
 
-Use [server-side batching](/docs/messages/batch#server-side) instead when every message matters, for example in a chat use case or when you're sending push notifications.
+| Item                        | Calculation                          | Total          |
+|-----------------------------|--------------------------------------|----------------|
+| Connection minutes          | 10,000 users × 4 sessions × 60 mins  | 2,400,000 mins |
+| **Connection minutes cost** | **2,400,000 × $1.00/M**              | **$3.00**      |
 
-<Aside data-type='note'>
-Without conflation: 723,600,000 messages = ~$1,809 in message costs. Conflation saves ~80%.
-</Aside>
+### Channel minutes
 
-## Further optimization: Delta compression
+[Channel minutes](https://ably.com/docs/pricing) are billed based on how long channels are active for.
 
-For richer payloads such as full market depth or live statistics, [delta compression](/docs/channels/options/deltas) can reduce bandwidth costs by sending only the difference between updates.
+| Item                     | Calculation                              | Total          |
+|--------------------------|------------------------------------------|----------------|
+| Channel minutes          | 40,000 sessions × 60 mins × 2 channels   | 4,800,000 mins |
+| **Channel minutes cost** | **4,800,000 × $1.00/M**                  | **$5.00**      |
 
-| Payload type | Full size | With delta | Bandwidth reduction |
-|--------------|-----------|------------|---------------------|
-| Full market (10+ selections) | 8 KiB | ~2 KiB | 75% |
-| Live stats + odds bundle | 15 KiB | ~4 KiB | 73% |
+---
+
+## Total cost
+
+The total cost of this use case.
+
+| Item               | Cost             |
+|--------------------|------------------|
+| Messages           | $370.00          |
+| Connection minutes | $3.00            |
+| Channel minutes    | $5.00            |
+| **Total cost**     | **$378.00/month** |
 
 <Aside data-type='further-reading'>
 Useful links for exploring this topic in more detail.
