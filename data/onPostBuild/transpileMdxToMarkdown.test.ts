@@ -17,6 +17,7 @@ import {
   transformCodeBlocksWithSubheadings,
   addLanguageSubheadingsToCodeBlocks,
 } from './transpileMdxToMarkdown';
+import type { NavContext } from './generateMarkdownFooter';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -55,6 +56,64 @@ title: Test Fixture
 Content without intro`;
 
       expect(() => transformMdxToMarkdown(input, siteUrl)).not.toThrow();
+    });
+  });
+
+  describe('transformMdxToMarkdown with navContext', () => {
+    it('should append navigation footer when navContext is provided', () => {
+      const input = `---
+title: Test Page
+---
+
+Some content here.`;
+
+      const navContext: NavContext = {
+        prev: { name: 'Previous', url: 'https://ably.com/docs/prev.md', description: 'Previous page.' },
+        next: { name: 'Next', url: 'https://ably.com/docs/next.md', description: 'Next page.' },
+        siblings: [{ name: 'Sibling', url: 'https://ably.com/docs/sibling.md', description: 'A sibling page.' }],
+      };
+
+      const { content } = transformMdxToMarkdown(input, 'https://ably.com', navContext);
+
+      expect(content).toContain('## Page Navigation');
+      expect(content).toContain('- Previous: [Previous](https://ably.com/docs/prev.md): Previous page.');
+      expect(content).toContain('- Next: [Next](https://ably.com/docs/next.md): Next page.');
+      expect(content).toContain('## Related Topics');
+      expect(content).toContain('- [Sibling](https://ably.com/docs/sibling.md): A sibling page.');
+      expect(content).toContain('## Documentation Index');
+      expect(content).toContain('Fetch [llms.txt](https://ably.com/llms.txt)');
+    });
+
+    it('should not append footer when navContext is undefined', () => {
+      const input = `---
+title: Test Page
+---
+
+Some content here.`;
+
+      const { content } = transformMdxToMarkdown(input, 'https://ably.com');
+
+      expect(content).not.toContain('## Page Navigation');
+      expect(content).not.toContain('## Documentation Index');
+    });
+
+    it('should not double-process footer URLs through transformation stages', () => {
+      const input = `---
+title: Test Page
+---
+
+Some content here.`;
+
+      const navContext: NavContext = {
+        next: { name: 'Next', url: 'https://ably.com/docs/next.md', description: 'Next page.' },
+        siblings: [],
+      };
+
+      const { content } = transformMdxToMarkdown(input, 'https://ably.com', navContext);
+
+      // The footer URL should remain exactly as-is (not get .md.md or other double-processing)
+      expect(content).toContain('https://ably.com/docs/next.md');
+      expect(content).not.toContain('https://ably.com/docs/next.md.md');
     });
   });
 
@@ -444,7 +503,9 @@ import Baz from 'qux';
     it('should not add .md to URLs that already have a file extension (.png)', () => {
       const input = '[Image](https://raw.githubusercontent.com/ably/docs/main/src/images/content/diagrams/test.png)';
       const output = convertDocsLinksToMarkdown(input);
-      expect(output).toBe('[Image](https://raw.githubusercontent.com/ably/docs/main/src/images/content/diagrams/test.png)');
+      expect(output).toBe(
+        '[Image](https://raw.githubusercontent.com/ably/docs/main/src/images/content/diagrams/test.png)',
+      );
     });
 
     // Tests for trailing slash normalization
@@ -519,8 +580,7 @@ import Baz from 'qux';
       const input = `"/docs/chat/getting-started/react"`;
       const output = convertJsxLinkProps(input, siteUrl);
       const expected =
-        `"[ably docs chat getting-started react]` +
-        `(http://localhost:3000/docs/chat/getting-started/react)"`;
+        `"[ably docs chat getting-started react]` + `(http://localhost:3000/docs/chat/getting-started/react)"`;
       expect(output).toBe(expected);
     });
 
@@ -558,8 +618,7 @@ import Baz from 'qux';
         `link: '[ably docs chat getting-started javascript]` +
         `(http://localhost:3000/docs/chat/getting-started/javascript)'`;
       const expectedReactLink =
-        `link: '[ably docs chat getting-started react]` +
-        `(http://localhost:3000/docs/chat/getting-started/react)'`;
+        `link: '[ably docs chat getting-started react]` + `(http://localhost:3000/docs/chat/getting-started/react)'`;
       expect(output).toContain(expectedJsLink);
       expect(output).toContain(expectedReactLink);
       // Ensure other content is preserved
@@ -586,8 +645,7 @@ Real prop: link: '/docs/presence'`;
       expect(output).toContain("fetch('/docs/api/posts/123')");
       expect(output).toContain('fetch("/docs/api/posts/456")');
       // Non-code-block content should be converted
-      const expectedPresenceLink =
-        `link: '[ably docs presence](http://localhost:3000/docs/presence)'`;
+      const expectedPresenceLink = `link: '[ably docs presence](http://localhost:3000/docs/presence)'`;
       expect(output).toContain(expectedPresenceLink);
     });
   });
