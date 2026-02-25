@@ -128,6 +128,10 @@ export default {
           name: 'Pricing examples',
           pages: [
             {
+              link: '/docs/platform/pricing/examples/ai-chatbot',
+              name: 'AI support chatbot',
+            },
+            {
               link: '/docs/platform/pricing/examples/livestream',
               name: 'Livestream chat',
             },
@@ -142,10 +146,6 @@ export default {
             {
               link: '/docs/platform/pricing/examples/realtime-dashboard',
               name: 'Realtime dashboard',
-            },
-            {
-              link: '/docs/platform/pricing/examples/ai-chatbot',
-              name: 'AI support chatbot',
             },
           ],
         },
