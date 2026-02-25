@@ -46,6 +46,10 @@ export default {
           link: '/docs/chat/getting-started/swift',
         },
         {
+          name: 'Swift (AsyncSequence)',
+          link: '/docs/chat/getting-started/swift-async-sequence',
+        },
+        {
           name: 'React UI Kit',
           link: '/docs/chat/getting-started/react-ui-kit',
         },
