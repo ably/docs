@@ -16,6 +16,7 @@ import {
   findPrecedingHeadingLevel,
   transformCodeBlocksWithSubheadings,
   addLanguageSubheadingsToCodeBlocks,
+  stripCodeFenceMeta,
 } from './transpileMdxToMarkdown';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -749,6 +750,18 @@ const x = 1;
       expect(output).toBeNull();
     });
 
+    it('should strip highlight meta from language identifier', () => {
+      const input = `
+\`\`\`javascript highlight="2,8"
+const x = 1;
+\`\`\`
+`;
+      const output = transformCodeBlocksWithSubheadings(input, '####');
+      expect(output).toContain('#### Javascript');
+      expect(output).not.toContain('highlight');
+      expect(output).not.toContain('```javascript');
+    });
+
     it('should handle multiple code blocks', () => {
       const input = `
 \`\`\`javascript
@@ -944,6 +957,45 @@ b = 2
       const output = addLanguageSubheadingsToCodeBlocks(input);
       expect(output).toContain('### Javascript');
       expect(output).toContain('#### Python');
+    });
+  });
+
+  describe('stripCodeFenceMeta', () => {
+    it('should strip highlight meta from code fences', () => {
+      const input = '```javascript highlight="2,8"\nconst x = 1;\n```';
+      const output = stripCodeFenceMeta(input);
+      expect(output).toBe('```javascript\nconst x = 1;\n```');
+    });
+
+    it('should leave code fences without meta unchanged', () => {
+      const input = '```javascript\nconst x = 1;\n```';
+      const output = stripCodeFenceMeta(input);
+      expect(output).toBe(input);
+    });
+
+    it('should leave bare code fences unchanged', () => {
+      const input = '```\nconst x = 1;\n```';
+      const output = stripCodeFenceMeta(input);
+      expect(output).toBe(input);
+    });
+
+    it('should handle multiple code fences with and without meta', () => {
+      const input = `\`\`\`javascript highlight="2,8"
+const x = 1;
+\`\`\`
+
+\`\`\`python
+x = 1
+\`\`\`
+
+\`\`\`kotlin highlight="1"
+val x = 1
+\`\`\``;
+      const output = stripCodeFenceMeta(input);
+      expect(output).not.toContain('highlight');
+      expect(output).toContain('```javascript\n');
+      expect(output).toContain('```python\n');
+      expect(output).toContain('```kotlin\n');
     });
   });
 });
