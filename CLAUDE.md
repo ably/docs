@@ -273,6 +273,12 @@ See `writing-style-guide.md` for full details. Key points:
 
 Tests use Jest with React Testing Library. Test files are colocated with source files as `*.test.tsx` or `*.test.ts`.
 
+## Custom Skills
+
+Custom slash commands live in `.claude/commands/`. Available commands:
+
+- `/generate-guide` — Generate an AI Transport guide from example code. Usage: `/generate-guide guides/ai-transport/{provider}-{pattern}`
+
 ## CI/CD
 
 - CI runs in CircleCI
