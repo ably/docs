@@ -1,9 +1,11 @@
 import express from 'express';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import Ably from 'ably';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../../.env.local') });
 
 const app = express();
@@ -19,10 +21,8 @@ app.use(
 const ably = new Ably.Rest(process.env.VITE_ABLY_KEY || '');
 
 app.get('/request-token', async (_req, res) => {
-  console.log('1 - /request-token endpoint called');
   try {
     const tokenRequest = await ably.auth.requestToken({ clientId: 'example-client-id' });
-    console.log('2 - Token generated:', tokenRequest);
     res.json(tokenRequest);
   } catch (error) {
     res.status(500).json({ error: 'Failed to generate token' });

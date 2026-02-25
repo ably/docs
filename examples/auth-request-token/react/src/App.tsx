@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider, useConnectionStateListener } from 'ably/react';
 import './styles/styles.css';
+import { config } from './config';
 
 interface StatusMessage {
   id: number;
@@ -53,9 +54,42 @@ export default function App() {
   ]);
 
   const handleConnect = async () => {
-    // Navigate to authenticated page
-    window.location.href = '/authenticated';
+    // Update first message
+    setMessages((prevMessages) => prevMessages.map((msg) => (msg.id === 1 ? { ...msg, success: true } : msg)));
+
+    // Initialize Ably client with token auth
+    const realtimeClient = new Ably.Realtime({
+      authCallback: async (_tokenParams, callback) => {
+        try {
+          const response = await fetch(config.AUTH_URL || 'http://localhost:3001/request-token');
+          if (!response.ok) {
+            callback(`Auth server error: ${response.status}`, null);
+            return;
+          }
+          const contentType = response.headers.get('content-type');
+          const token = contentType?.includes('application/json')
+            ? await response.json()
+            : await response.text();
+          callback(null, token);
+        } catch (error) {
+          callback(error instanceof Error ? error.message : String(error), null);
+        }
+      },
+    });
+
+    // Update second message
+    setMessages((prevMessages) => prevMessages.map((msg) => (msg.id === 2 ? { ...msg, success: true } : msg)));
+
+    setClient(realtimeClient);
   };
+
+  if (client) {
+    return (
+      <AblyProvider client={client}>
+        <StatusMessages messages={messages} setMessages={setMessages} />
+      </AblyProvider>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
