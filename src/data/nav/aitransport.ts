@@ -160,6 +160,14 @@ export default {
             },
           ],
         },
+        {
+          name: 'LangGraph human-in-the-loop',
+          link: '/docs/guides/ai-transport/langgraph-human-in-the-loop',
+        },
+        {
+          name: 'Vercel AI SDK human-in-the-loop',
+          link: '/docs/guides/ai-transport/vercel-human-in-the-loop',
+        },
       ],
     },
   ],
