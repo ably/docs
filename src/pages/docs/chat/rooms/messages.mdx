@@ -230,11 +230,19 @@ fun MyComponent(room: Room) {
 
 ### Handle self-published messages <a id="self-published-messages"/>
 
-<Aside data-type='important'>
-When you send a message using `send()`, the server echoes it back to all subscribers in the room, including the sender. 
-If your application adds the message to the UI immediately after calling `send()` and also appends it when received via `subscribe()`, the message will appear twice.
-To avoid this, we need to add safety check in the subscribe method that validates incoming message serial and version against existing messages.
-</Aside>
+When you send a message using `send()`, the server echoes it back to all subscribers in the room, including the sender. If your application adds the message to the UI immediately before/after calling `send()` and also appends it when received via `subscribe()`, the message will appear twice. There are two approaches to handle this.
+
+#### Wait for the subscriber <a id="wait-for-subscriber"/>
+
+The recommended approach is to not add the message to the UI immediately before/after calling `send()`. Instead, only append messages to the UI inside the `subscribe()` listener. Since the server echoes every sent message back to the sender as a subscriber event, the message will still appear in the UI when it arrives through the subscription. This eliminates the duplication problem entirely and requires no deduplication logic in the subscriber.
+
+This approach has the advantage that the message list is only written to from a single place — the subscriber. This means you don't need a concurrent data structure or additional synchronization to protect the list from simultaneous writes. The tradeoff is that the sent message must complete a round trip to the server before appearing in the UI. While Ably's realtime delivery is always near-instantaneous, this may introduce a slight delay rarely in poor network conditions.
+
+#### Deduplicate with optimistic UI <a id="deduplicate-optimistic-ui"/>
+
+If your application adds the message to the UI immediately before/after calling `send()` for a more responsive experience, you need to add a safety check in the subscriber to avoid duplicates. Validate the incoming message `serial` and `version` against existing messages.
+
+Because the message list is written to from two places — once before/after `send()` and again inside the subscriber — you must use a concurrent or thread-safe data structure to handle simultaneous writes safely. Additionally, each incoming message requires a lookup through the existing message list to check for duplicates, which adds CPU overhead that grows with the size of the list:
 
 <Code>
 ```javascript
@@ -281,7 +289,7 @@ for await message in messagesSubscription {
 ```
 
 ```kotlin
-val myMessageList: List<Messages>
+val myMessageList: List<Message>
 val subscription = room.messages.subscribe { event: ChatMessageEvent ->
     // Early return if a message with the same serial and version.serial already exists
     val existingMessage = myMessageList.find { it.serial == event.message.serial }
@@ -462,18 +470,13 @@ Use the [`useMessages`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typed
 ```javascript
 import { ChatMessageEventType } from '@ably/chat';
 const {unsubscribe} = room.messages.subscribe((event) => {
-  // Early return if a message with the same serial and version.serial already exists
-  const existingMessage = myMessageList.find(msg => msg.serial === event.message.serial);
-  if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
-    return;
-  }
-
   switch (event.type) {
     case ChatMessageEventType.Created:
       console.log('Received message: ', event.message);
       break;
     case ChatMessageEventType.Updated:
-      if (existingMessage && event.message.version.serial <= existingMessage.version.serial) {
+      const existing = myMessageList.find(msg => msg.serial === event.message.serial);
+      if (existing && event.message.version.serial <= existing.version.serial) {
         // We've already received a more recent update, so this one can be discarded.
         return;
       }
@@ -493,18 +496,13 @@ import { useMessages } from '@ably/chat/react';
 const MyComponent = () => {
   useMessages({
     listener: (event) => {
-      // Early return if a message with the same serial and version.serial already exists
-      const existingMessage = myMessageList.find(msg => msg.serial === event.message.serial);
-      if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
-        return;
-      }
-
       switch (event.type) {
         case ChatMessageEventType.Created:
           console.log('Received message: ', event.message);
           break;
         case ChatMessageEventType.Updated:
-          if (existingMessage && event.message.version.serial <= existingMessage.version.serial) {
+          const existing = myMessageList.find(msg => msg.serial === event.message.serial);
+          if (existing && event.message.version.serial <= existing.version.serial) {
             // We've already received a more recent update, so this one can be discarded.
             return;
           }
@@ -525,19 +523,12 @@ const MyComponent = () => {
 let messagesList: [Message]
 let messagesSubscription = try await room.messages.subscribe()
 for await message in messagesSubscription {
-  // Early return if a message with the same serial and version already exists
-  let existingMessage = messagesList.first(where: { $0.serial == message.serial })
-  if existingMessage != nil && existingMessage?.version.serial == message.version.serial {
-      continue
-  }
-
   switch message.action {
       case .messageCreate:
         messagesList.append(message)
       case .messageUpdate:
         // compare versions to ensure you are only updating with a newer message
-        if let existingMessage = existingMessage, message.version > existingMessage.version,
-           let index = messagesList.firstIndex(of: existingMessage) {
+        if let index = messagesList.firstIndex(where: { $0.serial == message.serial && message.version > $0.version }) {
             messagesList[index] = message
         }
       default:
@@ -547,19 +538,13 @@ for await message in messagesSubscription {
 ```
 
 ```kotlin
-val myMessageList: List<Messages>
+val myMessageList: List<Message>
 val messagesSubscription = room.messages.subscribe { event ->
-  // Early return if a message with the same serial and version.serial already exists
-  val existingMessage = myMessageList.find { it.serial == event.message.serial }
-  if (existingMessage != null && existingMessage.version.serial == event.message.version.serial) return@subscribe
-
   when (event.type) {
     ChatMessageEventType.Created -> println("Received message: ${event.message}")
-    ChatMessageEventType.Updated -> {
-      if (existingMessage != null && event.message.version.serial > existingMessage.version.serial) {
-        println("Message updated: ${event.message}")
-      }
-    }
+    ChatMessageEventType.Updated -> myMessageList.find {
+      event.message.serial == it.serial && event.message.version.serial > it.version.serial
+    }?.let { println("Message updated: ${event.message}") }
     else -> {}
   }
 }
@@ -578,17 +563,18 @@ fun MyComponent(room: Room) {
 
   LaunchedEffect(room) {
     room.messages.asFlow().collect { event ->
-      // Early return if a message with the same serial and version.serial already exists
-      val existingMessage = myMessageList.find { it.serial == event.message.serial }
-      if (existingMessage != null && existingMessage.version.serial == event.message.version.serial) return@collect
-
       when (event.type) {
         ChatMessageEventType.Created -> {
           myMessageList = myMessageList + event.message
         }
         ChatMessageEventType.Updated -> {
-          if (existingMessage != null && event.message.version.serial > existingMessage.version.serial) {
-            myMessageList = myMessageList.map { if (it.serial == existingMessage.serial) event.message else it }
+          myMessageList = myMessageList.map { message ->
+            if (message.serial == event.message.serial &&
+                event.message.version.serial > message.version.serial) {
+              event.message
+            } else {
+              message
+            }
           }
         }
         else -> {}
@@ -738,18 +724,13 @@ Use the [`useMessages`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typed
 ```javascript
 import { ChatMessageEventType } from '@ably/chat';
 const {unsubscribe} = room.messages.subscribe((event) => {
-  // Early return if a message with the same serial and version.serial already exists
-  const existingMessage = myMessageList.find(msg => msg.serial === event.message.serial);
-  if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
-    return;
-  }
-
   switch (event.type) {
     case ChatMessageEventType.Created:
       console.log('Received message: ', event.message);
       break;
     case ChatMessageEventType.Deleted:
-      if (existingMessage && event.message.version.serial <= existingMessage.version.serial) {
+      const existing = myMessageList.find(msg => msg.serial === event.message.serial);
+      if (existing && event.message.version.serial <= existing.version.serial) {
         // We've already received a more recent update, so this one can be discarded.
         return;
       }
@@ -769,18 +750,13 @@ import { useMessages } from '@ably/chat/react';
 const MyComponent = () => {
   useMessages({
     listener: (event) => {
-      // Early return if a message with the same serial and version.serial already exists
-      const existingMessage = myMessageList.find(msg => msg.serial === event.message.serial);
-      if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
-        return;
-      }
-
       switch (event.type) {
         case ChatMessageEventType.Created:
           console.log('Received message: ', event.message);
           break;
         case ChatMessageEventType.Deleted:
-          if (existingMessage && event.message.version.serial <= existingMessage.version.serial) {
+          const existing = myMessageList.find(msg => msg.serial === event.message.serial);
+          if (existing && event.message.version.serial <= existing.version.serial) {
             // We've already received a more recent update, so this one can be discarded.
             return;
           }
@@ -801,19 +777,12 @@ const MyComponent = () => {
 let messagesList: [Message]
 let messagesSubscription = try await room.messages.subscribe()
 for await message in messagesSubscription {
-  // Early return if a message with the same serial and version already exists
-  let existingMessage = messagesList.first(where: { $0.serial == message.serial })
-  if existingMessage != nil && existingMessage?.version.serial == message.version.serial {
-      continue
-  }
-
   switch message.action {
       case .messageCreate:
         messagesList.append(message)
       case .messageDelete:
         // version check ensures the message you are deleting is older
-        if let existingMessage = existingMessage, message.version > existingMessage.version,
-           let index = messagesList.firstIndex(of: existingMessage) {
+        if let index = messagesList.firstIndex(where: {  $0.serial == message.serial && message.version > $0.version }) {
            messagesList.remove(at: index)
         }
       default:
@@ -823,19 +792,13 @@ for await message in messagesSubscription {
 ```
 
 ```kotlin
-val myMessageList: List<Messages>
+val myMessageList: List<Message>
 val messagesSubscription = room.messages.subscribe { event ->
-  // Early return if a message with the same serial and version.serial already exists
-  val existingMessage = myMessageList.find { it.serial == event.message.serial }
-  if (existingMessage != null && existingMessage.version.serial == event.message.version.serial) return@subscribe
-
   when (event.type) {
     ChatMessageEventType.Created -> println("Received message: ${event.message}")
-    ChatMessageEventType.Deleted -> {
-      if (existingMessage != null && event.message.version.serial > existingMessage.version.serial) {
-        println("Message deleted: ${event.message}")
-      }
-    }
+    ChatMessageEventType.Deleted -> myMessageList.find {
+      event.message.serial == it.serial && event.message.version.serial > it.version.serial
+    }?.let { println("Message deleted: ${event.message}") }
     else -> {}
   }
 }
@@ -854,17 +817,14 @@ fun MyComponent(room: Room) {
 
   LaunchedEffect(room) {
     room.messages.asFlow().collect { event ->
-      // Early return if a message with the same serial and version.serial already exists
-      val existingMessage = myMessageList.find { it.serial == event.message.serial }
-      if (existingMessage != null && existingMessage.version.serial == event.message.version.serial) return@collect
-
       when (event.type) {
         ChatMessageEventType.Created -> {
           myMessageList = myMessageList + event.message
         }
         ChatMessageEventType.Deleted -> {
-          if (existingMessage != null && event.message.version.serial > existingMessage.version.serial) {
-            myMessageList = myMessageList.filterNot { it.serial == existingMessage.serial }
+          myMessageList = myMessageList.filterNot { message ->
+            message.serial == event.message.serial &&
+            event.message.version.serial > message.version.serial
           }
         }
         else -> {}
@@ -964,22 +924,15 @@ let myMessageList: Message[];
 
 // For messages (create, update, delete)
 room.messages.subscribe((event) => {
-  const existingMessage = myMessageList.find((msg) => msg.serial === event.message.serial);
-
-  // Early return if a message with the same serial and version.serial already exists
-  if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
-    return;
-  }
-
   switch (event.type) {
     case ChatMessageEventType.Created:
       myMessageList.push(event.message);
       break;
     case ChatMessageEventType.Updated:
     case ChatMessageEventType.Deleted:
-      if (existingMessage) {
-        const idx = myMessageList.indexOf(existingMessage);
-        myMessageList[idx] = existingMessage.with(event);
+      const idx = myMessageList.findIndex((msg) => msg.serial === event.message.serial);
+      if (idx !== -1) {
+        myMessageList[idx] = myMessageList[idx].with(event);
       }
       break;
     default:
@@ -989,10 +942,9 @@ room.messages.subscribe((event) => {
 
 // And for message reactions
 room.messages.reactions.subscribe((event) => {
-  const existingMessage = myMessageList.find((msg) => msg.serial === event.messageSerial);
-  if (existingMessage) {
-    const idx = myMessageList.indexOf(existingMessage);
-    myMessageList[idx] = existingMessage.with(event);
+  const idx = myMessageList.findIndex((msg) => msg.serial === event.messageSerial);
+  if (idx !== -1) {
+    myMessageList[idx] = myMessageList[idx].with(event);
   }
 });
 ```
@@ -1007,39 +959,35 @@ const MyComponent = () => {
   const [ messages, setMessages ] = useState<{list: Message[]}>({list: []});
   useMessages({
     listener: (event) => {
-      setMessages((prev) => {
-        const existingMessage = prev.list.find((msg) => msg.serial === event.message.serial);
-
-        // Early return if a message with the same serial and version.serial already exists
-        if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
-          return prev;
-        }
-
-        switch (event.type) {
-          case ChatMessageEventType.Created:
+      switch (event.type) {
+        case ChatMessageEventType.Created:
+          setMessages((prev) => {
             // append new message
             prev.list.push(event.message);
             // update reference without copying whole array
             return { list: prev.list };
-          case ChatMessageEventType.Updated:
-          case ChatMessageEventType.Deleted:
-            if (!existingMessage) {
+          });
+          break;
+        case ChatMessageEventType.Updated:
+        case ChatMessageEventType.Deleted:
+          setMyMessageList((prev) => {
+            // find existing message to apply update or delete to
+            const existing = prev.list.findIndex((msg) => msg.serial === event.message.serial);
+            if (existing === -1) {
               return prev; // no change if not found
             }
-            const newMsg = existingMessage.with(event);
-            if (newMsg === existingMessage) {
+            const newMsg = existing.with(event);
+            if (newMsg === existing) {
               // with() returns the same object if the event is older,
               // so in this case no change is needed
               return prev;
             }
             // set new message and update reference without copying whole array
-            const idx = prev.list.indexOf(existingMessage);
-            prev.list[idx] = newMsg;
+            prev.list[existing] = newMsg;
             return { list: prev.list };
-          default:
-            return prev;
-        }
-      });
+          });
+          break;
+      }
     },
   });
 
