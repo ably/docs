@@ -1,12 +1,12 @@
 ---
 title: "Guide: Stream OpenAI chain-of-thought reasoning"
 meta_description: "Stream chain-of-thought reasoning from OpenAI thinking models over Ably in realtime."
-meta_keywords: "AI, chain of thought, reasoning, OpenAI, thinking models, AI transport, Ably, realtime, extended thinking"
+meta_keywords: "AI, chain of thought, reasoning, OpenAI, thinking models, AI transport, Ably, realtime, reasoning summaries"
 ---
 
 This guide shows you how to stream chain-of-thought reasoning from OpenAI's thinking models over Ably. You'll learn how to capture reasoning summaries alongside model output and distribute them to clients using the inline or threading pattern.
 
-Streaming chain-of-thought reasoning provides transparency into how the model arrives at its conclusions. Using Ably to distribute reasoning enables you to build rich user experiences that show the model's thought process in realtime, building trust and allowing users to intervene when needed.
+Streaming chain-of-thought reasoning provides transparency into how the model arrives at its conclusions. Using Ably to distribute reasoning enables you to build rich user experiences that show the model's thought process in realtime, building trust and enabling users to intervene when needed.
 
 <Aside data-type="further-reading">
 To learn more about chain-of-thought patterns, including when to use inline vs threading, see the [chain-of-thought](/docs/ai-transport/messaging/chain-of-thought) documentation.
@@ -18,6 +18,7 @@ To follow this guide, you need:
 - Node.js 20 or higher
 - An OpenAI API key with access to reasoning models
 - An Ably API key
+- "Message annotations, updates, deletes and appends" enabled in a [rule](/docs/channels#rules) for the `ai` namespace. See [Step 1 of the message-per-response guide](/docs/guides/ai-transport/openai/openai-message-per-response#step-1) for setup instructions.
 
 Useful links:
 - [OpenAI reasoning models](https://platform.openai.com/docs/guides/reasoning)
@@ -54,7 +55,7 @@ export OPENAI_API_KEY="your_api_key_here"
 
 ## Step 1: Get reasoning from OpenAI <a id="step-1"/>
 
-Initialize an OpenAI client and use the Responses API with a reasoning model to get chain-of-thought output. OpenAI reasoning models like `o1` and `o3` produce reasoning tokens that show their thought process.
+Initialize an OpenAI client and use the Responses API with a reasoning model to get chain-of-thought output. OpenAI reasoning models like `o4-mini` and `o3` produce reasoning tokens that show their thought process.
 
 Create a new file `agent.mjs` with the following contents:
 
@@ -62,14 +63,13 @@ Create a new file `agent.mjs` with the following contents:
 ```javascript
 import OpenAI from 'openai';
 import Ably from 'ably';
-import crypto from 'crypto';
 
 const openai = new OpenAI();
 
 // Generate a response with reasoning
 async function getReasoningResponse(prompt) {
   const response = await openai.responses.create({
-    model: 'o3-mini',
+    model: 'o4-mini',
     input: prompt,
     reasoning: { effort: 'medium', summary: 'auto' },
     stream: true
@@ -175,7 +175,7 @@ async function streamInline(prompt) {
 ```
 </Code>
 
-The `publish` call creates an initial empty message and returns its `serial`. Subsequent `appendMessage` calls add tokens to that message. Don't await `appendMessage` calls - this maximizes throughput by allowing the next token to be sent without waiting for confirmation of the previous one.
+The `publish` call creates an initial empty message and returns its `serial`. Subsequent `appendMessage` calls add tokens to that message. Don't await `appendMessage` calls as this maximizes throughput by allowing the next token to be sent without waiting for confirmation of the previous one.
 
 #### Subscribe <a id="inline-subscribe"/>
 
@@ -233,7 +233,7 @@ await channel.subscribe((message) => {
       break;
 
     case 'message.update':
-      // Full content for reconnection - just store it
+      // Full message content received on reconnection
       const existing = messages.get(serial);
       if (existing) {
         existing.content = data;
@@ -264,6 +264,8 @@ Add the threading streaming function to `agent.mjs`:
 
 <Code>
 ```javascript
+import crypto from 'crypto';
+
 async function streamThreaded(prompt) {
   const conversationChannel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
   const responseId = crypto.randomUUID();
@@ -478,7 +480,7 @@ node agent.mjs threaded
 ```
 </Code>
 
-## Next steps
+## Next steps <a id="next-steps"/>
 
 - Learn more about [chain-of-thought](/docs/ai-transport/messaging/chain-of-thought) patterns
 - Explore [token streaming](/docs/ai-transport/token-streaming) for streaming individual tokens
