@@ -250,6 +250,10 @@ export default {
               name: 'APNs',
               link: '/docs/push/getting-started/apns',
             },
+            {
+              name: 'FCM',
+              link: '/docs/push/getting-started/fcm',
+            },
           ],
         },
         {
