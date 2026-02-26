@@ -37,14 +37,25 @@ If you're using LiveObjects from one of the the following languages, then use th
 
 Inband objects works by delivering changes to channel objects as regular channel messages, similar to [inband occupancy](/docs/channels/options#occupancy).
 
+There are two inband modes available:
+
+| Mode | Description |
+| --- | --- |
+| `objects`      | Sends the full state of all objects on the channel. Delivers an initial state snapshot on attach and sends updates whenever an object operation is applied.                                        |
+| `notification` | Sends a notification when an object operation has been received, without the full state data. Clients can then fetch the current state via the REST API. Does not send an initial state on attach. |
+
 ## Enable Inband Objects <a id="inband-objects-enable"/>
 
-To enable inband objects, use the `objects` [channel parameter](/docs/channels/options#objects) when getting a channel:
+To enable inband objects, use the `objects` [channel parameter](/docs/channels/options#objects) when getting a channel. Set the value to either `objects` or `notification` depending on which mode you want to use:
 
 <Code>
 ```javascript
-// When getting a channel instance
+// Enable full state sync mode
 const channelOpts = { params: { objects: 'objects' } };
+const channel = realtime.channels.get('my-channel', channelOpts);
+
+// Or enable notification mode
+const channelOpts = { params: { objects: 'notification' } };
 const channel = realtime.channels.get('my-channel', channelOpts);
 
 // Or using setOptions on an existing channel
@@ -56,12 +67,31 @@ await channel.setOptions({ params: { objects: 'objects' } });
 Clients require the `channel-metadata` [capability](/docs/auth/capabilities) to receive inband objects updates.
 </Aside>
 
+## Limitations <a id="inband-objects-limitations"/>
+
+Inband objects has some constraints to be aware of when designing your application.
+
+### Maximum object size
+
+Individual objects sent via inband objects mode cannot exceed the maximum message size limit (64KB by default). If an object's size exceeds this limit, **then no inband object messages will be received** on the connection and the sync sequence will fail with an error.
+
+Inband objects are delivered as regular channel messages, which are subject to the standard message size constraints.
+
+<Aside data-type='important'>
+If your use case requires storing more than 64KB in a single object, you should use the [LiveObjects plugin](/docs/liveobjects/quickstart/javascript) instead of inband objects. The LiveObjects plugin supports partial object synchronization, which can efficiently handle objects of any size by streaming them in chunks.
+</Aside>
+
+To avoid hitting this limit when using inband objects:
+
+* Keep individual object sizes small by distributing data across multiple objects
+* Consider using `notification` mode and fetching large objects via the REST API on demand
+
 ## Subscribe to updates <a id="inband-objects-subscribe"/>
 
-When using inband objects, the client will receive special `[meta]objects` messages whenever the objects on the channel are updated. These messages provide a snapshot of the current set of objects on the channel.
+When using inband objects, the client will receive special `[meta]objects` messages whenever the objects on the channel are updated.
 
 <Aside data-type='note'>
-If there is a high rate of updates to the channel objects the inband messages are throttled. However, the client is guaranteed to receive a sequence of inband messages after the last change occurs so that the latest data is always available.
+If there is a high rate of updates to the channel objects the inband messages are throttled. However in the case of `inband:objects`, the client is guaranteed to receive a sequence of inband messages after the last change occurs so that the latest data is always available.
 </Aside>
 
 [Subscribe](/docs/api/realtime-sdk/channels#subscribe) to `[meta]objects` messages like you would any other message on the channel. For convenience, use a message name filter to only receive messages with the name `[meta]objects` in your listener:
@@ -70,15 +100,18 @@ If there is a high rate of updates to the channel objects the inband messages ar
 ```javascript
 // Subscribe to [meta]objects messages
 channel.subscribe('[meta]objects', (message) => {
-  const { syncId, nextCursor, object } = message.data;
-  console.log("Received inband objects message:", syncId, nextCursor, JSON.stringify(message.data));
+  console.log("Received inband objects message:", JSON.stringify(message.data));
 });
 ```
 </Code>
 
-## Message Format <a id="inband-objects-message-format"/>
+## Objects mode <a id="inband-objects-mode"/>
 
-Inband objects messages are sent as a sequence of messages, where each message contains a snapshot of a single object on the channel. Taken together, a set of messages belonging to the same sequence describes the complete set of objects on the channel.
+The `objects` mode sends the full state of all objects on the channel. When a client attaches to the channel, it immediately receives the current state. Subsequent updates are sent whenever the objects change.
+
+### Message format
+
+Inband objects messages in `objects` mode are sent as a sequence of messages, where each message contains a snapshot of a single object on the channel. Taken together, a set of messages belonging to the same sequence describes the complete set of objects on the channel.
 
 Each inband objects message has a message `name` of `[meta]objects`.
 
@@ -90,4 +123,127 @@ The message `data` is a JSON object with the following top-level properties:
 | `nextCursor` | A cursor for the next message in the sequence, or `undefined` if this is the last message in the sequence. |
 | `object` | A JSON representation of the object included in the message. |
 
-The shape of the `object` is the same as the response format of an object when listing them via the [REST API](/docs/liveobjects/rest-api-usage#fetching-objects-list-values).
+The shape of the `object` is the following format:
+
+**Inband Counter Message**
+<Code>
+```javascript
+{
+  "name": "[meta]objects",
+  "data": {
+    "syncId": "1148d241",
+    "nextCursor": "root",
+    "object": {
+      "objectId": "counter:APjeaY7i_IQmrlxV5sEcR7NLTualutgS1QF3wNVJNYI@1769502401136",
+      "counter": {
+        "count": 12
+      },
+      "siteTimeserials": {
+        "cbf": "01769502451073-000@cbfpt5aQQByRKW13548557:000"
+      },
+      "tombstone": false
+    }
+  }
+}
+```
+</Code>
+
+**Inband Map Message**
+
+<Code>
+```javascript
+{
+  "name": "[meta]objects",
+  "data": {
+    "syncId": "95ad3a9f",
+    "object": {
+      "objectId": "root",
+      "map": {
+        "semantics": 0,
+        "entries": {
+          "hello": {
+            "timeserial": "01769446125853-000@cbfpt5aQQByRKW61375059:000",
+            "data": {
+              "string": "world"
+            },
+            "tombstone": false
+          },
+          "votes": {
+            "timeserial": "01769502401144-000@cbfpt5aQQByRKW13548557:001",
+            "data": {
+              "objectId": "counter:APjeaY7i_IQmrlxV5sEcR7NLTualutgS1QF3wNVJNYI@1769502401136"
+            },
+            "tombstone": false
+          }
+        }
+      },
+      "siteTimeserials": {
+        "cbf": "01769446125853-000@cbfpt5aQQByRKW61375059:000"
+      },
+      "tombstone": false
+    }
+  }
+}
+```
+</Code>
+
+
+### Example
+
+<Code>
+```javascript
+// Subscribe to [meta]objects messages in objects mode
+channel.subscribe('[meta]objects', (message) => {
+  const { syncId, nextCursor, object } = message.data;
+  console.log("Received object:", syncId, nextCursor, JSON.stringify(object));
+});
+```
+</Code>
+
+## Notification mode <a id="inband-notification-mode"/>
+
+The `notification` mode notifies clients when an objects operation is received, without sending the full state data. This reduces bandwidth for use cases where clients only need to know that an operation occurred and can fetch the state on demand.
+
+Unlike `objects` mode, `notification` mode does not send an initial state when the client attaches to the channel. The first notification is sent immediately when the first object operation is received.
+
+### Message format
+
+Each notification message has a message `name` of `[meta]objects`.
+
+The message `data` is a JSON object with the following property:
+
+| Property | Description |
+| --- | --- |
+| `link`   | A relative URL path to fetch the current state of the channel object on the channel via the [REST API](/docs/liveobjects/rest-api-usage#fetch-channel-object). This can be used directly with the Ably REST client's [request](/docs/api/rest-sdk#request) method. |
+
+### Example
+
+<Code>
+```javascript
+// Subscribe to [meta]objects messages in notification mode
+channel.subscribe('[meta]objects', async (message) => {
+  const { link } = message.data;
+  console.log("Objects operation received, fetching state from:", link);
+
+  // Fetch the current state using the REST API
+  const response = await ablyREST.request('GET', link);
+  if (response.items.length > 0 ) {
+    console.log("Current state:", response.items[0]);
+  }
+});
+```
+</Code>
+
+### When to use notification mode
+
+Use `notification` mode when:
+
+* You want to minimize bandwidth usage and only fetch state when needed.
+* Your application can tolerate fetching state on demand rather than receiving it immediately.
+* You have infrequent operations and don't need continuous state updates.
+
+Use `objects` mode when:
+
+* You need the full state immediately on attach.
+* You want to receive state updates in realtime without additional REST API calls.
+* Your application requires continuous synchronization of state.
