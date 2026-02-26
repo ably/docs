@@ -1,0 +1,488 @@
+---
+title: "Guide: Stream OpenAI chain-of-thought reasoning"
+meta_description: "Stream chain-of-thought reasoning from OpenAI thinking models over Ably in realtime."
+meta_keywords: "AI, chain of thought, reasoning, OpenAI, thinking models, AI transport, Ably, realtime, reasoning summaries"
+---
+
+This guide shows you how to stream chain-of-thought reasoning from OpenAI's thinking models over Ably. You'll learn how to capture reasoning summaries alongside model output and distribute them to clients using the inline or threading pattern.
+
+Streaming chain-of-thought reasoning provides transparency into how the model arrives at its conclusions. Using Ably to distribute reasoning enables you to build rich user experiences that show the model's thought process in realtime, building trust and enabling users to intervene when needed.
+
+<Aside data-type="further-reading">
+To learn more about chain-of-thought patterns, including when to use inline vs threading, see the [chain-of-thought](/docs/ai-transport/messaging/chain-of-thought) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+To follow this guide, you need:
+- Node.js 20 or higher
+- An OpenAI API key with access to reasoning models
+- An Ably API key
+- "Message annotations, updates, deletes and appends" enabled in a [rule](/docs/channels#rules) for the `ai` namespace. See [Step 1 of the message-per-response guide](/docs/guides/ai-transport/openai/openai-message-per-response#step-1) for setup instructions.
+
+Useful links:
+- [OpenAI reasoning models](https://platform.openai.com/docs/guides/reasoning)
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+
+Create a new NPM package, which will contain the agent and client code:
+
+<Code>
+```shell
+mkdir ably-openai-reasoning-example && cd ably-openai-reasoning-example
+npm init -y
+```
+</Code>
+
+Install the required packages using NPM:
+
+<Code>
+```shell
+npm install openai@^4 ably@^2
+```
+</Code>
+
+<Aside data-type="note">
+This guide uses version 4.x of the OpenAI SDK. Some details of interacting with the OpenAI SDK may differ from those given here if using a different major version.
+</Aside>
+
+Export your OpenAI API key to the environment, which will be used later in the guide by the OpenAI SDK:
+
+<Code>
+```shell
+export OPENAI_API_KEY="your_api_key_here"
+```
+</Code>
+
+## Step 1: Get reasoning from OpenAI <a id="step-1"/>
+
+Initialize an OpenAI client and use the Responses API with a reasoning model to get chain-of-thought output. OpenAI reasoning models like `o4-mini` and `o3` produce reasoning tokens that show their thought process.
+
+Create a new file `agent.mjs` with the following contents:
+
+<Code>
+```javascript
+import OpenAI from 'openai';
+import Ably from 'ably';
+
+const openai = new OpenAI();
+
+// Generate a response with reasoning
+async function getReasoningResponse(prompt) {
+  const response = await openai.responses.create({
+    model: 'o4-mini',
+    input: prompt,
+    reasoning: { effort: 'medium', summary: 'auto' },
+    stream: true
+  });
+
+  return response;
+}
+```
+</Code>
+
+<Aside data-type="note">
+Reasoning models require enabling reasoning output with the `reasoning` parameter. The `effort` level controls how much reasoning the model performs before generating output. Setting `summary: 'auto'` enables reasoning summaries, which provide a window into the model's thought process.
+</Aside>
+
+### Understand OpenAI reasoning events <a id="understand-reasoning-events"/>
+
+When streaming from OpenAI reasoning models with `summary: 'auto'`, you receive events that include both reasoning summaries and output content. The key event types are:
+
+- `response.reasoning_summary_text.delta`: Contains reasoning summary tokens that show the model's thought process.
+
+- `response.output_text.delta`: Contains output text tokens from the model's response.
+
+- `response.completed`: Signals the response has finished streaming.
+
+The following example shows a typical event sequence:
+
+<Code>
+```json
+// 1. Reasoning summary tokens stream in
+{"type":"response.reasoning_summary_text.delta","delta":"**Determining the capital of France**\n\n"}
+{"type":"response.reasoning_summary_text.delta","delta":"The user's question is straightforward..."}
+
+// 2. Output tokens stream in
+{"type":"response.output_text.delta","delta":"The capital of France is Paris."}
+{"type":"response.output_text.delta","delta":" It has been the capital since the 10th century."}
+
+// 3. Response completes
+{"type":"response.completed","response":{...}}
+```
+</Code>
+
+## Step 2: Set up Ably channels <a id="step-2"/>
+
+Initialize the Ably client and add it to your `agent.mjs` file:
+
+<Code>
+```javascript
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+```
+</Code>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own reasoning and output messages, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+## Step 3: Stream and subscribe to reasoning <a id="step-3"/>
+
+There are two patterns for distributing reasoning to clients. The inline pattern publishes reasoning and output to the same channel, maintaining relative message order. The threading pattern publishes reasoning to a separate channel, keeping the main channel clean and reducing bandwidth for clients that don't need to view reasoning. Choose the pattern that fits your use case.
+
+Both examples use the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern, which streams tokens into a single message that grows over time. This provides efficient history storage while still delivering tokens in realtime.
+
+### Inline pattern <a id="inline"/>
+
+The inline pattern publishes both reasoning and output messages to the same channel. This simplifies channel management and maintains the relative order of messages.
+
+#### Publish <a id="inline-publish"/>
+
+Add the inline streaming function to `agent.mjs`:
+
+<Code>
+```javascript
+async function streamInline(prompt) {
+  const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+  // Create initial empty messages and capture their serials
+  const { serials: [reasoningSerial] } = await channel.publish({ name: 'reasoning', data: '' });
+  const { serials: [messageSerial] } = await channel.publish({ name: 'message', data: '' });
+
+  const stream = await getReasoningResponse(prompt);
+
+  for await (const event of stream) {
+    switch (event.type) {
+      case 'response.reasoning_summary_text.delta':
+        // Append reasoning token (don't await for efficiency)
+        channel.appendMessage({ serial: reasoningSerial, data: event.delta });
+        break;
+
+      case 'response.output_text.delta':
+        // Append output token (don't await for efficiency)
+        channel.appendMessage({ serial: messageSerial, data: event.delta });
+        break;
+
+      case 'response.completed':
+        console.log('Stream completed');
+        break;
+    }
+  }
+}
+```
+</Code>
+
+The `publish` call creates an initial empty message and returns its `serial`. Subsequent `appendMessage` calls add tokens to that message. Don't await `appendMessage` calls as this maximizes throughput by allowing the next token to be sent without waiting for confirmation of the previous one.
+
+#### Subscribe <a id="inline-subscribe"/>
+
+Create a subscriber that receives both reasoning and output messages on the same channel. The subscriber handles three message actions: `message.create` for new messages, `message.append` for token deltas, and `message.update` for resynchronization after disconnections.
+
+Create a new file `client-inline.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track messages by serial
+const messages = new Map();
+
+// Track current section for clean output
+let currentSection = null;
+
+await channel.subscribe((message) => {
+  const { serial, action, name, data } = message;
+
+  switch (action) {
+    case 'message.create':
+      messages.set(serial, { name, content: data || '' });
+      if (data) {
+        if (name === 'reasoning' && currentSection !== 'reasoning') {
+          console.log('\n[Reasoning]');
+          currentSection = 'reasoning';
+        } else if (name === 'message' && currentSection !== 'output') {
+          console.log('\n\n[Output]');
+          currentSection = 'output';
+        }
+        process.stdout.write(data);
+      }
+      break;
+
+    case 'message.append':
+      const msg = messages.get(serial);
+      if (msg) {
+        // Print header on first real content
+        if (msg.content === '' && data) {
+          if (msg.name === 'reasoning' && currentSection !== 'reasoning') {
+            console.log('\n[Reasoning]');
+            currentSection = 'reasoning';
+          } else if (msg.name === 'message' && currentSection !== 'output') {
+            console.log('\n\n[Output]');
+            currentSection = 'output';
+          }
+        }
+        msg.content += data;
+        process.stdout.write(data);
+      }
+      break;
+
+    case 'message.update':
+      // Full message content received on reconnection
+      const existing = messages.get(serial);
+      if (existing) {
+        existing.content = data;
+      }
+      break;
+  }
+});
+
+console.log('Subscriber ready, waiting for reasoning and output...');
+```
+</Code>
+
+Run the subscriber:
+
+<Code>
+```shell
+node client-inline.mjs
+```
+</Code>
+
+### Threading pattern <a id="threading"/>
+
+The threading pattern publishes reasoning to a separate channel from model output. This keeps the main channel focused on final responses and reduces bandwidth by delivering reasoning only when clients choose to view it.
+
+#### Publish <a id="threading-publish"/>
+
+Add the threading streaming function to `agent.mjs`:
+
+<Code>
+```javascript
+import crypto from 'crypto';
+
+async function streamThreaded(prompt) {
+  const conversationChannel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+  const responseId = crypto.randomUUID();
+
+  // Create a dedicated reasoning channel for this response
+  const reasoningChannel = realtime.channels.get(`ai:{{RANDOM_CHANNEL_NAME}}:${responseId}`);
+
+  // Publish start control message with responseId
+  await conversationChannel.publish({
+    name: 'start',
+    extras: {
+      headers: { responseId }
+    }
+  });
+
+  // Create initial empty messages and capture their serials
+  const { serials: [reasoningSerial] } = await reasoningChannel.publish({ name: 'reasoning', data: '' });
+  const { serials: [messageSerial] } = await conversationChannel.publish({
+    name: 'message',
+    data: '',
+    extras: { headers: { responseId } }
+  });
+
+  const stream = await getReasoningResponse(prompt);
+
+  for await (const event of stream) {
+    switch (event.type) {
+      case 'response.reasoning_summary_text.delta':
+        // Append reasoning token (don't await for efficiency)
+        reasoningChannel.appendMessage({ serial: reasoningSerial, data: event.delta });
+        break;
+
+      case 'response.output_text.delta':
+        // Append output token (don't await for efficiency)
+        conversationChannel.appendMessage({ serial: messageSerial, data: event.delta });
+        break;
+
+      case 'response.completed':
+        console.log('Stream completed');
+        break;
+    }
+  }
+}
+```
+</Code>
+
+The reasoning channel name includes the `responseId`, creating a unique channel per response that clients can discover and subscribe to.
+
+<Aside data-type="note">
+Ably channels are [created when used](/docs/channels#use), so you can dynamically create unique reasoning channels on demand.
+</Aside>
+
+#### Subscribe <a id="threading-subscribe"/>
+
+Create a subscriber that receives output on the main channel and automatically subscribes to the reasoning channel when a response starts.
+
+Create a new file `client-threaded.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+const conversationChannel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track current section for clean output
+let currentSection = null;
+
+// Track messages by serial for output
+const outputMessages = new Map();
+
+// Function to subscribe to reasoning channel for a response
+async function subscribeToReasoning(responseId) {
+  const reasoningChannel = realtime.channels.get(`ai:{{RANDOM_CHANNEL_NAME}}:${responseId}`);
+
+  // Track reasoning messages by serial
+  const reasoningMessages = new Map();
+
+  await reasoningChannel.subscribe((message) => {
+    const { serial, action, data } = message;
+
+    switch (action) {
+      case 'message.create':
+        reasoningMessages.set(serial, data || '');
+        if (data) {
+          if (currentSection !== 'reasoning') {
+            console.log('\n[Reasoning]');
+            currentSection = 'reasoning';
+          }
+          process.stdout.write(data);
+        }
+        break;
+
+      case 'message.append':
+        if (currentSection !== 'reasoning') {
+          console.log('\n[Reasoning]');
+          currentSection = 'reasoning';
+        }
+        const content = reasoningMessages.get(serial) || '';
+        reasoningMessages.set(serial, content + data);
+        process.stdout.write(data);
+        break;
+
+      case 'message.update':
+        reasoningMessages.set(serial, data);
+        break;
+    }
+  });
+}
+
+// Subscribe to main conversation channel
+await conversationChannel.subscribe(async (message) => {
+  const responseId = message.extras?.headers?.responseId;
+  const { serial, action, name, data } = message;
+
+  if (name === 'start' && responseId) {
+    // Auto-subscribe to reasoning when response starts
+    await subscribeToReasoning(responseId);
+    return;
+  }
+
+  if (name === 'message') {
+    switch (action) {
+      case 'message.create':
+        outputMessages.set(serial, { responseId, content: data || '' });
+        if (data) {
+          if (currentSection !== 'output') {
+            console.log('\n\n[Output]');
+            currentSection = 'output';
+          }
+          process.stdout.write(data);
+        }
+        break;
+
+      case 'message.append':
+        const msg = outputMessages.get(serial);
+        if (msg) {
+          if (msg.content === '' && data) {
+            if (currentSection !== 'output') {
+              console.log('\n\n[Output]');
+              currentSection = 'output';
+            }
+          }
+          msg.content += data;
+          process.stdout.write(data);
+        }
+        break;
+
+      case 'message.update':
+        const existing = outputMessages.get(serial);
+        if (existing) {
+          existing.content = data;
+        }
+        break;
+    }
+  }
+});
+
+console.log('Subscriber ready, waiting for responses...');
+```
+</Code>
+
+Run the subscriber:
+
+<Code>
+```shell
+node client-threaded.mjs
+```
+</Code>
+
+When a response starts, the client automatically subscribes to the reasoning channel and displays both reasoning and output as they stream in.
+
+## Step 4: Run the agent <a id="step-4"/>
+
+Add a main function to run the agent with either pattern:
+
+<Code>
+```javascript
+// Choose pattern: 'inline' or 'threaded'
+const pattern = process.argv[2] || 'inline';
+const prompt = 'What is the capital of France? Explain your reasoning.';
+
+console.log(`Running with ${pattern} pattern`);
+
+if (pattern === 'inline') {
+  await streamInline(prompt);
+} else {
+  await streamThreaded(prompt);
+}
+
+// Keep connection open briefly for message delivery
+setTimeout(() => {
+  realtime.close();
+  process.exit(0);
+}, 2000);
+```
+</Code>
+
+Run the agent with the inline pattern:
+
+<Code>
+```shell
+node agent.mjs inline
+```
+</Code>
+
+Or with the threading pattern:
+
+<Code>
+```shell
+node agent.mjs threaded
+```
+</Code>
+
+## Next steps <a id="next-steps"/>
+
+- Learn more about [chain-of-thought](/docs/ai-transport/messaging/chain-of-thought) patterns
+- Explore [token streaming](/docs/ai-transport/token-streaming) for streaming individual tokens
+- Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI-enabled applications
+- Learn about [human-in-the-loop](/docs/ai-transport/messaging/human-in-the-loop) for approval workflows
