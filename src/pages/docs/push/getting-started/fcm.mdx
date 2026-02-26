@@ -12,10 +12,10 @@ You'll learn how to set up your application with Firebase Cloud Messaging (FCM),
 
 1. [Sign up](https://ably.com/signup) for an Ably account.
 2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
-3. Your API key will need the `publish` and `subscribe` capabilities. For sending push notifications from your app, you'll also need the `push-admin` capability.
-4. For channel-based push, add a rule for the channel with **Push notifications enabled** checked. In the dashboard left sidebar: **Configuration** → **Rules** → **Add** or **Edit** a rule, then enable the Push notifications option. See [channel rules](https://ably.com/docs/channels#rules) for details.
+3. Your API key needs the `publish` and `subscribe` capabilities. For sending push notifications from your app, you'll also need the `push-admin` capability.
+4. For channel-based push, add a rule for the channel with **Push notifications enabled** checked. In the dashboard left sidebar: **Configuration** → **Rules** → **Add** or **Edit** a rule, then enable the Push notifications option. See [channel rules](/docs/channels#rules) for details.
 5. Install [Android Studio](https://developer.android.com/studio).
-6. A real Android device or an emulator with Google Play Services installed (required for FCM).
+6. Use a real Android device or an emulator with Google Play Services installed (required for FCM).
 
 ### (Optional) Install Ably CLI <a id="install-cli"/>
 
@@ -116,7 +116,7 @@ object AblyHelper {
         return instance ?: synchronized(this) {
             instance ?: run {
                 val options = ClientOptions().apply {
-                    key = "{{API_KEY}}"
+                    key = "{{API_KEY}}" // Use token authentication in production
                     clientId = "push-tutorial-client"
                 }
                 AblyRealtime(options).also {
@@ -241,7 +241,7 @@ Register the service in `AndroidManifest.xml` inside the `<application>` element
 ```
 </Code>
 
-Now add push activation and deactivation to your `MainActivity.kt`. The Ably Android SDK sends activation results as local broadcasts, so register a `BroadcastReceiver` to handle them:
+Now add push activation and deactivation to your `MainActivity.kt`. The Ably Android SDK activates push asynchronously and the result arrives via Android's broadcast system, so register a `BroadcastReceiver` to handle it (the following imports cover all steps in this guide):
 
 <Code>
 ```kotlin
@@ -250,12 +250,17 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
+import android.widget.Button
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import io.ably.lib.types.AblyException
 import io.ably.lib.types.ErrorInfo
 import io.ably.lib.realtime.CompletionListener
+import io.ably.lib.util.IntentUtils
 import com.google.gson.JsonObject
 import io.ably.lib.types.Message
 import io.ably.lib.types.MessageExtras
@@ -274,28 +279,23 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 "io.ably.broadcast.PUSH_ACTIVATE" -> {
-                    val error = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra("error", ErrorInfo::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra("error")
-                    }
+                    val error = IntentUtils.getErrorInfo(intent)
                     if (error != null) {
                         Log.e(TAG, "Push activation failed: ${error.message}")
                         updateStatus("Push activation failed: ${error.message}")
                     } else {
-                        val deviceId = realtime.device().id
-                        Log.d(TAG, "Push activated. Device ID: $deviceId")
-                        updateStatus("Push activated. Device ID: $deviceId")
+                        try {
+                            val deviceId = realtime.device().id
+                            Log.d(TAG, "Push activated. Device ID: $deviceId")
+                            updateStatus("Push activated. Device ID: $deviceId")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Push activated but failed to get device ID: ${e.message}")
+                            updateStatus("Push activated")
+                        }
                     }
                 }
                 "io.ably.broadcast.PUSH_DEACTIVATE" -> {
-                    val error = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra("error", ErrorInfo::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra("error")
-                    }
+                    val error = IntentUtils.getErrorInfo(intent)
                     if (error != null) {
                         Log.e(TAG, "Push deactivation failed: ${error.message}")
                     } else {
@@ -335,9 +335,9 @@ class MainActivity : AppCompatActivity() {
 ```
 </Code>
 
-Now you are ready to receive push notifications.
+Your app is now configured to receive push notifications once activated.
 
-## Step 3: Receive push notifications <a id="step-3"/>
+## Step 3: Subscribe and test push notifications <a id="step-3"/>
 
 Push notifications delivered while your app is in the background are handled automatically by the FCM SDK and displayed as system notifications. For foreground handling, your `PushNotificationService.onMessageReceived()` method (from Step 2) displays a notification via `NotificationManager`.
 
@@ -384,18 +384,17 @@ Also add a realtime channel subscription to receive messages while the app is in
 fun subscribeToRealtime(channelName: String) {
     val channel = realtime.channels.get(channelName)
     channel.subscribe { message ->
-        runOnUiThread {
-            appendToLog("Received message: ${message.name} - ${message.data}")
-        }
+        Log.d(TAG, "Received message: ${message.name} - ${message.data}")
     }
 }
 ```
 </Code>
 
-Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability for your API key. Use this method for testing purposes.
-In a production environment, you would typically send push notifications from your backend server (by posting messages with `push` `extras` field to a channel).
+<Aside>
+Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability for your API key. Use this method for testing purposes. In a production environment, you would typically send push notifications from your backend server (by posting messages with `push` `extras` field to a channel).
+</Aside>
 
-To test push notifications, use the Ably CLI to send a push to your client ID:
+Now use the Ably CLI to test sending a push notification to your client ID:
 
 <Code>
 ```shell
@@ -416,7 +415,7 @@ ably push publish --device-id <your-device-id> \
 ```
 </Code>
 
-For sending pushes via a channel, we need some actual UI to subscribe to this channel. So, let's build one.
+To send push notifications via a channel, you first need a UI to subscribe to the channel.
 
 ## Step 4: Build the UI <a id="step-4"/>
 
@@ -526,16 +525,15 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 "io.ably.broadcast.PUSH_ACTIVATE" -> {
-                    val error = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra("error", ErrorInfo::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra("error")
-                    }
+                    val error = IntentUtils.getErrorInfo(intent)
                     if (error != null) {
                         updateStatus("Push activation failed: ${error.message}")
                     } else {
-                        updateStatus("Push activated. Device ID: ${realtime.device().id}")
+                        try {
+                            updateStatus("Push activated. Device ID: ${realtime.device().id}")
+                        } catch (e: Exception) {
+                            updateStatus("Push activated")
+                        }
                     }
                 }
                 "io.ably.broadcast.PUSH_DEACTIVATE" -> {
@@ -657,7 +655,7 @@ Build and run your app on an Android device or emulator. Tap **Activate Push** a
 
 ### Send push via channel <a id="step-4-send-channel"/>
 
-To test pushes via channel, tap **Subscribe to Channel** in the app and then publish a message to "exampleChannel1" with a `push` `extras` field using Ably CLI:
+To test push notifications via channel, tap **Subscribe to Channel** in the app and then publish a message to "exampleChannel1" with a `push` `extras` field using Ably CLI:
 
 <Code>
 ```shell
