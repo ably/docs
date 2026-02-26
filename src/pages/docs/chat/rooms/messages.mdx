@@ -230,6 +230,98 @@ fun MyComponent(room: Room) {
 ```
 </Code>
 
+### Handle self-published messages <a id="self-published-messages"/>
+
+When you send a message using `send()`, the server echoes it back to all subscribers in the room, including the sender. If your application adds the message to the UI immediately before/after calling `send()` and also appends it when received via `subscribe()`, the message will appear twice. There are two approaches to handle this.
+
+#### Wait for the subscriber <a id="wait-for-subscriber"/>
+
+The recommended approach is to not add the message to the UI immediately before/after calling `send()`. Instead, only append messages to the UI inside the `subscribe()` listener. Since the server echoes every sent message back to the sender as a subscriber event, the message will still appear in the UI when it arrives through the subscription. This eliminates the duplication problem entirely and requires no deduplication logic in the subscriber.
+
+This approach has the advantage that the message list is only written to from a single place — the subscriber. This means you don't need a concurrent data structure or additional synchronization to protect the list from simultaneous writes. The tradeoff is that the sent message must complete a round trip to the server before appearing in the UI. While Ably's realtime delivery is always near-instantaneous, this may introduce a slight delay rarely in poor network conditions.
+
+#### Deduplicate with optimistic UI <a id="deduplicate-optimistic-ui"/>
+
+If your application adds the message to the UI immediately before/after calling `send()` for a more responsive experience, you need to add a safety check in the subscriber to avoid duplicates. Validate the incoming message `serial` and `version` against existing messages.
+
+Because the message list is written to from two places — once before/after `send()` and again inside the subscriber — you must use a concurrent or thread-safe data structure to handle simultaneous writes safely. Additionally, each incoming message requires a lookup through the existing message list to check for duplicates, which adds CPU overhead that grows with the size of the list:
+
+<Code>
+```javascript
+const {unsubscribe} = room.messages.subscribe((event) => {
+  // Early return if a message with the same serial and version.serial already exists
+  const existingMessage = myMessageList.find(msg => msg.serial === event.message.serial);
+  if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
+    return;
+  }
+  // Process the message
+});
+```
+
+```react
+import { useMessages } from '@ably/chat/react';
+
+const MyComponent = () => {
+  useMessages({
+    listener: (event) => {
+      // Early return if a message with the same serial and version.serial already exists
+      const existingMessage = myMessageList.find(msg => msg.serial === event.message.serial);
+      if (existingMessage && existingMessage.version.serial === event.message.version.serial) {
+        return;
+      }
+      // Process the message
+    },
+  });
+
+  return <div>...</div>;
+};
+```
+
+```swift
+let messagesList: [Message]
+let messagesSubscription = try await room.messages.subscribe()
+for await message in messagesSubscription {
+    // Early return if a message with the same serial and version already exists
+    let existingMessage = messagesList.first(where: { $0.serial == message.serial })
+    if existingMessage != nil && existingMessage?.version.serial == message.version.serial {
+        continue
+    }
+    // Process the message
+}
+```
+
+```kotlin
+val myMessageList: List<Message>
+val subscription = room.messages.subscribe { event: ChatMessageEvent ->
+    // Early return if a message with the same serial and version.serial already exists
+    val existingMessage = myMessageList.find { it.serial == event.message.serial }
+    if (existingMessage != null && existingMessage.version.serial == event.message.version.serial) return@subscribe
+    // Process the message
+}
+```
+
+```android
+import androidx.compose.runtime.*
+import com.ably.chat.Message
+import com.ably.chat.Room
+import com.ably.chat.asFlow
+
+@Composable
+fun MyComponent(room: Room) {
+  var myMessageList by remember { mutableStateOf<List<Message>>(emptyList()) }
+
+  LaunchedEffect(room) {
+    room.messages.asFlow().collect { event ->
+      // Early return if a message with the same serial and version.serial already exists
+      val existingMessage = myMessageList.find { it.serial == event.message.serial }
+      if (existingMessage != null && existingMessage.version.serial == event.message.version.serial) return@collect
+      // Process the message
+    }
+  }
+}
+```
+</Code>
+
 ## Get a single message <a id="get-by-serial"/>
 
 <If lang="javascript,swift,kotlin,android">
@@ -448,7 +540,7 @@ for await message in messagesSubscription {
 ```
 
 ```kotlin
-val myMessageList: List<Messages>
+val myMessageList: List<Message>
 val messagesSubscription = room.messages.subscribe { event ->
   when (event.type) {
     ChatMessageEventType.Created -> println("Received message: ${event.message}")
@@ -702,7 +794,7 @@ for await message in messagesSubscription {
 ```
 
 ```kotlin
-val myMessageList: List<Messages>
+val myMessageList: List<Message>
 val messagesSubscription = room.messages.subscribe { event ->
   when (event.type) {
     ChatMessageEventType.Created -> println("Received message: ${event.message}")
