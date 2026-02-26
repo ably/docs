@@ -1,0 +1,564 @@
+---
+title: "Getting started: Push Notifications in React Native"
+meta_description: "Get started with Ably Push Notifications in React Native. Learn how to register for push notifications with Firebase Cloud Messaging (FCM), activate push on your client, handle incoming notifications, and send push messages on iOS and Android."
+meta_keywords: "Push Notifications React Native, Ably Push, FCM, Android Push, iOS Push, React Native push notifications, Firebase Cloud Messaging, Ably Push Notifications guide, realtime push React Native, push notification example, Ably tutorial React Native, device registration, push messaging"
+---
+
+This guide will get you started with Ably Push Notifications in a new React Native application.
+
+You'll learn how to set up your application with Firebase Cloud Messaging (FCM), register devices with Ably, send push notifications, subscribe to channel-based push, and handle incoming notifications on both iOS and Android.
+
+## Prerequisites <a id="prerequisites"/>
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
+3. Your API key needs the `publish`, `subscribe`, and `push-admin` capabilities.
+4. For channel-based push, add a rule for the channel with **Push notifications enabled** checked. In the dashboard left sidebar: **Configuration** → **Rules** → **Add** or **Edit** a rule, then enable the Push notifications option. See [channel rules](/docs/channels#rules) for details.
+5. Install [Node.js](https://nodejs.org/) 18 or higher.
+6. Set up your React Native development environment following the [React Native CLI Quickstart](https://reactnative.dev/docs/set-up-your-environment).
+7. For iOS: Install [Xcode](https://developer.apple.com/xcode/). Push notifications require a physical iOS device (simulators do not support push).
+8. For Android: Install [Android Studio](https://developer.android.com/studio). Use a physical device or an emulator with Google Play Services installed.
+
+### (Optional) Install Ably CLI <a id="install-cli"/>
+
+Use the [Ably CLI](https://github.com/ably/cli) as an additional client to quickly test Pub/Sub features and push notifications.
+
+1. Install the Ably CLI:
+
+<Code>
+```shell
+npm install -g @ably/cli
+```
+</Code>
+
+2. Run the following to log in to your Ably account and set the default app and API key:
+
+<Code>
+```shell
+ably login
+```
+</Code>
+
+### Set up Firebase Cloud Messaging <a id="setup-fcm"/>
+
+Firebase Cloud Messaging delivers push notifications on both Android and iOS. To enable FCM:
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project (or use an existing one).
+2. Register your Android app using your package name. Download `google-services.json` and place it in `android/app/`.
+3. Register your iOS app using your bundle identifier. Download `GoogleService-Info.plist` and add it to your Xcode project's root target.
+4. For iOS, upload your APNs authentication key to Firebase: In the Firebase Console, go to **Project Settings** → **Cloud Messaging** → **APNs Authentication Key** → **Upload**.
+5. In the Ably dashboard, navigate to your app's **Notifications** tab.
+6. Scroll to the **Push Notifications Setup** section and select **Configure Push**.
+7. Follow the instructions to upload your Firebase service account JSON file.
+
+### Create a React Native project <a id="create-project"/>
+
+Create a new React Native project and install the required dependencies:
+
+<Code>
+```shell
+npx react-native@latest init PushTutorial
+cd PushTutorial
+npm install ably @react-native-firebase/app @react-native-firebase/messaging @notifee/react-native
+```
+</Code>
+
+For iOS, install the native pods:
+
+<Code>
+```shell
+cd ios && pod install && cd ..
+```
+</Code>
+
+For Android, apply the Google Services plugin in `android/build.gradle`:
+
+<Code>
+```kotlin
+// android/build.gradle
+buildscript {
+    dependencies {
+        classpath('com.google.gms:google-services:4.4.2')
+    }
+}
+```
+</Code>
+
+Then apply it in `android/app/build.gradle`:
+
+<Code>
+```kotlin
+// android/app/build.gradle
+apply plugin: 'com.google.gms.google-services'
+```
+</Code>
+
+For iOS, add the `Push Notifications` capability in Xcode: select your target, go to **Signing & Capabilities**, and click **+ Capability** to add it.
+
+All further code can be added to `App.tsx`.
+
+## Step 1: Set up Ably <a id="step-1"/>
+
+Replace the contents of `App.tsx` with the following to initialize the Ably Realtime client and subscribe to a channel for incoming messages:
+
+<Code>
+```react
+import React, {useEffect, useRef, useState} from 'react';
+import {
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import * as Ably from 'ably';
+
+const CHANNEL_NAME = 'exampleChannel1';
+
+// Use token authentication in production
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  clientId: 'push-tutorial-client',
+});
+
+export default function App() {
+  const [status, setStatus] = useState('Ready to start');
+  const [log, setLog] = useState<string[]>([]);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  function appendLog(message: string) {
+    setLog(prev => [...prev, message]);
+  }
+
+  function showStatus(message: string) {
+    setStatus(message);
+    console.log(message);
+  }
+
+  useEffect(() => {
+    const channel = realtime.channels.get(CHANNEL_NAME);
+    channel.subscribe(message => {
+      appendLog(`Received: ${message.name} - ${JSON.stringify(message.data)}`);
+    });
+    return () => {
+      channel.unsubscribe();
+    };
+  }, []);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Ably Push Tutorial</Text>
+      <View style={styles.statusBox}>
+        <Text style={styles.statusText}>{status}</Text>
+      </View>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.logBox}
+        onContentSizeChange={() =>
+          scrollViewRef.current?.scrollToEnd({animated: true})
+        }>
+        {log.map((entry, i) => (
+          <Text key={i} style={styles.logEntry}>{entry}</Text>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {flex: 1, padding: 16, backgroundColor: '#fff'},
+  title: {fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 12},
+  statusBox: {backgroundColor: '#f0f0f0', padding: 12, borderRadius: 6, marginBottom: 12},
+  statusText: {fontSize: 14},
+  logBox: {flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8},
+  logEntry: {fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 12, marginBottom: 4},
+});
+```
+</Code>
+
+Key configuration options:
+
+- **`key`**: Your Ably API key.
+- **`clientId`**: A unique identifier for this client.
+
+## Step 2: Set up push notifications <a id="step-2"/>
+
+Push notification activation in React Native requires obtaining an FCM registration token and registering the device with Ably. Add the following functions to `App.tsx`:
+
+<Aside data-type='note'>
+The buttons referenced in these functions are added to the UI in [Step 4](#step-4). The code in this step won't be fully functional until that step is complete.
+</Aside>
+
+<Code>
+```react
+import messaging from '@react-native-firebase/messaging';
+import {PermissionsAndroid} from 'react-native';
+```
+</Code>
+
+<Code>
+```react
+const [deviceId] = useState(
+  `push-tutorial-${Platform.OS}-${Math.random().toString(36).slice(2, 9)}`,
+);
+
+async function requestPermission(): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  }
+  const authStatus = await messaging().requestPermission();
+  return (
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL
+  );
+}
+
+async function activatePush() {
+  try {
+    showStatus('Activating push notifications...');
+    const granted = await requestPermission();
+    if (!granted) {
+      showStatus('Notification permission denied.');
+      return;
+    }
+
+    const fcmToken = await messaging().getToken();
+
+    await realtime.push.admin.deviceRegistrations.save({
+      id: deviceId,
+      clientId: 'push-tutorial-client',
+      platform: Platform.OS === 'ios' ? 'ios' : 'android',
+      formFactor: 'phone',
+      push: {
+        recipient: {
+          transportType: Platform.OS === 'ios' ? 'apns' : 'fcm',
+          registrationToken: fcmToken,
+        },
+      },
+    });
+
+    showStatus(`Push activated. Device ID: ${deviceId}`);
+    appendLog(`Push activated. Device ID: ${deviceId}`);
+  } catch (error: any) {
+    showStatus(`Failed to activate push: ${error.message}`);
+  }
+}
+
+async function deactivatePush() {
+  try {
+    showStatus('Deactivating push notifications...');
+    await realtime.push.admin.deviceRegistrations.remove(deviceId);
+    showStatus('Push notifications deactivated.');
+  } catch (error: any) {
+    showStatus(`Failed to deactivate push: ${error.message}`);
+  }
+}
+```
+</Code>
+
+When `activatePush()` is called, it:
+
+1. Requests notification permission from the user.
+2. Obtains the FCM registration token from Firebase.
+3. Registers the device with Ably's push notification service using the token.
+
+After successful activation, `deviceId` contains the unique device ID assigned to this installation.
+
+## Step 3: Subscribe and test push notifications <a id="step-3"/>
+
+Background push notifications are handled automatically by the FCM SDK and displayed as system notifications. For foreground handling, use `@notifee/react-native` to display notifications while the app is open.
+
+Add the following imports and foreground notification handler to `App.tsx`:
+
+<Code>
+```react
+import notifee from '@notifee/react-native';
+```
+</Code>
+
+<Code>
+```react
+useEffect(() => {
+  // Create a default Android notification channel
+  if (Platform.OS === 'android') {
+    notifee.createChannel({id: 'default', name: 'Default Channel'});
+  }
+
+  // Handle foreground push messages
+  const unsubscribe = messaging().onMessage(async remoteMessage => {
+    const title = remoteMessage.notification?.title ?? 'Push Notification';
+    const body = remoteMessage.notification?.body ?? '';
+    appendLog(`Push received: ${title} — ${body}`);
+    await notifee.displayNotification({
+      title,
+      body,
+      android: {channelId: 'default'},
+    });
+  });
+
+  // Handle FCM token refresh
+  const unsubscribeTokenRefresh = messaging().onTokenRefresh(async newToken => {
+    try {
+      await realtime.push.admin.deviceRegistrations.save({
+        id: deviceId,
+        clientId: 'push-tutorial-client',
+        platform: Platform.OS === 'ios' ? 'ios' : 'android',
+        formFactor: 'phone',
+        push: {
+          recipient: {
+            transportType: Platform.OS === 'ios' ? 'apns' : 'fcm',
+            registrationToken: newToken,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('Failed to update FCM token:', error.message);
+    }
+  });
+
+  return () => {
+    unsubscribe();
+    unsubscribeTokenRefresh();
+  };
+}, [deviceId]);
+```
+</Code>
+
+To subscribe your device to a channel so it can receive channel-based push notifications, add the following functions:
+
+<Code>
+```react
+async function subscribeToChannel() {
+  try {
+    await realtime.push.admin.channelSubscriptions.save({
+      deviceId,
+      channel: CHANNEL_NAME,
+    });
+    showStatus(`Subscribed to push on channel: ${CHANNEL_NAME}`);
+  } catch (error: any) {
+    showStatus(`Failed to subscribe: ${error.message}`);
+  }
+}
+
+async function unsubscribeFromChannel() {
+  try {
+    await realtime.push.admin.channelSubscriptions.remove({
+      deviceId,
+      channel: CHANNEL_NAME,
+    });
+    showStatus(`Unsubscribed from push on channel: ${CHANNEL_NAME}`);
+  } catch (error: any) {
+    showStatus(`Failed to unsubscribe: ${error.message}`);
+  }
+}
+```
+</Code>
+
+Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability for your API key. Use this method for testing purposes. In a production environment, you would typically send push notifications from your backend server (by posting messages with a `push` `extras` field to a channel).
+
+Use the Ably CLI to send a test notification to your client ID:
+
+<Code>
+```shell
+ably push publish --client-id push-tutorial-client \
+  --title "Test push" \
+  --body "Hello from CLI!" \
+  --data '{"foo":"bar","baz":"qux"}'
+```
+</Code>
+
+Or send directly to a device ID:
+
+<Code>
+```shell
+ably push publish --device-id <your-device-id> \
+  --title "Test push" \
+  --body "Hello from device ID!"
+```
+</Code>
+
+To send push notifications via a channel, you first need a UI to subscribe to the channel.
+
+## Step 4: Build the UI <a id="step-4"/>
+
+Update the `return` statement in `App.tsx` to add buttons that wire up all the push functions:
+
+<Code>
+```react
+return (
+  <SafeAreaView style={styles.container}>
+    <Text style={styles.title}>Ably Push Tutorial</Text>
+    <View style={styles.statusBox}>
+      <Text style={styles.statusText}>{status}</Text>
+    </View>
+    <View style={styles.buttons}>
+      <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={activatePush}>
+        <Text style={styles.btnText}>Activate Push</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, styles.btnRed]} onPress={deactivatePush}>
+        <Text style={styles.btnText}>Deactivate Push</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, styles.btnPurple]} onPress={subscribeToChannel}>
+        <Text style={styles.btnText}>Subscribe to Channel</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, styles.btnOrange]} onPress={unsubscribeFromChannel}>
+        <Text style={styles.btnText}>Unsubscribe from Channel</Text>
+      </TouchableOpacity>
+    </View>
+    <ScrollView
+      ref={scrollViewRef}
+      style={styles.logBox}
+      onContentSizeChange={() =>
+        scrollViewRef.current?.scrollToEnd({animated: true})
+      }>
+      {log.map((entry, i) => (
+        <Text key={i} style={styles.logEntry}>{entry}</Text>
+      ))}
+    </ScrollView>
+  </SafeAreaView>
+);
+```
+</Code>
+
+Add the button styles to the `StyleSheet.create` call:
+
+<Code>
+```react
+buttons: {gap: 8, marginBottom: 12},
+btn: {padding: 14, borderRadius: 6, alignItems: 'center'},
+btnText: {color: '#fff', fontWeight: '600'},
+btnGreen: {backgroundColor: '#28a745'},
+btnRed: {backgroundColor: '#dc3545'},
+btnPurple: {backgroundColor: '#6f42c1'},
+btnOrange: {backgroundColor: '#fd7e14'},
+btnBlue: {backgroundColor: '#007bff'},
+btnIndigo: {backgroundColor: '#6610f2'},
+btnTeal: {backgroundColor: '#20c997'},
+```
+</Code>
+
+Build and run your app on a physical device:
+
+<Code>
+```shell
+# Android
+npx react-native run-android
+
+# iOS
+npx react-native run-ios --device
+```
+</Code>
+
+Tap **Activate Push** and wait until the status message displays your device ID. Try sending a test notification using the Ably CLI commands shown in Step 3.
+
+### Send push via channel <a id="step-4-send-channel"/>
+
+To test push notifications via channel, tap **Subscribe to Channel** in the app and then publish a message to `exampleChannel1` with a `push` `extras` field using the Ably CLI:
+
+<Code>
+```shell
+ably channels publish exampleChannel1 '{"name":"example","data":"Hello from CLI!","extras":{"push":{"notification":{"title":"Ably CLI","body":"Hello from CLI!"},"data":{"foo":"bar"}}}}'
+```
+</Code>
+
+If you tap **Unsubscribe from Channel**, you will no longer receive push notifications for that channel. Send the same command again and verify that no notification is received.
+
+You can also send push notifications directly from your app. The next step shows you how.
+
+## Step 5: Send push with code <a id="step-5"/>
+
+Just as you can send push notifications through the Ably CLI or dashboard, you can also send them directly from your app using `deviceId` (or `clientId`), or channel publishing methods. For channel publishing, you don't need the admin capabilities for your API key.
+
+Add the following functions to `App.tsx`:
+
+<Code>
+```react
+async function sendPushToDevice() {
+  try {
+    await realtime.push.admin.publish(
+      {deviceId},
+      {
+        notification: {title: 'Push Tutorial', body: 'Hello from device ID!'},
+        data: {foo: 'bar', baz: 'qux'},
+      },
+    );
+    showStatus(`Push sent to device ID: ${deviceId}`);
+  } catch (error: any) {
+    showStatus(`Failed to send push to device: ${error.message}`);
+  }
+}
+
+async function sendPushToClient() {
+  try {
+    const clientId = realtime.auth.clientId;
+    await realtime.push.admin.publish(
+      {clientId},
+      {
+        notification: {title: 'Push Tutorial', body: 'Hello from client ID!'},
+        data: {foo: 'bar', baz: 'qux'},
+      },
+    );
+    showStatus(`Push sent to client ID: ${clientId}`);
+  } catch (error: any) {
+    showStatus(`Failed to send push to client: ${error.message}`);
+  }
+}
+```
+</Code>
+
+Sending to a channel is just publishing a message on a channel with a `push` `extras` field:
+
+<Code>
+```react
+async function sendPushToChannel() {
+  try {
+    const channel = realtime.channels.get(CHANNEL_NAME);
+    await channel.publish({
+      name: 'example',
+      data: 'Hello from channel!',
+      extras: {
+        push: {
+          notification: {title: 'Channel Push', body: `Sent push to ${CHANNEL_NAME}`},
+          data: {foo: 'bar', baz: 'qux'},
+        },
+      },
+    });
+    showStatus(`Push sent to channel: ${CHANNEL_NAME}`);
+  } catch (error: any) {
+    showStatus(`Failed to send push to channel: ${error.message}`);
+  }
+}
+```
+</Code>
+
+Add three more buttons to the `buttons` view in your `return` statement:
+
+<Code>
+```react
+<TouchableOpacity style={[styles.btn, styles.btnIndigo]} onPress={sendPushToDevice}>
+  <Text style={styles.btnText}>Send Push to Device</Text>
+</TouchableOpacity>
+<TouchableOpacity style={[styles.btn, styles.btnTeal]} onPress={sendPushToClient}>
+  <Text style={styles.btnText}>Send Push to Client</Text>
+</TouchableOpacity>
+<TouchableOpacity style={[styles.btn, styles.btnBlue]} onPress={sendPushToChannel}>
+  <Text style={styles.btnText}>Send Push to Channel</Text>
+</TouchableOpacity>
+```
+</Code>
+
+Build and run your app again. Use the new buttons to send push notifications directly to your device ID, client ID, or the subscribed channel.
+
+## Next steps <a id="next-steps"/>
+
+* Understand [token authentication](/docs/auth/token) before going to production.
+* Explore [push notification administration](/docs/push#push-admin) for managing devices and subscriptions.
+* Learn about [channel rules](/docs/channels#rules) for channel-based push notifications.
+* Read more about the [Push Admin API](/docs/api/realtime-sdk/push-admin).
+
+You can also explore the [Ably JavaScript SDK](https://github.com/ably/ably-js) on GitHub, or visit the [API references](/docs/api/realtime-sdk?lang=javascript) for additional functionality.
