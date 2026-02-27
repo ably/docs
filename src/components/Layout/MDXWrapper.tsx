@@ -180,22 +180,31 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
     navigate(`${location.pathname}?lang=${lang}`);
   };
 
+  const sdkLabel = detectedSdkType === 'client' ? 'Client' : detectedSdkType === 'agent' ? 'Agent' : null;
+
   return (
-    <CodeSnippet
-      {...props}
-      lang={languageOverride || activePage.language}
-      sdk={detectedSdkType || sdk}
-      onChange={handleLanguageChange}
-      className={cn(props.className, 'mb-5')}
-      languageOrdering={
-        activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
-      }
-      apiKeys={apiKeys}
-      // Hide internal language selector for client/agent blocks since page-level selector controls it
-      fixed={detectedSdkType === 'client' || detectedSdkType === 'agent'}
-    >
-      {processedChildren}
-    </CodeSnippet>
+    <div className={sdkLabel ? 'relative' : undefined}>
+      {sdkLabel && (
+        <span className="absolute top-2 right-2 z-10 text-xs font-medium uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+          {sdkLabel}
+        </span>
+      )}
+      <CodeSnippet
+        {...props}
+        lang={languageOverride || activePage.language}
+        sdk={detectedSdkType || sdk}
+        onChange={handleLanguageChange}
+        className={cn(props.className, 'mb-5')}
+        languageOrdering={
+          activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
+        }
+        apiKeys={apiKeys}
+        // Hide internal language selector for client/agent blocks since page-level selector controls it
+        fixed={detectedSdkType === 'client' || detectedSdkType === 'agent'}
+      >
+        {processedChildren}
+      </CodeSnippet>
+    </div>
   );
 };
 
