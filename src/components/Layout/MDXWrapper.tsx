@@ -43,8 +43,8 @@ type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
 // Create SDK Context
 type SDKContextType = {
-  sdk: SDKType;
-  setSdk: (sdk: SDKType) => void;
+  sdk: SDKType | undefined;
+  setSdk: (sdk: SDKType | undefined) => void;
 };
 
 type Replacement = {
@@ -104,57 +104,107 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
     return processChild(children);
   }, [children, replacements]);
 
-  // Check if this code block contains only a single utility language
-  const utilityLanguageOverride = useMemo(() => {
+  // Detect code block type (client_, agent_, utility, or standard)
+  const { languageOverride, detectedSdkType } = useMemo(() => {
     // Utility languages that should be shown without warning (like JSON)
-    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql', 'json'];
+    const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql', 'json', 'shell', 'text'];
 
-    const childrenArray = React.Children.toArray(processedChildren);
+    // Helper to extract language from className
+    const extractLangFromClassName = (className: string | undefined): string | null => {
+      if (!className) {
+        return null;
+      }
+      const langMatch = className.match(/language-(\S+)/);
+      return langMatch ? langMatch[1] : null;
+    };
 
-    // Check if this is a single child with a utility language
-    if (childrenArray.length !== 1) {
-      return null;
+    // Recursively find all language classes in children
+    const findLanguages = (node: ReactNode): string[] => {
+      const languages: string[] = [];
+
+      React.Children.forEach(node, (child) => {
+        if (!isValidElement(child)) {
+          return;
+        }
+
+        const element = child as ReactElement<ElementProps>;
+        const props = element.props || {};
+
+        // Check className on this element
+        const lang = extractLangFromClassName(props.className);
+        if (lang) {
+          languages.push(lang);
+        }
+
+        // Recursively check children
+        if (props.children) {
+          languages.push(...findLanguages(props.children));
+        }
+      });
+
+      return languages;
+    };
+
+    const languages = findLanguages(processedChildren);
+
+    // Check for client_/agent_ prefixes
+    const hasClientPrefix = languages.some((lang) => lang.startsWith('client_'));
+    const hasAgentPrefix = languages.some((lang) => lang.startsWith('agent_'));
+
+    if (hasClientPrefix && activePage.isDualLanguage) {
+      return { languageOverride: activePage.clientLanguage, detectedSdkType: 'client' as SDKType };
     }
 
-    const child = childrenArray[0];
-    if (!isValidElement(child)) {
-      return null;
+    if (hasAgentPrefix && activePage.isDualLanguage) {
+      return { languageOverride: activePage.agentLanguage, detectedSdkType: 'agent' as SDKType };
     }
 
-    const preElement = child as ReactElement<ElementProps>;
-    const codeElement = isValidElement(preElement.props?.children)
-      ? (preElement.props.children as ReactElement<ElementProps>)
-      : null;
-
-    if (!codeElement || !codeElement.props.className) {
-      return null;
+    // Check for single utility language (existing logic)
+    if (languages.length === 1 && UTILITY_LANGUAGES.includes(languages[0])) {
+      return { languageOverride: languages[0], detectedSdkType: undefined };
     }
 
-    const className = codeElement.props.className as string;
-    const langMatch = className.match(/language-(\w+)/);
-    const lang = langMatch ? langMatch[1] : null;
+    return { languageOverride: undefined, detectedSdkType: undefined };
+  }, [processedChildren, activePage.isDualLanguage, activePage.clientLanguage, activePage.agentLanguage]);
 
-    // If it's a utility language, return the language to use as override
-    return lang && UTILITY_LANGUAGES.includes(lang) ? lang : null;
-  }, [processedChildren]);
+  // For client/agent blocks, the page-level selector controls language, so disable internal onChange
+  const handleLanguageChange = (lang: string, newSdk: SDKType | undefined) => {
+    // Don't navigate for client/agent blocks - page-level selector handles this
+    if (detectedSdkType === 'client' || detectedSdkType === 'agent') {
+      return;
+    }
+
+    if (!detectedSdkType) {
+      setSdk(newSdk ?? undefined);
+    }
+    navigate(`${location.pathname}?lang=${lang}`);
+  };
+
+  const sdkLabel = detectedSdkType === 'client' ? 'Client' : detectedSdkType === 'agent' ? 'Agent' : null;
 
   return (
-    <CodeSnippet
-      {...props}
-      lang={utilityLanguageOverride || activePage.language}
-      sdk={sdk}
-      onChange={(lang, sdk) => {
-        setSdk(sdk ?? null);
-        navigate(`${location.pathname}?lang=${lang}`);
-      }}
-      className={cn(props.className, 'mb-5')}
-      languageOrdering={
-        activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
-      }
-      apiKeys={apiKeys}
-    >
-      {processedChildren}
-    </CodeSnippet>
+    <div className={sdkLabel ? 'relative' : undefined}>
+      {sdkLabel && (
+        <span className="absolute top-2 right-2 z-10 text-xs font-medium uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+          {sdkLabel}
+        </span>
+      )}
+      <CodeSnippet
+        {...props}
+        lang={languageOverride || activePage.language}
+        sdk={detectedSdkType || sdk}
+        onChange={handleLanguageChange}
+        className={cn(props.className, 'mb-5')}
+        languageOrdering={
+          activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
+        }
+        apiKeys={apiKeys}
+        // Hide internal language selector for client/agent blocks since page-level selector controls it
+        fixed={detectedSdkType === 'client' || detectedSdkType === 'agent'}
+      >
+        {processedChildren}
+      </CodeSnippet>
+    </div>
   );
 };
 
@@ -168,11 +218,11 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { frontmatter } = pageContext;
 
   const { activePage } = useLayoutContext();
-  const [sdk, setSdk] = useState<SDKType>(
+  const [sdk, setSdk] = useState<SDKType | undefined>(
     (pageContext.languages
       ?.filter((language) => language.startsWith('realtime') || language.startsWith('rest'))
       ?.find((language) => activePage.language && language.endsWith(activePage.language))
-      ?.split('_')[0] as SDKType) ?? null,
+      ?.split('_')[0] as SDKType) ?? undefined,
   );
   const userContext = useContext(UserContext);
 

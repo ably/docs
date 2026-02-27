@@ -39,11 +39,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
 
   const showLanguageSelector = useMemo(
     () =>
-      activePage.languages.length > 0 &&
-      !activePage.languages.every(
-        (language) => !Object.keys(languageData[product as ProductKey] ?? {}).includes(language),
-      ),
-    [activePage.languages, product],
+      // Always show for dual language pages (AI Transport guides)
+      activePage.isDualLanguage ||
+      // Standard logic: show if languages exist and at least one is in languageData
+      (activePage.languages.length > 0 &&
+        !activePage.languages.every(
+          (language) => !Object.keys(languageData[product as ProductKey] ?? {}).includes(language),
+        )),
+    [activePage.languages, product, activePage.isDualLanguage],
   );
 
   useEffect(() => {
