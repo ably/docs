@@ -345,6 +345,10 @@ export default {
           name: 'Dashboards and visualizations',
           link: '/docs/guides/pub-sub/dashboards-and-visualizations',
         },
+        {
+          name: 'Handling discontinuity',
+          link: '/docs/guides/handling-discontinuity',
+        },
       ],
     },
   ],

@@ -226,6 +226,10 @@ export default {
           name: 'Livestream chat',
           link: '/docs/guides/chat/build-livestream',
         },
+        {
+          name: 'Handling discontinuity',
+          link: '/docs/guides/handling-discontinuity',
+        },
       ],
     },
   ],
