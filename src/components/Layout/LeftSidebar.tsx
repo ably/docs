@@ -8,31 +8,20 @@ import Icon from '@ably/ui/core/Icon';
 import { productData } from 'src/data';
 import { NavProductContent, NavProductPage } from 'src/data/nav/types';
 import Link from '../Link';
-import { useLayoutContext, isDualLanguagePath } from 'src/contexts/layout-context';
+import { useLayoutContext } from 'src/contexts/layout-context';
 import { interactiveButtonClassName } from './utils/styles';
 
-// Build link with appropriate language params based on target page type
+// Build link preserving all language params across navigation
 const buildLinkWithParams = (targetLink: string, searchParams: URLSearchParams): string => {
-  const clientLang = searchParams.get('client_lang');
-  const agentLang = searchParams.get('agent_lang');
-  const lang = searchParams.get('lang');
-
   const params = new URLSearchParams();
 
-  if (isDualLanguagePath(targetLink)) {
-    // Target supports dual language - preserve client_lang/agent_lang
-    if (clientLang) {
-      params.set('client_lang', clientLang);
-    }
-    if (agentLang) {
-      params.set('agent_lang', agentLang);
-    }
-  } else {
-    // Target uses single language - preserve lang
-    if (lang) {
-      params.set('lang', lang);
-    }
-  }
+  const lang = searchParams.get('lang');
+  const clientLang = searchParams.get('client_lang');
+  const agentLang = searchParams.get('agent_lang');
+
+  if (lang) params.set('lang', lang);
+  if (clientLang) params.set('client_lang', clientLang);
+  if (agentLang) params.set('agent_lang', agentLang);
 
   const paramString = params.toString();
   return paramString ? `${targetLink}?${paramString}` : targetLink;
