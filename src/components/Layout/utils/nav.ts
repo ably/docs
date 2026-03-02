@@ -17,6 +17,8 @@ export type ActivePage = {
   // Dual language support for AI Transport guides
   clientLanguage?: LanguageKey;
   agentLanguage?: LanguageKey;
+  clientLanguages?: LanguageKey[];
+  agentLanguages?: LanguageKey[];
   isDualLanguage?: boolean;
 };
 

@@ -69,14 +69,28 @@ export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...prop
     cleanHref = href.slice(brokenAssetPrefix.length);
   }
 
-  // Add lang param from current URL if available
+  // Add language params from current URL if available
   const urlParams = new URLSearchParams(location.search);
-  const langParam = urlParams.get('lang');
 
-  if (langParam && cleanHref && checkLinkIsInternal(cleanHref)) {
+  if (cleanHref && checkLinkIsInternal(cleanHref)) {
     const url = new URL(cleanHref, 'https://ably.com');
-    url.searchParams.set('lang', langParam);
-    cleanHref = url.pathname + url.search;
+    const langParam = urlParams.get('lang');
+    const clientLang = urlParams.get('client_lang');
+    const agentLang = urlParams.get('agent_lang');
+
+    if (langParam) {
+      url.searchParams.set('lang', langParam);
+    }
+    if (clientLang) {
+      url.searchParams.set('client_lang', clientLang);
+    }
+    if (agentLang) {
+      url.searchParams.set('agent_lang', agentLang);
+    }
+
+    if (langParam || clientLang || agentLang) {
+      cleanHref = url.pathname + url.search;
+    }
   }
 
   return (

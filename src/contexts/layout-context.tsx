@@ -16,17 +16,11 @@ import { ProductKey } from 'src/data/types';
 
 export const DEFAULT_LANGUAGE = 'javascript';
 
-// Languages supported for dual-language selection in AI Transport guides
-export const CLIENT_LANGUAGES: LanguageKey[] = ['javascript', 'swift', 'java'];
-export const AGENT_LANGUAGES: LanguageKey[] = ['javascript', 'python', 'java'];
+// Extract languages for a given prefix (e.g. 'client_' or 'agent_') from raw page languages
+const extractPrefixedLanguages = (rawLanguages: string[], prefix: string): LanguageKey[] =>
+  rawLanguages.filter((lang) => lang.startsWith(prefix)).map((lang) => lang.replace(prefix, '') as LanguageKey);
 
-// Check if a page supports dual language selection based on its path
-// Used for navigation param preservation (we don't have access to page content at nav time)
-export const isDualLanguagePath = (pathname: string): boolean => {
-  return pathname.includes('/docs/guides/ai-transport');
-};
-
-// Check if page content has client_/agent_ prefixed languages (more accurate than path check)
+// Check if page content has client_/agent_ prefixed languages
 const hasDualLanguageContent = (languages: string[]): boolean => {
   return languages.some((lang) => lang.startsWith('client_') || lang.startsWith('agent_'));
 };
@@ -43,6 +37,8 @@ const LayoutContext = createContext<{
     template: null,
     clientLanguage: undefined,
     agentLanguage: undefined,
+    clientLanguages: [],
+    agentLanguages: [],
     isDualLanguage: false,
   },
 });
@@ -66,29 +62,31 @@ const determineActiveLanguage = (
 };
 
 // Determine client language for dual-language pages
-const determineClientLanguage = (location: string, _product: ProductKey | null): LanguageKey => {
+const determineClientLanguage = (location: string, validLanguages: LanguageKey[]): LanguageKey => {
   const params = new URLSearchParams(location);
   const clientLangParam = params.get('client_lang') as LanguageKey;
 
-  if (clientLangParam && CLIENT_LANGUAGES.includes(clientLangParam)) {
+  if (clientLangParam && validLanguages.includes(clientLangParam)) {
     return clientLangParam;
   }
 
-  // Default to javascript
-  return DEFAULT_LANGUAGE;
+  return validLanguages.includes(DEFAULT_LANGUAGE as LanguageKey)
+    ? DEFAULT_LANGUAGE
+    : (validLanguages[0] ?? DEFAULT_LANGUAGE);
 };
 
 // Determine agent language for dual-language pages
-const determineAgentLanguage = (location: string, _product: ProductKey | null): LanguageKey => {
+const determineAgentLanguage = (location: string, validLanguages: LanguageKey[]): LanguageKey => {
   const params = new URLSearchParams(location);
   const agentLangParam = params.get('agent_lang') as LanguageKey;
 
-  if (agentLangParam && AGENT_LANGUAGES.includes(agentLangParam)) {
+  if (agentLangParam && validLanguages.includes(agentLangParam)) {
     return agentLangParam;
   }
 
-  // Default to javascript
-  return DEFAULT_LANGUAGE;
+  return validLanguages.includes(DEFAULT_LANGUAGE as LanguageKey)
+    ? DEFAULT_LANGUAGE
+    : (validLanguages[0] ?? DEFAULT_LANGUAGE);
 };
 
 export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageContextType }>> = ({
@@ -112,12 +110,12 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
     // Check if this page has dual-language content (client_/agent_ prefixed code blocks)
     const rawLanguages = pageContext?.languages ?? [];
     const isDualLanguage = hasDualLanguageContent(rawLanguages);
-    const clientLanguage = isDualLanguage
-      ? determineClientLanguage(location.search, activePageData?.product ?? null)
-      : undefined;
-    const agentLanguage = isDualLanguage
-      ? determineAgentLanguage(location.search, activePageData?.product ?? null)
-      : undefined;
+
+    const clientLanguages = isDualLanguage ? extractPrefixedLanguages(rawLanguages, 'client_') : [];
+    const agentLanguages = isDualLanguage ? extractPrefixedLanguages(rawLanguages, 'agent_') : [];
+
+    const clientLanguage = isDualLanguage ? determineClientLanguage(location.search, clientLanguages) : undefined;
+    const agentLanguage = isDualLanguage ? determineAgentLanguage(location.search, agentLanguages) : undefined;
 
     return {
       tree: activePageData?.tree ?? [],
@@ -128,6 +126,8 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
       template: 'mdx' as PageTemplate,
       clientLanguage,
       agentLanguage,
+      clientLanguages,
+      agentLanguages,
       isDualLanguage,
     };
   }, [location.pathname, location.search, pageContext?.languages]);

@@ -39,7 +39,7 @@ You also need:
 
 Useful links:
 - [Anthropic API documentation](https://docs.anthropic.com/en/api)
-<If clientOrAgentLang="javascript">
+<If lang="javascript">
 - [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
 </If>
 <If clientLang="swift">
@@ -48,7 +48,7 @@ Useful links:
 <If agentLang="python">
 - [Ably Python SDK getting started](/docs/getting-started/python)
 </If>
-<If clientOrAgentLang="java">
+<If lang="java">
 - [Ably Java SDK getting started](/docs/getting-started/java)
 </If>
 
@@ -78,7 +78,9 @@ pip install anthropic ably
 </If>
 
 <If agentLang="java">
-Create a new Maven project and add the following dependencies to your `pom.xml`:
+Create a new project and add the required dependencies.
+
+For Maven, add to your `pom.xml`:
 
 <Code>
 ```xml
@@ -94,6 +96,17 @@ Create a new Maven project and add the following dependencies to your `pom.xml`:
         <version>1.6.1</version>
     </dependency>
 </dependencies>
+```
+</Code>
+
+For Gradle, add to your `build.gradle`:
+
+<Code>
+```text
+dependencies {
+    implementation 'com.anthropic:anthropic-java:2.15.0'
+    implementation 'io.ably:ably-java:1.6.1'
+}
 ```
 </Code>
 </If>
@@ -482,6 +495,8 @@ async def process_event(event):
 ```
 
 ```agent_java
+import io.ably.lib.types.Message;
+
 // Track state across events
 private static String msgSerial = null;
 private static Long textBlockIndex = null;
@@ -490,7 +505,7 @@ private static Long textBlockIndex = null;
 private static void processEvent(RawMessageStreamEvent event) throws AblyException {
     if (event.isMessageStart()) {
         // Publish initial empty message when response starts
-        io.ably.lib.types.Message message = new io.ably.lib.types.Message("response", "");
+        Message message = new Message("response", "");
         channel.publish(message, new Callback<PublishResult>() {
             @Override
             public void onSuccess(PublishResult result) {
@@ -505,19 +520,22 @@ private static void processEvent(RawMessageStreamEvent event) throws AblyExcepti
 
     } else if (event.isContentBlockStart()) {
         // Capture text block index when a text content block is added
-        ContentBlockStartEvent blockStart = event.asContentBlockStart();
+        RawContentBlockStartEvent blockStart = event.asContentBlockStart();
         if (blockStart.contentBlock().isText()) {
             textBlockIndex = blockStart.index();
         }
 
     } else if (event.isContentBlockDelta()) {
         // Append tokens from text deltas only
-        ContentBlockDeltaEvent delta = event.asContentBlockDelta();
-        if (delta.index().equals(textBlockIndex) &&
+        RawContentBlockDeltaEvent delta = event.asContentBlockDelta();
+        if (delta.index() == textBlockIndex &&
             delta.delta().isText() &&
             msgSerial != null) {
             String text = delta.delta().asText().text();
-            channel.appendMessage(msgSerial, text);
+            Message message = new Message();
+            message.data = text;
+            message.serial = msgSerial;
+            channel.appendMessage(message);
         }
 
     } else if (event.isMessageStop()) {
@@ -722,9 +740,6 @@ public class Subscriber {
         });
 
         System.out.println("Subscriber ready, waiting for tokens...");
-
-        // Keep the application running
-        Thread.currentThread().join();
     }
 }
 ```

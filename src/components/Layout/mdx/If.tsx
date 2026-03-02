@@ -7,24 +7,30 @@ interface IfProps {
   lang?: LanguageKey;
   clientLang?: LanguageKey;
   agentLang?: LanguageKey;
-  clientOrAgentLang?: LanguageKey;
   loggedIn?: boolean;
   className?: string;
   children: React.ReactNode;
   as?: React.ElementType;
 }
 
-const If: React.FC<IfProps> = ({ lang, clientLang, agentLang, clientOrAgentLang, loggedIn, children }) => {
+const If: React.FC<IfProps> = ({ lang, clientLang, agentLang, loggedIn, children }) => {
   const { activePage } = useLayoutContext();
-  const { language, clientLanguage, agentLanguage } = activePage;
+  const { language, isDualLanguage, clientLanguage, agentLanguage } = activePage;
   const userContext = useContext(UserContext);
 
   let shouldShow = true;
 
   // Check language condition if lang prop is provided
-  if (lang !== undefined && language) {
+  if (lang !== undefined) {
     const splitLang = lang.split(',');
-    shouldShow = shouldShow && splitLang.includes(language);
+    if (isDualLanguage) {
+      // On dual-language pages, check if either client or agent matches
+      const clientMatches = clientLanguage && splitLang.includes(clientLanguage);
+      const agentMatches = agentLanguage && splitLang.includes(agentLanguage);
+      shouldShow = shouldShow && !!(clientMatches || agentMatches);
+    } else if (language) {
+      shouldShow = shouldShow && splitLang.includes(language);
+    }
   }
 
   // Check client language condition if clientLang prop is provided
@@ -37,14 +43,6 @@ const If: React.FC<IfProps> = ({ lang, clientLang, agentLang, clientOrAgentLang,
   if (agentLang !== undefined && agentLanguage) {
     const splitLang = agentLang.split(',');
     shouldShow = shouldShow && splitLang.includes(agentLanguage);
-  }
-
-  // Check if either client or agent matches (OR logic) - useful for shared requirements
-  if (clientOrAgentLang !== undefined) {
-    const splitLang = clientOrAgentLang.split(',');
-    const clientMatches = clientLanguage && splitLang.includes(clientLanguage);
-    const agentMatches = agentLanguage && splitLang.includes(agentLanguage);
-    shouldShow = shouldShow && (clientMatches || agentMatches);
   }
 
   // Check logged in condition if loggedIn prop is provided
