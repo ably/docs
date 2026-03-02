@@ -210,7 +210,7 @@ describe('generateMarkdownFooter', () => {
 
       const messagesCtx = lookup.get('/docs/chat/rooms/messages');
       expect(messagesCtx?.siblings).toHaveLength(2);
-      expect(messagesCtx?.siblings[0].name).toBe('Message storage and history');
+      expect(messagesCtx?.siblings[0].name).toBe('Message history');
       expect(messagesCtx?.siblings[0].url).toBe('https://ably.com/docs/chat/rooms/history.md');
       expect(messagesCtx?.siblings[0].description).toBe('Retrieve message history.');
     });
@@ -233,7 +233,7 @@ describe('generateMarkdownFooter', () => {
       const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
 
       const messagesCtx = lookup.get('/docs/chat/rooms/messages');
-      expect(messagesCtx?.siblings[0].description).toBe('Message storage and history');
+      expect(messagesCtx?.siblings[0].description).toBe('Message history');
     });
 
     it('should filter out non-MDX pages', () => {
