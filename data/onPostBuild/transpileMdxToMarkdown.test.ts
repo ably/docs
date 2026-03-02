@@ -68,16 +68,12 @@ title: Test Page
 Some content here.`;
 
       const navContext: NavContext = {
-        prev: { name: 'Previous', url: 'https://ably.com/docs/prev.md', description: 'Previous page.' },
-        next: { name: 'Next', url: 'https://ably.com/docs/next.md', description: 'Next page.' },
         siblings: [{ name: 'Sibling', url: 'https://ably.com/docs/sibling.md', description: 'A sibling page.' }],
       };
 
       const { content } = transformMdxToMarkdown(input, 'https://ably.com', navContext);
 
-      expect(content).toContain('## Page Navigation');
-      expect(content).toContain('- Previous: [Previous](https://ably.com/docs/prev.md): Previous page.');
-      expect(content).toContain('- Next: [Next](https://ably.com/docs/next.md): Next page.');
+      expect(content).not.toContain('## Page Navigation');
       expect(content).toContain('## Related Topics');
       expect(content).toContain('- [Sibling](https://ably.com/docs/sibling.md): A sibling page.');
       expect(content).toContain('## Documentation Index');
@@ -93,7 +89,7 @@ Some content here.`;
 
       const { content } = transformMdxToMarkdown(input, 'https://ably.com');
 
-      expect(content).not.toContain('## Page Navigation');
+      expect(content).not.toContain('## Related Topics');
       expect(content).not.toContain('## Documentation Index');
     });
 
@@ -105,15 +101,14 @@ title: Test Page
 Some content here.`;
 
       const navContext: NavContext = {
-        next: { name: 'Next', url: 'https://ably.com/docs/next.md', description: 'Next page.' },
-        siblings: [],
+        siblings: [{ name: 'Sibling', url: 'https://ably.com/docs/sibling.md', description: 'A sibling page.' }],
       };
 
       const { content } = transformMdxToMarkdown(input, 'https://ably.com', navContext);
 
       // The footer URL should remain exactly as-is (not get .md.md or other double-processing)
-      expect(content).toContain('https://ably.com/docs/next.md');
-      expect(content).not.toContain('https://ably.com/docs/next.md.md');
+      expect(content).toContain('https://ably.com/docs/sibling.md');
+      expect(content).not.toContain('https://ably.com/docs/sibling.md.md');
     });
   });
 

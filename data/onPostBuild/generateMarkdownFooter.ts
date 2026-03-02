@@ -35,8 +35,6 @@ export interface NavLink {
 }
 
 export interface NavContext {
-  prev?: NavLink;
-  next?: NavLink;
   siblings: NavLink[];
 }
 
@@ -134,8 +132,9 @@ function buildMetaDescriptionMap(mdxNodes: NavMdxNode[]): Map<string, string> {
 }
 
 /**
- * Build a lookup map for navigation context (prev/next/siblings) for each page.
+ * Build a lookup map for navigation context (siblings) for each page.
  * Filters out pages not in mdxPageSet to avoid broken links to .tsx pages.
+ * Siblings are other pages in the same section, excluding the current page.
  */
 function buildNavigationLookup(
   siteUrl: string,
@@ -147,14 +146,6 @@ function buildNavigationLookup(
 
   // Filter to only pages that have MDX source files
   const filteredPages = allPages.filter((page) => mdxPageSet.has(page.link));
-
-  // Group by product for prev/next
-  const productPages = new Map<string, FlatNavPage[]>();
-  for (const page of filteredPages) {
-    const existing = productPages.get(page.product) || [];
-    existing.push(page);
-    productPages.set(page.product, existing);
-  }
 
   // Group by sectionKey for siblings
   const sectionPages = new Map<string, FlatNavPage[]>();
@@ -168,79 +159,44 @@ function buildNavigationLookup(
 
   const lookup = new Map<string, NavContext>();
 
-  for (const [, pages] of productPages) {
-    for (let i = 0; i < pages.length; i++) {
-      const page = pages[i];
-      const prev = i > 0 ? pages[i - 1] : undefined;
-      const next = i < pages.length - 1 ? pages[i + 1] : undefined;
+  for (const page of filteredPages) {
+    // Get siblings (other pages in same section, excluding current page)
+    const siblings = (sectionPages.get(page.sectionKey) || [])
+      .filter((s) => s.link !== page.link)
+      .map(
+        (s): NavLink => ({
+          name: s.name,
+          url: linkToMdUrl(s.link),
+          description: metaDescriptions.get(s.link) || s.name,
+        }),
+      );
 
-      // Get siblings (other pages in same section, excluding current page)
-      const siblings = (sectionPages.get(page.sectionKey) || [])
-        .filter((s) => s.link !== page.link)
-        .map(
-          (s): NavLink => ({
-            name: s.name,
-            url: linkToMdUrl(s.link),
-            description: metaDescriptions.get(s.link) || s.name,
-          }),
-        );
+    const navContext: NavContext = {
+      siblings,
+    };
 
-      const navContext: NavContext = {
-        prev: prev
-          ? { name: prev.name, url: linkToMdUrl(prev.link), description: metaDescriptions.get(prev.link) || prev.name }
-          : undefined,
-        next: next
-          ? { name: next.name, url: linkToMdUrl(next.link), description: metaDescriptions.get(next.link) || next.name }
-          : undefined,
-        siblings,
-      };
-
-      lookup.set(page.link, navContext);
-    }
+    lookup.set(page.link, navContext);
   }
 
   return lookup;
 }
 
 /**
- * Generate a navigation footer with three sections: Page Navigation, Related Topics, Documentation Index.
+ * Generate a navigation footer with two sections: Related Topics, Documentation Index.
  * The Documentation Index section provides instructions for discovering additional documentation via llms.txt.
- * Always returns a footer that includes at least the Documentation Index section, even if there is no
- * page navigation or related topics content.
+ * Always returns a footer that includes at least the Documentation Index section, even if there are no
+ * related topics.
  */
 function generateNavigationFooter(navContext: NavContext, siteUrl: string): string {
   const baseUrl = siteUrl.replace(/\/$/, '');
   const sections: string[] = [];
 
-  // Page Navigation section (prev/next with descriptions)
-  if (navContext.prev || navContext.next) {
-    const navLines: string[] = [];
-    navLines.push('## Page Navigation');
-    navLines.push('');
-    if (navContext.prev) {
-      navLines.push(`- Previous: [${navContext.prev.name}](${navContext.prev.url}): ${navContext.prev.description}`);
-    }
-    if (navContext.next) {
-      navLines.push(`- Next: [${navContext.next.name}](${navContext.next.url}): ${navContext.next.description}`);
-    }
-    sections.push(navLines.join('\n'));
-  }
-
-  // Related Topics section (siblings, excluding pages already in Page Navigation)
-  const navUrls = new Set<string>();
-  if (navContext.prev) {
-    navUrls.add(navContext.prev.url);
-  }
-  if (navContext.next) {
-    navUrls.add(navContext.next.url);
-  }
-
-  const filteredSiblings = navContext.siblings.filter((s) => !navUrls.has(s.url));
-  if (filteredSiblings.length > 0) {
+  // Related Topics section (siblings of the current page)
+  if (navContext.siblings.length > 0) {
     const siblingLines: string[] = [];
     siblingLines.push('## Related Topics');
     siblingLines.push('');
-    for (const sibling of filteredSiblings) {
+    for (const sibling of navContext.siblings) {
       siblingLines.push(`- [${sibling.name}](${sibling.url}): ${sibling.description}`);
     }
     sections.push(siblingLines.join('\n'));

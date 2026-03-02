@@ -184,66 +184,16 @@ describe('generateMarkdownFooter', () => {
   describe('buildNavigationLookup', () => {
     const siteUrl = 'https://ably.com';
 
-    it('should compute prev/next correctly for middle page', () => {
-      const mdxPageSet = new Set(['/docs/chat', '/docs/chat/setup', '/docs/chat/rooms/messages']);
-      const metaDescriptions = new Map<string, string>();
-      const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
-
-      const setupCtx = lookup.get('/docs/chat/setup');
-      expect(setupCtx?.prev?.url).toBe('https://ably.com/docs/chat.md');
-      expect(setupCtx?.next?.url).toBe('https://ably.com/docs/chat/rooms/messages.md');
-    });
-
-    it('should have no previous for first page in product', () => {
-      const mdxPageSet = new Set(['/docs/chat', '/docs/chat/getting-started']);
-      const metaDescriptions = new Map<string, string>();
-      const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
-
-      const firstPage = lookup.get('/docs/chat');
-      expect(firstPage?.prev).toBeUndefined();
-      expect(firstPage?.next).toBeDefined();
-    });
-
-    it('should have no next for last page in product', () => {
-      const pages = flattenNavPages();
-      const chatPages = pages.filter((p) => p.product === 'Ably Chat');
-      const lastChatLink = chatPages[chatPages.length - 1].link;
-
-      const mdxPageSet = new Set(chatPages.map((p) => p.link));
-      const metaDescriptions = new Map<string, string>();
-      const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
-
-      const lastPage = lookup.get(lastChatLink);
-      expect(lastPage?.next).toBeUndefined();
-      expect(lastPage?.prev).toBeDefined();
-    });
-
     it('should use absolute .md URLs', () => {
-      const mdxPageSet = new Set(['/docs/chat', '/docs/chat/getting-started']);
+      const mdxPageSet = new Set(['/docs/chat/rooms/messages', '/docs/chat/rooms/history']);
       const metaDescriptions = new Map<string, string>();
       const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
 
-      const ctx = lookup.get('/docs/chat');
-      expect(ctx?.next?.url).toMatch(/^https:\/\/ably\.com\/docs\/.*\.md$/);
-    });
-
-    it('should not cross product boundaries', () => {
-      const pages = flattenNavPages();
-      const platformPages = pages.filter((p) => p.product === 'Platform');
-      const chatPages = pages.filter((p) => p.product === 'Ably Chat');
-
-      const lastPlatformLink = platformPages[platformPages.length - 1].link;
-      const firstChatLink = chatPages[0].link;
-
-      const mdxPageSet = new Set([...platformPages.map((p) => p.link), ...chatPages.map((p) => p.link)]);
-      const metaDescriptions = new Map<string, string>();
-      const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
-
-      const lastPlatform = lookup.get(lastPlatformLink);
-      const firstChat = lookup.get(firstChatLink);
-
-      expect(lastPlatform?.next).toBeUndefined();
-      expect(firstChat?.prev).toBeUndefined();
+      const ctx = lookup.get('/docs/chat/rooms/messages');
+      expect(ctx).toBeDefined();
+      if (ctx && ctx.siblings.length > 0) {
+        expect(ctx.siblings[0].url).toMatch(/^https:\/\/ably\.com\/docs\/.*\.md$/);
+      }
     });
 
     it('should compute siblings correctly', () => {
@@ -265,6 +215,18 @@ describe('generateMarkdownFooter', () => {
       expect(messagesCtx?.siblings[0].description).toBe('Retrieve message history.');
     });
 
+    it('should exclude the current page from siblings', () => {
+      const mdxPageSet = new Set(['/docs/chat/rooms/messages', '/docs/chat/rooms/history']);
+      const metaDescriptions = new Map<string, string>();
+      const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
+
+      const messagesCtx = lookup.get('/docs/chat/rooms/messages');
+      expect(messagesCtx).toBeDefined();
+      // Current page should not appear in its own siblings
+      const selfSibling = messagesCtx?.siblings.find((s) => s.url.includes('/rooms/messages'));
+      expect(selfSibling).toBeUndefined();
+    });
+
     it('should use page name as fallback description when meta_description is missing', () => {
       const mdxPageSet = new Set(['/docs/chat/rooms/messages', '/docs/chat/rooms/history']);
       const metaDescriptions = new Map<string, string>(); // No descriptions
@@ -280,20 +242,16 @@ describe('generateMarkdownFooter', () => {
       const metaDescriptions = new Map<string, string>();
       const lookup = buildNavigationLookup(siteUrl, metaDescriptions, mdxPageSet);
 
-      // The platform page should not have /docs/api/control-api as next
       const platformCtx = lookup.get('/docs/platform');
       expect(platformCtx).toBeDefined();
-      expect(platformCtx?.next).toBeUndefined();
     });
   });
 
   describe('generateNavigationFooter', () => {
     const siteUrl = 'https://ably.com';
 
-    it('should generate full footer with all three sections', () => {
+    it('should generate footer with Related Topics and Documentation Index sections', () => {
       const navContext: NavContext = {
-        prev: { name: 'Previous Page', url: 'https://ably.com/docs/prev.md', description: 'Previous page desc.' },
-        next: { name: 'Next Page', url: 'https://ably.com/docs/next.md', description: 'Next page desc.' },
         siblings: [
           { name: 'Sibling 1', url: 'https://ably.com/docs/sibling1.md', description: 'First sibling.' },
           { name: 'Sibling 2', url: 'https://ably.com/docs/sibling2.md', description: 'Second sibling.' },
@@ -302,9 +260,6 @@ describe('generateMarkdownFooter', () => {
 
       const footer = generateNavigationFooter(navContext, siteUrl);
 
-      expect(footer).toContain('## Page Navigation');
-      expect(footer).toContain('- Previous: [Previous Page](https://ably.com/docs/prev.md): Previous page desc.');
-      expect(footer).toContain('- Next: [Next Page](https://ably.com/docs/next.md): Next page desc.');
       expect(footer).toContain('## Related Topics');
       expect(footer).toContain('- [Sibling 1](https://ably.com/docs/sibling1.md): First sibling.');
       expect(footer).toContain('- [Sibling 2](https://ably.com/docs/sibling2.md): Second sibling.');
@@ -312,23 +267,8 @@ describe('generateMarkdownFooter', () => {
       expect(footer).toContain('Fetch [llms.txt](https://ably.com/llms.txt)');
     });
 
-    it('should include descriptions in Page Navigation prev/next links', () => {
+    it('should list all siblings in Related Topics', () => {
       const navContext: NavContext = {
-        prev: { name: 'Prev', url: 'https://ably.com/docs/prev.md', description: 'Go back here.' },
-        next: { name: 'Next', url: 'https://ably.com/docs/next.md', description: 'Continue here.' },
-        siblings: [],
-      };
-
-      const footer = generateNavigationFooter(navContext, siteUrl);
-
-      expect(footer).toContain('- Previous: [Prev](https://ably.com/docs/prev.md): Go back here.');
-      expect(footer).toContain('- Next: [Next](https://ably.com/docs/next.md): Continue here.');
-    });
-
-    it('should exclude prev/next pages from Related Topics to avoid duplicates', () => {
-      const navContext: NavContext = {
-        prev: { name: 'Sibling 1', url: 'https://ably.com/docs/sibling1.md', description: 'First sibling.' },
-        next: { name: 'Sibling 2', url: 'https://ably.com/docs/sibling2.md', description: 'Second sibling.' },
         siblings: [
           { name: 'Sibling 1', url: 'https://ably.com/docs/sibling1.md', description: 'First sibling.' },
           { name: 'Sibling 2', url: 'https://ably.com/docs/sibling2.md', description: 'Second sibling.' },
@@ -338,80 +278,19 @@ describe('generateMarkdownFooter', () => {
 
       const footer = generateNavigationFooter(navContext, siteUrl);
 
-      // Sibling 1 and 2 are in Page Navigation, so only Sibling 3 should be in Related Topics
       expect(footer).toContain('## Related Topics');
+      expect(footer).toContain('- [Sibling 1](https://ably.com/docs/sibling1.md): First sibling.');
+      expect(footer).toContain('- [Sibling 2](https://ably.com/docs/sibling2.md): Second sibling.');
       expect(footer).toContain('- [Sibling 3](https://ably.com/docs/sibling3.md): Third sibling.');
-      // Sibling 1 and 2 should NOT appear in Related Topics
-      const additionalSection = footer.split('## Related Topics')[1].split('## Documentation Index')[0];
-      expect(additionalSection).not.toContain('Sibling 1');
-      expect(additionalSection).not.toContain('Sibling 2');
-    });
-
-    it('should omit Related Topics when all siblings are already in Page Navigation', () => {
-      const navContext: NavContext = {
-        prev: { name: 'Sibling 1', url: 'https://ably.com/docs/sibling1.md', description: 'First.' },
-        next: { name: 'Sibling 2', url: 'https://ably.com/docs/sibling2.md', description: 'Second.' },
-        siblings: [
-          { name: 'Sibling 1', url: 'https://ably.com/docs/sibling1.md', description: 'First.' },
-          { name: 'Sibling 2', url: 'https://ably.com/docs/sibling2.md', description: 'Second.' },
-        ],
-      };
-
-      const footer = generateNavigationFooter(navContext, siteUrl);
-
-      expect(footer).toContain('## Page Navigation');
-      expect(footer).not.toContain('## Related Topics');
-      expect(footer).toContain('## Documentation Index');
-    });
-
-    it('should omit Previous bullet when no previous page', () => {
-      const navContext: NavContext = {
-        next: { name: 'Next Page', url: 'https://ably.com/docs/next.md', description: 'Next desc.' },
-        siblings: [],
-      };
-
-      const footer = generateNavigationFooter(navContext, siteUrl);
-
-      expect(footer).toContain('## Page Navigation');
-      expect(footer).not.toContain('Previous');
-      expect(footer).toContain('- Next: [Next Page](https://ably.com/docs/next.md): Next desc.');
-    });
-
-    it('should omit Next bullet when no next page', () => {
-      const navContext: NavContext = {
-        prev: { name: 'Previous Page', url: 'https://ably.com/docs/prev.md', description: 'Prev desc.' },
-        siblings: [],
-      };
-
-      const footer = generateNavigationFooter(navContext, siteUrl);
-
-      expect(footer).toContain('## Page Navigation');
-      expect(footer).toContain('- Previous: [Previous Page](https://ably.com/docs/prev.md): Prev desc.');
-      expect(footer).not.toContain('Next');
-    });
-
-    it('should omit Page Navigation section when both prev and next are absent', () => {
-      const navContext: NavContext = {
-        siblings: [{ name: 'Sibling', url: 'https://ably.com/docs/sibling.md', description: 'A sibling.' }],
-      };
-
-      const footer = generateNavigationFooter(navContext, siteUrl);
-
-      expect(footer).not.toContain('## Page Navigation');
-      expect(footer).toContain('## Related Topics');
-      expect(footer).toContain('## Documentation Index');
     });
 
     it('should omit Related Topics section when no siblings', () => {
       const navContext: NavContext = {
-        prev: { name: 'Prev', url: 'https://ably.com/docs/prev.md', description: 'Prev desc.' },
-        next: { name: 'Next', url: 'https://ably.com/docs/next.md', description: 'Next desc.' },
         siblings: [],
       };
 
       const footer = generateNavigationFooter(navContext, siteUrl);
 
-      expect(footer).toContain('## Page Navigation');
       expect(footer).not.toContain('## Related Topics');
       expect(footer).toContain('## Documentation Index');
     });
