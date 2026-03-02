@@ -103,9 +103,11 @@ Ably Tokens and JWTs are issued from an existing API key and their capabilities 
 
 If an API key must be shared with a third party, then it is recommended that [the principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege) is considered, assigning only the capabilities needed by that third party. Thus, any Ably requests authenticated using that API key or Ably-compatible tokens associated with that API key, will be restricted to the capabilities assigned to the API key.
 
-#### Using JWT (recommended) <a id="jwt-capabilities"/>
+JWTs are the recommended approach for setting token capabilities. Use a TokenRequest as an alternative when your capability list is very large or must remain confidential.
 
-Set capabilities in a JWT using the `x-ably-capability` claim. No Ably SDK is required. This example uses [jsonwebtoken](https://www.npmjs.com/package/jsonwebtoken):
+#### Using JWT <a id="jwt-capabilities"/>
+
+Set capabilities in a JWT using the `x-ably-capability` claim. No Ably SDK is required:
 
 <Code>
 ```javascript
@@ -152,9 +154,108 @@ ably_jwt = jwt.encode(
     headers={'kid': key_name}
 )
 ```
+
+```java
+// Server-side: Create JWT with capabilities using any JWT library
+Map<String, Object> headerClaims = new HashMap<>();
+headerClaims.put("typ", "JWT");
+headerClaims.put("alg", "HS256");
+headerClaims.put("kid", keyName);
+
+long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
+Map<String, Object> claims = new HashMap<>();
+claims.put("iat", currentTimeInSeconds);
+claims.put("exp", currentTimeInSeconds + 3600);
+claims.put("x-ably-capability", "{\"your-namespace:*\":[\"publish\",\"subscribe\",\"presence\"],\"notifications\":[\"subscribe\"]}");
+claims.put("x-ably-clientId", userId);
+
+Algorithm algorithm = Algorithm.HMAC256(keySecret);
+String token = JWT.create()
+        .withHeader(headerClaims)
+        .withPayload(claims)
+        .sign(algorithm);
+```
+
+```ruby
+# Server-side: Create JWT with capabilities using any JWT library
+require 'jwt'
+
+key_name, key_secret = ENV['ABLY_API_KEY'].split(':')
+
+now = Time.now.to_i
+payload = {
+  'iat' => now,
+  'exp' => now + 3600,
+  'x-ably-capability' => '{"your-namespace:*":["publish","subscribe","presence"],"notifications":["subscribe"]}',
+  'x-ably-clientId' => user_id
+}
+
+ably_jwt = JWT.encode(payload, key_secret, 'HS256', { 'kid' => key_name })
+```
+
+```php
+// Server-side: Create JWT with capabilities using any JWT library
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'kid' => $keyName
+];
+$currentTime = time();
+$claims = [
+    'iat' => $currentTime,
+    'exp' => $currentTime + 3600,
+    'x-ably-capability' => '{"your-namespace:*":["publish","subscribe","presence"],"notifications":["subscribe"]}',
+    'x-ably-clientId' => $userId
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$signature = hash_hmac('sha256', $base64Header . '.' . $base64Claims, $keySecret, true);
+$jwt = $base64Header . '.' . $base64Claims . '.' . base64_encode($signature);
+```
+
+```go
+// Server-side: Create JWT with capabilities using any JWT library
+header := map[string]string{
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": keyName,
+}
+
+currentTime := time.Now().Unix()
+claims := map[string]interface{}{
+    "iat":                currentTime,
+    "exp":                currentTime + 3600,
+    "x-ably-capability":  `{"your-namespace:*":["publish","subscribe","presence"],"notifications":["subscribe"]}`,
+    "x-ably-clientId":    userId,
+}
+
+// Sign using HS256 with your API key secret
+```
+
+```csharp
+// Server-side: Create JWT with capabilities using any JWT library
+var header = new Dictionary<string, object>
+{
+    { "typ", "JWT" },
+    { "alg", "HS256" },
+    { "kid", keyName }
+};
+
+var currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+var claims = new Dictionary<string, object>
+{
+    { "iat", currentTime },
+    { "exp", currentTime + 3600 },
+    { "x-ably-capability", "{\"your-namespace:*\":[\"publish\",\"subscribe\",\"presence\"],\"notifications\":[\"subscribe\"]}" },
+    { "x-ably-clientId", userId }
+};
+
+// Sign using HS256 with your API key secret
+```
 </Code>
 
-#### Using TokenRequest (alternative) <a id="tokenrequest-capabilities"/>
+#### Using TokenRequest <a id="tokenrequest-capabilities"/>
 
 Use a TokenRequest when your capability list is very large (JWTs must fit within HTTP header limits, typically around 8 KB) or when capabilities need to be kept confidential (JWTs can be decoded by clients):
 
@@ -180,9 +281,74 @@ token_request = await ably.auth.create_token_request({
     }),
 })
 ```
-</Code>
 
-See [Ably Tokens](/docs/auth/ably-tokens#token-request) for complete TokenRequest examples in all languages.
+```java
+// Server-side with Ably SDK
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+AblyRest rest = new AblyRest(options);
+
+Auth.TokenParams tokenParams = new Auth.TokenParams();
+tokenParams.clientId = "user-123";
+tokenParams.capability = "{\"your-namespace:*\":[\"publish\",\"subscribe\"]}";
+
+Auth.TokenRequest tokenRequest = rest.auth.createTokenRequest(tokenParams, null);
+```
+
+```ruby
+# Server-side with Ably SDK
+rest = Ably::Rest.new(key: '{{API_KEY}}')
+
+token_request = rest.auth.create_token_request(
+  client_id: 'user-123',
+  capability: { 'your-namespace:*' => ['publish', 'subscribe'] }
+)
+```
+
+```php
+// Server-side with Ably SDK
+$rest = new Ably\AblyRest(
+    ['key' => '{{API_KEY}}']
+);
+
+$tokenRequest = $rest->auth->createTokenRequest([
+    'clientId' => 'user-123',
+    'capability' => '{"your-namespace:*":["publish","subscribe"]}'
+]);
+```
+
+```go
+// Server-side with Ably SDK
+rest, err := ably.NewREST(
+  ably.WithKey("{{API_KEY}}"))
+if err != nil {
+  log.Fatalf("Error creating Ably client: %v", err)
+}
+
+capabilitiesJSON, _ := json.Marshal(map[string][]string{
+  "your-namespace:*": {"publish", "subscribe"},
+})
+
+tokenParams := &ably.TokenParams{
+  ClientID:   "user-123",
+  Capability: string(capabilitiesJSON),
+}
+tokenRequest, _ := rest.Auth.CreateTokenRequest(tokenParams)
+```
+
+```flutter
+// Server-side with Ably SDK
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}',
+);
+final rest = ably.Rest(options: clientOptions);
+final tokenRequest = rest.auth.createTokenRequest(
+  tokenParams: ably.TokenParams(
+    clientId: 'user-123',
+    capability: '{"your-namespace:*":["publish","subscribe"]}',
+  ),
+);
+```
+</Code>
 
 ### Token capability determination <a id="capability-determination"/>
 
