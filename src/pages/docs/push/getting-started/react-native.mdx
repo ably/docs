@@ -257,6 +257,23 @@ async function requestPermission(): Promise<boolean> {
   );
 }
 
+const tokenRefreshUnsubscribeRef = useRef<(() => void) | null>(null);
+
+async function saveDeviceRegistration(token: string) {
+  await realtime.push.admin.deviceRegistrations.save({
+    id: deviceId,
+    clientId: 'push-tutorial-client',
+    platform: Platform.OS === 'ios' ? 'ios' : 'android',
+    formFactor: 'phone',
+    push: {
+      recipient: {
+        transportType: 'fcm',
+        registrationToken: token,
+      },
+    },
+  });
+}
+
 async function activatePush() {
   try {
     showStatus('Activating push notifications...');
@@ -268,18 +285,15 @@ async function activatePush() {
 
     await messaging().registerDeviceForRemoteMessages(); // Required to receive push notifications on iOS, no-op on Android
     const fcmToken = await messaging().getToken();
+    await saveDeviceRegistration(fcmToken);
 
-    await realtime.push.admin.deviceRegistrations.save({
-      id: deviceId,
-      clientId: 'push-tutorial-client',
-      platform: Platform.OS === 'ios' ? 'ios' : 'android',
-      formFactor: 'phone',
-      push: {
-        recipient: {
-          transportType: 'fcm',
-          registrationToken: fcmToken,
-        },
-      },
+    tokenRefreshUnsubscribeRef.current?.();
+    tokenRefreshUnsubscribeRef.current = messaging().onTokenRefresh(async newToken => {
+      try {
+        await saveDeviceRegistration(newToken);
+      } catch (error: any) {
+        console.error('Failed to update FCM token:', error.message);
+      }
     });
 
     showStatus(`Push activated. Device ID: ${deviceId}`);
@@ -293,6 +307,8 @@ async function deactivatePush() {
   try {
     showStatus('Deactivating push notifications...');
     await realtime.push.admin.deviceRegistrations.remove(deviceId);
+    tokenRefreshUnsubscribeRef.current?.();
+    tokenRefreshUnsubscribeRef.current = null;
     showStatus('Push notifications deactivated.');
   } catch (error: any) {
     showStatus(`Failed to deactivate push: ${error.message}`);
@@ -341,31 +357,10 @@ useEffect(() => {
     });
   });
 
-  // Handle FCM token refresh
-  const unsubscribeTokenRefresh = messaging().onTokenRefresh(async newToken => {
-    try {
-      await realtime.push.admin.deviceRegistrations.save({
-        id: deviceId,
-        clientId: 'push-tutorial-client',
-        platform: Platform.OS === 'ios' ? 'ios' : 'android',
-        formFactor: 'phone',
-        push: {
-          recipient: {
-            transportType: 'fcm',
-            registrationToken: newToken,
-          },
-        },
-      });
-    } catch (error: any) {
-      console.error('Failed to update FCM token:', error.message);
-    }
-  });
-
   return () => {
     unsubscribe();
-    unsubscribeTokenRefresh();
   };
-}, [deviceId]);
+}, []);
 ```
 </Code>
 
