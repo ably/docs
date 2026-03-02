@@ -1,0 +1,198 @@
+---
+title: Typing
+meta_description: "API reference for the Typing interface in the Ably Chat JavaScript SDK."
+meta_keywords: "Ably Chat SDK, JavaScript, Typing API, keystroke, stop, subscribe, typing indicators"
+---
+
+The `Typing` interface provides methods for sending and receiving typing indicators in a chat room. Access it via `room.typing`.
+
+<Code>
+```javascript
+const typing = room.typing;
+```
+</Code>
+
+## Properties
+
+The `Typing` interface has the following properties:
+
+<Table id='TypingProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| current | The current set of client IDs who are typing in the room. | `Set<string>` |
+
+</Table>
+
+## Start typing <a id="keystroke"/>
+
+<MethodSignature>{`typing.keystroke(): Promise<void>`}</MethodSignature>
+
+Sends a typing started event to notify other users that the current user is typing.
+
+Events are throttled according to the [`heartbeatThrottleMs`](/docs/chat/api/javascript/rooms#get) room option to prevent excessive network traffic. If called within the throttle interval, the operation becomes a no-op. Multiple rapid calls are serialized to maintain consistency.
+
+The room must be [attached](/docs/chat/api/javascript/room#attach) and the connection must be in the [`connected`](/docs/chat/api/javascript/connection) state.
+
+<Code>
+```javascript
+// Call this when the user starts typing
+await room.typing.keystroke();
+```
+</Code>
+
+### Returns <a id="keystroke-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the typing event has been sent, or rejected with an [`ErrorInfo`](/docs/chat/api/javascript/chat-client#errorinfo) object.
+
+## Stop typing <a id="stop"/>
+
+<MethodSignature>{`typing.stop(): Promise<void>`}</MethodSignature>
+
+Sends a typing stopped event to notify other users that the current user has stopped typing.
+
+If the user is not currently typing, this operation is a no-op. Multiple rapid calls are serialized to maintain consistency.
+
+The room must be [attached](/docs/chat/api/javascript/room#attach) and the connection must be in the [`connected`](/docs/chat/api/javascript/connection) state.
+
+<Code>
+```javascript
+// Call this when the user stops typing or clears the input
+await room.typing.stop();
+```
+</Code>
+
+### Returns <a id="stop-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the stop event has been sent, or rejected with an [`ErrorInfo`](/docs/chat/api/javascript/chat-client#errorinfo) object.
+
+## Subscribe to typing events <a id="subscribe"/>
+
+<MethodSignature>{`typing.subscribe(listener: TypingListener): Subscription`}</MethodSignature>
+
+Subscribes to typing events from users in the chat room. Receives updates whenever a user starts or stops typing, providing real-time feedback about who is currently composing messages.
+
+The room must be [attached](/docs/chat/api/javascript/room#attach) to receive typing events.
+
+<Code>
+```javascript
+const { unsubscribe } = room.typing.subscribe((event) => {
+  console.log('Currently typing:', Array.from(event.currentlyTyping));
+});
+
+// To stop receiving typing events
+unsubscribe();
+```
+</Code>
+
+### Parameters <a id="subscribe-params"/>
+
+The `subscribe()` method takes the following parameters:
+
+<Table id='SubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Required | Callback invoked when the typing state changes. | <Table id='TypingEvent'/> |
+
+</Table>
+
+<Table id='TypingEvent' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | The type of the event. Always `SetChanged`. | <Table id='TypingSetEventType'/> |
+| currentlyTyping | Set of client IDs currently typing in the room. | `Set<string>` |
+| change | Information about the specific change that triggered this event. | <Table id='TypingChange'/> |
+
+</Table>
+
+<Table id='TypingSetEventType' hidden>
+
+| Value | Description |
+| --- | --- |
+| SetChanged | The set of currently typing users has changed. The value is `typing.set.changed`. |
+
+</Table>
+
+<Table id='TypingChange' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| clientId | The client ID whose typing state changed. | String |
+| type | Whether the user started or stopped typing. | <Table id='TypingEventType'/> |
+
+</Table>
+
+<Table id='TypingEventType' hidden>
+
+| Value | Description |
+| --- | --- |
+| Started | A user has started typing. The value is `typing.started`. |
+| Stopped | A user has stopped typing. The value is `typing.stopped`. |
+
+</Table>
+
+### Returns <a id="subscribe-returns"/>
+
+`Subscription`
+
+Returns an object with the following methods:
+
+#### Unsubscribe from typing events <a id="subscribe-unsubscribe"/>
+
+<MethodSignature>unsubscribe(): void</MethodSignature>
+
+Call `unsubscribe()` to stop receiving typing events.
+
+## Example
+
+<Code>
+```javascript
+const room = await chatClient.rooms.get('my-room', {
+  typing: {
+    heartbeatThrottleMs: 5000 // Throttle typing events to every 5 seconds
+  }
+});
+
+await room.attach();
+
+// Subscribe to typing events
+const { unsubscribe } = room.typing.subscribe((event) => {
+  const typingUsers = Array.from(event.currentlyTyping);
+
+  if (typingUsers.length === 0) {
+    console.log('No one is typing');
+  } else if (typingUsers.length === 1) {
+    console.log(`${typingUsers[0]} is typing...`);
+  } else {
+    console.log(`${typingUsers.join(', ')} are typing...`);
+  }
+});
+
+// Integrate with an input field
+const inputField = document.getElementById('message-input');
+
+inputField.addEventListener('input', async () => {
+  if (inputField.value.length > 0) {
+    await room.typing.keystroke();
+  } else {
+    await room.typing.stop();
+  }
+});
+
+inputField.addEventListener('blur', async () => {
+  await room.typing.stop();
+});
+
+// Check who is currently typing
+console.log('Currently typing:', room.typing.current);
+
+// Clean up
+unsubscribe();
+```
+</Code>
