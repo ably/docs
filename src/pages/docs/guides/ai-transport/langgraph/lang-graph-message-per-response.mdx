@@ -1,12 +1,14 @@
 ---
-title: "Guide: Stream Anthropic responses using the message-per-response pattern"
-meta_description: "Stream tokens from the Anthropic Messages API over Ably in realtime using message appends."
-meta_keywords: "AI, token streaming, Anthropic, Claude, Messages API, AI transport, Ably, realtime, message appends"
+title: "Guide: Stream LangGraph responses using the message-per-response pattern"
+meta_description: "Stream tokens from LangGraph over Ably in realtime using message appends."
+meta_keywords: "AI, token streaming, LangGraph, LangChain, Anthropic, AI transport, Ably, realtime, message appends"
+redirect_from:
+  - /docs/guides/ai-transport/lang-graph-message-per-response
 ---
 
-This guide shows you how to stream AI responses from Anthropic's [Messages API](https://docs.anthropic.com/en/api/messages) over Ably using the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response). Specifically, it appends each response token to a single Ably message, creating a complete AI response that grows incrementally while delivering tokens in realtime.
+This guide shows you how to stream AI responses from [LangGraph](https://docs.langchain.com/oss/javascript/langgraph/overview) over Ably using the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response). Specifically, it appends each response token to a single Ably message, creating a complete AI response that grows incrementally while delivering tokens in realtime.
 
-Using Ably to distribute tokens from the Anthropic SDK enables you to broadcast AI responses to thousands of concurrent subscribers with reliable message delivery and ordering guarantees. This approach stores each complete response as a single message in channel history, making it easy to retrieve conversation history without processing thousands of individual token messages.
+Using Ably to distribute tokens from LangGraph enables you to broadcast AI responses to thousands of concurrent subscribers with reliable message delivery and ordering guarantees. This approach stores each complete response as a single message in channel history, making it easy to retrieve conversation history without processing thousands of individual token messages.
 
 <Aside data-type="further-reading">
 To discover other approaches to token streaming, including the [message-per-token](/docs/ai-transport/token-streaming/message-per-token) pattern, see the [token streaming](/docs/ai-transport/token-streaming) documentation.
@@ -20,14 +22,14 @@ To follow this guide, you need:
 - An Ably API key
 
 Useful links:
-- [Anthropic API documentation](https://docs.anthropic.com/en/api)
+- [LangGraph documentation](https://docs.langchain.com/oss/javascript/langgraph/overview)
 - [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
 
 Create a new NPM package, which will contain the publisher and subscriber code:
 
 <Code>
 ```shell
-mkdir ably-anthropic-example && cd ably-anthropic-example
+mkdir ably-langgraph-example-per-response && cd ably-langgraph-example-per-response
 npm init -y
 ```
 </Code>
@@ -36,12 +38,12 @@ Install the required packages using NPM:
 
 <Code>
 ```shell
-npm install @anthropic-ai/sdk@^0.71 ably@^2
+npm install @langchain/langgraph@^0.2 @langchain/anthropic@^0.3 @langchain/core@^0.3 ably@^2
 ```
 </Code>
 
 <Aside data-type="note">
-This guide uses version 0.71.x of the Anthropic SDK. Some details of interacting with the Anthropic SDK may differ from those given here if using a different major version.
+This guide uses LangGraph with the Anthropic provider and Claude Sonnet 4.5 model. LangGraph supports [multiple model providers](https://js.langchain.com/docs/integrations/chat/) including OpenAI, Google, and others. The streaming approach shown in this guide works with any LangChain-compatible model.
 </Aside>
 
 Export your Anthropic API key to the environment, which will be used later in the guide by the Anthropic SDK:
@@ -75,94 +77,91 @@ The examples in this guide use the `ai:` namespace prefix, which assumes you hav
 The `ai:` namespace is just a naming convention used in this guide. There's nothing special about it - you can use any namespace pattern you like, as long as your channel name matches the configured channel rule.
 </Aside>
 
-## Step 2: Get a streamed response from Anthropic <a id="step-2"/>
+## Step 2: Get a streamed response from LangGraph <a id="step-2"/>
 
-Initialize an Anthropic client and use the [Messages API](https://docs.anthropic.com/en/api/messages) to stream model output as a series of events.
+Initialize LangGraph with a simple graph that uses Claude to respond to prompts, and use [`stream`](https://docs.langchain.com/oss/javascript/langgraph/streaming) with `streamMode: "messages"` to stream model tokens.
 
 Create a new file `publisher.mjs` with the following contents:
 
 <Code>
 ```javascript
-import Anthropic from '@anthropic-ai/sdk';
+import { ChatAnthropic } from "@langchain/anthropic";
+import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
 
-// Initialize Anthropic client
-const anthropic = new Anthropic();
+// Initialize the model
+const model = new ChatAnthropic({ model: "claude-sonnet-4-5" });
 
-// Process each streaming event
-async function processEvent(event) {
-  console.log(JSON.stringify(event));
-  // This function is updated in the next sections
-}
+// Define state with message history
+const StateAnnotation = Annotation.Root({
+  messages: Annotation({
+    reducer: (x, y) => x.concat(y),
+    default: () => [],
+  }),
+});
 
-// Create streaming response from Anthropic
-async function streamAnthropicResponse(prompt) {
-  const stream = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 1024,
-    messages: [{ role: "user", content: prompt }],
-    stream: true,
-  });
+// Build and compile a simple graph
+const graph = new StateGraph(StateAnnotation)
+  .addNode("agent", async (state) => {
+    const response = await model.invoke(state.messages);
+    return { messages: [response] };
+  })
+  .addEdge(START, "agent")
+  .addEdge("agent", END);
 
-  // Iterate through streaming events
-  for await (const event of stream) {
-    await processEvent(event);
+const app = graph.compile();
+
+// Stream response tokens
+async function streamLangGraphResponse(prompt) {
+  const stream = await app.stream(
+    { messages: [{ role: "user", content: prompt }] },
+    { streamMode: "messages" }
+  );
+
+  for await (const [messageChunk, metadata] of stream) {
+    console.log(messageChunk.content || "(empty)");
   }
 }
 
 // Usage example
-streamAnthropicResponse("Tell me a short joke");
+streamLangGraphResponse("Tell me a short joke");
 ```
 </Code>
 
-### Understand Anthropic streaming events <a id="understand-streaming-events"/>
+### Understand LangGraph streaming <a id="understand-streaming"/>
 
-Anthropic's Messages API [streams](https://docs.anthropic.com/en/api/messages-streaming) model output as a series of events when you set `stream: true`. Each streamed event includes a `type` property which describes the event type. A complete text response can be constructed from the following event types:
+LangGraph's [`stream`](https://docs.langchain.com/oss/javascript/langgraph/streaming) method with `streamMode: "messages"` streams LLM tokens from your graph. The stream returns tuples of `[messageChunk, metadata]` where:
 
-- [`message_start`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals the start of a response. Contains a `message` object with an `id` to correlate subsequent events.
+- `messageChunk`: Contains the token content in the `content` field. These represent incremental text chunks as the model generates them. The message chunk also includes an `id` field that uniquely identifies the response.
 
-- [`content_block_start`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Indicates the start of a new content block. For text responses, the `content_block` will have `type: "text"`; other types may be specified, such as `"thinking"` for internal reasoning tokens. The `index` indicates the position of this item in the message's `content` array.
+- `metadata`: Contains metadata about the stream, including the `langgraph_node` where the LLM is invoked and any associated tags.
 
-- [`content_block_delta`](https://platform.claude.com/docs/en/build-with-claude/streaming#content-block-delta-types): Contains a single text delta in the `delta.text` field. If `delta.type === "text_delta"` the delta contains model response text; other types may be specified, such as `"thinking_delta"` for internal reasoning tokens. Use the `index` to correlate deltas relating to a specific content block.
-
-- [`content_block_stop`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals completion of a content block. Contains the `index` that identifies the content block.
-
-- [`message_delta`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Contains additional message-level metadata that may be streamed incrementally. Includes a [`delta.stop_reason`](https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons) which indicates why the model successfully completed its response generation.
-
-- [`message_stop`](https://platform.claude.com/docs/en/build-with-claude/streaming#event-types): Signals the end of the response.
-
-The following example shows the event sequence received when streaming a response:
+The following example shows the message chunks received when streaming a response. Each event is a tuple of `[messageChunk, metadata]`:
 
 <Code>
 ```json
-// 1. Message starts
-{"type":"message_start","message":{"model":"claude-sonnet-4-5-20250929","id":"msg_012zEkenyT6heaYSDvDEDdXm","type":"message","role":"assistant","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":1,"service_tier":"standard"}}}
+// 1. Stream initialization (empty content with model metadata)
+[{"lc":1,"type":"constructor","id":["langchain_core","messages","AIMessageChunk"],"kwargs":{"content":"","additional_kwargs":{"model":"claude-sonnet-4-5-20250929","id":"msg_01SPbpi5P7CkNqgxPT2Ne9u5","type":"message","role":"assistant"},"tool_call_chunks":[],"usage_metadata":{"input_tokens":12,"output_tokens":1,"total_tokens":13},"id":"msg_01SPbpi5P7CkNqgxPT2Ne9u5"}},{"langgraph_step":1,"langgraph_node":"agent","langgraph_triggers":["branch:to:agent"]}]
 
-// 2. Content block starts
-{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+// 2. Empty content chunk
+[{"lc":1,"type":"constructor","id":["langchain_core","messages","AIMessageChunk"],"kwargs":{"content":"","additional_kwargs":{},"tool_call_chunks":[],"id":"msg_01SPbpi5P7CkNqgxPT2Ne9u5"}},{"langgraph_step":1,"langgraph_node":"agent"}]
 
-// 3. Text tokens stream in as delta events
-{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Why"}}
-{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" don't scientists trust atoms?\n\nBecause"}}
-{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" they make up everything!"}}
+// 3. Text tokens stream in
+[{"lc":1,"type":"constructor","id":["langchain_core","messages","AIMessageChunk"],"kwargs":{"content":"Why","additional_kwargs":{},"tool_call_chunks":[],"id":"msg_01SPbpi5P7CkNqgxPT2Ne9u5"}},{"langgraph_step":1,"langgraph_node":"agent"}]
+[{"lc":1,"type":"constructor","id":["langchain_core","messages","AIMessageChunk"],"kwargs":{"content":" don't scientists trust atoms?\n\nBecause","additional_kwargs":{},"tool_call_chunks":[],"id":"msg_01SPbpi5P7CkNqgxPT2Ne9u5"}},{"langgraph_step":1,"langgraph_node":"agent"}]
+[{"lc":1,"type":"constructor","id":["langchain_core","messages","AIMessageChunk"],"kwargs":{"content":" they make up everything!","additional_kwargs":{},"tool_call_chunks":[],"id":"msg_01SPbpi5P7CkNqgxPT2Ne9u5"}},{"langgraph_step":1,"langgraph_node":"agent"}]
 
-// 4. Content block completes
-{"type":"content_block_stop","index":0}
-
-// 5. Message delta (usage stats)
-{"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":17}}
-
-// 6. Message completes
-{"type":"message_stop"}
+// 4. Stream completion (empty content with stop reason and final usage)
+[{"lc":1,"type":"constructor","id":["langchain_core","messages","AIMessageChunk"],"kwargs":{"content":"","additional_kwargs":{"stop_reason":"end_turn","stop_sequence":null},"usage_metadata":{"input_tokens":0,"output_tokens":17,"total_tokens":17},"id":"msg_01SPbpi5P7CkNqgxPT2Ne9u5"}},{"langgraph_step":1,"langgraph_node":"agent"}]
 ```
 </Code>
 
 <Aside data-type="note">
-This is only an illustrative example for a simple "text in, text out" use case and may not reflect the exact sequence of events that you observe from the Anthropic API. It also does not describe response generation errors or refusals. For complete details on all event types and their properties, see [Anthropic Streaming events](https://docs.anthropic.com/en/api/messages-streaming).
+This is only an illustrative example for a simple "text in, text out" use case and may not reflect the exact sequence of messages that you observe from LangGraph. LangGraph also supports more complex graphs with multiple nodes, tools, and conditional edges. For complete details on streaming modes, see [LangGraph streaming documentation](https://docs.langchain.com/oss/javascript/langgraph/streaming).
 </Aside>
 
 ## Step 3: Publish streaming tokens to Ably <a id="step-3"/>
 
-Publish Anthropic streaming events to Ably using message appends to reliably and scalably distribute them to subscribers.
+Publish LangGraph streaming tokens to Ably using message appends to reliably and scalably distribute them to subscribers.
 
 Each AI response is stored as a single Ably message that grows as tokens are appended.
 
@@ -193,25 +192,27 @@ Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on 
 
 ### Publish initial message and append tokens <a id="publish-and-append"/>
 
-When a new response begins, publish an initial message to create it. Ably assigns a [`serial`](/docs/messages#properties) identifier to the message. Use this `serial` to append each token to the message as it arrives from the Anthropic model.
-
-<Aside data-type="note">
-This implementation assumes each response contains a single text content block. It filters out thinking tokens and other non-text content blocks. For production use cases with multiple content blocks or concurrent responses, consider tracking state per message ID and content block index.
-</Aside>
+When a new response begins, publish an initial message to create it. Ably assigns a [`serial`](/docs/messages#properties) identifier to the message. Use this `serial` to append each token to the message as it arrives from the LangGraph stream.
 
 Update your `publisher.mjs` file to publish the initial message and append tokens:
 
 <Code>
 ```javascript
-// Track state across events
+// Track state across chunks
 let msgSerial = null;
-let textBlockIndex = null;
 
-// Process each streaming event and publish to Ably
-async function processEvent(event) {
-  switch (event.type) {
-    case 'message_start':
-      // Publish initial empty message when response starts
+// Stream response tokens
+async function streamLangGraphResponse(prompt) {
+  const stream = await app.stream(
+    { messages: [{ role: "user", content: prompt }] },
+    { streamMode: "messages" }
+  );
+
+  for await (const [messageChunk, metadata] of stream) {
+    const content = messageChunk?.content;
+
+    // Publish initial empty message on first chunk
+    if (!msgSerial && messageChunk?.id) {
       const result = await channel.publish({
         name: 'response',
         data: ''
@@ -219,38 +220,27 @@ async function processEvent(event) {
 
       // Capture the message serial for appending tokens
       msgSerial = result.serials[0];
-      break;
+    }
 
-    case 'content_block_start':
-      // Capture text block index when a text content block is added
-      if (event.content_block.type === 'text') {
-        textBlockIndex = event.index;
-      }
-      break;
-
-    case 'content_block_delta':
-      // Append tokens from text deltas only
-      if (event.index === textBlockIndex && event.delta.type === 'text_delta' && msgSerial) {
-        channel.appendMessage({
-          serial: msgSerial,
-          data: event.delta.text
-        });
-      }
-      break;
-
-    case 'message_stop':
-      console.log('Stream completed!');
-      break;
+    // Append token content to the message
+    if (content && msgSerial) {
+      channel.appendMessage({
+        serial: msgSerial,
+        data: content
+      });
+    }
   }
+
+  console.log('Stream completed!');
 }
 ```
 </Code>
 
 This implementation:
 
-- Publishes an initial empty message when the response begins and captures the `serial`
-- Filters for `content_block_delta` events with `text_delta` type from text content blocks
-- Appends each token to the original message
+- Publishes an initial empty message when the first chunk arrives and captures the `serial`
+- Filters for chunks with non-empty `content`
+- Appends each token to the original message using the captured `serial`
 
 <Aside data-type="note">
 Append operations are published without `await` to maximize throughput. Ably maintains message ordering even without awaiting each append. For more information, see [Publishing tokens](/docs/ai-transport/token-streaming/message-per-response#publishing).
@@ -333,7 +323,7 @@ node subscriber.mjs
 ```
 </Code>
 
-With the subscriber running, run the publisher in another terminal. The tokens stream in realtime as the Anthropic model generates them.
+With the subscriber running, run the publisher in another terminal. The tokens stream in realtime as the AI model generates them.
 
 ## Step 5: Stream with multiple publishers and subscribers <a id="step-5"/>
 
@@ -362,7 +352,7 @@ All subscribers receive the same stream of tokens in realtime.
 
 ### Publishing concurrent responses <a id="multiple-publishers"/>
 
-Multiple publishers can stream different responses concurrently on the same [channel](/docs/channels). Each response is a distinct message with its own unique `serial` identifier, so tokens from different responses are isolated to distinct messages and don't interfere with each other.
+Multiple publishers can stream different responses concurrently on the same [channel](/docs/channels). Each response is stored as a separate message with its own `serial`, allowing subscribers to track all responses independently.
 
 To demonstrate this, run a publisher in multiple separate terminals:
 
@@ -427,4 +417,4 @@ For more advanced hydration strategies, including using channel history with `un
 - Learn more about the [message-per-response pattern](/docs/ai-transport/token-streaming/message-per-response) used in this guide
 - Learn about [client hydration strategies](/docs/ai-transport/token-streaming/message-per-response#hydration) for handling late joiners and reconnections
 - Understand [sessions and identity](/docs/ai-transport/sessions-identity) in AI enabled applications
-- Explore the [message-per-token pattern](/docs/ai-transport/token-streaming/message-per-token) for explicit control over individual token messages
+- Explore the [message-per-token pattern](/docs/ai-transport/token-streaming/message-per-token) for streaming individual tokens as separate messages

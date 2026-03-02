@@ -64,7 +64,9 @@ function transformCodeBlocksWithSubheadings(innerContent: string, headingPrefix:
   }
 
   // Replace each code block with a subheading followed by the code block (without language in fence)
-  return innerContent.replace(codeBlockRegex, (_codeBlock, lang, codeContent) => {
+  return innerContent.replace(codeBlockRegex, (_codeBlock, langWithMeta, codeContent) => {
+    // Strip any meta string (e.g. highlight="2,8") from the language identifier
+    const lang = langWithMeta.split(/\s+/)[0];
     const displayName = getLanguageDisplayName(lang);
     return `${headingPrefix} ${displayName}\n\n\`\`\`\n${codeContent}\`\`\``;
   });
@@ -95,6 +97,15 @@ function addLanguageSubheadingsToCodeBlocks(content: string): string {
     // Ensure proper newline after <Code> tag for markdown formatting
     return `<Code>\n\n${transformedContent.trimStart()}</Code>`;
   });
+}
+
+/**
+ * Strip code fence meta strings (e.g. highlight="2,8") from all fenced code blocks,
+ * keeping only the language identifier. This keeps the compiled markdown clean for LLMs.
+ */
+function stripCodeFenceMeta(content: string): string {
+  // Match opening code fences with a language followed by whitespace and meta
+  return content.replace(/```(\S+)[ \t]+[^\n]+/g, '```$1');
 }
 
 export interface MdxNode {
@@ -588,13 +599,16 @@ function transformMdxToMarkdown(
   // Stage 12: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 13: Add language subheadings to code blocks within <Code> tags
+  // Stage 13: Strip code fence meta strings (e.g. highlight="2,8") to keep markdown clean for LLMs
+  content = stripCodeFenceMeta(content);
+
+  // Stage 14: Add language subheadings to code blocks within <Code> tags
   content = addLanguageSubheadingsToCodeBlocks(content);
 
-  // Stage 14: Prepend title as markdown heading
+  // Stage 15: Prepend title as markdown heading
   let finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
-  // Stage 15: Append navigation footer (after all transformations to avoid double-processing)
+  // Stage 16: Append navigation footer (after all transformations to avoid double-processing)
   if (navContext) {
     finalContent += generateNavigationFooter(navContext, siteUrl);
   }
@@ -743,4 +757,5 @@ export {
   findPrecedingHeadingLevel,
   transformCodeBlocksWithSubheadings,
   addLanguageSubheadingsToCodeBlocks,
+  stripCodeFenceMeta,
 };

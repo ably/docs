@@ -1,0 +1,92 @@
+---
+title: "Process messages with external systems"
+meta_description: "Process chat messages through external systems to trigger notifications, handle slash commands, analyze sentiment, and more."
+meta_keywords: "chat processing, message processing, notifications, slash commands, sentiment analysis, chat automation, webhooks"
+---
+
+Once you have [extracted messages from chat rooms](/docs/chat/external-storage-and-processing/data-extraction) using an integration, you can process them through external systems to build features like notifications, slash commands, and sentiment analysis.
+
+## Enable features with metadata <a id="enable-features"/>
+
+Clients can include structured [metadata](/docs/chat/rooms/messages#structure) when [sending messages](/docs/chat/rooms/messages#send) to provide context for your external processing systems. This enables your integration to act on messages based on the intent signaled by the client.
+
+For example, when implementing a notification system, a client might include the target user ID and notification type in the metadata:
+
+<Code>
+```javascript
+await room.messages.send({
+  text: '@john.123 Can you review this?',
+  metadata: {
+    targetClientId: 'john.123',
+    notificationType: 'mention'
+  }
+});
+```
+</Code>
+
+Your integration can then extract this information to send a push notification to the mentioned user.
+
+Other patterns metadata enables include:
+
+* Slash commands where clients include command type and parameters in metadata, for example `targetClientId` and `reminderTime` for a `/remind` command. Your integration processes this to schedule reminders, execute actions, or trigger workflows.
+* Content categorization where clients tag messages with categories or intents, for example `messageType: 'question'` or `category: 'support'`, to route messages to appropriate handlers or analytics pipelines.
+* Sentiment analysis where your integration forwards the message text to an AI service and stores the results for reporting or alerting.
+
+<Aside data-type='important'>
+Metadata is set by clients and is not server-validated. Always treat it as untrusted input in your integration code. For sensitive operations, make authorization decisions server-side based on user permissions rather than trusting client-provided flags.
+</Aside>
+
+
+## Understand message data <a id="message-data"/>
+
+Each [decoded message](/docs/chat/external-storage-and-processing/data-extraction#decoding) provides the following data for your processing logic:
+
+| Field | Description |
+| --- | --- |
+| `text` | The message content, typically user input. See [message structure](/docs/chat/rooms/messages#structure). |
+| `clientId` | Identifies the user who sent the message, useful for attribution and user-specific actions. |
+| `serial` | A unique, lexicographically sortable identifier for the message, enabling [global ordering](/docs/chat/rooms/messages#global-ordering). |
+| `timestamp` | When the message was sent, enabling time-based processing or analytics. |
+| `action` | The message type: `message.created`, `message.updated`, `message.deleted`, or `message.summary` for [reactions](#reactions). |
+| `metadata` | Client-provided structured data. Can be used to enable features like [replies](/docs/chat/rooms/replies) and notifications. |
+| `headers` | Key-value pairs typically used for routing and [filtering](/docs/pub-sub/advanced#filter-subscribe). |
+| `version` | Version information for updates and deletes, including `version.serial` and `version.timestamp`. See [ordering updates and deletes](/docs/chat/rooms/messages#ordering-update-delete). |
+
+The room name can be [extracted](/docs/chat/external-storage-and-processing/data-extraction#extract-room) from the envelope's `channel` field.
+
+Text, metadata, and headers are all client-provided and should be treated as untrusted input. Use the message's `clientId` to make server-side authorization decisions rather than trusting client-provided metadata flags. All other fields are server-generated and can be trusted for processing logic.
+
+## Route messages for processing <a id="routing"/>
+
+After decoding messages from the integration envelope, route them based on their content and metadata to call different processing functions:
+
+<Code>
+```javascript
+function routeMessage(roomName, msg) {
+  const metadata = msg.data?.metadata || {};
+
+  if (metadata.command === 'remind') {
+    return handleRemindCommand(msg.data?.text, metadata.targetClientId, msg.clientId);
+  }
+
+  if (metadata.notificationType === 'mention') {
+    return sendMentionNotification(metadata.targetClientId, msg.data?.text, roomName, msg.clientId);
+  }
+
+  return processStandardMessage(roomName, msg);
+}
+```
+</Code>
+
+Your external services may have rate limits, processing constraints, or availability issues. Implement retry logic and circuit breakers in your integration code to handle these limitations gracefully. Consider queuing failed requests for retry rather than dropping them.
+
+## Handle message updates and deletes <a id="updates-and-deletes"/>
+
+When a message is updated or deleted, the integration will receive a new version with `action` set to `message.updated` or `message.deleted`. If you sent a notification for a message that was subsequently deleted, you may want to retract that previous notification.
+
+Use `serial` to identify the original message and `version.serial` to determine whether an [incoming version](/docs/chat/external-storage-and-processing/data-extraction#versioning) is newer than what you have already processed.
+
+## Handle message reactions <a id="reactions"/>
+
+Reaction summaries arrive as messages with `action` set to `message.summary`. If your processing needs reaction data, for example analytics on popular reactions or triggering actions when a message reaches a reaction threshold, [extract reaction counts](/docs/chat/external-storage-and-processing/data-extraction#reaction) from the annotations payload.
+
