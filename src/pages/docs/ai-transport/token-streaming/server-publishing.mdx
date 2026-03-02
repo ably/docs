@@ -48,15 +48,15 @@ For more detail on how Ably preserves message order across its globally distribu
 
 ## Transient publishing and channel limits <a id="transient"/>
 
-In a typical AI application, your server publishes responses to many distinct channels, often one per user session. When your server only publishes to a channel without subscribing, the SDK uses a [transient publish](/docs/pub-sub/advanced#transient-publish). Transient publishes do not count toward the limit on [number of channels per connection](/docs/platform/pricing/limits#connection).
-
-All message actions use the same transient publish path, including `publish()` and `appendMessage()`. This means a single connection can publish to thousands of distinct channels without hitting the channel limit. No additional configuration is required. When you call `publish()` or `appendMessage()` on a channel that the client has not explicitly attached to, the SDK handles the transient attachment automatically.
-
-The constraint to be aware of is the [per-connection inbound message rate](/docs/platform/pricing/limits#connection), not the number of channels.
+In a typical AI application, your server publishes responses to many distinct channels, often one per user session. When your server publishes to a channel without attaching first, the SDK uses a [transient publish](/docs/pub-sub/advanced#transient-publish). Transient publishes do not count toward the limit on the [number of channels per connection](/docs/platform/pricing/limits#connection).
 
 <Aside data-type="note">
-If you also need to subscribe to channels on the same connection, those subscriptions require explicit attachment and will count toward the channel limit.
+The server must attach to the channel in order to subscribe to it. In this case, the SDK client instance will not use transient publishing.
 </Aside>
+
+Because transient publishing removes the channel limit as a constraint, the limiting factor becomes the [per-connection inbound message rate](/docs/platform/pricing/limits#connection). Typically, each channel represents a conversation between a user and an agent, so a single connection publishes to multiple channels simultaneously. Since the per-connection and per-channel inbound rate limits are the same value, you are likely to hit the connection limit first because it is shared across all channels on that connection.
+
+See [per-connection rate limits](#rate-limits) for how this interacts with each token streaming pattern.
 
 ## Per-connection rate limits <a id="rate-limits"/>
 
@@ -124,49 +124,23 @@ Account for your model's peak output rate when determining how many concurrent s
 
 When your server handles more concurrent AI response streams than a single connection supports, create additional Realtime clients. Each client uses its own connection with its own message rate budget, so throughput scales linearly with the number of connections.
 
-Route channels to connections using consistent hashing so that all operations for a given channel always go through the same connection. This preserves [message ordering](#ordering) for each response.
+Route channels to clients using a hash function so that all operations for a given channel always go through the same client. This preserves [message ordering](#ordering) for each response.
 
 <Code>
 ```javascript
-class AblyConnectionPool {
+class AblyClientPool {
   constructor(size, options) {
-    this._connections = Array.from({ length: size }, (_, i) => {
+    this._clients = Array.from({ length: size }, (_, i) => {
       const client = new Ably.Realtime(options);
 
       client.connection.on((stateChange) => {
-        console.warn(`[Pool conn ${i}] ${stateChange.previous} → ${stateChange.current}`);
-        if (stateChange.current === 'failed') {
-          this._replaceConnection(i, options);
-        }
+        console.warn(`[Pool client ${i}] ${stateChange.previous} → ${stateChange.current}`);
       });
 
       return client;
     });
 
     this._channelMap = new Map();
-    this._options = options;
-  }
-
-  _replaceConnection(index) {
-    const oldClient = this._connections[index];
-
-    const affectedChannels = [];
-    for (const [channelName, connIndex] of this._channelMap) {
-      if (connIndex === index) affectedChannels.push(channelName);
-    }
-
-    try { oldClient.close(); } catch (e) { /* already dead */ }
-
-    const newClient = new Ably.Realtime(this._options);
-    newClient.connection.on((stateChange) => {
-      console.warn(`[Pool conn ${index}] ${stateChange.previous} → ${stateChange.current}`);
-      if (stateChange.current === 'failed') {
-        this._replaceConnection(index);
-      }
-    });
-    this._connections[index] = newClient;
-
-    console.warn(`[Pool] Replaced conn ${index}, ${affectedChannels.length} channels affected`);
   }
 
   _hashCode(str) {
@@ -178,9 +152,9 @@ class AblyConnectionPool {
   }
 
   getClient(channelName) {
-    const index = this._hashCode(channelName) % this._connections.length;
+    const index = this._hashCode(channelName) % this._clients.length;
     this._channelMap.set(channelName, index);
-    return this._connections[index];
+    return this._clients[index];
   }
 
   getChannel(channelName, channelOptions) {
@@ -191,7 +165,7 @@ class AblyConnectionPool {
   releaseChannel(channelName) {
     const index = this._channelMap.get(channelName);
     if (index !== undefined) {
-      const client = this._connections[index];
+      const client = this._clients[index];
       client.channels.release(channelName);
       this._channelMap.delete(channelName);
     }
@@ -200,20 +174,20 @@ class AblyConnectionPool {
   async close() {
     const detachPromises = [];
     for (const [channelName, index] of this._channelMap) {
-      const client = this._connections[index];
+      const client = this._clients[index];
       const channel = client.channels.get(channelName);
       detachPromises.push(channel.detach().catch(() => {}));
     }
     await Promise.allSettled(detachPromises);
     this._channelMap.clear();
 
-    for (const client of this._connections) {
+    for (const client of this._clients) {
       client.close();
     }
   }
 
   getStatus() {
-    return this._connections.map((client, i) => ({
+    return this._clients.map((client, i) => ({
       index: i,
       state: client.connection.state,
       channels: [...this._channelMap.entries()]
@@ -223,7 +197,7 @@ class AblyConnectionPool {
   }
 }
 
-const pool = new AblyConnectionPool(10, {
+const pool = new AblyClientPool(10, {
   key: 'your-api-key',
   echoMessages: false,
   transportParams: { appendRollupWindow: 100 },
