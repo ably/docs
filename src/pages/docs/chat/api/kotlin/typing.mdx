@@ -1,0 +1,214 @@
+---
+title: Typing
+meta_description: "API reference for the Typing interface in the Ably Chat Kotlin SDK."
+meta_keywords: "Ably Chat SDK, Kotlin, Typing API, keystroke, stop, subscribe, asFlow, typing indicators"
+---
+
+The `Typing` interface provides methods for sending and receiving typing indicators in a chat room. Access it via `room.typing`.
+
+<Code>
+```kotlin
+val typing = room.typing
+```
+</Code>
+
+## Properties
+
+The `Typing` interface has the following properties:
+
+<Table id='TypingProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| current | The current set of client IDs who are typing in the room. | `Set<String>` |
+
+</Table>
+
+## Start typing <a id="keystroke"/>
+
+<MethodSignature>{`suspend typing.keystroke(): Unit`}</MethodSignature>
+
+Sends a typing started event to notify other users that the current user is typing.
+
+Events are throttled according to the [`heartbeatThrottle`](/docs/chat/api/kotlin/rooms#get) room option to prevent excessive network traffic. If called within the throttle interval, the operation becomes a no-op. Multiple rapid calls are serialized to maintain consistency.
+
+The room must be [attached](/docs/chat/api/kotlin/room#attach) and the connection must be in the [`Connected`](/docs/chat/api/kotlin/connection) state.
+
+<Code>
+```kotlin
+// Call this when the user starts typing
+room.typing.keystroke()
+```
+</Code>
+
+### Returns <a id="keystroke-returns"/>
+
+`Unit`
+
+This is a suspend function. It completes when the typing event has been sent, or throws an [`ErrorInfo`](/docs/chat/api/kotlin/chat-client#errorinfo) on failure.
+
+## Stop typing <a id="stop"/>
+
+<MethodSignature>{`suspend typing.stop(): Unit`}</MethodSignature>
+
+Sends a typing stopped event to notify other users that the current user has stopped typing.
+
+If the user is not currently typing, this operation is a no-op. Multiple rapid calls are serialized to maintain consistency.
+
+The room must be [attached](/docs/chat/api/kotlin/room#attach) and the connection must be in the [`Connected`](/docs/chat/api/kotlin/connection) state.
+
+<Code>
+```kotlin
+// Call this when the user stops typing or clears the input
+room.typing.stop()
+```
+</Code>
+
+### Returns <a id="stop-returns"/>
+
+`Unit`
+
+This is a suspend function. It completes when the stop event has been sent, or throws an [`ErrorInfo`](/docs/chat/api/kotlin/chat-client#errorinfo) on failure.
+
+## Subscribe to typing events <a id="subscribe"/>
+
+<MethodSignature>{`typing.subscribe(listener: TypingListener): Subscription`}</MethodSignature>
+
+Subscribes to typing events from users in the chat room. Receives updates whenever a user starts or stops typing, providing real-time feedback about who is currently composing messages.
+
+The room must be [attached](/docs/chat/api/kotlin/room#attach) to receive typing events.
+
+<Code>
+```kotlin
+val subscription = room.typing.subscribe { event ->
+    println("Currently typing: ${event.currentlyTyping}")
+}
+
+// To stop receiving typing events
+subscription.unsubscribe()
+```
+</Code>
+
+### Parameters <a id="subscribe-params"/>
+
+The `subscribe()` method takes the following parameters:
+
+<Table id='SubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Required | Callback invoked when the typing state changes. | <Table id='TypingSetEvent'/> |
+
+</Table>
+
+<Table id='TypingSetEvent' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | The type of the event. | TypingSetEventType |
+| currentlyTyping | Set of client IDs currently typing in the room. | `Set<String>` |
+| change | Information about the specific change that triggered this event. | <Table id='TypingChange'/> |
+
+</Table>
+
+<Table id='TypingChange' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| clientId | The client ID whose typing state changed. | String |
+| type | Whether the user started or stopped typing. | <Table id='TypingEventType'/> |
+
+</Table>
+
+<Table id='TypingEventType' hidden>
+
+| Value | Description |
+| --- | --- |
+| Started | A user has started typing. |
+| Stopped | A user has stopped typing. |
+
+</Table>
+
+### Returns <a id="subscribe-returns"/>
+
+[`Subscription`](/docs/chat/api/kotlin/rooms#Subscription)
+
+Returns a `Subscription` object.
+
+#### Unsubscribe from typing events <a id="subscribe-unsubscribe"/>
+
+<MethodSignature>subscription.unsubscribe(): Unit</MethodSignature>
+
+Call `unsubscribe()` to stop receiving typing events.
+
+## Collect typing events as a Flow <a id="asFlow"/>
+
+<MethodSignature>{`Typing.asFlow(): Flow<TypingSetEvent>`}</MethodSignature>
+
+Returns a Kotlin `Flow` that emits typing events. This is an extension function on the `Typing` interface that provides a reactive alternative to listener-based subscriptions.
+
+<Code>
+```kotlin
+import kotlinx.coroutines.launch
+
+launch {
+    room.typing.asFlow().collect { event ->
+        println("Currently typing: ${event.currentlyTyping}")
+    }
+}
+```
+</Code>
+
+### Returns <a id="asFlow-returns"/>
+
+`Flow<TypingSetEvent>`
+
+Returns a `Flow` that emits `TypingSetEvent` events. The flow automatically manages the underlying subscription.
+
+## Example
+
+<Code>
+```kotlin
+import com.ably.chat.asFlow
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
+
+val room = chatClient.rooms.get("my-room") {
+    typing {
+        heartbeatThrottle = 5.seconds // Throttle typing events to every 5 seconds
+    }
+}
+
+room.attach()
+
+// Subscribe to typing events with a listener
+val subscription = room.typing.subscribe { event ->
+    val typingUsers = event.currentlyTyping
+
+    when {
+        typingUsers.isEmpty() -> println("No one is typing")
+        typingUsers.size == 1 -> println("${typingUsers.first()} is typing...")
+        else -> println("${typingUsers.joinToString(", ")} are typing...")
+    }
+}
+
+// Or use Flow for reactive collection
+launch {
+    room.typing.asFlow().collect { event ->
+        println("Typing users: ${event.currentlyTyping}")
+    }
+}
+
+// Notify that the current user is typing
+room.typing.keystroke()
+
+// Notify that the current user has stopped typing
+room.typing.stop()
+
+// Check who is currently typing
+println("Currently typing: ${room.typing.current}")
+
+// Clean up
+subscription.unsubscribe()
+```
+</Code>
