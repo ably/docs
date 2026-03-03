@@ -228,7 +228,7 @@ export default {
         },
         {
           name: 'Handling discontinuity',
-          link: '/docs/guides/handling-discontinuity',
+          link: '/docs/guides/chat/handling-discontinuity',
         },
       ],
     },
