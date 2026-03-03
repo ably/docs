@@ -366,6 +366,10 @@ export default {
       ],
     },
     {
+      name: 'Message billing',
+      link: '/docs/pub-sub/message-billing',
+    },
+    {
       name: 'Guides',
       pages: [
         {
