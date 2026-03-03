@@ -19,9 +19,15 @@ const buildLinkWithParams = (targetLink: string, searchParams: URLSearchParams):
   const clientLang = searchParams.get('client_lang');
   const agentLang = searchParams.get('agent_lang');
 
-  if (lang) params.set('lang', lang);
-  if (clientLang) params.set('client_lang', clientLang);
-  if (agentLang) params.set('agent_lang', agentLang);
+  if (lang) {
+    params.set('lang', lang);
+  }
+  if (clientLang) {
+    params.set('client_lang', clientLang);
+  }
+  if (agentLang) {
+    params.set('agent_lang', agentLang);
+  }
 
   const paramString = params.toString();
   return paramString ? `${targetLink}?${paramString}` : targetLink;

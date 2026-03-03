@@ -78,9 +78,15 @@ export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...prop
     const clientLang = urlParams.get('client_lang');
     const agentLang = urlParams.get('agent_lang');
 
-    if (langParam) url.searchParams.set('lang', langParam);
-    if (clientLang) url.searchParams.set('client_lang', clientLang);
-    if (agentLang) url.searchParams.set('agent_lang', agentLang);
+    if (langParam) {
+      url.searchParams.set('lang', langParam);
+    }
+    if (clientLang) {
+      url.searchParams.set('client_lang', clientLang);
+    }
+    if (agentLang) {
+      url.searchParams.set('agent_lang', agentLang);
+    }
 
     if (langParam || clientLang || agentLang) {
       cleanHref = url.pathname + url.search;
