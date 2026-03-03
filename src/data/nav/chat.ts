@@ -300,9 +300,53 @@ export default {
           external: true,
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/',
-          name: 'Kotlin SDK',
-          external: true,
+          name: 'Kotlin',
+          pages: [
+            {
+              link: '/docs/chat/api/kotlin/chat-client',
+              name: 'ChatClient',
+            },
+            {
+              link: '/docs/chat/api/kotlin/connection',
+              name: 'Connection',
+            },
+            {
+              link: '/docs/chat/api/kotlin/rooms',
+              name: 'Rooms',
+            },
+            {
+              link: '/docs/chat/api/kotlin/room',
+              name: 'Room',
+            },
+            {
+              link: '/docs/chat/api/kotlin/messages',
+              name: 'Messages',
+            },
+            {
+              link: '/docs/chat/api/kotlin/message',
+              name: 'Message',
+            },
+            {
+              link: '/docs/chat/api/kotlin/message-reactions',
+              name: 'MessageReactions',
+            },
+            {
+              link: '/docs/chat/api/kotlin/presence',
+              name: 'Presence',
+            },
+            {
+              link: '/docs/chat/api/kotlin/occupancy',
+              name: 'Occupancy',
+            },
+            {
+              link: '/docs/chat/api/kotlin/typing',
+              name: 'Typing',
+            },
+            {
+              link: '/docs/chat/api/kotlin/room-reactions',
+              name: 'RoomReactions',
+            },
+          ],
         },
         {
           link: 'https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/',
