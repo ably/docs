@@ -56,7 +56,9 @@ const SingleLanguageSelector = () => {
         language: option.label,
         location: location.pathname,
       });
-      navigate(`${location.pathname}?lang=${option.label}`);
+      const params = new URLSearchParams(location.search);
+      params.set('lang', option.label);
+      navigate(`${location.pathname}?${params.toString()}`);
     }
   };
 
