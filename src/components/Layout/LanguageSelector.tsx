@@ -225,9 +225,7 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
 
   return (
     <div className="flex items-center gap-2">
-      <span className="ui-text-overline2 normal-case text-neutral-700 dark:text-neutral-600 whitespace-nowrap">
-        {label}
-      </span>
+      <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 whitespace-nowrap">{label}</span>
       <Select.Root value={value} onValueChange={handleValueChange}>
         <Select.Trigger
           className={cn(
