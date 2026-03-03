@@ -224,6 +224,10 @@ export default {
       ],
     },
     {
+      name: 'Message billing',
+      link: '/docs/chat/message-billing',
+    },
+    {
       name: 'Guides',
       pages: [
         {
