@@ -8,7 +8,7 @@ import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/u
 import { track } from '@ably/ui/core/insights';
 import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
-import { useLayoutContext, CLIENT_LANGUAGES, AGENT_LANGUAGES } from 'src/contexts/layout-context';
+import { useLayoutContext } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
 import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 import * as Select from '../ui/Select';
@@ -178,13 +178,13 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
 
   const options: LanguageSelectorOptionData[] = useMemo(
     () =>
-      languages
-        .filter((lang) => languageVersions[lang])
-        .map((lang) => ({
-          label: lang,
-          value: `${lang}-${languageVersions[lang]}`,
-          version: languageVersions[lang],
-        })),
+      Object.entries(languageVersions)
+        .map(([lang, version]) => ({
+          label: lang as LanguageKey,
+          value: `${lang}-${version}`,
+          version,
+        }))
+        .filter((option) => languages.includes(option.label)),
     [languages, languageVersions],
   );
 
@@ -328,13 +328,13 @@ const DualLanguageSelector = () => {
       <DualLanguageDropdown
         label="Client"
         paramName="client_lang"
-        languages={CLIENT_LANGUAGES}
+        languages={activePage.clientLanguages ?? []}
         selectedLanguage={activePage.clientLanguage}
       />
       <DualLanguageDropdown
         label="Agent"
         paramName="agent_lang"
-        languages={AGENT_LANGUAGES}
+        languages={activePage.agentLanguages ?? []}
         selectedLanguage={activePage.agentLanguage}
       />
     </div>

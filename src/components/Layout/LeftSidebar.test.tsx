@@ -16,7 +16,6 @@ jest.mock('src/contexts/layout-context', () => ({
       template: null,
     },
   }),
-  isDualLanguagePath: jest.fn().mockReturnValue(false),
 }));
 
 jest.mock('@reach/router', () => ({
