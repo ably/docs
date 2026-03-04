@@ -97,8 +97,12 @@ export default {
         },
         {
           name: 'Token auth',
-          link: '/docs/auth/token',
           pages: [
+            {
+              name: 'Overview',
+              link: '/docs/auth/token',
+              index: true,
+            },
             {
               name: 'JWTs',
               link: '/docs/auth/jwt',
