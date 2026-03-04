@@ -42,7 +42,7 @@ Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on 
 
 Ably guarantees that messages published on a single connection are delivered to subscribers in the order they were published. This ordering guarantee is essential for token streaming, because tokens must arrive in sequence for the final message to be correct.
 
-This guarantee is per-connection. If you use [multiple connections](#multiple-streams) to handle higher concurrency, route all operations for a given channel through the same connection. This ensures that all `publish()` and `appendMessage()` calls for a given response maintain their order.
+This guarantee is per-connection. If you use [multiple clients](#multiple-streams) to handle higher concurrency, route all operations for a given channel through the same client. This ensures that all `publish()` and `appendMessage()` calls for a given response maintain their order.
 
 For more detail on how Ably preserves message order across its globally distributed infrastructure, see [message ordering](/docs/platform/architecture/message-ordering).
 
@@ -54,187 +54,18 @@ In a typical AI application, your server publishes responses to many distinct ch
 The server must attach to the channel in order to subscribe to it. In this case, the SDK client instance will not use transient publishing.
 </Aside>
 
-Because transient publishing removes the channel limit as a constraint, the limiting factor becomes the [per-connection inbound message rate](/docs/platform/pricing/limits#connection). Typically, each channel represents a conversation between a user and an agent, so a single connection publishes to multiple channels simultaneously. Since the per-connection and per-channel inbound rate limits are the same value, you are likely to hit the connection limit first because it is shared across all channels on that connection.
-
-See [per-connection rate limits](#rate-limits) for how this interacts with each token streaming pattern.
+Because transient publishing removes the channel limit as a constraint, the limiting factor becomes the [per-connection inbound message rate](/docs/platform/pricing/limits#connection). Typically, each channel represents a conversation between a user and an agent, so a single connection publishes to multiple channels simultaneously. The per-connection and per-channel inbound rate limits are the same value, but the connection limit is shared across all channels on that connection, making it the constraint you will reach first. See [per-connection rate limits](#rate-limits) for how this interacts with each token streaming pattern.
 
 ## Per-connection rate limits <a id="rate-limits"/>
 
-Each connection has an [inbound message rate limit](/docs/platform/pricing/limits#connection) that caps how many messages per second can be published on that connection. How this limit interacts with your server's publish rate depends on which token streaming pattern you use.
+Each connection has an [inbound message rate limit](/docs/platform/pricing/limits#connection) that caps how many messages per second can be published on that connection. How this limit interacts with your publish rate depends on the token streaming pattern you use:
 
-### Message per response <a id="rate-limits-per-response"/>
-
-With [message per response](/docs/ai-transport/token-streaming/message-per-response), your server calls `appendMessage()` at whatever rate the model produces tokens. Ably concatenates all appends received within a configurable time window, called the `appendRollupWindow`, into a single message before publishing it to subscribers. This is similar to [server-side batching](/docs/messages/batch#server-side), but happens at the edge of Ably's network where the connection is handled, before the message is published onwards. The connection's [inbound message rate limit](/docs/platform/pricing/limits#connection) applies to these rolled-up messages, not to individual `appendMessage()` calls.
-
-For example, if your server publishes appends at 100 msg/s with a 40ms rollup window:
-
-- 40ms window = 25 windows per second (1000ms / 40ms).
-- Ably produces 25 rolled-up messages per second.
-- Each rolled-up message contains approximately 4 tokens (100 / 25).
-- The 25 msg/s rolled-up rate is what counts against the connection's inbound message rate limit.
-
-The following table shows how the `appendRollupWindow` affects the delivery rate to subscribers, concurrent stream capacity, and the trade-off in delivery granularity:
-
-| `appendRollupWindow` | Client delivery rate | Tokens per delivery (at 100 tok/s) | Concurrent streams per connection |
-| ---                  | ---                  | ---                                 | ---                               |
-| 40ms *(default)*     | 25 msg/s             | ~4                                  | 2                                 |
-| 100ms                | 10 msg/s             | ~10                                 | 5                                 |
-| 200ms                | 5 msg/s              | ~20                                 | 10                                |
-| 500ms *(max)*        | 2 msg/s              | ~50                                 | 25                                |
-
-_Concurrent streams per connection is calculated based on the connection's [max inbound rate limit](/docs/platform/pricing/limits#connection)._
-
-A longer rollup window allows more concurrent streams per connection, but subscribers receive tokens in larger, less frequent batches. The default 40ms window provides smooth delivery for up to two concurrent streams. Increasing the window to 100ms or 200ms accommodates more streams with a modest reduction in delivery granularity.
-
-Set the rollup window when creating the client:
-
-<Code>
-```javascript
-const ably = new Ably.Realtime({
-  key: '{{API_KEY}}',
-  echoMessages: false,
-  transportParams: { appendRollupWindow: 100 }
-});
-```
-```python
-ably = AblyRealtime(
-    key='{{API_KEY}}',
-    echo_messages=False,
-    transport_params={'appendRollupWindow': 100}
-)
-```
-```java
-ClientOptions options = new ClientOptions();
-options.key = "{{API_KEY}}";
-options.echoMessages = false;
-options.transportParams = Map.of("appendRollupWindow", "100");
-AblyRealtime ably = new AblyRealtime(options);
-```
-</Code>
-
-For full detail on rollup configuration, see [token streaming limits](/docs/ai-transport/token-streaming/token-rate-limits#rollup).
-
-### Message per token <a id="rate-limits-per-token"/>
-
-With [message per token](/docs/ai-transport/token-streaming/message-per-token), each token is a separate `publish()` call with no rollup. Every publish counts directly against the [connection inbound message rate limit](/docs/platform/pricing/limits#connection). A model outputting 50 tokens per second saturates a single connection, leaving no capacity for additional streams.
-
-Account for your model's peak output rate when determining how many concurrent streams a single connection can support. For strategies to stay within limits, see [token streaming limits](/docs/ai-transport/token-streaming/token-rate-limits#per-token).
+- With [message per response](/docs/ai-transport/token-streaming/message-per-response), Ably rolls up multiple appends into fewer published messages. The rollup window determines how many concurrent streams a single connection can support. See [token streaming limits](/docs/ai-transport/token-streaming/token-rate-limits#rollup) for rollup configuration and concurrent stream capacity.
+- With [message per token](/docs/ai-transport/token-streaming/message-per-token), each token is a separate publish with no rollup. Every publish counts directly against the connection's rate limit. See [token streaming limits](/docs/ai-transport/token-streaming/token-rate-limits#per-token) for strategies to stay within limits.
 
 ## Multiple concurrent streams <a id="multiple-streams"/>
 
-When your server handles more concurrent AI response streams than a single connection supports, create additional Realtime clients. Each client uses its own connection with its own message rate budget, so throughput scales linearly with the number of connections.
+When your server handles more concurrent AI response streams than a single connection supports, create additional Realtime clients. Each client uses its own connection with its own message rate budget, so throughput scales linearly with the number of clients.
 
-Route channels to clients using a hash function so that all operations for a given channel always go through the same client. This preserves [message ordering](#ordering) for each response.
-
-<Code>
-```javascript
-class AblyClientPool {
-  constructor(size, options) {
-    this._clients = Array.from({ length: size }, (_, i) => {
-      const client = new Ably.Realtime(options);
-
-      client.connection.on((stateChange) => {
-        console.warn(`[Pool client ${i}] ${stateChange.previous} → ${stateChange.current}`);
-      });
-
-      return client;
-    });
-
-    this._channelMap = new Map();
-  }
-
-  _hashCode(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-    }
-    return Math.abs(hash);
-  }
-
-  getClient(channelName) {
-    const index = this._hashCode(channelName) % this._clients.length;
-    this._channelMap.set(channelName, index);
-    return this._clients[index];
-  }
-
-  getChannel(channelName, channelOptions) {
-    const client = this.getClient(channelName);
-    return client.channels.get(channelName, channelOptions);
-  }
-
-  releaseChannel(channelName) {
-    const index = this._channelMap.get(channelName);
-    if (index !== undefined) {
-      const client = this._clients[index];
-      client.channels.release(channelName);
-      this._channelMap.delete(channelName);
-    }
-  }
-
-  async close() {
-    const detachPromises = [];
-    for (const [channelName, index] of this._channelMap) {
-      const client = this._clients[index];
-      const channel = client.channels.get(channelName);
-      detachPromises.push(channel.detach().catch(() => {}));
-    }
-    await Promise.allSettled(detachPromises);
-    this._channelMap.clear();
-
-    for (const client of this._clients) {
-      client.close();
-    }
-  }
-
-  getStatus() {
-    return this._clients.map((client, i) => ({
-      index: i,
-      state: client.connection.state,
-      channels: [...this._channelMap.entries()]
-        .filter(([, idx]) => idx === i)
-        .map(([name]) => name),
-    }));
-  }
-}
-
-const pool = new AblyClientPool(10, {
-  key: 'your-api-key',
-  echoMessages: false,
-  transportParams: { appendRollupWindow: 100 },
-});
-
-// Publish a streaming response
-const channel = pool.getChannel('ai:session-123');
-
-// Ensure channel rule has "Message annotations, updates, deletes and appends" enabled
-// for the ai:* namespace in your Ably dashboard
-const { serials: [msgSerial] } = await channel.publish({ name: 'response', data: '' });
-
-for await (const event of stream) {
-  if (event.type === 'token') {
-    channel.appendMessage({ serial: msgSerial, data: event.text });
-  }
-}
-
-// When session ends
-pool.releaseChannel('ai:session-123');
-
-// On server shutdown
-await pool.close();
-```
-</Code>
-
-### Size the connection pool <a id="sizing"/>
-
-The number of connections you need depends on your peak concurrent streams and your per-stream message rate.
-
-For [message per response](/docs/ai-transport/token-streaming/message-per-response), the rollup window controls per-stream message rate:
-
-| `appendRollupWindow` | Streams per connection | Streams per 5 conns | Streams per 10 conns | Streams per 20 conns |
-| --- | --- | --- | --- | --- |
-| 40ms *(default)* | 2 | 10 | 20 | 40 |
-| 100ms | 5 | 25 | 50 | 100 |
-| 200ms | 10 | 50 | 100 | 200 |
-
-For [message per token](/docs/ai-transport/token-streaming/message-per-token), divide your [connection inbound message rate](/docs/platform/pricing/limits#connection) by the model's peak output rate to determine how many streams fit per connection. If a model outputs 50 tokens per second, a single stream saturates one connection.
+Route all operations for a given channel through the same client to preserve [message ordering](#ordering). Use a hash of the channel name to deterministically select a client, ensuring that all `publish()` and `appendMessage()` calls for a given response go through the same connection.
 
