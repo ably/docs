@@ -1,0 +1,97 @@
+---
+title: "Message billing"
+meta_description: "Understand how different Ably Pub/Sub operations contribute to your message count, including persistence, presence, and cost optimization strategies."
+meta_keywords: "message billing, message counting, pricing, persistence billing, presence billing, cost optimization"
+---
+
+This page explains how different Ably operations contribute to your message count. Understanding message billing helps you optimize costs and choose the right features for your use case.
+
+<Aside data-type="further-reading">
+For package comparison and volume discounts, see the [pricing](https://ably.com/pricing) page. For general billing information, see [billing](/docs/platform/pricing/billing).
+</Aside>
+
+## Basic message counting <a id="basic-counting"/>
+
+Every message sent through Ably is counted for both publishing and delivery:
+
+* 1 publish = 1 inbound message
+* Each subscriber delivery = 1 outbound message per subscriber
+* Each integration delivery = 1 outbound message per [integration](/docs/platform/integrations) target
+* Messages from metachannels (such as `[meta]log` and `[meta]stats`) follow the same counting rules
+
+For example, 1 publisher sends a message to a channel with 10 subscribers = **11 messages** (1 inbound + 10 outbound).
+
+## Message size <a id="message-size"/>
+
+Message size for Pub/Sub messages is calculated as the sum of the `name`, `clientId`, `data`, and `extras` [properties](/docs/api/realtime-sdk/messages#properties) before any compression or expansion occurs in the serialization process.
+
+<Aside data-type="note">
+LiveObjects and Annotations have different billing considerations. See [LiveObjects billing](/docs/liveobjects/concepts/billing) and [Annotations](/docs/messages/annotations) for details on their respective billing.
+</Aside>
+
+* `name` and `clientId` are calculated as the size in bytes of their UTF-8 representation.
+* `data` is calculated as the size in bytes if it is binary, or its UTF-8 byte length if it is a string.
+* `extras` is calculated as the string length of its JSON representation.
+
+The [bandwidth](/docs/platform/pricing#bandwidth) allowance calculation uses an average message size of 5KiB. If your total bandwidth for the month exceeds this baseline, the overage is charged per GiB.
+
+See [maximum message size](/docs/platform/pricing/limits#message) for the size limits per package type.
+
+## Operations and their billing impact <a id="operations"/>
+
+The following table shows how different operations contribute to your message count:
+
+| Operation | Messages counted | Notes |
+| --- | --- | --- |
+| Publish to channel | 1 inbound + 1 per subscriber outbound | Base cost for all messaging |
+| Persisted message storage | +1 per message stored | Enable via [channel rules](/docs/storage-history/storage) |
+| History retrieval | +1 per message retrieved | Each message returned in a [history](/docs/storage-history/history) response counts as 1 outbound message |
+| Presence enter/leave/update | 1 inbound + 1 per presence subscriber outbound | Same counting as regular messages |
+| Webhook/integration delivery | +1 per outbound delivery | Per [integration](/docs/platform/integrations) target |
+| Rewind on attach | Rewound messages count as outbound | Up to 100 messages per [rewind](/docs/channels/options/rewind) |
+| Push notification | Counted separately per push platform | See [push notifications](/docs/push) |
+
+## Persistence billing <a id="persistence"/>
+
+When persistence is enabled via [channel rules](/docs/storage-history/storage), each message stored to disk counts as an additional message.
+
+If you persist all messages, a message published to 10 subscribers with persistence enabled = 1 (publish) + 10 (subscriber delivery) + 1 (persistence storage) = **12 messages**.
+
+If you persist last message only, the most recent message is stored. The storage cost is 1 additional message per new "last message" stored.
+
+Retrieving persisted messages via the [history API](/docs/storage-history/history) also counts: each message returned in a history response = 1 additional message.
+
+To avoid additional costs for messages that do not need persistence, history, rewind, integrations, or resume, mark them as [ephemeral](/docs/pub-sub/advanced#ephemeral). Ephemeral messages are exempt from all of these features, reducing your billable message count.
+
+## Presence event billing <a id="presence"/>
+
+Presence events (enter, leave, update) are billed as regular messages:
+
+* 1 presence enter event with 100 presence subscribers = **101 messages** (1 enter + 100 deliveries)
+
+In high-churn scenarios, presence events can generate significant message volume due to the n-squared pattern. When both subscribers and members are present on a channel, each member event is delivered to every subscriber.
+
+For example, 200 members joining and leaving a channel generates approximately **80,400 messages**. See the [large-scale presence sets](/docs/presence-occupancy/presence#large-presence) section for the full calculation.
+
+To reduce presence costs:
+
+* Use [occupancy](/docs/presence-occupancy/occupancy) if you only need member counts, not individual identities.
+* Enable [server-side batching](/docs/presence-occupancy/presence#large-presence) to group presence events and support up to 20,000 members per channel.
+* Subscribe to presence updates only on channels where you need member-level detail.
+
+## Cost optimization strategies <a id="optimization"/>
+
+The following table summarizes strategies for reducing message costs:
+
+| Strategy | How it reduces costs | When to use |
+| --- | --- | --- |
+| [Ephemeral messages](/docs/pub-sub/advanced#ephemeral) | Exempt from persistence, rewind, resume, and integrations | Streaming data where history is not needed |
+| [echoMessages: false](/docs/pub-sub/advanced#echo) | Prevents self-delivery to the publisher | Optimistic UI patterns and server-side publishers |
+| [Conflation](/docs/guides/pub-sub/data-streaming#solution-message-conflation) | Delivers only the latest message per key in each time window | High-frequency updates where only the latest value matters |
+| [Server-side batching](/docs/guides/pub-sub/data-streaming#solution-server-side-batching) | Groups messages into single deliveries | High-throughput channels where slight delay is acceptable |
+| [Delta compression](/docs/channels/options/deltas) | Reduces payload size, lowering bandwidth costs | Large, structurally similar successive messages |
+| [Occupancy](/docs/presence-occupancy/occupancy) instead of presence | Avoids n-squared presence event fan-out | When you need member counts, not individual identities |
+
+<Aside data-type="further-reading">
+See the [pricing](https://ably.com/pricing) page for package comparison and volume discounts.
+</Aside>
