@@ -105,11 +105,11 @@ export default {
             },
             {
               name: 'JWTs',
-              link: '/docs/auth/jwt',
+              link: '/docs/auth/token/jwt',
             },
             {
               name: 'Ably Tokens',
-              link: '/docs/auth/ably-tokens',
+              link: '/docs/auth/token/ably-tokens',
             },
           ],
         },
