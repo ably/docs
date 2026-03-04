@@ -136,6 +136,22 @@ export default {
               link: '/docs/platform/pricing/examples/ai-chatbot',
               name: 'AI support chatbot',
             },
+            {
+              link: '/docs/platform/pricing/examples/livestream',
+              name: 'Livestream chat',
+            },
+            {
+              link: '/docs/platform/pricing/examples/support-chat',
+              name: 'Support chat',
+            },
+            {
+              link: '/docs/platform/pricing/examples/data-broadcast',
+              name: 'Data broadcast',
+            },
+            {
+              link: '/docs/platform/pricing/examples/realtime-dashboard',
+              name: 'Realtime dashboard',
+            },
           ],
         },
         {
