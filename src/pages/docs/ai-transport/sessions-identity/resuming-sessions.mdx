@@ -16,7 +16,7 @@ An agent or user might resume an existing session when:
 
 When you attach to a channel, Ably automatically syncs the complete current presence set to your client. You can then query the presence set or subscribe to presence events without any additional hydration steps. This works the same way for both users and agents.
 
-For details on obtaining the synced presence set, see [Viewing who is online](/docs/ai-transport/sessions-and-identity/online-status#viewing-presence).
+For details on obtaining the synced presence set, see [Viewing who is online](/docs/ai-transport/sessions-identity/online-status#viewing-presence).
 
 ## User resumes a session
 
@@ -106,25 +106,138 @@ await channel.subscribe('prompt', (message) => {
   saveLastProcessedTimestamp(message.timestamp);
 });
 
-// Fetch history up until the point of attachment, starting from last checkpoint
+// Fetch history from the attachment point back to the last checkpoint
 let page = await channel.history({
   untilAttach: true,
   start: lastProcessedTimestamp,
-  direction: 'forwards'
 });
 
-// Paginate through all missed messages
+// Paginate through all missed messages, storing in oldest-to-newest order
+const missedMessages = [];
 while (page) {
-  for (const message of page.items) {
-    // Process the historical message
-    await processMessage(message);
-
-    // Persist the timestamp after successful processing
-    await saveLastProcessedTimestamp(message.timestamp);
-  }
+  missedMessages.unshift(...page.items.reverse());
 
   // Move to next page if available
   page = page.hasNext() ? await page.next() : null;
+}
+
+// Process messages oldest-to-newest
+for (const message of missedMessages) {
+  await processMessage(message);
+
+  // Persist the timestamp after successful processing
+  await saveLastProcessedTimestamp(message.timestamp);
+}
+```
+```python
+# Agent code
+import os
+from ably import AblyRealtime
+
+ably = AblyRealtime(
+    key=os.environ.get("ABLY_API_KEY"),
+    client_id="agent:assistant"
+)
+
+# Load persisted session state
+channel_name = await load_channel_name()
+last_processed_timestamp = await load_last_processed_timestamp()
+
+# Use a channel in a namespace with persistence enabled
+# to access more than 2 minutes of message history
+channel = ably.channels.get(channel_name)
+
+# Subscribe to live messages (implicitly attaches the channel)
+def on_prompt(message):
+    # Process the live message
+    process_message(message)
+
+    # Persist the timestamp after successful processing
+    save_last_processed_timestamp(message.timestamp)
+
+await channel.subscribe("prompt", on_prompt)
+
+# Fetch history from the attachment point back to the last checkpoint
+page = await channel.history(
+    until_attach=True,
+    start=last_processed_timestamp,
+)
+
+# Paginate through all missed messages, storing in oldest-to-newest order
+missed_messages = []
+while page:
+    missed_messages = list(reversed(page.items)) + missed_messages
+
+    # Move to next page if available
+    page = await page.next() if page.has_next() else None
+
+# Process messages oldest-to-newest
+for message in missed_messages:
+    await process_message(message)
+
+    # Persist the timestamp after successful processing
+    await save_last_processed_timestamp(message.timestamp)
+```
+```java
+// Agent code
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.Channel;
+import io.ably.lib.types.ClientOptions;
+import io.ably.lib.types.Message;
+import io.ably.lib.types.PaginatedResult;
+import io.ably.lib.types.Param;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+ClientOptions options = new ClientOptions();
+options.key = System.getenv("ABLY_API_KEY");
+options.clientId = "agent:assistant";
+
+AblyRealtime ably = new AblyRealtime(options);
+
+// Load persisted session state
+String channelName = loadChannelName();
+long lastProcessedTimestamp = loadLastProcessedTimestamp();
+
+// Use a channel in a namespace with persistence enabled
+// to access more than 2 minutes of message history
+Channel channel = ably.channels.get(channelName);
+
+// Subscribe to live messages (implicitly attaches the channel)
+channel.subscribe("prompt", message -> {
+    // Process the live message
+    processMessage(message);
+
+    // Persist the timestamp after successful processing
+    saveLastProcessedTimestamp(message.timestamp);
+});
+
+// Fetch history from the attachment point back to the last checkpoint
+Param[] params = new Param[] {
+    new Param("untilAttach", "true"),
+    new Param("start", String.valueOf(lastProcessedTimestamp))
+};
+PaginatedResult<Message> page = channel.history(params);
+
+// Paginate through all missed messages, storing in oldest-to-newest order
+List<Message> missedMessages = new ArrayList<>();
+while (page != null) {
+    List<Message> items = Arrays.asList(page.items());
+    Collections.reverse(items);
+    missedMessages.addAll(0, items);
+
+    // Move to next page if available
+    page = page.hasNext() ? page.next() : null;
+}
+
+// Process messages oldest-to-newest
+for (Message message : missedMessages) {
+    processMessage(message);
+
+    // Persist the timestamp after successful processing
+    saveLastProcessedTimestamp(message.timestamp);
 }
 ```
 </Code>

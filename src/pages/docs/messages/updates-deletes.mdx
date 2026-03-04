@@ -405,6 +405,10 @@ To append data to an existing message, use the `appendMessage()` method on a RES
 
 The message is identified by its `serial`, which is populated by Ably. To append to a message, you need its serial - you can get this either from the return value of `publish()`, from a received message via subscription, or by querying history.
 
+<Aside data-type="note">
+If you are publishing appends at a high rate, use a [Realtime](/docs/api/realtime-sdk) client rather than [REST](/docs/api/rest-sdk). A Realtime client maintains a persistent connection to the Ably service, allowing you to publish at high message rates with low latencies while preserving [message delivery order](/docs/platform/architecture/message-ordering). For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
+</Aside>
+
 When Ably receives an append, it concatenates the provided data with the current latest version to calculate a full (non-incremental) version of the message. That version (with an action of `message.update`) is then used in contexts like [History](/docs/storage-history/history) and [rewind](/docs/channels/options/rewind), so that when using those APIs, you will always receive complete messages without needing to do any concatenation yourself, and can specify e.g. `rewind=10` to get the most recent 10 full, distinct messages.
 
 ### Comparison with update
@@ -603,6 +607,29 @@ When appending to a message, you can optionally provide metadata:
 | metadata | Additional metadata about the append operation. | Object |
 
 This metadata will end up in the message's `version` property. See [Message version structure](/docs/messages/updates-deletes#version-structure) for what this looks like.
+
+## Message conflation <a id="message-conflation"/>
+
+When [server-side batching](/docs/messages/batch#server-side) or [message conflation](/docs/messages#conflation) is enabled, Ably groups update, delete, and append messages received in the configured time window before delivering them to subscribers.
+During this window, if multiple operations target the same message (identified by its `serial`), Ably combines them into a single operation.
+Instead of receiving every intermediate update, append, or delete, subscribers receive a single message representing the combined result.
+For update, delete, and append messages the same behavior applies whether you use batching rules or conflation rules.
+
+### Append conflation
+
+Ably concatenates a series of appends to the same message into a single larger append. Subscribers receive one append containing the combined data from all appends in the conflation window, with the operation metadata from the most recent append.
+The append messages must all have the same data type (e.g. all strings or all binary) in order to be concatenated correctly.
+
+### Update and delete conflation
+
+When an update or delete occurs, it supersedes all previous operations for that message in the time window.
+If additional appends follow the update or delete within the same window, Ably combines them: subscribers receive the full message content including those appends, rather than receiving the update followed by separate append operations.
+
+Conversely, if an update or delete arrives after appends in the conflation window, the update or delete wins and discards the pending appends.
+
+<Aside data-type='note'>
+The exact conflation behavior depends on timing and batching intervals, but subscribers always receive a consistent final state that matches what a history query or [getMessage()](/docs/messages/updates-deletes#get) request returns.
+</Aside>
 
 ## Get the latest version of a message <a id="get"/>
 

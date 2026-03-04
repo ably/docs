@@ -63,6 +63,11 @@ export default {
       name: 'Products and SDKs',
       pages: [
         {
+          name: 'Product guidance',
+          link: '/docs/platform/products',
+          index: true,
+        },
+        {
           name: 'SDKs',
           link: '/docs/sdks',
           external: true,
@@ -247,7 +252,7 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/account',
+          link: '/docs/platform/account',
           index: true,
         },
         {

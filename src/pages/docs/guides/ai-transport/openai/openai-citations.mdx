@@ -1,0 +1,543 @@
+---
+title: "Guide: Attach citations to OpenAI responses using message annotations"
+meta_description: "Attach source citations to AI responses from the OpenAI Responses API using Ably message annotations."
+meta_keywords: "AI, citations, OpenAI, Responses API, AI transport, Ably, realtime, message annotations, source attribution, web search"
+---
+
+This guide shows you how to attach source citations to AI responses from OpenAI's [Responses API](https://platform.openai.com/docs/api-reference/responses) using Ably [message annotations](/docs/messages/annotations). When OpenAI provides citations from web search results, you can publish them as annotations on Ably messages, enabling clients to display source references alongside AI responses in realtime.
+
+Attaching citations to AI responses enables your users to see the original sources that were used in the generated response, explore topics in depth, and properly attribute the source content creators. Citations provide explicit traceability between the generated response and the information sources that were used when generating them.
+
+Ably [message annotations](/docs/messages/annotations) let you separate citation metadata from response content, display citation summaries updated in realtime, and retrieve detailed citation data on demand.
+
+<Aside data-type="further-reading">
+To learn more about the citations pattern and how message annotations work, see the [citations](/docs/ai-transport/messaging/citations) documentation.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+To follow this guide, you need:
+- Node.js 20 or higher
+- An OpenAI API key
+- An Ably API key
+
+Useful links:
+- [OpenAI Web Search documentation](https://platform.openai.com/docs/guides/tools-web-search)
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+
+Create a new NPM package, which will contain the publisher and subscriber code:
+
+<Code>
+```shell
+mkdir ably-openai-citations && cd ably-openai-citations
+npm init -y
+```
+</Code>
+
+Install the required packages using NPM:
+
+<Code>
+```shell
+npm install openai@^4 ably@^2
+```
+</Code>
+
+<Aside data-type="note">
+This guide uses version 4.x of the OpenAI SDK. Some details of interacting with the OpenAI SDK may differ from those given here if using a different major version.
+</Aside>
+
+Export your OpenAI API key to the environment, which will be used later in the guide by the OpenAI SDK:
+
+<Code>
+```shell
+export OPENAI_API_KEY="your_api_key_here"
+```
+</Code>
+
+## Step 1: Enable message annotations <a id="step-1"/>
+
+Message annotations require "Message annotations, updates, deletes and appends" to be enabled in a [channel rule](/docs/channels#rules) associated with the channel.
+
+<Aside data-type="important">
+When the "Message annotations, updates, deletes and appends" channel rule is enabled, messages are persisted irrespective of whether or not persistence has also been explicitly enabled. This increases usage since [we charge for persisting messages](https://faqs.ably.com/how-does-ably-count-messages).
+</Aside>
+
+To enable the channel rule:
+
+1. Go to the [Ably dashboard](https://www.ably.com/dashboard) and select your app.
+2. Navigate to the "Configuration" > "Rules" section from the left-hand navigation bar.
+3. Choose "Add new rule".
+4. Enter a channel name or namespace pattern (e.g. `ai` for all channels starting with `ai:`).
+5. Select the "Message annotations, updates, deletes and appends" option from the list.
+6. Click "Create channel rule".
+
+The examples in this guide use the `ai:` namespace prefix, which assumes you have configured the rule for `ai:*`.
+
+<Aside data-type="note">
+The `ai:` namespace is just a naming convention used in this guide. There's nothing special about it - you can use any namespace pattern you like, as long as your channel name matches the configured channel rule.
+</Aside>
+
+## Step 2: Get a response with citations from OpenAI <a id="step-2"/>
+
+Initialize an OpenAI client and use the [Responses API](https://platform.openai.com/docs/api-reference/responses) with web search enabled. When web search is used, OpenAI includes `url_citation` annotations in the response.
+
+Create a new file `publisher.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+import OpenAI from 'openai';
+
+// Initialize OpenAI client
+const openai = new OpenAI();
+
+// Create response with web search enabled
+async function getOpenAIResponseWithCitations(question) {
+  const response = await openai.responses.create({
+    model: "gpt-5",
+    input: question,
+    tools: [{ type: "web_search_preview" }]
+  });
+
+  console.log(JSON.stringify(response, null, 2));
+}
+
+// Usage example
+getOpenAIResponseWithCitations(
+  "What are the latest discoveries from the James Webb Space Telescope in 2025?"
+);
+```
+</Code>
+
+<Aside data-type="note">
+The example question asks about recent discoveries to ensure OpenAI performs a web search and returns citations. Questions that can be answered from the model's training data may not trigger a web search, resulting in no citations being returned.
+</Aside>
+
+### Understand OpenAI citation responses <a id="understand-citation-responses"/>
+
+When web search is enabled, OpenAI's Responses API returns responses with `url_citation` annotations embedded in the output. The response includes both the web search call and the message with citations.
+
+The following example shows the response structure when citations are included:
+
+<Code>
+```json
+{
+  "id": "resp_abc123",
+  "status": "completed",
+  "output": [
+    {
+      "type": "web_search_call",
+      "id": "ws_456",
+      "status": "completed"
+    },
+    {
+      "type": "message",
+      "id": "msg_789",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The James Webb Space Telescope launched on December 25, 2021 [1]. Its first full-color images were released on July 12, 2022 [2].",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "start_index": 51,
+              "end_index": 54,
+              "url": "https://science.nasa.gov/mission/webb/",
+              "title": "James Webb Space Telescope - NASA Science"
+            },
+            {
+              "type": "url_citation",
+              "start_index": 110,
+              "end_index": 113,
+              "url": "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope",
+              "title": "James Webb Space Telescope - Wikipedia"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+</Code>
+
+Each `url_citation` annotation includes:
+
+- `type`: Always `"url_citation"` for web search citations.
+- `start_index`: The character position in the response text where the citation marker begins.
+- `end_index`: The character position where the citation marker ends.
+- `url`: The source URL being cited.
+- `title`: The title of the source page.
+
+<Aside data-type="note">
+The `start_index` and `end_index` refer to the inline citation markers (like `[1]`) in the response text, not the cited content itself. Use these positions to link the marker to its source.
+</Aside>
+
+## Step 3: Publish response and citations to Ably <a id="step-3"/>
+
+Publish the AI response as an Ably message, then publish each citation as a message annotation referencing the response message's `serial`.
+
+### Initialize the Ably client <a id="initialize-ably"/>
+
+Add the Ably import and client initialization to your `publisher.mjs` file:
+
+<Code>
+```javascript
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+
+// Create a channel for publishing AI responses
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+The Ably Realtime client maintains a persistent connection to the Ably service, which allows you to publish messages with low latency.
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on the agent's Ably client to prevent the agent from receiving its own responses and citations, avoiding billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+### Publish response and citations <a id="publish-and-citations"/>
+
+Add a `processResponse` function to extract the text and citations from the OpenAI response, then publish them to Ably. Update `getOpenAIResponseWithCitations` to call it by replacing the `console.log` line with `await processResponse(response);`:
+
+<Code>
+```javascript
+// Process response and publish to Ably
+async function processResponse(response) {
+  let fullText = '';
+  const citations = [];
+
+  // Extract text and citations from response
+  for (const item of response.output) {
+    if (item.type === 'message') {
+      for (const content of item.content) {
+        if (content.type === 'output_text') {
+          fullText = content.text;
+
+          if (content.annotations) {
+            for (const annotation of content.annotations) {
+              if (annotation.type === 'url_citation') {
+                citations.push({
+                  url: annotation.url,
+                  title: annotation.title,
+                  startIndex: annotation.start_index,
+                  endIndex: annotation.end_index
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Publish the AI response message
+  const { serials: [msgSerial] } = await channel.publish('response', fullText);
+  console.log('Published response with serial:', msgSerial);
+
+  // Publish each citation as an annotation
+  for (const citation of citations) {
+    const sourceDomain = new URL(citation.url).hostname;
+
+    await channel.annotations.publish(msgSerial, {
+      type: 'citations:multiple.v1',
+      name: sourceDomain,
+      data: {
+        url: citation.url,
+        title: citation.title,
+        startIndex: citation.startIndex,
+        endIndex: citation.endIndex
+      }
+    });
+  }
+
+  console.log(`Published ${citations.length} citation(s)`);
+}
+```
+</Code>
+
+This implementation:
+
+- Extracts the response text from the `output_text` content block
+- Collects all `url_citation` annotations with their URLs, titles, and positions
+- Publishes the response as a single Ably message and captures its `serial`
+- Publishes each citation as an annotation using the [`multiple.v1`](/docs/messages/annotations#multiple) summarization method
+- Uses the source domain as the annotation `name` for grouping in summaries
+
+<Aside data-type="note">
+The annotation `name` determines how citations are grouped in summaries. Using the source domain means summaries will show counts like "2 citations from wikipedia.org, 1 from nasa.gov".
+</Aside>
+
+Run the publisher to see responses and citations published to Ably:
+
+<Code>
+```shell
+node publisher.mjs
+```
+</Code>
+
+## Step 4: Subscribe to citation summaries <a id="step-4"/>
+
+Create a subscriber that receives AI responses and citation summaries in realtime.
+
+Create a new file `subscriber.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Get the same channel used by the publisher
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track responses
+const responses = new Map();
+
+// Subscribe to receive messages and summaries
+await channel.subscribe((message) => {
+  switch (message.action) {
+    case 'message.create':
+      console.log('\n[New response]');
+      console.log('Serial:', message.serial);
+      console.log('Content:', message.data);
+      responses.set(message.serial, { content: message.data, citations: {} });
+      break;
+
+    case 'message.summary':
+      const citationsSummary = message.annotations?.summary['citations:multiple.v1'];
+      if (citationsSummary) {
+        console.log('\n[Citation summary updated]');
+        for (const [source, data] of Object.entries(citationsSummary)) {
+          console.log(`  ${source}: ${data.total} citation(s)`);
+        }
+      }
+      break;
+  }
+});
+
+console.log('Subscriber ready, waiting for responses and citations...');
+```
+</Code>
+
+Run the subscriber in a separate terminal:
+
+<Code>
+```shell
+node subscriber.mjs
+```
+</Code>
+
+With the subscriber running, run the publisher in another terminal. You'll see the response appear followed by citation summary updates showing counts grouped by source domain.
+
+## Step 5: Subscribe to individual citations <a id="step-5"/>
+
+To access the full citation data for rendering source links or inline markers, subscribe to individual annotation events.
+
+Create a new file `citation-subscriber.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Get the channel with annotation subscription enabled
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}', {
+  modes: ['SUBSCRIBE', 'ANNOTATION_SUBSCRIBE']
+});
+
+// Track responses and their citations
+const responses = new Map();
+
+// Subscribe to messages
+await channel.subscribe((message) => {
+  if (message.action === 'message.create') {
+    console.log('\n[New response]');
+    console.log('Serial:', message.serial);
+    console.log('Content:', message.data);
+    responses.set(message.serial, { content: message.data, citations: [] });
+  }
+});
+
+// Subscribe to individual citation annotations
+await channel.annotations.subscribe((annotation) => {
+  if (annotation.action === 'annotation.create' &&
+      annotation.type === 'citations:multiple.v1') {
+    const { url, title, startIndex, endIndex } = annotation.data;
+
+    console.log('\n[Citation received]');
+    console.log(`  Title: ${title}`);
+    console.log(`  URL: ${url}`);
+    console.log(`  Position: ${startIndex}-${endIndex}`);
+
+    // Store citation for the response
+    const response = responses.get(annotation.messageSerial);
+    if (response) {
+      response.citations.push(annotation.data);
+    }
+  }
+});
+
+console.log('Subscriber ready, waiting for responses and citations...');
+```
+</Code>
+
+Run the citation subscriber:
+
+<Code>
+```shell
+node citation-subscriber.mjs
+```
+</Code>
+
+This subscriber receives the full citation data as each annotation arrives, enabling you to:
+
+- Display clickable source links with titles and URLs
+- Link inline citation markers (like `[1]`) to their sources using the position indices
+- Build a references section with all cited sources
+
+## Step 6: Combine with streaming responses <a id="step-6"/>
+
+You can combine citations with the [message-per-response](/docs/ai-transport/token-streaming/message-per-response) streaming pattern. OpenAI's streaming responses include citation annotations in the final `response.output_text.done` event.
+
+<Code>
+```javascript
+import OpenAI from 'openai';
+import Ably from 'ably';
+
+const openai = new OpenAI();
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track state for streaming
+let msgSerial = null;
+let messageItemId = null;
+
+// Process streaming events
+async function processStreamEvent(event) {
+  switch (event.type) {
+    case 'response.created':
+      // Publish initial empty message
+      const result = await channel.publish({ name: 'response', data: '' });
+      msgSerial = result.serials[0];
+      break;
+
+    case 'response.output_item.added':
+      if (event.item.type === 'message') {
+        messageItemId = event.item.id;
+      }
+      break;
+
+    case 'response.output_text.delta':
+      // Append text token
+      if (event.item_id === messageItemId && msgSerial) {
+        channel.appendMessage({ serial: msgSerial, data: event.delta });
+      }
+      break;
+
+    case 'response.output_text.done':
+      // Process citations when text output is complete
+      if (event.item_id === messageItemId && event.annotations) {
+        for (const annotation of event.annotations) {
+          if (annotation.type === 'url_citation') {
+            const sourceDomain = new URL(annotation.url).hostname;
+
+            await channel.annotations.publish(msgSerial, {
+              type: 'citations:multiple.v1',
+              name: sourceDomain,
+              data: {
+                url: annotation.url,
+                title: annotation.title,
+                startIndex: annotation.start_index,
+                endIndex: annotation.end_index
+              }
+            });
+          }
+        }
+      }
+      break;
+
+    case 'response.completed':
+      console.log('Stream completed!');
+      break;
+  }
+}
+
+// Stream response with web search
+async function streamWithCitations(question) {
+  const stream = await openai.responses.create({
+    model: "gpt-5",
+    input: question,
+    tools: [{ type: "web_search_preview" }],
+    stream: true
+  });
+
+  for await (const event of stream) {
+    await processStreamEvent(event);
+  }
+}
+
+// Example usage
+await streamWithCitations(
+  "What are the latest discoveries from the James Webb Space Telescope in 2025?"
+);
+```
+</Code>
+
+<Aside data-type="note">
+When streaming, citations are included in the `response.output_text.done` event after all text tokens have been streamed. This event contains the complete `annotations` array for the output text.
+</Aside>
+
+## Step 7: Customize search behavior <a id="step-7"/>
+
+OpenAI's web search tool supports configuration options to customize search behavior:
+
+<Code>
+```javascript
+// Customize search context size
+const response = await openai.responses.create({
+  model: "gpt-5",
+  input: "What are the latest AI developments?",
+  tools: [{
+    type: "web_search_preview",
+    search_context_size: "high" // Options: "low", "medium", "high"
+  }]
+});
+
+// Filter to specific domains
+const response = await openai.responses.create({
+  model: "gpt-5",
+  input: "Find information about the James Webb Space Telescope",
+  tools: [{
+    type: "web_search_preview",
+    user_location: {
+      type: "approximate",
+      country: "US"
+    }
+  }]
+});
+```
+</Code>
+
+The `search_context_size` option controls how much context from search results is provided to the model:
+- `low`: Faster responses with less context
+- `medium`: Balanced approach (default)
+- `high`: More comprehensive context, potentially more citations
+
+## Next steps
+
+- Learn more about [citations and message annotations](/docs/ai-transport/messaging/citations)
+- Explore [annotation summaries](/docs/messages/annotations#annotation-summaries) for displaying citation counts
+- Understand how to [retrieve annotations on demand](/docs/messages/annotations#rest-api) via the REST API
+- Combine with [message-per-response streaming](/docs/ai-transport/token-streaming/message-per-response) for live token delivery

@@ -46,6 +46,10 @@ export default {
           link: '/docs/chat/getting-started/swift',
         },
         {
+          name: 'Swift (AsyncSequence)',
+          link: '/docs/chat/getting-started/swift-async-sequence',
+        },
+        {
           name: 'React UI Kit',
           link: '/docs/chat/getting-started/react-ui-kit',
         },
@@ -81,7 +85,7 @@ export default {
           link: '/docs/chat/rooms/messages',
         },
         {
-          name: 'Message storage and history',
+          name: 'Message history',
           link: '/docs/chat/rooms/history',
         },
         {
@@ -111,6 +115,28 @@ export default {
         {
           name: 'Message replies',
           link: '/docs/chat/rooms/replies',
+        },
+      ],
+    },
+    {
+      name: 'External storage and processing',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/chat/external-storage-and-processing',
+          index: true,
+        },
+        {
+          name: 'Data extraction',
+          link: '/docs/chat/external-storage-and-processing/data-extraction',
+        },
+        {
+          name: 'Data processing',
+          link: '/docs/chat/external-storage-and-processing/data-processing',
+        },
+        {
+          name: 'Data storage',
+          link: '/docs/chat/external-storage-and-processing/data-storage',
         },
       ],
     },
@@ -185,6 +211,10 @@ export default {
               name: 'AWS Lambda',
               link: '/docs/chat/moderation/custom/lambda',
             },
+            {
+              name: 'Webhook',
+              link: '/docs/chat/moderation/custom/webhook',
+            },
           ],
         },
       ],
@@ -197,8 +227,8 @@ export default {
           link: '/docs/guides/chat/build-livestream',
         },
         {
-          name: 'Export chat messages',
-          link: '/docs/guides/chat/export-chat',
+          name: 'Handling discontinuity',
+          link: '/docs/guides/chat/handling-discontinuity',
         },
       ],
     },
@@ -212,9 +242,53 @@ export default {
           name: 'Overview',
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-js.html',
-          name: 'JavaScript SDK',
-          external: true,
+          name: 'JavaScript',
+          pages: [
+            {
+              link: '/docs/chat/api/javascript/chat-client',
+              name: 'ChatClient',
+            },
+            {
+              link: '/docs/chat/api/javascript/connection',
+              name: 'Connection',
+            },
+            {
+              link: '/docs/chat/api/javascript/rooms',
+              name: 'Rooms',
+            },
+            {
+              link: '/docs/chat/api/javascript/room',
+              name: 'Room',
+            },
+            {
+              link: '/docs/chat/api/javascript/messages',
+              name: 'Messages',
+            },
+            {
+              link: '/docs/chat/api/javascript/message',
+              name: 'Message',
+            },
+            {
+              link: '/docs/chat/api/javascript/message-reactions',
+              name: 'MessageReactions',
+            },
+            {
+              link: '/docs/chat/api/javascript/presence',
+              name: 'Presence',
+            },
+            {
+              link: '/docs/chat/api/javascript/occupancy',
+              name: 'Occupancy',
+            },
+            {
+              link: '/docs/chat/api/javascript/typing',
+              name: 'Typing',
+            },
+            {
+              link: '/docs/chat/api/javascript/room-reactions',
+              name: 'RoomReactions',
+            },
+          ],
         },
         {
           link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-react.html',
