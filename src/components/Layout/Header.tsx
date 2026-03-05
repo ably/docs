@@ -162,7 +162,7 @@ const Header: React.FC = () => {
         <TabMenu
           rootClassName="hidden md:flex h-16"
           tabs={desktopTabs}
-          tabClassName="!p-0"
+          tabClassName="!p-0 !ui-text-label3"
           options={{
             underline: false,
             flexibleTabHeight: true,
