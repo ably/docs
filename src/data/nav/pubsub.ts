@@ -97,7 +97,21 @@ export default {
         },
         {
           name: 'Token auth',
-          link: '/docs/auth/token',
+          pages: [
+            {
+              name: 'Overview',
+              link: '/docs/auth/token',
+              index: true,
+            },
+            {
+              name: 'JWTs',
+              link: '/docs/auth/token/jwt',
+            },
+            {
+              name: 'Ably Tokens',
+              link: '/docs/auth/token/ably-tokens',
+            },
+          ],
         },
         {
           name: 'Token revocation',
@@ -243,8 +257,16 @@ export default {
           name: 'Getting started',
           pages: [
             {
+              name: 'Web Push',
+              link: '/docs/push/getting-started/web',
+            },
+            {
               name: 'APNs',
               link: '/docs/push/getting-started/apns',
+            },
+            {
+              name: 'FCM',
+              link: '/docs/push/getting-started/fcm',
             },
           ],
         },
