@@ -949,6 +949,15 @@ Idempotency ensures that multiple publishes of the same message cannot result in
 
 When idempotent publishing is enabled, the Ably SDK will internally assign a unique ID to each message which ensures that subsequent retry attempts cannot result in duplicate messages. Idempotent publishing is enabled by default in all latest Ably SDKs. It can be disabled by setting the `idempotentRestPublishing` [`ClientOptions`](/docs/api/rest-sdk#client-options) to `false`.
 
+#### When to use idempotent publishing <a id="when-to-use-idempotent"/>
+
+Idempotent publishing is enabled by default in current Ably SDKs. It is especially important in these scenarios:
+
+- Duplicate notifications degrade user trust. In notification systems, idempotent publishing ensures a notification is delivered exactly once even if the publisher retries after a network error.
+- Duplicate bid confirmations, payment events, or trade notifications can cause incorrect state in financial transactions. The 2-minute deduplication window covers typical retry scenarios.
+- Duplicate operations in a collaborative document can cause data corruption or conflicting states in collaborative editing.
+- Duplicate commands to physical devices in IoT systems, such as "open valve" or "toggle switch", can have real-world consequences.
+
 You may wish to set the unique message ID yourself to achieve idempotency in some cases, such as:
 
 * To ensure idempotency when a publisher instance might be restarted, and continuous activity cannot be guaranteed.
@@ -1144,6 +1153,35 @@ message := &ably.Message{
 }
 ```
 </Code>
+
+#### Avoid common mistakes with custom message IDs <a id="custom-id-mistakes"/>
+
+When providing custom message IDs for cross-restart deduplication, the ID **must be deterministic across retries**. If a retry generates a different ID, deduplication fails.
+
+<Aside data-type='important'>
+Do not use non-deterministic values like `Date.now()`, `Math.random()`, or `crypto.randomUUID()` as message IDs if you intend to retry. These generate a different ID on each attempt, defeating deduplication entirely.
+</Aside>
+
+Instead, derive the ID from the message content or generate it once before the first publish attempt:
+
+<Code>
+```javascript
+// Good: Generate ID once, reuse on retry
+const messageId = crypto.randomUUID();
+await channel.publish({ id: messageId, data: payload });
+
+// Good: Derive from content (deterministic)
+const messageId = `order-${orderId}-confirmed`;
+await channel.publish({ id: messageId, data: payload });
+
+// Bad: Non-deterministic -- different ID on each retry
+await channel.publish({ id: Date.now().toString(), data: payload });
+```
+</Code>
+
+<Aside data-type='important'>
+When publishing an array of messages in a single `publish()` call, each message ID must follow the format `baseId:index`, where index is the zero-based position in the array. All messages in the batch share the same base ID. For example: `myBatchId:0`, `myBatchId:1`, `myBatchId:2`. Ably deduplicates the entire batch atomically using the base ID.
+</Aside>
 
 ### Publishing on behalf of a realtime connection <a id="publish-on-behalf"/>
 

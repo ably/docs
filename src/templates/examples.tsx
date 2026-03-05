@@ -1,5 +1,5 @@
 import React, { PropsWithChildren, useContext, useEffect, useRef } from 'react';
-import Markdown from 'markdown-to-jsx';
+import Markdown from 'markdown-to-jsx/react';
 import { Link } from 'gatsby';
 import Icon from '@ably/ui/core/Icon';
 import LinkButton from '@ably/ui/core/LinkButton';

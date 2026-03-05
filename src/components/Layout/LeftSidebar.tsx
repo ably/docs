@@ -11,6 +11,28 @@ import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { interactiveButtonClassName } from './utils/styles';
 
+// Build link preserving all language params across navigation
+const buildLinkWithParams = (targetLink: string, searchParams: URLSearchParams): string => {
+  const params = new URLSearchParams();
+
+  const lang = searchParams.get('lang');
+  const clientLang = searchParams.get('client_lang');
+  const agentLang = searchParams.get('agent_lang');
+
+  if (lang) {
+    params.set('lang', lang);
+  }
+  if (clientLang) {
+    params.set('client_lang', clientLang);
+  }
+  if (agentLang) {
+    params.set('agent_lang', agentLang);
+  }
+
+  const paramString = params.toString();
+  return paramString ? `${targetLink}?${paramString}` : targetLink;
+};
+
 type LeftSidebarProps = {
   className?: string;
   inHeader?: boolean;
@@ -78,7 +100,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
     }
   }, [activePage.tree.length, subtreeIdentifier]);
 
-  const lang = new URLSearchParams(location.search).get('lang');
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   return (
     <Accordion.Root
@@ -124,7 +146,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
                       target: '_blank',
                       rel: 'noopener noreferrer',
                     })}
-                    to={page.link + (lang ? `?lang=${lang}` : '')}
+                    to={buildLinkWithParams(page.link, searchParams)}
                   >
                     <span>{page.name}</span>
                     {page.external && (
