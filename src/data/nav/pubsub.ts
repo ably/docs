@@ -171,6 +171,10 @@ export default {
               link: '/docs/channels/options/deltas',
             },
             {
+              name: 'Echo',
+              link: '/docs/channels/options/echo',
+            },
+            {
               name: 'Encryption',
               link: '/docs/channels/options/encryption',
             },
