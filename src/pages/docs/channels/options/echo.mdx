@@ -1,0 +1,107 @@
+---
+title: Echo
+meta_description: "The echo channel option enables per-channel control over whether a client receives its own published messages."
+---
+
+By default, clients receive their own messages when subscribed to a channel they publish on. This is useful in many applications because it means every subscriber, including the publisher, renders state from the same stream of messages. For example, in a chat application or collaborative editor, a client can publish a message and then update its UI only when that message arrives back on the channel, guaranteeing that all participants see the same ordering and state.
+
+However, this is not always desirable. A client streaming pricing updates, publishing telemetry data, or sending tokens via [AI Transport](/docs/ai-transport) does not need to hear its own messages echoed back. Suppressing echo on these channels reduces unnecessary bandwidth and message processing.
+
+Set `echo` to `false` in the channel `params` to suppress echo on a per-channel basis. As `echo` only applies to channel subscriptions, it is only available when using the realtime interface of an Ably SDK, or when using [SSE](/docs/protocols/sse) or [MQTT](/docs/protocols/mqtt).
+
+## When to suppress echo <a id="when"/>
+
+Suppressing echo per-channel is useful when a client publishes and subscribes on the same channel but does not need its own messages back:
+
+- **Streaming data**: A client publishing live pricing updates, sensor readings, or telemetry to a channel does not need those messages echoed back. Suppressing echo avoids redundant processing and reduces bandwidth.
+- **AI token streaming**: An [AI Transport](/docs/ai-transport) agent publishes tokens at high frequency and subscribes for steering or control messages. Echoing every token back to the publishing agent is wasteful.
+- **RPC over channels**: A caller publishes a request and subscribes for the response on the same channel. The caller already knows what it sent.
+- **Mixed workloads**: Some channels on a connection need echo, such as collaborative editing where a client confirms its updates, while others do not, such as notification or logging channels.
+
+The connection-level [`echoMessages`](/docs/api/realtime-sdk/types#client-options) option disables echo across all channels on a connection. The `echo` channel param provides finer control, disabling echo on specific channels while leaving others unaffected.
+
+## Suppress echo on a channel <a id="suppress"/>
+
+Set the `echo` param to `false` when obtaining a channel instance:
+
+<Code>
+```realtime_javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {
+  params: { echo: 'false' }
+});
+
+await channel.subscribe((message) => {
+  // Only receives messages from other clients, not from this client
+  console.log('Received:', message.data);
+});
+```
+
+```realtime_nodejs
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {
+  params: { echo: 'false' }
+});
+
+await channel.subscribe((message) => {
+  // Only receives messages from other clients, not from this client
+  console.log('Received:', message.data);
+});
+```
+
+```realtime_java
+ChannelOptions channelOpts = new ChannelOptions();
+channelOpts.params = new HashMap<>();
+channelOpts.params.put("echo", "false");
+
+Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}", channelOpts);
+
+channel.subscribe(new Channel.MessageListener() {
+    @Override
+    public void onMessage(Message message) {
+        // Only receives messages from other clients, not from this client
+        System.out.println("Received: " + message.data);
+    }
+});
+```
+
+```realtime_go
+channel := realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}", ably.ChannelWithParams("echo", "false"))
+
+_, err := channel.SubscribeAll(context.Background(), func(msg *ably.Message) {
+	// Only receives messages from other clients, not from this client
+	log.Println("Received:", msg.Data)
+})
+if err != nil {
+	log.Panic(err)
+}
+```
+
+```realtime_flutter
+final channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+const channelOptions = RealtimeChannelOptions(
+  params: {'echo': 'false'},
+);
+
+await channel.setOptions(channelOptions);
+channel.subscribe().listen((message) {
+  // Only receives messages from other clients, not from this client
+  print('Received: ${message.data}');
+});
+```
+</Code>
+
+## Interaction with connection-level echo <a id="connection-level"/>
+
+The channel-level `echo` param works alongside the connection-level [`echoMessages`](/docs/api/realtime-sdk/types#client-options) setting:
+
+| Connection `echoMessages` | Channel `echo` param | Result |
+|---------------------------|---------------------|--------|
+| `true` (default) | Not set | Messages echoed |
+| `true` (default) | `false` | Messages suppressed on this channel |
+| `false` | Not set | Messages suppressed (connection-level) |
+| `false` | `false` | Messages suppressed |
+
+The channel-level param only adds suppression. If the connection already has `echoMessages` set to `false`, echo is suppressed regardless of the channel param.
+
+<Aside data-type='note'>
+The `echo` channel param only affects messages. Presence events are always delivered regardless of the echo setting.
+</Aside>
