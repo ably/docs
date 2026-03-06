@@ -9,6 +9,8 @@ class ResizeObserver {
 
 window.ResizeObserver = ResizeObserver;
 
+Element.prototype.scrollIntoView = jest.fn();
+
 jest.mock('@ably/ui/core/utils/syntax-highlighter', () => ({
   highlightSnippet: jest.fn,
   LINE_HIGHLIGHT_CLASSES: {
