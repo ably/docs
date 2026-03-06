@@ -84,6 +84,10 @@ export default {
       ],
     },
     {
+      name: 'Authentication',
+      link: '/docs/authentication',
+    },
+    {
       name: 'Connections',
       pages: [
         {

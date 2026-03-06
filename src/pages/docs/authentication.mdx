@@ -1,0 +1,411 @@
+---
+title: Pub/Sub authentication
+meta_description: "Configure authentication for Pub/Sub applications with the required capabilities."
+meta_keywords: "authentication, pub/sub, capabilities, JWT, token"
+---
+
+All Pub/Sub clients must authenticate with Ably before they can publish or subscribe to channels. Use [token authentication](/docs/platform/auth/token) for client-side applications, and [basic authentication](/docs/platform/auth/basic) for trusted server environments.
+
+## Authentication flow
+
+The recommended authentication flow for client-side applications is:
+
+1. Your auth server authenticates the user.
+2. Your auth server issues an Ably-compatible token (JWT format is recommended for most apps).
+3. The client SDK fetches tokens with `authCallback` and refreshes them automatically before expiry.
+
+<Aside data-type='important'>
+Never use API keys in client-side code. API keys do not expire and are not suitable for untrusted clients.
+</Aside>
+
+## Server setup
+
+Create an endpoint that validates user-provided credentials and returns JWTs with the appropriate capabilities:
+
+<Code>
+```javascript
+// Server-side JWT with channel-scoped capabilities
+import jwt from 'jsonwebtoken';
+
+const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
+
+const ablyJwt = jwt.sign(
+  {
+    'x-ably-capability': JSON.stringify({
+      'your-channel': ['publish', 'subscribe', 'presence', 'history'],
+    }),
+    'x-ably-clientId': userId,
+  },
+  keySecret,
+  { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
+);
+```
+
+```python
+# Server-side JWT with channel-scoped capabilities
+import jwt
+import json
+import time
+import os
+
+key_name, key_secret = os.environ['ABLY_API_KEY'].split(':')
+
+now = int(time.time())
+ably_jwt = jwt.encode(
+    {
+        'iat': now,
+        'exp': now + 3600,
+        'x-ably-capability': json.dumps({
+            'your-channel': ['publish', 'subscribe', 'presence', 'history'],
+        }),
+        'x-ably-clientId': user_id,
+    },
+    key_secret,
+    algorithm='HS256',
+    headers={'kid': key_name}
+)
+```
+
+```go
+// Server-side JWT with channel-scoped capabilities
+header := map[string]string{
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": keyName,
+}
+
+currentTime := time.Now().Unix()
+claims := map[string]interface{}{
+    "iat":                currentTime,
+    "exp":                currentTime + 3600,
+    "x-ably-capability":  `{"your-channel":["publish","subscribe","presence","history"]}`,
+    "x-ably-clientId":    userId,
+}
+
+// Sign using HS256 with your API key secret
+```
+
+```ruby
+# Server-side JWT with channel-scoped capabilities
+require 'jwt'
+
+key_name, key_secret = ENV['ABLY_API_KEY'].split(':')
+
+now = Time.now.to_i
+payload = {
+  'iat' => now,
+  'exp' => now + 3600,
+  'x-ably-capability' => '{"your-channel":["publish","subscribe","presence","history"]}',
+  'x-ably-clientId' => user_id
+}
+
+ably_jwt = JWT.encode(payload, key_secret, 'HS256', { 'kid' => key_name })
+```
+
+```php
+// Server-side JWT with channel-scoped capabilities
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'kid' => $keyName
+];
+$currentTime = time();
+$claims = [
+    'iat' => $currentTime,
+    'exp' => $currentTime + 3600,
+    'x-ably-capability' => '{"your-channel":["publish","subscribe","presence","history"]}',
+    'x-ably-clientId' => $userId
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$signature = hash_hmac('sha256', $base64Header . '.' . $base64Claims, $keySecret, true);
+$jwt = $base64Header . '.' . $base64Claims . '.' . base64_encode($signature);
+```
+
+```java
+Map<String, Object> headerClaims = new HashMap<>();
+headerClaims.put("typ", "JWT");
+headerClaims.put("alg", "HS256");
+headerClaims.put("kid", keyName);
+
+long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
+Map<String, Object> claims = new HashMap<>();
+claims.put("iat", currentTimeInSeconds);
+claims.put("exp", currentTimeInSeconds + 3600);
+claims.put("x-ably-capability", "{\"your-channel\":[\"publish\",\"subscribe\",\"presence\",\"history\"]}");
+claims.put("x-ably-clientId", userId);
+
+Algorithm algorithm = Algorithm.HMAC256(keySecret);
+String token = JWT.create()
+        .withHeader(headerClaims)
+        .withPayload(claims)
+        .sign(algorithm);
+```
+
+```csharp
+// Server-side JWT with channel-scoped capabilities
+var header = new Dictionary<string, object>
+{
+    { "typ", "JWT" },
+    { "alg", "HS256" },
+    { "kid", keyName }
+};
+
+var currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+var claims = new Dictionary<string, object>
+{
+    { "iat", currentTime },
+    { "exp", currentTime + 3600 },
+    { "x-ably-capability", "{\"your-channel\":[\"publish\",\"subscribe\",\"presence\",\"history\"]}" },
+    { "x-ably-clientId", userId }
+};
+
+// Sign using HS256 with your API key secret
+```
+</Code>
+
+## Client setup
+
+Use `authCallback` to fetch tokens from your auth server. The SDK handles token refresh automatically:
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+
+const realtime = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token', { credentials: 'include' });
+      if (!response.ok) throw new Error('Auth failed');
+      const jwt = await response.text();
+      callback(null, jwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+```
+
+```react
+import { useMemo } from 'react';
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+
+export function App() {
+  const client = useMemo(
+    () =>
+      new Ably.Realtime({
+        authCallback: async (tokenParams, callback) => {
+          try {
+            const response = await fetch('/api/ably-token', { credentials: 'include' });
+            if (!response.ok) throw new Error('Auth failed');
+            callback(null, await response.text());
+          } catch (error) {
+            callback(error, null);
+          }
+        },
+      }),
+    []
+  );
+
+  return (
+    <AblyProvider client={client}>
+      <YourApp />
+    </AblyProvider>
+  );
+}
+```
+
+```python
+from ably import AblyRealtime
+
+async def auth_callback(token_params):
+    # Fetch JWT from your auth server
+    return await fetch_ably_jwt()
+
+realtime = AblyRealtime(auth_callback=auth_callback)
+```
+
+```swift
+import Ably
+
+let options = ARTClientOptions()
+options.authCallback = { tokenParams, callback in
+    fetchAblyJwt { result in
+        switch result {
+        case .success(let jwt):
+            callback(jwt as ARTTokenDetailsCompatible, nil)
+        case .failure(let error):
+            callback(nil, error)
+        }
+    }
+}
+
+let realtime = ARTRealtime(options: options)
+```
+
+```kotlin
+import io.ably.lib.realtime.AblyRealtime
+import io.ably.lib.rest.Auth
+import io.ably.lib.types.ClientOptions
+
+val realtime = AblyRealtime(
+    ClientOptions().apply {
+        authCallback = Auth.TokenCallback { _ ->
+            // Return JWT string from your auth server
+            fetchAblyJwt()
+        }
+    }
+)
+```
+
+```java
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.rest.Auth;
+import io.ably.lib.types.ClientOptions;
+
+ClientOptions options = new ClientOptions();
+options.authCallback = tokenParams -> {
+    // Return JWT string from your auth server
+    return fetchAblyJwt();
+};
+
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```csharp
+using IO.Ably;
+using IO.Ably.Realtime;
+
+var options = new ClientOptions
+{
+    AuthCallback = async tokenParams =>
+    {
+        // Fetch JWT from your auth server
+        return await FetchAblyJwtAsync();
+    }
+};
+
+var realtime = new AblyRealtime(options);
+```
+
+```flutter
+import 'package:ably_flutter/ably_flutter.dart' as ably;
+
+final options = ably.ClientOptions()
+  ..authCallback = (tokenParams) async {
+    // Fetch JWT from your auth server
+    return await fetchAblyJwt();
+  };
+
+final realtime = ably.Realtime(options: options);
+```
+
+```ruby
+require 'ably'
+
+realtime = Ably::Realtime.new(auth_callback: ->(token_params) {
+  # Fetch JWT from your auth server
+  fetch_ably_jwt
+})
+```
+
+```go
+package main
+
+import "github.com/ably/ably-go/ably"
+
+client, err := ably.NewRealtime(
+    ably.WithAuthCallback(func(ctx context.Context, params ably.TokenParams) (ably.Tokener, error) {
+        // Fetch JWT from your auth server
+        return ably.TokenString(fetchAblyJwt()), nil
+    }),
+)
+```
+
+```objc
+#import "AblyRealtime.h"
+
+ARTClientOptions *options = [[ARTClientOptions alloc] init];
+options.authCallback = ^(ARTTokenParams *tokenParams, void (^callback)(id<ARTTokenDetailsCompatible>, NSError *)) {
+    [self fetchAblyJwtWithCompletion:^(NSString *jwt, NSError *error) {
+        if (error) {
+            callback(nil, error);
+        } else {
+            callback(jwt, nil);
+        }
+    }];
+};
+
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithOptions:options];
+```
+
+```php
+require 'vendor/autoload.php';
+
+use Ably\AblyRest;
+
+$ably = new AblyRest([
+    'authCallback' => function ($tokenParams) {
+        // Fetch JWT from your auth server
+        return fetchAblyJwt();
+    },
+]);
+```
+</Code>
+
+## Pub/Sub capabilities
+
+Capabilities are permissions that control what operations a client can perform. When you create a token, you specify which capabilities the client has:
+
+| Capability | Description |
+|------------|-------------|
+| `publish` | Publish messages to channels |
+| `subscribe` | Subscribe to messages, presence state changes, and annotations on channels |
+| `presence` | Register presence on a channel (enter, update, and leave) |
+| `history` | Retrieve message and presence history on channels |
+| `annotation-publish` | Publish [annotations](/docs/messages/annotations) to messages on a channel |
+| `annotation-subscribe` | Subscribe to individual [annotations](/docs/messages/annotations) on a channel |
+| `message-update-own` | [Update messages](/docs/messages/updates-deletes) where the original publisher's `clientId` matches the updater's `clientId` |
+| `message-update-any` | [Update any message](/docs/messages/updates-deletes) on the channel |
+| `message-delete-own` | [Delete messages](/docs/messages/updates-deletes) where the original publisher's `clientId` matches the deleter's `clientId` |
+| `message-delete-any` | [Delete any message](/docs/messages/updates-deletes) on the channel |
+| `channel-metadata` | Get metadata for a channel and enumerate channels |
+| `push-subscribe` | Subscribe devices for push notifications on channels |
+| `push-admin` | Manage device registrations and push subscriptions for all devices in an app |
+| `privileged-headers` | Set data in the privileged section of [message extras](/docs/api/realtime-sdk/messages#extras) |
+
+## Channel-scoped capabilities
+
+You can scope capabilities to specific channels, a namespace of channels, or all channels:
+
+* `my-channel` - a specific channel
+* `my-namespace:*` - all channels in the `my-namespace:` namespace
+* `*` - all channels
+
+For example, to grant different permissions on different channels:
+
+<Code>
+```javascript
+'x-ably-capability': JSON.stringify({
+  'public:*': ['subscribe'],
+  'private:user-123': ['publish', 'subscribe', 'presence'],
+})
+```
+</Code>
+
+## Token lifecycle and permission updates
+
+- With `authCallback` or `authUrl`, token refresh is automatic and handled by the SDK.
+- To change a user's capabilities during an active session, issue a new token from your auth server and re-authenticate:
+
+<Code>
+```javascript
+// Re-authenticate to pick up updated capabilities
+await realtime.auth.authorize();
+```
+</Code>
+
+- To immediately remove access, [revoke issued tokens](/docs/platform/auth/revocation).
+- If your capability JSON is too large for JWT or must remain confidential, use native [Ably Tokens](/docs/platform/auth/token/ably-tokens).
