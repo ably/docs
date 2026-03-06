@@ -234,6 +234,10 @@ export default {
           name: 'Handling discontinuity',
           link: '/docs/guides/chat/handling-discontinuity',
         },
+        {
+          name: 'Embedded chat',
+          link: '/docs/guides/chat/build-embedded-chat',
+        },
       ],
     },
   ],
