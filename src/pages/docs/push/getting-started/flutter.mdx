@@ -137,6 +137,7 @@ import 'package:ably_flutter/ably_flutter.dart' as ably;
 class AblyService {
   static final AblyService _instance = AblyService._internal();
   late ably.Realtime _realtime;
+  late ably.Rest _rest;
 
   factory AblyService() {
     return _instance;
@@ -151,9 +152,11 @@ class AblyService {
     );
 
     _realtime = ably.Realtime(options: clientOptions);
+    _rest = ably.Rest(options: clientOptions);
   }
 
   ably.Realtime get realtime => _realtime;
+  ably.Rest get rest => _rest;
 }
 ```
 </Code>
@@ -460,14 +463,36 @@ ably channels publish exampleChannel1 '{"name":"example","data":"Hello from CLI!
 
 ## Step 5: Send push with code <a id="step-5"/>
 
-Just as you can send push notifications through the Ably CLI or dashboard, you can also send them directly from your app using `deviceId`, `clientId`, or channel publishing methods. Add the following methods to `_PushHomePageState`:
+The `Push` class on the Realtime client does not expose the admin API. Use the `Rest` client instead — add it to `AblyService` alongside the Realtime client:
+
+<Code>
+```flutter
+class AblyService {
+  // ... existing Realtime fields ...
+  late ably.Rest _rest;
+
+  Future<void> init() async {
+    // ... existing Realtime init ...
+    _rest = ably.Rest(options: clientOptions);
+  }
+
+  ably.Rest get rest => _rest;
+}
+```
+</Code>
+
+<Aside data-type='note'>
+Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability. In production, perform these calls from your backend server rather than embedding a privileged key in the app.
+</Aside>
+
+Add the following methods to `_PushHomePageState`:
 
 <Code>
 ```flutter
 Future<void> _sendPushToDevice() async {
   try {
     final device = await AblyService().realtime.device();
-    await AblyService().realtime.push.admin.publish(
+    await AblyService().rest.push.admin.publish(
       {'deviceId': device.id},
       {
         'notification': {
@@ -486,7 +511,7 @@ Future<void> _sendPushToDevice() async {
 Future<void> _sendPushToClient() async {
   try {
     final clientId = AblyService().realtime.auth.clientId;
-    await AblyService().realtime.push.admin.publish(
+    await AblyService().rest.push.admin.publish(
       {'clientId': clientId},
       {
         'notification': {
@@ -512,7 +537,7 @@ Future<void> _sendPushToChannel() async {
   try {
     final channel = AblyService().realtime.channels.get(_channelName);
     await channel.publish(
-      ably.Message(
+      message: ably.Message(
         name: 'example',
         data: 'Hello from channel!',
         extras: ably.MessageExtras({
@@ -540,19 +565,22 @@ Add three more buttons to the `children` list in the `build` method, before the 
 ```flutter
 ElevatedButton(
   onPressed: _sendPushToDevice,
-  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6610F2)),
+  style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF6610F2)),
   child: const Text('Send Push to Device',
       style: TextStyle(color: Colors.white)),
 ),
 ElevatedButton(
   onPressed: _sendPushToClient,
-  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF20C997)),
+  style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF20C997)),
   child: const Text('Send Push to Client',
       style: TextStyle(color: Colors.white)),
 ),
 ElevatedButton(
   onPressed: _sendPushToChannel,
-  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF17A2B8)),
+  style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF17A2B8)),
   child: const Text('Send Push to Channel',
       style: TextStyle(color: Colors.white)),
 ),
