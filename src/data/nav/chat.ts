@@ -234,6 +234,10 @@ export default {
           name: 'Handling discontinuity',
           link: '/docs/guides/chat/handling-discontinuity',
         },
+        {
+          name: 'Support chat',
+          link: '/docs/guides/chat/support-chat',
+        },
       ],
     },
   ],
