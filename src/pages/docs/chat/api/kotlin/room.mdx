@@ -1,0 +1,305 @@
+---
+title: Room
+meta_description: "API reference for the Room interface in the Ably Chat Kotlin SDK."
+meta_keywords: "Ably Chat SDK, Kotlin, Room API, attach, detach, onStatusChange, onDiscontinuity, statusAsFlow, discontinuityAsFlow, messages, presence, typing, occupancy, reactions"
+---
+
+The `Room` interface represents an individual chat room instance. It provides access to all chat features such as messages, presence, reactions, typing indicators, and occupancy. Rooms are the primary way users interact with chat functionality.
+
+## Obtaining a room instance
+
+Use the [`rooms.get()`](/docs/chat/api/kotlin/rooms#get) method to obtain a room instance:
+
+<Code>
+```kotlin
+val room = chatClient.rooms.get("my-room")
+```
+</Code>
+
+For more information, see the [rooms documentation](/docs/chat/rooms).
+
+## Properties
+
+The `Room` interface has the following properties:
+
+<Table id='RoomProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| name | The unique identifier of the room. | String |
+| messages | The Messages instance for sending and receiving messages. | [Messages](/docs/chat/api/kotlin/messages) |
+| presence | The Presence instance for tracking online users. | [Presence](/docs/chat/api/kotlin/presence) |
+| reactions | The RoomReactions instance for room-level reactions. | [RoomReactions](/docs/chat/api/kotlin/room-reactions) |
+| typing | The Typing instance for typing indicators. | [Typing](/docs/chat/api/kotlin/typing) |
+| occupancy | The Occupancy instance for tracking user counts. | [Occupancy](/docs/chat/api/kotlin/occupancy) |
+| status | The current lifecycle status of the room. | <Table id='RoomStatus'/> |
+| error | The error information if the room is in a failed state, or `null`. | [ErrorInfo](/docs/chat/api/kotlin/chat-client#errorinfo) |
+| options | The resolved configuration options for this room. | [RoomOptions](/docs/chat/api/kotlin/rooms#get) |
+| channel | The underlying Ably channel used for the room. Note: this property is experimental and may change in a future release. | RealtimeChannel |
+
+</Table>
+
+<Table id='RoomStatus' hidden>
+
+| Status | Description |
+| --- | --- |
+| Initialized | The room has been initialized, but no attach has been attempted yet. |
+| Attaching | An attach has been initiated by sending a request to Ably. This is a transient status and will be followed by a transition to `Attached`, `Suspended`, or `Failed`. |
+| Attached | The room is attached and actively receiving events. In this status, clients can publish and subscribe to messages, and enter the presence set. |
+| Detaching | A detach has been initiated on the attached room by sending a request to Ably. This is a transient status and will be followed by a transition to `Detached` or `Failed`. |
+| Detached | The room has been detached by the client and is no longer receiving events. |
+| Suspended | The room, having previously been attached, has lost continuity. This typically occurs when the client is disconnected from Ably for more than two minutes. The client will automatically attempt to reattach when connectivity is restored. |
+| Failed | An indefinite failure condition. This status is entered if an error is received from Ably, such as an attempt to attach without the necessary access rights. |
+| Releasing | The room is being released and its resources are being cleaned up. Attempting to use a room in this state may result in undefined behavior. |
+| Released | The room has been released and is no longer usable. A new room instance must be obtained to continue using the room. |
+
+</Table>
+
+## Attach to a room <a id="attach"/>
+
+<MethodSignature>{`suspend room.attach(): Unit`}</MethodSignature>
+
+Attach to the room to start receiving messages and events. Attaching is required before the client can publish or subscribe to room events.
+
+<Code>
+```kotlin
+room.attach()
+```
+</Code>
+
+### Returns <a id="attach-returns"/>
+
+`Unit`
+
+This is a suspend function. It completes when the room is attached, or throws an [`ErrorInfo`](/docs/chat/api/kotlin/chat-client#errorinfo) on failure.
+
+For more information, see [attach to a room](/docs/chat/rooms#attach).
+
+## Detach from a room <a id="detach"/>
+
+<MethodSignature>{`suspend room.detach(): Unit`}</MethodSignature>
+
+Detach from the room to stop receiving messages and events. Existing subscriptions are preserved but will not receive events until the room is re-attached.
+
+<Code>
+```kotlin
+room.detach()
+```
+</Code>
+
+### Returns <a id="detach-returns"/>
+
+`Unit`
+
+This is a suspend function. It completes when the room is detached, or throws an [`ErrorInfo`](/docs/chat/api/kotlin/chat-client#errorinfo) on failure.
+
+For more information, see [detach from a room](/docs/chat/rooms#detach).
+
+## Subscribe to room status changes <a id="onStatusChange"/>
+
+<MethodSignature>{`room.onStatusChange(listener: RoomStatusListener): Subscription`}</MethodSignature>
+
+Register a listener to receive room status change events. The listener is called whenever the room transitions between lifecycle states.
+
+<Code>
+```kotlin
+val subscription = room.onStatusChange { change ->
+    println("Room status changed to: ${change.current}")
+    change.error?.let { error ->
+        println("Error: $error")
+    }
+}
+
+// To remove the listener
+subscription.unsubscribe()
+```
+</Code>
+
+### Parameters <a id="onStatusChange-params"/>
+
+The `onStatusChange()` method takes the following parameters:
+
+<Table id='OnStatusChangeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Required | A function that receives status change events. | <Table id='RoomStatusChange'/> |
+
+</Table>
+
+<Table id='RoomStatusChange' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| current | The new status of the room. | <Table id='RoomStatus'/> |
+| previous | The previous status of the room. | <Table id='RoomStatus'/> |
+| error | An error that provides a reason why the room has entered the new status, if applicable, or `null`. | [ErrorInfo](/docs/chat/api/kotlin/chat-client#errorinfo) |
+
+</Table>
+
+### Returns <a id="onStatusChange-returns"/>
+
+[`Subscription`](/docs/chat/api/kotlin/rooms#Subscription)
+
+Returns a `Subscription` object.
+
+#### Deregister the listener <a id="onStatusChange-unsubscribe"/>
+
+<MethodSignature>subscription.unsubscribe(): Unit</MethodSignature>
+
+Call `unsubscribe()` to deregister the room status listener.
+
+## Subscribe to discontinuity events <a id="onDiscontinuity"/>
+
+<MethodSignature>{`room.onDiscontinuity(listener: DiscontinuityListener): Subscription`}</MethodSignature>
+
+Register a listener to detect connection interruptions and potentially missed events. This is useful for understanding when the client may have missed messages due to connectivity issues.
+
+<Code>
+```kotlin
+val subscription = room.onDiscontinuity { reason ->
+    println("Discontinuity detected: $reason")
+    // You may want to re-fetch recent messages here
+}
+
+// To remove the listener
+subscription.unsubscribe()
+```
+</Code>
+
+### Parameters <a id="onDiscontinuity-params"/>
+
+The `onDiscontinuity()` method takes the following parameters:
+
+<Table id='OnDiscontinuityParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Required | A function that receives discontinuity events. | <Table id='DiscontinuityListener'/> |
+
+</Table>
+
+<Table id='DiscontinuityListener' hidden>
+
+| Parameter | Description | Type |
+| --- | --- | --- |
+| error | An error providing context about why the discontinuity occurred. | [ErrorInfo](/docs/chat/api/kotlin/chat-client#errorinfo) |
+
+</Table>
+
+### Returns <a id="onDiscontinuity-returns"/>
+
+[`Subscription`](/docs/chat/api/kotlin/rooms#Subscription)
+
+Returns a `Subscription` object.
+
+#### Deregister the listener <a id="onDiscontinuity-unsubscribe"/>
+
+<MethodSignature>subscription.unsubscribe(): Unit</MethodSignature>
+
+Call `unsubscribe()` to deregister the discontinuity listener.
+
+## Collect room status changes as a Flow <a id="statusAsFlow"/>
+
+<MethodSignature>{`Room.statusAsFlow(): Flow<RoomStatusChange>`}</MethodSignature>
+
+Returns a Kotlin `Flow` that emits room status changes. This is an extension function on the `Room` interface that provides a reactive alternative to listener-based subscriptions.
+
+<Code>
+```kotlin
+import kotlinx.coroutines.launch
+
+launch {
+    room.statusAsFlow().collect { change ->
+        println("Room status: ${change.current}")
+    }
+}
+```
+</Code>
+
+### Returns <a id="statusAsFlow-returns"/>
+
+`Flow<RoomStatusChange>`
+
+Returns a `Flow` that emits `RoomStatusChange` events. The flow automatically manages the underlying subscription.
+
+## Collect discontinuity events as a Flow <a id="discontinuityAsFlow"/>
+
+<MethodSignature>{`Room.discontinuityAsFlow(): Flow<ErrorInfo>`}</MethodSignature>
+
+Returns a Kotlin `Flow` that emits discontinuity events. This is an extension function on the `Room` interface that provides a reactive alternative to listener-based subscriptions.
+
+<Code>
+```kotlin
+import kotlinx.coroutines.launch
+
+launch {
+    room.discontinuityAsFlow().collect { error ->
+        println("Discontinuity detected: $error")
+    }
+}
+```
+</Code>
+
+### Returns <a id="discontinuityAsFlow-returns"/>
+
+`Flow<ErrorInfo>`
+
+Returns a `Flow` that emits `ErrorInfo` events when discontinuities occur. The flow automatically manages the underlying subscription.
+
+## Example
+
+<Code>
+```kotlin
+import com.ably.chat.RoomStatus
+import com.ably.chat.statusAsFlow
+import com.ably.chat.discontinuityAsFlow
+import kotlinx.coroutines.launch
+
+val room = chatClient.rooms.get("my-room")
+
+// Attach to start receiving events
+room.attach()
+
+// Monitor room status with a listener
+val statusSub = room.onStatusChange { change ->
+    println("Room status: ${change.current}")
+}
+
+// Monitor for discontinuities
+val discSub = room.onDiscontinuity { reason ->
+    println("Discontinuity detected, consider re-fetching messages")
+}
+
+// Or use Flow for reactive collection
+launch {
+    room.statusAsFlow().collect { change ->
+        when (change.current) {
+            RoomStatus.Attached -> println("Room attached")
+            RoomStatus.Suspended -> println("Room suspended")
+            RoomStatus.Failed -> println("Room failed: ${change.error}")
+            else -> {}
+        }
+    }
+}
+
+launch {
+    room.discontinuityAsFlow().collect { error ->
+        println("Discontinuity: $error")
+    }
+}
+
+// Access room features
+val messages = room.messages
+val presence = room.presence
+val typing = room.typing
+
+// Get the room name
+println("Room name: ${room.name}")
+
+// When done, detach and clean up
+room.detach()
+statusSub.unsubscribe()
+discSub.unsubscribe()
+```
+</Code>

@@ -1,0 +1,176 @@
+---
+title: Occupancy
+meta_description: "API reference for the Occupancy interface in the Ably Chat Kotlin SDK."
+meta_keywords: "Ably Chat SDK, Kotlin, Occupancy API, get, subscribe, asFlow, connections, presence members, user count"
+---
+
+The `Occupancy` interface provides methods for tracking the number of users in a chat room. Access it via `room.occupancy`.
+
+<Code>
+```kotlin
+val occupancy = room.occupancy
+```
+</Code>
+
+## Properties
+
+The `Occupancy` interface has the following properties:
+
+<Table id='OccupancyProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| current | The latest occupancy data cached from realtime events. Returns `null` if no occupancy events have been received yet since room attachment. Requires `enableEvents` to be `true` in the [room's occupancy options](/docs/chat/api/kotlin/rooms#get). | <Table id='OccupancyData'/> or null |
+
+</Table>
+
+<Table id='OccupancyData' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| connections | The number of active connections to the room. | Int |
+| presenceMembers | The number of users in the presence set. | Int |
+
+</Table>
+
+## Get current occupancy <a id="get"/>
+
+<MethodSignature>{`suspend occupancy.get(): OccupancyData`}</MethodSignature>
+
+Fetches the current occupancy of the chat room from the server. Retrieves the latest occupancy metrics, including the number of active connections and presence members.
+
+This method uses the Ably Chat REST API and does not require the room to be attached.
+
+<Code>
+```kotlin
+val data = room.occupancy.get()
+println("Connections: ${data.connections}")
+println("Presence members: ${data.presenceMembers}")
+```
+</Code>
+
+### Returns <a id="get-returns"/>
+
+`OccupancyData`
+
+This is a suspend function. It returns the current occupancy data, or throws an [`ErrorInfo`](/docs/chat/api/kotlin/chat-client#errorinfo) on failure.
+
+## Subscribe to occupancy events <a id="subscribe"/>
+
+<MethodSignature>{`occupancy.subscribe(listener: OccupancyListener): Subscription`}</MethodSignature>
+
+Subscribes to occupancy updates for the chat room. Receives updates whenever the number of connections or present members in the room changes.
+
+Requires `enableEvents` to be `true` in the [room's occupancy options](/docs/chat/api/kotlin/rooms#get). The room should be [attached](/docs/chat/api/kotlin/room#attach) to receive occupancy events.
+
+<Code>
+```kotlin
+val subscription = room.occupancy.subscribe { event ->
+    println("Connections: ${event.occupancy.connections}")
+    println("Presence members: ${event.occupancy.presenceMembers}")
+}
+
+// To stop receiving occupancy updates
+subscription.unsubscribe()
+```
+</Code>
+
+### Parameters <a id="subscribe-params"/>
+
+The `subscribe()` method takes the following parameters:
+
+<Table id='SubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Required | Callback invoked when room occupancy changes. | <Table id='OccupancyEvent'/> |
+
+</Table>
+
+<Table id='OccupancyEvent' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | The type of occupancy event. | OccupancyEventType |
+| occupancy | The current occupancy data. | <Table id='OccupancyData'/> |
+
+</Table>
+
+### Returns <a id="subscribe-returns"/>
+
+[`Subscription`](/docs/chat/api/kotlin/rooms#Subscription)
+
+Returns a `Subscription` object.
+
+#### Unsubscribe from occupancy events <a id="subscribe-unsubscribe"/>
+
+<MethodSignature>subscription.unsubscribe(): Unit</MethodSignature>
+
+Call `unsubscribe()` to stop receiving occupancy events.
+
+## Collect occupancy events as a Flow <a id="asFlow"/>
+
+<MethodSignature>{`Occupancy.asFlow(): Flow<OccupancyEvent>`}</MethodSignature>
+
+Returns a Kotlin `Flow` that emits occupancy events. This is an extension function on the `Occupancy` interface that provides a reactive alternative to listener-based subscriptions.
+
+<Code>
+```kotlin
+import kotlinx.coroutines.launch
+
+launch {
+    room.occupancy.asFlow().collect { event ->
+        println("Connections: ${event.occupancy.connections}")
+    }
+}
+```
+</Code>
+
+### Returns <a id="asFlow-returns"/>
+
+`Flow<OccupancyEvent>`
+
+Returns a `Flow` that emits `OccupancyEvent` events. The flow automatically manages the underlying subscription.
+
+## Example
+
+<Code>
+```kotlin
+import com.ably.chat.asFlow
+import kotlinx.coroutines.launch
+
+val room = chatClient.rooms.get("my-room") {
+    occupancy {
+        enableEvents = true // Required for subscribe() and current property
+    }
+}
+
+room.attach()
+
+// Subscribe to occupancy changes with a listener
+val subscription = room.occupancy.subscribe { event ->
+    val (connections, presenceMembers) = event.occupancy
+    println("Room has $connections connections and $presenceMembers presence members")
+}
+
+// Or use Flow for reactive collection
+launch {
+    room.occupancy.asFlow().collect { event ->
+        println("Occupancy updated: ${event.occupancy.connections} connections")
+    }
+}
+
+// Fetch occupancy on-demand (works even without enableEvents)
+val occupancy = room.occupancy.get()
+println("Initial occupancy: ${occupancy.connections} connections")
+
+// Access cached occupancy (requires enableEvents)
+val cached = room.occupancy.current
+cached?.let {
+    println("Cached occupancy: ${it.connections}")
+}
+
+// Clean up
+subscription.unsubscribe()
+```
+</Code>

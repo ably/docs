@@ -1,0 +1,182 @@
+---
+title: RoomReactions
+meta_description: "API reference for the RoomReactions interface in the Ably Chat Kotlin SDK."
+meta_keywords: "Ably Chat SDK, Kotlin, RoomReactions API, send, subscribe, asFlow, room reactions, ephemeral reactions"
+---
+
+The `RoomReactions` interface provides methods for sending and receiving ephemeral room-level reactions. These are commonly used for live interactions like floating emojis, applause, or other real-time feedback in chat rooms. Access it via `room.reactions`.
+
+<Code>
+```kotlin
+val reactions = room.reactions
+```
+</Code>
+
+Unlike message reactions, room reactions are not persisted and are only visible to users currently connected to the room.
+
+## Send a room reaction <a id="send"/>
+
+<MethodSignature>{`suspend reactions.send(name: String, metadata: JsonObject? = null, headers: Map<String, String>? = null): Unit`}</MethodSignature>
+
+Sends a room-level reaction. Room reactions are ephemeral events that are not associated with specific messages.
+
+The room should be [attached](/docs/chat/api/kotlin/room#attach) to send room reactions. The connection must be in the [`Connected`](/docs/chat/api/kotlin/connection) state.
+
+<Code>
+```kotlin
+room.reactions.send(name = "👍")
+```
+</Code>
+
+### Parameters <a id="send-params"/>
+
+The `send()` method takes the following parameters:
+
+<Table id='SendParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| name | Required | The name of the reaction, typically an emoji or identifier. | String |
+| metadata | Optional | Additional metadata to include with the reaction. | `JsonObject` |
+| headers | Optional | Additional information in Ably message extras, usable for features like referencing external resources. | `Map<String, String>` |
+
+</Table>
+
+### Returns <a id="send-returns"/>
+
+`Unit`
+
+This is a suspend function. It completes when the reaction has been sent, or throws an [`ErrorInfo`](/docs/chat/api/kotlin/chat-client#errorinfo) on failure.
+
+## Subscribe to room reactions <a id="subscribe"/>
+
+<MethodSignature>{`reactions.subscribe(listener: RoomReactionListener): Subscription`}</MethodSignature>
+
+Subscribes to room-level reaction events. Receives all room reactions sent by any user in the room. This is useful for displaying floating reactions, triggering animations, or showing live audience engagement.
+
+The room should be [attached](/docs/chat/api/kotlin/room#attach) to receive reaction events.
+
+<Code>
+```kotlin
+val subscription = room.reactions.subscribe { event ->
+    println("${event.reaction.clientId} reacted with ${event.reaction.name}")
+}
+
+// To stop receiving reactions
+subscription.unsubscribe()
+```
+</Code>
+
+### Parameters <a id="subscribe-params"/>
+
+The `subscribe()` method takes the following parameters:
+
+<Table id='SubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Required | Callback invoked when a room reaction is received. | <Table id='RoomReactionEvent'/> |
+
+</Table>
+
+<Table id='RoomReactionEvent' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | The type of the event. | RoomReactionEventType |
+| reaction | The reaction that was received. | <Table id='RoomReaction'/> |
+
+</Table>
+
+<Table id='RoomReaction' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| name | The name of the reaction (for example, an emoji). | String |
+| clientId | The client ID of the user who sent the reaction. | String |
+| metadata | Additional metadata included with the reaction. Empty object if none provided. | `JsonObject` |
+| headers | Additional information from Ably message extras. Empty map if none provided. | `Map<String, String>` |
+| createdAt | When the reaction was sent, in milliseconds since epoch. | Long |
+| isSelf | Whether the reaction was sent by the current client. | Boolean |
+
+</Table>
+
+### Returns <a id="subscribe-returns"/>
+
+[`Subscription`](/docs/chat/api/kotlin/rooms#Subscription)
+
+Returns a `Subscription` object.
+
+#### Unsubscribe from room reactions <a id="subscribe-unsubscribe"/>
+
+<MethodSignature>subscription.unsubscribe(): Unit</MethodSignature>
+
+Call `unsubscribe()` to stop receiving room reaction events.
+
+## Collect room reactions as a Flow <a id="asFlow"/>
+
+<MethodSignature>{`RoomReactions.asFlow(): Flow<RoomReactionEvent>`}</MethodSignature>
+
+Returns a Kotlin `Flow` that emits room reaction events. This is an extension function on the `RoomReactions` interface that provides a reactive alternative to listener-based subscriptions.
+
+<Code>
+```kotlin
+import kotlinx.coroutines.launch
+
+launch {
+    room.reactions.asFlow().collect { event ->
+        println("${event.reaction.clientId} reacted with ${event.reaction.name}")
+    }
+}
+```
+</Code>
+
+### Returns <a id="asFlow-returns"/>
+
+`Flow<RoomReactionEvent>`
+
+Returns a `Flow` that emits `RoomReactionEvent` events. The flow automatically manages the underlying subscription.
+
+## Example
+
+<Code>
+```kotlin
+import com.ably.chat.asFlow
+import kotlinx.coroutines.launch
+
+val room = chatClient.rooms.get("my-room")
+room.attach()
+
+// Subscribe to room reactions with a listener
+val subscription = room.reactions.subscribe { event ->
+    println("${event.reaction.clientId} sent ${event.reaction.name}")
+
+    // Check if it's your own reaction
+    if (event.reaction.isSelf) {
+        println("This was my reaction")
+    }
+}
+
+// Or use Flow for reactive collection
+launch {
+    room.reactions.asFlow().collect { event ->
+        println("Reaction: ${event.reaction.name}")
+    }
+}
+
+// Send a simple reaction
+room.reactions.send(name = "🎉")
+
+// Send a reaction with metadata
+room.reactions.send(
+    name = "🎉",
+    metadata = buildJsonObject {
+        put("animation", JsonPrimitive("confetti"))
+        put("color", JsonPrimitive("gold"))
+    }
+)
+
+// Clean up
+subscription.unsubscribe()
+```
+</Code>
