@@ -268,6 +268,10 @@ export default {
               name: 'FCM',
               link: '/docs/push/getting-started/fcm',
             },
+            {
+              name: 'Flutter',
+              link: '/docs/push/getting-started/flutter',
+            },
           ],
         },
         {
