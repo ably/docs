@@ -2,6 +2,7 @@ import Ably from 'ably';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { publish } from '../src/publisher.js';
 import { subscribe } from '../src/subscriber.js';
+import { waitForMessage } from '../../../test-helpers.js';
 
 describe('lang-graph-message-per-token', () => {
   let publisherClient: Ably.Realtime;
@@ -33,8 +34,9 @@ describe('lang-graph-message-per-token', () => {
       });
     });
 
+    const stopReceived = waitForMessage(channel, (m) => m.name === 'stop');
     await publish(pubChannel, 'Reply with exactly: OK');
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await stopReceived;
 
     expect(events[0].name).toBe('start');
     expect(events[events.length - 1].name).toBe('stop');
@@ -49,7 +51,7 @@ describe('lang-graph-message-per-token', () => {
     const subChannel = subscriberClient.channels.get(channelName + '-reconstruct');
     const pubChannel = publisherClient.channels.get(channelName + '-reconstruct');
     const responsePromise = subscribe(subChannel);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await subChannel.attach();
     await publish(pubChannel, 'Reply with exactly: Hello world');
     const fullResponse = await responsePromise;
     expect(fullResponse.length).toBeGreaterThan(0);
@@ -64,7 +66,7 @@ describe('lang-graph-message-per-token', () => {
       tokens.push(message.data as string);
     });
     const responsePromise = subscribe(channel);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await channel.attach();
     await publish(pubChannel, 'Reply with exactly: Test');
     const fullResponse = await responsePromise;
     const concatenated = tokens.join('');

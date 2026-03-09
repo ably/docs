@@ -2,6 +2,7 @@ import Ably from 'ably';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { publish } from '../src/publisher.js';
 import { subscribe } from '../src/subscriber.js';
+import { waitForMessage } from '../../../test-helpers.js';
 
 describe('vercel-message-per-response', () => {
   let publisherClient: Ably.Realtime;
@@ -33,8 +34,9 @@ describe('vercel-message-per-response', () => {
       });
     });
 
+    const appendReceived = waitForMessage(channel, (m) => m.action === 'message.append');
     await publish(pubChannel, 'Reply with exactly: OK');
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await appendReceived;
 
     expect(actions[0].action).toBe('message.create');
     const appendActions = actions.filter((a) => a.action === 'message.append');
@@ -48,7 +50,7 @@ describe('vercel-message-per-response', () => {
     const subChannel = subscriberClient.channels.get(channelName + '-reconstruct');
     const pubChannel = publisherClient.channels.get(channelName + '-reconstruct');
     const responsePromise = subscribe(subChannel);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await subChannel.attach();
     await publish(pubChannel, 'Reply with exactly: Hello world');
     const fullResponse = await responsePromise;
     expect(fullResponse.length).toBeGreaterThan(0);
@@ -67,7 +69,7 @@ describe('vercel-message-per-response', () => {
     });
 
     const responsePromise = subscribe(channel);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await channel.attach();
     await publish(pubChannel, 'Reply with exactly: Test');
     const fullResponse = await responsePromise;
     const concatenated = appendedTokens.join('');

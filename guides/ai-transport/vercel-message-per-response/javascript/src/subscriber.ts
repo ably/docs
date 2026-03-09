@@ -10,7 +10,9 @@ export function subscribe(channel: Ably.RealtimeChannel): Promise<string> {
     let doneTimer: ReturnType<typeof setTimeout> | null = null;
 
     const resetTimer = () => {
-      if (doneTimer) clearTimeout(doneTimer);
+      if (doneTimer) {
+        clearTimeout(doneTimer);
+      }
       doneTimer = setTimeout(() => {
         if (lastSerial) {
           const finalText = responses.get(lastSerial) || '';
@@ -20,24 +22,29 @@ export function subscribe(channel: Ably.RealtimeChannel): Promise<string> {
     };
 
     channel.subscribe((message: Ably.Message) => {
+      const serial = message.serial;
+      if (!serial) {
+        return;
+      }
+
       switch (message.action) {
         case 'message.create':
-          console.log('\n[Response started]', message.serial);
-          responses.set(message.serial, message.data as string);
-          lastSerial = message.serial;
+          console.log('\n[Response started]', serial);
+          responses.set(serial, message.data as string);
+          lastSerial = serial;
           resetTimer();
           break;
 
         case 'message.append': {
-          const current = responses.get(message.serial) || '';
-          responses.set(message.serial, current + (message.data as string));
+          const current = responses.get(serial) || '';
+          responses.set(serial, current + (message.data as string));
           process.stdout.write(message.data as string);
           resetTimer();
           break;
         }
 
         case 'message.update':
-          responses.set(message.serial, message.data as string);
+          responses.set(serial, message.data as string);
           console.log('\n[Response updated with full content]');
           resetTimer();
           break;
