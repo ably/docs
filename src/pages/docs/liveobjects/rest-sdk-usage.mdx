@@ -1,0 +1,962 @@
+---
+title: Using the REST SDK
+meta_description: "Learn how to work with Ably LiveObjects using the REST SDK"
+---
+
+<Aside data-type='public-preview'>
+LiveObjects JavaScript REST SDK is in Public Preview. We are committed to supporting the LiveObjects Javascript API and welcome adoption and feedback.
+
+**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+</Aside>
+
+LiveObjects provides a JavaScript REST SDK that enables you to directly work with objects without using a realtime connection.
+
+## Setup <a id="setup"/>
+
+Create an [`Ably.Rest`](/docs/api/rest-sdk) client instance with the `LiveObjects` plugin:
+
+<Code>
+```javascript
+import { LiveObjects } from 'ably/liveobjects';
+
+const rest = new Ably.Rest({ plugins: { LiveObjects }, /* other ClientOptions */ });
+```
+</Code>
+
+The LiveObjects REST SDK is then available on a channel via `channel.object`:
+
+<Code>
+```javascript
+const channel = rest.channels.get('my-channel');
+channel.object // LiveObjects REST SDK
+```
+</Code>
+
+## Authentication <a id="authentication"/>
+
+Authentication is configured when instantiating the REST client. Pass an API key or use [token authentication](/docs/auth/token) via the [`ClientOptions`](/docs/api/rest-sdk#client-options). See the [REST SDK authentication](/docs/api/rest-sdk/authentication) documentation for details.
+
+To use LiveObjects, an API key must have at least the `object-subscribe` capability. With only this capability, clients will have read-only access, preventing them from publishing operations.
+
+In order to create or update objects, make sure your API key includes both `object-subscribe` and `object-publish` [capabilities](/docs/auth/capabilities) to allow full read and write access.
+
+## Fetch objects <a id="fetch-objects"/>
+
+### Use `channel.object.get` <a id="get"/>
+
+`get(RestObjectGetParams params?): Promise<Object>`
+
+Reads object data from the channel. Uses the channel's root object as the entrypoint when no `objectId` is provided. Makes a request to the [`GET /channels/{channelId}/object`](/docs/liveobjects/rest-api-usage#fetch-channel-object) REST API endpoint. The return type depends on the `compact` parameter: when `compact` is `true` (default), returns a [`RestObjectGetCompactResult`](#rest-object-get-compact-result); when `compact` is `false`, returns a [`RestObjectGetFullResult`](#rest-object-get-full-result).
+
+| Parameter | Description | Type |
+|-----------|-------------|------|
+| params | An optional object containing the query parameters | [`RestObjectGetParams`](#rest-object-get-params) |
+
+Objects can be fetched in two formats:
+
+| Format | Parameter | Description |
+|--------|----------------|-------------|
+| **Compact** (default) | `compact: true` | Values-only representation without metadata. Ideal for reading data values. |
+| **Non-compact** | `compact: false` | Full structure including object IDs and type metadata. Useful for debugging. |
+
+**Compact format** returns the logical structure of your data as a JSON-like value. [LiveMap](/docs/liveobjects/map) instances appear as JSON objects with their entries, and [LiveCounter](/docs/liveobjects/counter) instances appear as numbers. `bytes`-typed values are returned as <If lang="javascript">`ArrayBuffer`</If><If lang="nodejs">`Buffer`</If> when using the binary protocol, or as base64-encoded strings when using the JSON protocol. `json`-typed values remain as their JSON-encoded string representation, as the client SDK cannot distinguish between a regular string and a JSON-encoded string in the compact view.
+
+**Non-compact format** includes additional [metadata](/docs/liveobjects/concepts/objects#metadata) for each object:
+- Object IDs for each instance
+- Object type metadata (map semantics, counter values)
+- Complete object hierarchy
+
+Since each value in the non-compact format carries explicit type information, the SDK always decodes `bytes` values to <If lang="javascript">`ArrayBuffer`</If><If lang="nodejs">`Buffer`</If> and `json` values to native objects or arrays.
+
+See [Data values reference](#data-values) for more details on value types and encoding.
+
+### Fetch the channel object <a id="fetch-channel-object"/>
+
+Fetch the entire channel object:
+
+<Code>
+```javascript
+const data = await channel.object.get();
+```
+</Code>
+
+Example compact result:
+
+<Code>
+```json
+{
+  "votes": {
+    "down": 5,
+    "up": 10
+  }
+}
+```
+</Code>
+
+This example shows a `LiveMap` stored on the "votes" key of the channel object, which contains two `LiveCounter` instances on the "down" and "up" keys.
+
+Set `compact: false` to include object metadata:
+
+<Code>
+```javascript
+const data = await channel.object.get({ compact: false });
+```
+</Code>
+
+<Code>
+```json
+{
+  "objectId": "root",
+  "map": {
+    "semantics": "lww",
+    "entries": {
+      "votes": {
+        "data": {
+          "objectId": "map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692",
+          "map": {
+            "semantics": "lww",
+            "entries": {
+              "down": {
+                "data": {
+                  "objectId": "counter:Yj1F_aEX3T2rRkTkra7Aifmlr8PxUWSR3kO3MzxtQto@1760448653393",
+                  "counter": {
+                    "data": {
+                      "number": 5
+                    }
+                  }
+                }
+              },
+              "up": {
+                "data": {
+                  "objectId": "counter:ibxddWpDjH8R3cvXWWacfe4IVd3DxT_oqkAafhaS68s@1760448646413",
+                  "counter": {
+                    "data": {
+                      "number": 10
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+</Code>
+
+### Fetch by path <a id="fetch-by-path"/>
+
+Return a subset of the channel object by specifying the `path` parameter. For example, to return only the `votes` `LiveMap` instance from the channel object:
+
+<Code>
+```javascript
+const data = await channel.object.get({ path: 'votes' });
+```
+</Code>
+
+Example result:
+
+<Code>
+```json
+{
+  "down": 5,
+  "up": 10
+}
+```
+</Code>
+
+### Fetch by object ID <a id="fetch-by-id"/>
+
+Fetch a specific [object instance](/docs/liveobjects/concepts/instance) by specifying its `objectId`:
+
+<Code>
+```javascript
+const data = await channel.object.get({
+  objectId: 'map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692'
+});
+```
+</Code>
+
+Example compact result:
+
+<Code>
+```json
+{
+  "down": 5,
+  "up": 10
+}
+```
+</Code>
+
+Set `compact: false` to include object metadata:
+
+<Code>
+```javascript
+const data = await channel.object.get({
+  objectId: 'map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692',
+  compact: false
+});
+```
+</Code>
+
+<Code>
+```json
+{
+  "objectId": "map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692",
+  "map": {
+    "semantics": "lww",
+    "entries": {
+      "down": {
+        "data": {
+          "objectId": "counter:Yj1F_aEX3T2rRkTkra7Aifmlr8PxUWSR3kO3MzxtQto@1760448653393",
+          "counter": {
+            "data": {
+              "number": 5
+            }
+          }
+        }
+      },
+      "up": {
+        "data": {
+          "objectId": "counter:ibxddWpDjH8R3cvXWWacfe4IVd3DxT_oqkAafhaS68s@1760448646413",
+          "counter": {
+            "data": {
+              "number": 10
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+</Code>
+
+You can also specify a `path` parameter alongside `objectId`. The path is evaluated relative to the specified object instance:
+
+<Code>
+```javascript
+const data = await channel.object.get({
+  objectId: 'map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692',
+  path: 'down'
+});
+```
+</Code>
+
+<Code>
+```json
+5
+```
+</Code>
+
+## Publish operations <a id="publish-operations"/>
+
+### Use `channel.object.publish` <a id="publish"/>
+
+`publish(RestObjectOperation operation): Promise<RestObjectPublishResult>`
+
+`publish(RestObjectOperation[] operations): Promise<RestObjectPublishResult>`
+
+Publishes one or more operations to modify objects on the channel. Makes a request to the [`POST /channels/{channelId}/object`](/docs/liveobjects/rest-api-usage#publishing-operations) REST API endpoint. When an array is provided, all operations are published as an atomic [batch](#batch-operations).
+
+| Parameter | Description | Type |
+|-----------|-------------|------|
+| operation | The operation or array of operations to publish | [`RestObjectOperation`](#rest-object-operation) or [`RestObjectOperation[]`](#rest-object-operation) |
+
+Returns a [`RestObjectPublishResult`](#rest-object-publish-result) containing the message ID and affected object IDs.
+
+Each operation includes:
+1. A reference to an object using either `objectId` or `path`. Create operations (`mapCreate`, `counterCreate`) can omit both to create a [standalone object](#create-standalone).
+2. An **operation-specific field** (`mapSet`, `counterInc`, etc.) containing the operation parameters
+
+Operations can target objects using `objectId`, `path`, or neither (for create operations that create [standalone objects](#create-standalone)):
+- `objectId` (string): The unique identifier of the object instance to create or update
+- `path` (string): The path to the object instance within the channel object
+
+Use dot-separated notation for paths (for example `votes.up`), relative to the channel object. An empty path `""` refers to the channel object itself. Paths can contain wildcards (`*`) to target multiple objects.
+
+<Aside data-type='important'>
+When using path operations, the server resolves object IDs at the time it receives the request. Ably applies the operation to these specific object instances. If the object instances at the specified path change due to concurrent updates before Ably processes the operation, Ably does not apply the operation to the new object instances.
+</Aside>
+
+<Aside data-type='further-reading'>
+See [PathObject](/docs/liveobjects/concepts/path-object) for details on path-based access in client SDKs.
+</Aside>
+
+### Available operations <a id="operation-types"/>
+
+LiveObjects supports the following operations:
+
+| Operation | Description |
+| --------- | ----------- |
+| `mapSet` | Sets a key/value pair in a `LiveMap`. |
+| `mapRemove` | Removes a key from a `LiveMap`. |
+| `counterInc` | Increments or decrements a `LiveCounter`. |
+| `mapCreate` | Creates a new `LiveMap` instance. |
+| `counterCreate` | Creates a new `LiveCounter` instance. |
+| `mapCreateWithObjectId` | Creates a new `LiveMap` with a [client-generated ID](#client-generated-ids). |
+| `counterCreateWithObjectId` | Creates a new `LiveCounter` with a [client-generated ID](#client-generated-ids). |
+
+To create an object, see [Create objects](#create-objects).
+
+Each operation has specific required and optional fields:
+
+#### mapSet <a id="mapset-spec"/>
+
+<Code>
+```javascript
+await channel.object.publish({
+  path: 'user',
+  mapSet: {
+    key: 'username',
+    value: { string: 'alice' }
+  }
+});
+```
+</Code>
+
+Map values can be any of the supported [data value types](#data-values), including references to other objects.
+
+#### mapRemove <a id="mapremove-spec"/>
+
+<Code>
+```javascript
+await channel.object.publish({
+  path: 'user',
+  mapRemove: {
+    key: 'username'
+  }
+});
+```
+</Code>
+
+#### counterInc <a id="counterinc-spec"/>
+
+<Code>
+```javascript
+await channel.object.publish({
+  path: 'votes.up',
+  counterInc: {
+    number: 5
+  }
+});
+```
+</Code>
+
+<Aside data-type='note'>
+There is no explicit `counterDec` operation. To decrement a counter, use `counterInc` with a negative number.
+</Aside>
+
+#### mapCreate <a id="mapcreate-spec"/>
+
+Optionally omit the `path` or `objectId` fields when creating an object with `mapCreate`.
+For the object to be [reachable](/docs/liveobjects/concepts/objects#reachability) in the state tree, assign it to a key in a `LiveMap` that is reachable from the channel object.
+
+<Code>
+```javascript
+await channel.object.publish({
+  path: 'posts.post1',
+  mapCreate: {
+    semantics: 'lww',
+    entries: {
+      title: { data: { string: 'LiveObjects is awesome' } },
+      createdAt: { data: { number: 1745835181122 } },
+      isPublished: { data: { boolean: true } }
+    }
+  }
+});
+```
+</Code>
+
+#### counterCreate <a id="countercreate-spec"/>
+
+Optionally omit the `path` or `objectId` fields when creating an object with `counterCreate`.
+For the object to be [reachable](/docs/liveobjects/concepts/objects#reachability) in the state tree, assign it to a key in a `LiveMap` that is reachable from the channel object.
+
+<Code>
+```javascript
+await channel.object.publish({
+  path: 'visits',
+  counterCreate: {
+    count: 0
+  }
+});
+```
+</Code>
+
+### Update by object ID <a id="update-by-id"/>
+
+To perform operations on a specific object instance, provide its `objectId` in the operation:
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  objectId: 'counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269',
+  counterInc: {
+    number: 1
+  }
+});
+```
+</Code>
+
+### Update by path <a id="update-by-path"/>
+
+Path operations target objects based on their location in the channel object.
+
+Paths are expressed relative to the structure of the object as defined by the [compact](#fetch-channel-object) view of the channel object.
+
+The following example increments the `LiveCounter` instance stored at the `up` key on the `votes` `LiveMap` object:
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  path: 'votes.up',
+  counterInc: {
+    number: 1
+  }
+});
+```
+</Code>
+
+### Publish result <a id="publish-result"/>
+
+The result includes the ID of the published operation message, the channel and a list of object IDs that were affected by the operation:
+
+<Code>
+```json
+{
+  "messageId": "TJPWHhMTrF:0",
+  "channel": "my-channel",
+  "objectIds": ["counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269"]
+}
+```
+</Code>
+
+### Path operations <a id="path-operations"/>
+
+Path operations provide flexibility when targeting objects.
+
+#### Path wildcards <a id="path-wildcards"/>
+
+Use wildcards in paths to target multiple objects at once. To increment all `LiveCounter` instances in the `votes` `LiveMap` instance:
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  path: 'votes.*',
+  counterInc: {
+    number: 1
+  }
+});
+```
+</Code>
+
+The result includes the IDs of each of the affected object instances:
+
+<Code>
+```json
+{
+  "messageId": "0Q1w-LpA11:0",
+  "channel": "my-channel",
+  "objectIds": [
+    "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269",
+    "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669"
+  ]
+}
+```
+</Code>
+
+Wildcards match exactly one level in the channel object and can appear at the end or middle of paths. For example, given the following compact view of the channel object:
+
+<Code>
+```json
+{
+  "posts": {
+    "post1": {
+      "votes": {
+        "down": 5,
+        "up": 10
+      }
+    },
+    "post2": {
+      "votes": {
+        "down": 5,
+        "up": 10
+      }
+    }
+  }
+}
+```
+</Code>
+
+The following example increments the upvote `LiveCounter` instances for all posts in the `posts` `LiveMap` instance:
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  path: 'posts.*.votes.up',
+  counterInc: {
+    number: 1
+  }
+});
+```
+</Code>
+
+#### Escape special characters <a id="escape-special-characters"/>
+
+If your `LiveMap` keys contain periods, escape them with a backslash. The following example increments the upvote `LiveCounter` instance for a post with the key `post.123`:
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  path: 'posts.post\\.123.votes.up',
+  counterInc: {
+    number: 1
+  }
+});
+```
+</Code>
+
+### Remove objects <a id="remove-objects"/>
+
+Remove an object from the channel using `mapRemove` to delete the key referencing it:
+
+<Code>
+```javascript
+await channel.object.publish({
+  objectId: 'root',
+  mapRemove: {
+    key: 'posts'
+  }
+});
+```
+</Code>
+
+Map keys can be removed by issuing a `mapRemove` operation targeting either an `objectId` or a `path`.
+
+If no other references to the object exist, it becomes unreachable and is eligible for [garbage collection](#object-reachability).
+
+<Aside data-type='note'>
+Removing a key may also make nested child objects unreachable. These objects are also eligible for garbage collection.
+</Aside>
+
+## Create objects <a id="create-objects"/>
+
+Use `mapCreate` and `counterCreate` operations to create new LiveObjects [instances](/docs/liveobjects/concepts/instance).
+
+### Create objects with paths <a id="create-with-path"/>
+
+The simplest way to create an object is to specify a `path` where it should be created. The server automatically creates the object and assigns it to that path in a single atomic operation.
+
+The following example creates a new `LiveMap` instance and assigns it to the `posts` `LiveMap` instance on the channel object under the key `post1`:
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  path: 'posts.post1',
+  mapCreate: {
+    semantics: 'lww',
+    entries: {
+      title: { data: { string: 'LiveObjects is awesome' } },
+      createdAt: { data: { number: 1745835181122 } },
+      isPublished: { data: { boolean: true } }
+    }
+  }
+});
+```
+</Code>
+
+When using `path` with a create operation, the server constructs two operations published as a [batch](#batch-operations):
+
+1. A `mapCreate` or `counterCreate` operation to create the new object
+2. A `mapSet` operation to assign the new object to the parent `LiveMap` at the specified path
+
+This ensures the new object is immediately [reachable](#object-reachability) from the root.
+
+The result will include the object IDs of all objects affected by the resulting set of operations.
+The newly created object's ID will be the first item in the list:
+
+<Code>
+```json
+{
+  "messageId": "mkfjWU2jju:0",
+  "channel": "my-channel",
+  "objectIds": [
+    "map:cRCKx-eev7Tl66jGfl1SkZh_uEMo6F5jyV0B7mUn4Zs@1745835549101",
+    "map:a_oQqPYUGxi95_Cn0pWcsoeBlHZZtVW5xKIw0hnJCZs@1745835547258"
+  ]
+}
+```
+</Code>
+
+### Create standalone objects <a id="create-standalone"/>
+
+Create objects without immediately assigning them by omitting both `objectId` and `path` from the create operation.
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  mapCreate: {
+    semantics: 'lww',
+    entries: {
+      name: { data: { string: 'Alice' } }
+    }
+  }
+});
+```
+</Code>
+
+The result includes the generated object ID:
+
+<Code>
+```json
+{
+  "messageId": "TJPWHhMTrF:0",
+  "channel": "my-channel",
+  "objectIds": ["map:abc123def456...@1745835549101"]
+}
+```
+</Code>
+
+<Aside data-type='important'>
+Standalone objects are not reachable until assigned to the object tree. Unreachable objects are eligible for garbage collection. See [Object reachability and garbage collection](#object-reachability) for details.
+</Aside>
+
+### Client-generated object IDs <a id="client-generated-ids"/>
+
+Client-generated object IDs enable atomic batch operations with cross-references between newly created objects. See the [REST API documentation](/docs/liveobjects/rest-api-usage#client-generated-ids) for details on how to generate object IDs.
+
+#### Publish with client-generated IDs <a id="publish-with-client-ids"/>
+
+Use `mapCreateWithObjectId` or `counterCreateWithObjectId` to create an object with a pre-computed ID:
+
+<Code>
+```javascript
+const result = await channel.object.publish({
+  objectId: 'map:Qj2kkvprTybCY5mkNMcm31hhNKZCDWqcz45LjYvCABs@1769079911168',
+  mapCreateWithObjectId: {
+    initialValue: '{"semantics":0,"entries":{"name":{"data":{"string":"Alice"}},"age":{"data":{"number":30}}}}',
+    nonce: 'random-nonce-abc123'
+  }
+});
+```
+</Code>
+
+#### Atomic batch with cross-references <a id="atomic-batch-cross-references"/>
+
+Create a map and immediately link it to root in a single atomic batch:
+
+<Code>
+```javascript
+const result = await channel.object.publish([
+  {
+    objectId: 'map:Qj2kkvprTybCY5mkNMcm31hhNKZCDWqcz45LjYvCABs@1769079911168',
+    mapCreateWithObjectId: {
+      initialValue: '{"semantics":0,"entries":{"name":{"data":{"string":"Alice"}}}}',
+      nonce: 'nonce-1'
+    }
+  },
+  {
+    objectId: 'root',
+    mapSet: {
+      key: 'alice',
+      value: { objectId: 'map:Qj2kkvprTybCY5mkNMcm31hhNKZCDWqcz45LjYvCABs@1769079911168' }
+    }
+  }
+]);
+```
+</Code>
+
+Both operations execute atomically. The second operation references the object created in the first because you pre-computed the ID.
+
+<Aside data-type='note'>
+Only use client-generated IDs when you need atomic batch operations with cross-references. For most use cases, use simple operations or path-based operations instead.
+</Aside>
+
+## Cyclic references <a id="cyclic-references"/>
+
+For both the full object and the compact formats, cyclic references in the channel object are included as a reference to the object ID rather than including the same object instance in the result more than once.
+
+For example, if you create a cycle in the channel object by adding a reference to the channel object in the `votes` `LiveMap` instance with the following operation:
+
+<Code>
+```javascript
+await channel.object.publish({
+  objectId: 'map:qZXBk8xaGqf4kwLSlR7Tj0Eqhd48WDFfb3gTAbj194k@1760448597692',
+  mapSet: {
+    key: 'myRoot',
+    value: { objectId: 'root' }
+  }
+});
+```
+</Code>
+
+The result will handle the cyclic reference by including the `myRoot` key as a reference to the object ID of the channel object:
+
+<Code>
+```javascript
+const data = await channel.object.get();
+```
+</Code>
+
+<Code>
+```json
+{
+  "votes": {
+    "down": 5,
+    "up": 10,
+    "myRoot": {
+      "objectId": "root"
+    }
+  }
+}
+```
+</Code>
+
+## Object reachability and garbage collection <a id="object-reachability"/>
+
+Objects that are not reachable from the channel object are automatically garbage collected. See the [REST API documentation](/docs/liveobjects/rest-api-usage#object-reachability) and [reachability and object lifecycle](/docs/liveobjects/concepts/objects#reachability) for details.
+
+## Batch operations <a id="batch-operations"/>
+
+Group multiple operations into a single call by passing an array of operations to `publish()`. All operations are published as a single message and processed as a single atomic unit. Learn more about [batch operations](/docs/liveobjects/batch).
+
+The following example increments two distinct `LiveCounter` instances in a single batch operation:
+
+<Code>
+```javascript
+await channel.object.publish([
+  {
+    objectId: 'counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269',
+    counterInc: {
+      number: 1
+    }
+  },
+  {
+    objectId: 'counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669',
+    counterInc: {
+      number: 1
+    }
+  }
+]);
+```
+</Code>
+
+## Idempotent operations <a id="idempotent-operations"/>
+
+Publish operations idempotently by specifying an `id` for the operation, using the same approach as [idempotent message publishing](/docs/api/liveobjects-rest#idempotent-publish):
+
+<Code>
+```javascript
+await channel.object.publish({
+  id: 'my-idempotency-key',
+  objectId: 'counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269',
+  counterInc: {
+    number: 1
+  }
+});
+```
+</Code>
+
+For batch operations, use the format `<baseId>:<index>` where the index is the zero-based index of the operation in the array:
+
+<Code>
+```javascript
+await channel.object.publish([
+  {
+    id: 'my-idempotency-key:0',
+    objectId: 'counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269',
+    counterInc: {
+      number: 1
+    }
+  },
+  {
+    id: 'my-idempotency-key:1',
+    objectId: 'counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669',
+    counterInc: {
+      number: 1
+    }
+  }
+]);
+```
+</Code>
+
+## Data values reference <a id="data-values"/>
+
+When working with objects via the REST SDK, [primitive types](/docs/liveobjects/concepts/objects#primitive-types) and [object references](/docs/liveobjects/concepts/objects#composability) are represented as typed value objects.
+
+The key in the value object indicates the type of the value. Examples of data value formats:
+
+<Code>
+```javascript
+{ number: 42 }
+{ string: 'LiveObjects is awesome' }
+{ boolean: true }
+{ bytes: new Uint8Array([76, 105, 118, 101]) }
+{ objectId: 'counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669' }
+{ json: { someKey: 'someValue' } }
+```
+</Code>
+
+<Aside data-type='note'>
+Over the wire, `bytes` values are base64-encoded and `json` values are JSON-stringified strings, matching the [REST API format](/docs/liveobjects/rest-api-usage#data-values). When publishing operations, the SDK automatically encodes these values, so you can work with native types directly: <If lang="javascript">`ArrayBuffer`</If><If lang="nodejs">`Buffer`</If> for `bytes`, and plain objects or arrays for `json`.
+
+When fetching with `compact: false`, the SDK decodes `bytes` to <If lang="javascript">`ArrayBuffer`</If><If lang="nodejs">`Buffer`</If> and `json` to native objects or arrays.
+
+When fetching with `compact: true` (default), values lack type metadata so the SDK cannot distinguish a regular string from a JSON-encoded string. `json`-typed values remain as JSON-encoded strings and are not parsed into objects or arrays. `bytes`-typed values are returned as <If lang="javascript">`ArrayBuffer`</If><If lang="nodejs">`Buffer`</If> when using the binary protocol, or as base64-encoded strings when using the JSON protocol.
+</Aside>
+
+## Related types <a id="related-types"/>
+
+### RestObjectGetParams <a id="rest-object-get-params"/>
+
+Parameters for the [`get()`](#get) method:
+
+| Property | Description | Type |
+|----------|-------------|------|
+| objectId | The unique identifier of the [object instance](/docs/liveobjects/concepts/instance) to fetch. If omitted, fetches from the channel's root object | `String` (optional) |
+| path | A dot-separated path to return a subset of the object. Evaluated relative to the root or the specified `objectId` | `String` (optional) |
+| compact | When `true` (default), returns a values-only representation. When `false`, includes object IDs and type metadata | `Boolean` (optional) |
+
+### RestObjectOperation <a id="rest-object-operation"/>
+
+An operation passed to the [`publish()`](#publish) method. Each operation contains an optional `id` for [idempotent publishing](#idempotent-operations), an optional target (`objectId` or `path`), and exactly one operation-specific field containing the operation parameters:
+
+| Property | Description | Type |
+|----------|-------------|------|
+| id | Identifier for [idempotent publishing](#idempotent-operations) | `String` (optional) |
+| objectId | The unique identifier of the [object instance](/docs/liveobjects/concepts/instance) to target | `String` (optional) |
+| path | The dot-separated path to the object instance within the channel object. Evaluated relative to the root | `String` (optional) |
+| mapSet | Parameters for setting a key to a value in a `LiveMap` | [`RestObjectOperationMapSet`](#rest-object-operation-map-set) (optional) |
+| mapRemove | Parameters for removing a key from a `LiveMap` | [`RestObjectOperationMapRemove`](#rest-object-operation-map-remove) (optional) |
+| counterInc | Parameters for incrementing a `LiveCounter` | [`RestObjectOperationCounterInc`](#rest-object-operation-counter-inc) (optional) |
+| mapCreate | Parameters for creating a new `LiveMap` | [`RestObjectOperationMapCreate`](#rest-object-operation-map-create) (optional) |
+| counterCreate | Parameters for creating a new `LiveCounter` | [`RestObjectOperationCounterCreate`](#rest-object-operation-counter-create) (optional) |
+| mapCreateWithObjectId | Parameters for creating a new `LiveMap` with a [client-generated ID](#client-generated-ids) | [`RestObjectOperationMapCreateWithObjectId`](#rest-object-operation-map-create-with-object-id) (optional) |
+| counterCreateWithObjectId | Parameters for creating a new `LiveCounter` with a [client-generated ID](#client-generated-ids) | [`RestObjectOperationCounterCreateWithObjectId`](#rest-object-operation-counter-create-with-object-id) (optional) |
+
+### RestObjectOperationMapSet <a id="rest-object-operation-map-set"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| key | The key to set | `String` |
+| value | The value to assign to the key | [`PublishObjectData`](#publish-object-data) |
+
+### RestObjectOperationMapRemove <a id="rest-object-operation-map-remove"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| key | The key to remove | `String` |
+
+### RestObjectOperationCounterInc <a id="rest-object-operation-counter-inc"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| number | The amount to increment by. Use a negative value to decrement | `Number` |
+
+### RestObjectOperationMapCreate <a id="rest-object-operation-map-create"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| semantics | The conflict-resolution semantics for the map. One of: `'lww'` | `String` |
+| entries | Initial key-value pairs, keyed by string | `Record<String, { data: `[`PublishObjectData`](#publish-object-data)` }>` |
+
+### RestObjectOperationCounterCreate <a id="rest-object-operation-counter-create"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| count | The initial value of the counter | `Number` |
+
+### RestObjectOperationMapCreateWithObjectId <a id="rest-object-operation-map-create-with-object-id"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| initialValue | JSON-encoded string of the [`mapCreate`](#rest-object-operation-map-create) object | `String` |
+| nonce | Random string used to generate the object ID | `String` |
+
+### RestObjectOperationCounterCreateWithObjectId <a id="rest-object-operation-counter-create-with-object-id"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| initialValue | JSON-encoded string of the [`counterCreate`](#rest-object-operation-counter-create) object | `String` |
+| nonce | Random string used to generate the object ID | `String` |
+
+### RestObjectGetCompactResult <a id="rest-object-get-compact-result"/>
+
+Returned by [`get()`](#get) when `compact` is `true` (default). The result is a recursive type: `null`, `boolean`, `number`, `string`, binary data (<If lang="javascript">`ArrayBuffer`</If><If lang="nodejs">`Buffer`</If> when using the binary protocol, or a base64-encoded string when using the JSON protocol), or a JSON object whose values are themselves `RestObjectGetCompactResult`. [LiveMap](/docs/liveobjects/map) instances appear as JSON objects with their entries, and [LiveCounter](/docs/liveobjects/counter) instances appear as numbers.
+
+### RestObjectGetFullResult <a id="rest-object-get-full-result"/>
+
+Returned by [`get()`](#get) when `compact` is `false`. Can be a [`RestLiveObject`](#rest-live-object) (full object with metadata) or a [`RestObjectData`](#rest-object-data) (leaf value when the path resolves to a primitive entry in a map).
+
+### RestLiveObject <a id="rest-live-object"/>
+
+A full object structure including object IDs and type metadata. Can be a [`RestLiveMap`](#rest-live-map), [`RestLiveCounter`](#rest-live-counter), or a generic object with an `objectId` property.
+
+#### RestLiveMap <a id="rest-live-map"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| objectId | The ID of the map object | `String` |
+| map | The map data | [`RestLiveMapValue`](#rest-live-map-value) |
+
+#### RestLiveMapValue <a id="rest-live-map-value"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| semantics | The conflict-resolution semantics. One of: `'lww'` | `String` |
+| entries | The map entries, indexed by key. Each entry is either a [`RestObjectDataMapEntry`](#rest-object-data-map-entry) (leaf value) or a [`RestLiveObjectMapEntry`](#rest-live-object-map-entry) (nested object) | `Record<String, RestObjectDataMapEntry \| RestLiveObjectMapEntry>` |
+
+### RestObjectDataMapEntry <a id="rest-object-data-map-entry"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| data | The value for this entry | [`RestObjectData`](#rest-object-data) |
+
+#### RestLiveObjectMapEntry <a id="rest-live-object-map-entry"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| data | A nested object | [`RestLiveObject`](#rest-live-object) |
+
+#### RestLiveCounter <a id="rest-live-counter"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| objectId | The ID of the counter object | `String` |
+| counter | The counter data | [`RestLiveCounterValue`](#rest-live-counter-value) |
+
+#### RestLiveCounterValue <a id="rest-live-counter-value"/>
+
+| Property | Description | Type |
+|----------|-------------|------|
+| data | Holds the counter value | `{ number: Number }` |
+
+### RestObjectData <a id="rest-object-data"/>
+
+Represents a leaf data value for an object. Either a primitive value or a reference to another object. Exactly one property is set, indicating the type:
+
+| Property | Description | Type |
+|----------|-------------|------|
+| string | A string value | `String` |
+| number | A numeric value | `Number` |
+| boolean | A boolean value | `Boolean` |
+| bytes | A binary value | <If lang="javascript">`ArrayBuffer`</If><If lang="nodejs">`Buffer`</If> |
+| json | A JSON value (array or object) | `Array` / `Object` |
+| objectId | A reference to another object by its ID | `String` |
+
+### PublishObjectData <a id="publish-object-data"/>
+
+Same properties as [`RestObjectData`](#rest-object-data). Used when publishing operations via [`publish()`](#publish). Exactly one property must be set.
+
+### RestObjectPublishResult <a id="rest-object-publish-result"/>
+
+Result returned by the [`publish()`](#publish) method:
+
+| Property | Description | Type |
+|----------|-------------|------|
+| messageId | The ID of the message containing the published operations | `String` |
+| channel | The name of the channel the operations were published to | `String` |
+| objectIds | Array of object IDs affected by the operations. May include multiple IDs for wildcard paths and batch operations | `String[]` |
