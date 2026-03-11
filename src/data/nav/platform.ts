@@ -332,6 +332,50 @@ export default {
       ],
     },
     {
+      name: 'Authentication',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/platform/auth',
+          index: true,
+        },
+        {
+          name: 'Basic auth',
+          link: '/docs/platform/auth/basic',
+        },
+        {
+          name: 'Token auth',
+          pages: [
+            {
+              name: 'Overview',
+              link: '/docs/platform/auth/token',
+              index: true,
+            },
+            {
+              name: 'JWTs',
+              link: '/docs/platform/auth/token/jwt',
+            },
+            {
+              name: 'Ably Tokens',
+              link: '/docs/platform/auth/token/ably-tokens',
+            },
+          ],
+        },
+        {
+          name: 'Token revocation',
+          link: '/docs/platform/auth/revocation',
+        },
+        {
+          name: 'Identified clients',
+          link: '/docs/platform/auth/identified-clients',
+        },
+        {
+          name: 'Capabilities',
+          link: '/docs/platform/auth/capabilities',
+        },
+      ],
+    },
+    {
       name: 'Tools',
       pages: [
         {
