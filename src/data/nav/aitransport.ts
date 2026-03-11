@@ -140,11 +140,11 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/ai-transport/guides/langgraph/lang-graph-message-per-response',
+              link: '/docs/ai-transport/guides/langgraph/langgraph-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/ai-transport/guides/langgraph/lang-graph-message-per-token',
+              link: '/docs/ai-transport/guides/langgraph/langgraph-message-per-token',
             },
             {
               name: 'Human-in-the-loop',
