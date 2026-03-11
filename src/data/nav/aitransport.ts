@@ -98,19 +98,19 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/anthropic/anthropic-message-per-response',
+              link: '/docs/ai-transport/guides/anthropic/anthropic-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/anthropic/anthropic-message-per-token',
+              link: '/docs/ai-transport/guides/anthropic/anthropic-message-per-token',
             },
             {
               name: 'Human-in-the-loop',
-              link: '/docs/guides/ai-transport/anthropic/anthropic-human-in-the-loop',
+              link: '/docs/ai-transport/guides/anthropic/anthropic-human-in-the-loop',
             },
             {
               name: 'Citations',
-              link: '/docs/guides/ai-transport/anthropic/anthropic-citations',
+              link: '/docs/ai-transport/guides/anthropic/anthropic-citations',
             },
           ],
         },
@@ -119,19 +119,19 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/openai/openai-message-per-response',
+              link: '/docs/ai-transport/guides/openai/openai-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/openai/openai-message-per-token',
+              link: '/docs/ai-transport/guides/openai/openai-message-per-token',
             },
             {
               name: 'Human-in-the-loop',
-              link: '/docs/guides/ai-transport/openai/openai-human-in-the-loop',
+              link: '/docs/ai-transport/guides/openai/openai-human-in-the-loop',
             },
             {
               name: 'Citations',
-              link: '/docs/guides/ai-transport/openai/openai-citations',
+              link: '/docs/ai-transport/guides/openai/openai-citations',
             },
           ],
         },
@@ -140,11 +140,11 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/langgraph/lang-graph-message-per-response',
+              link: '/docs/ai-transport/guides/langgraph/lang-graph-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/langgraph/lang-graph-message-per-token',
+              link: '/docs/ai-transport/guides/langgraph/lang-graph-message-per-token',
             },
           ],
         },
@@ -153,11 +153,11 @@ export default {
           pages: [
             {
               name: 'Message per response',
-              link: '/docs/guides/ai-transport/vercel-ai-sdk/vercel-message-per-response',
+              link: '/docs/ai-transport/guides/vercel-ai-sdk/vercel-message-per-response',
             },
             {
               name: 'Message per token',
-              link: '/docs/guides/ai-transport/vercel-ai-sdk/vercel-message-per-token',
+              link: '/docs/ai-transport/guides/vercel-ai-sdk/vercel-message-per-token',
             },
           ],
         },

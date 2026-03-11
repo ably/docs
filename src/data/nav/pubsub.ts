@@ -361,15 +361,15 @@ export default {
       pages: [
         {
           name: 'Data streaming',
-          link: '/docs/guides/pub-sub/data-streaming',
+          link: '/docs/pub-sub/guides/data-streaming',
         },
         {
           name: 'Dashboards and visualizations',
-          link: '/docs/guides/pub-sub/dashboards-and-visualizations',
+          link: '/docs/pub-sub/guides/dashboards-and-visualizations',
         },
         {
           name: 'Handling discontinuity',
-          link: '/docs/guides/pub-sub/handling-discontinuity',
+          link: '/docs/pub-sub/guides/handling-discontinuity',
         },
       ],
     },

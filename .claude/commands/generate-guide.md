@@ -49,16 +49,16 @@ Identify agent vs client roles from the discovered source files:
 ## 3. Read reference files
 
 - Find and read an existing guide to use as a structural template. Try in order:
-  1. Same pattern, different provider: glob `src/pages/docs/guides/ai-transport/*-{pattern}.mdx`
-  2. Same provider, any pattern: glob `src/pages/docs/guides/ai-transport/{provider-slug}-*.mdx`
-  3. Any existing guide: glob `src/pages/docs/guides/ai-transport/*.mdx` and pick one
+  1. Same pattern, different provider: glob `src/pages/docs/ai-transport/guides/*-{pattern}.mdx`
+  2. Same provider, any pattern: glob `src/pages/docs/ai-transport/guides/{provider-slug}-*.mdx`
+  3. Any existing guide: glob `src/pages/docs/ai-transport/guides/*.mdx` and pick one
 - Read `writing-style-guide.md` for tone rules.
 - Read `src/data/nav/aitransport.ts` for the current nav structure.
 - Read `src/data/languages/languageData.ts` to confirm supported languages for aiTransport.
 
 ## 4. Generate the guide
 
-Write to `src/pages/docs/guides/ai-transport/{provider-slug}-{pattern}.mdx`.
+Write to `src/pages/docs/ai-transport/guides/{provider-slug}-{pattern}.mdx`.
 
 If the file already exists, warn and ask before overwriting.
 
@@ -155,7 +155,7 @@ Edit `src/data/nav/aitransport.ts`. The Guides section uses nested provider grou
 {
   name: '{Provider display name}',
   pages: [
-    { name: '{Pattern display name}', link: '/docs/guides/ai-transport/{provider-slug}-{pattern}' },
+    { name: '{Pattern display name}', link: '/docs/ai-transport/guides/{provider-slug}-{pattern}' },
   ],
 },
 ```
