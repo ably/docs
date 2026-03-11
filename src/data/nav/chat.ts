@@ -228,11 +228,11 @@ export default {
       pages: [
         {
           name: 'Livestream chat',
-          link: '/docs/guides/chat/build-livestream',
+          link: '/docs/chat/guides/build-livestream',
         },
         {
           name: 'Handling discontinuity',
-          link: '/docs/guides/chat/handling-discontinuity',
+          link: '/docs/chat/guides/handling-discontinuity',
         },
       ],
     },
