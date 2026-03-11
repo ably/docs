@@ -1,0 +1,111 @@
+---
+title: "Message billing"
+meta_description: "Understand how operations across all Ably products contribute to your message count, including Pub/Sub, Chat, LiveObjects, and Annotations."
+meta_keywords: "message billing, message counting, pricing, Pub/Sub billing, Chat billing, LiveObjects billing"
+intro: "How operations across all Ably products contribute to your message count."
+---
+
+All Ably products count messages for billing purposes. The following sections explain how operations across Pub/Sub, Chat, LiveObjects, and Annotations contribute to your message count.
+
+<Aside data-type="further-reading">
+For package comparison and volume discounts, see the [pricing](https://ably.com/pricing) page. For general billing information, see [billing](/docs/platform/pricing/billing).
+</Aside>
+
+## How messages are counted <a id="basic-counting"/>
+
+Ably counts every message for both publishing and delivery:
+
+* 1 publish = 1 inbound message
+* Each subscriber delivery = 1 outbound message per subscriber
+* Each integration delivery = 1 outbound message per [integration](/docs/platform/integrations) target
+* Messages from metachannels (such as `[meta]log` and `[meta]stats`) follow the same counting rules
+
+For example, if 1 publisher sends a message to a channel with 10 subscribers, this counts as **11 messages** (1 inbound + 10 outbound).
+
+## Message size <a id="message-size"/>
+
+Ably calculates message size for Pub/Sub messages as the sum of the `name`, `clientId`, `data`, and `extras` [properties](/docs/api/realtime-sdk/messages#properties) before any compression or expansion occurs in the serialization process.
+
+* `name` and `clientId` are calculated as the size in bytes of their UTF-8 representation.
+* `data` is calculated as the size in bytes if it is binary, or its UTF-8 byte length if it is a string.
+* `extras` is calculated as the string length of its JSON representation.
+
+The [bandwidth](/docs/platform/pricing#bandwidth) allowance calculation uses an average message size of 5KiB. If your total bandwidth for the month exceeds this baseline, Ably charges overage per GiB.
+
+See [maximum message size](/docs/platform/pricing/limits#message) for the size limits per package type.
+
+## Pub/Sub operations <a id="pubsub-operations"/>
+
+The following table shows how Pub/Sub operations contribute to your message count:
+
+| Operation | Messages counted | Notes |
+| --- | --- | --- |
+| Publish to channel | 1 inbound + 1 per subscriber outbound | Base cost for all messaging |
+| Persisted message storage | +1 per message stored | Enable via [channel rules](/docs/storage-history/storage) |
+| History retrieval | +1 per message retrieved | Each message returned in a [history](/docs/storage-history/history) response counts as 1 outbound message |
+| Presence enter/leave/update | 1 inbound + 1 per presence subscriber outbound | Same counting as regular messages |
+| Webhook/integration delivery | +1 per outbound delivery | Per [integration](/docs/platform/integrations) target |
+| Rewind on attach | Rewound messages count as outbound | Up to 100 messages per [rewind](/docs/channels/options/rewind) |
+| Push notification | Counted separately per push platform | See [push notifications](/docs/push) |
+
+For Pub/Sub-specific cost optimization strategies, see [Pub/Sub pricing](/docs/pub-sub/pricing).
+
+## Chat operations <a id="chat-operations"/>
+
+The [Chat SDK](/docs/chat) is built on top of [Pub/Sub](/docs/pub-sub). All Chat operations generate Pub/Sub messages that follow the same counting rules.
+
+| Operation | Messages counted | Notes |
+| --- | --- | --- |
+| Chat message | 1 inbound + 1 per subscriber outbound | Same as a standard publish |
+| Typing indicator heartbeat | 1 inbound + 1 per subscriber outbound | Default interval is 10 seconds; approximately 6 events per minute per active typer |
+| Typing indicator stop | 1 inbound + 1 per subscriber outbound | Sent when a user stops typing |
+| Room reaction | 1 inbound + 1 per subscriber outbound | Same as a standard publish |
+| Presence enter/leave/update | 1 inbound + 1 per presence subscriber outbound | Same as Pub/Sub presence |
+| Occupancy | Uses metachannels | Follows standard metachannel counting rules |
+
+For Chat-specific cost optimization strategies, see [Chat pricing](/docs/chat/pricing).
+
+## LiveObjects operations <a id="liveobjects-operations"/>
+
+LiveObjects has a different billing scheme based on ObjectMessages. Each ObjectMessage counts as:
+
+* 1 outbound message per connected client (delivery)
+* 1 inbound message per connected client (acknowledgment)
+
+See the [LiveObjects billing](/docs/liveobjects/concepts/billing) page for details.
+
+## Annotations <a id="annotations"/>
+
+[Annotations](/docs/messages/annotations) have a different billing scheme from standard messages. See the [Annotations](/docs/messages/annotations) page for details on how annotation operations are counted.
+
+## Persistence billing <a id="persistence"/>
+
+When persistence is enabled via [channel rules](/docs/storage-history/storage), Ably counts each message stored to disk as an additional message.
+
+If you persist all messages, a message published to 10 subscribers with persistence enabled counts as 1 (publish) + 10 (subscriber delivery) + 1 (persistence storage) = **12 messages**.
+
+If you persist the last message only, Ably stores the most recent message. The storage cost is 1 additional message per new "last message" stored.
+
+Retrieving persisted messages via the [history API](/docs/storage-history/history) also counts: each message returned in a history response = 1 additional message.
+
+To avoid additional costs for messages that do not need persistence, history, rewind, integrations, or resume, mark them as [ephemeral](/docs/pub-sub/advanced#ephemeral). Ephemeral messages are exempt from all of these features, reducing your billable message count.
+
+## Presence event billing <a id="presence"/>
+
+Ably bills presence events (enter, leave, update) as regular messages:
+
+* 1 presence enter event with 100 presence subscribers = **101 messages** (1 enter + 100 deliveries)
+
+In high-churn scenarios, presence events can generate significant message volume due to the n-squared pattern. When both subscribers and members are present on a channel, each member event is delivered to every subscriber.
+
+For example, 200 members joining and leaving a channel generates approximately **80,400 messages**. See the [large-scale presence sets](/docs/presence-occupancy/presence#large-presence) section for the full calculation.
+
+To reduce presence costs:
+
+* Use [occupancy](/docs/presence-occupancy/occupancy) if you only need member counts, not individual identities.
+* Enable [server-side batching](/docs/presence-occupancy/presence#large-presence) to group presence events and support up to 20,000 members per channel.
+* Subscribe to presence updates only on channels where you need member-level detail.
+
+<Aside data-type="further-reading">
+See the [pricing](https://ably.com/pricing) page for package comparison and volume discounts.
+</Aside>

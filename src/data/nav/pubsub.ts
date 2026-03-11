@@ -366,8 +366,8 @@ export default {
       ],
     },
     {
-      name: 'Message billing',
-      link: '/docs/pub-sub/message-billing',
+      name: 'Pricing',
+      link: '/docs/pub-sub/pricing',
     },
     {
       name: 'Guides',
