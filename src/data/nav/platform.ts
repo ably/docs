@@ -126,8 +126,8 @@ export default {
           name: 'Billing',
         },
         {
-          link: '/docs/platform/pricing/message-billing',
-          name: 'Message billing',
+          link: '/docs/platform/pricing/message-counting',
+          name: 'Message counting',
         },
         {
           link: '/docs/platform/pricing/limits',
