@@ -60,11 +60,6 @@ export default {
           link: '/docs/liveobjects/concepts/synchronization',
           languages: ['javascript', 'swift', 'java'],
         },
-        {
-          name: 'Billing',
-          link: '/docs/liveobjects/concepts/billing',
-          languages: ['javascript', 'swift', 'java'],
-        },
       ],
     },
     {
@@ -112,6 +107,10 @@ export default {
           link: '/docs/liveobjects/rest-api-usage',
         },
       ],
+    },
+    {
+      name: 'LiveObjects pricing',
+      link: '/docs/liveobjects/pricing',
     },
   ],
   api: [

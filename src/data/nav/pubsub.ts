@@ -366,7 +366,7 @@ export default {
       ],
     },
     {
-      name: 'Pricing',
+      name: 'Pub/Sub pricing',
       link: '/docs/pub-sub/pricing',
     },
     {
