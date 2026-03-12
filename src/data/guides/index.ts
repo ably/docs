@@ -21,8 +21,7 @@ export const guides: Guide[] = [
   {
     id: 'dashboards-and-visualizations',
     name: 'Building realtime dashboards',
-    description:
-      'Architecting realtime dashboards with Ably: from fan engagement at scale to critical monitoring.',
+    description: 'Architecting realtime dashboards with Ably: from fan engagement at scale to critical monitoring.',
     link: '/docs/guides/pub-sub/dashboards-and-visualizations',
     products: ['pubsub'],
   },
@@ -62,7 +61,8 @@ export const guides: Guide[] = [
   {
     id: 'anthropic-citations',
     name: 'Attach citations to Anthropic responses',
-    description: 'Attach source citations to AI responses from the Anthropic Messages API using Ably message annotations.',
+    description:
+      'Attach source citations to AI responses from the Anthropic Messages API using Ably message annotations.',
     link: '/docs/guides/ai-transport/anthropic/anthropic-citations',
     products: ['ai-transport'],
     aiProvider: 'anthropic',
@@ -95,7 +95,8 @@ export const guides: Guide[] = [
   {
     id: 'openai-citations',
     name: 'Attach citations to OpenAI responses',
-    description: 'Attach source citations to AI responses from the OpenAI Responses API using Ably message annotations.',
+    description:
+      'Attach source citations to AI responses from the OpenAI Responses API using Ably message annotations.',
     link: '/docs/guides/ai-transport/openai/openai-citations',
     products: ['ai-transport'],
     aiProvider: 'openai',
