@@ -228,6 +228,20 @@ channel.subscribe("response-complete", message -> {
     response.append((String) message.data);
 });
 ```
+
+```react
+const [response, setResponse] = useState('');
+
+// Handle individual tokens and recovery messages
+useChannel('{{RANDOM_CHANNEL_NAME}}', (message) => {
+  if (message.name === 'token') {
+    setResponse((prev) => prev + message.data);
+  } else if (message.name === 'response-complete') {
+    // Recovery message replaces all previous tokens
+    setResponse(message.data);
+  }
+});
+```
 </Code>
 
 When streaming multiple concurrent responses, include a `responseId` in message [`extras`](/docs/messages#properties) so subscribers can correctly associate the recovery message with the tokens it replaces. See [token stream with multiple responses](#multiple-responses) for details on correlating messages.
@@ -310,6 +324,16 @@ Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
 channel.subscribe("token", message -> {
     String token = (String) message.data;
     System.out.println(token); // log each token as it arrives
+});
+```
+
+```react
+const [response, setResponse] = useState('');
+
+// Subscribe to token messages
+useChannel('{{RANDOM_CHANNEL_NAME}}', 'token', (message) => {
+  const token = message.data;
+  setResponse((prev) => prev + token);
 });
 ```
 </Code>
@@ -447,6 +471,24 @@ channel.subscribe("token", message -> {
 
     // Append token to response
     responses.put(responseId, responses.get(responseId) + token);
+});
+```
+
+```react
+const [responses, setResponses] = useState(new Map());
+
+// Track responses by ID
+useChannel('{{RANDOM_CHANNEL_NAME}}', 'token', (message) => {
+  const token = message.data;
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) return;
+
+  setResponses((prev) => {
+    const next = new Map(prev);
+    next.set(responseId, (next.get(responseId) || '') + token);
+    return next;
+  });
 });
 ```
 </Code>
@@ -662,6 +704,27 @@ channel.subscribe("stop", message -> {
     System.out.println("Response complete: " + finalText);
 });
 ```
+
+```react
+const [responses, setResponses] = useState(new Map());
+
+// Handle response lifecycle events
+useChannel('{{RANDOM_CHANNEL_NAME}}', (message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (message.name === 'start') {
+    setResponses((prev) => new Map(prev).set(responseId, ''));
+  } else if (message.name === 'token') {
+    setResponses((prev) => {
+      const next = new Map(prev);
+      next.set(responseId, (next.get(responseId) || '') + message.data);
+      return next;
+    });
+  } else if (message.name === 'stop') {
+    console.log('Response complete:', responses.get(responseId));
+  }
+});
+```
 </Code>
 
 ## Client hydration <a id="hydration"/>
@@ -723,6 +786,18 @@ channel.subscribe("token", message -> {
 
     // Process tokens from both recent history and live stream
     System.out.println("Token received: " + token);
+});
+```
+
+```react
+// Set rewind via ChannelProvider options={{ params: { rewind: '2m' } }}
+
+const [response, setResponse] = useState('');
+
+// Receive both recent historical and live messages
+useChannel('{{RANDOM_CHANNEL_NAME}}', 'token', (message) => {
+  const token = message.data;
+  setResponse((prev) => prev + token);
 });
 ```
 </Code>
@@ -820,6 +895,35 @@ while (page != null) {
     // Move to next page if available
     page = page.hasNext() ? page.next() : null;
 }
+```
+
+```react
+const [response, setResponse] = useState('');
+const hydrated = useRef(false);
+
+// Subscribe to live messages and get the history function
+const { history } = useChannel('persisted:{{RANDOM_CHANNEL_NAME}}', 'token', (message) => {
+  setResponse((prev) => prev + message.data);
+});
+
+// Fetch history on mount
+useEffect(() => {
+  if (hydrated.current) return;
+  hydrated.current = true;
+
+  (async () => {
+    let historicalTokens = '';
+    let page = await history({ untilAttach: true });
+    while (page) {
+      // Messages are newest-first, so prepend them to response
+      for (const message of page.items) {
+        historicalTokens = message.data + historicalTokens;
+      }
+      page = page.hasNext() ? await page.next() : null;
+    }
+    setResponse((prev) => historicalTokens + prev);
+  })();
+}, [history]);
 ```
 </Code>
 
@@ -940,6 +1044,29 @@ channel.subscribe("token", message -> {
 
     // Append tokens for new responses
     inProgressResponses.put(responseId, inProgressResponses.get(responseId) + token);
+});
+```
+
+```react
+// Set rewind via ChannelProvider options={{ params: { rewind: '2m' } }}
+
+const [inProgressResponses, setInProgressResponses] = useState(new Map());
+
+// Receive both recent historical and live messages
+useChannel('{{RANDOM_CHANNEL_NAME}}', 'token', (message) => {
+  const token = message.data;
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) return;
+
+  // Skip tokens for responses already hydrated from database
+  if (completedResponses.has(responseId)) return;
+
+  setInProgressResponses((prev) => {
+    const next = new Map(prev);
+    next.set(responseId, (next.get(responseId) || '') + token);
+    return next;
+  });
 });
 ```
 </Code>
@@ -1132,5 +1259,56 @@ while (page != null && !done) {
     // Move to next page if available
     page = page.hasNext() ? page.next() : null;
 }
+```
+
+```react
+const [inProgressResponses, setInProgressResponses] = useState(new Map());
+const hydrated = useRef(false);
+
+// Subscribe to live messages and get the history function
+const { history } = useChannel('persisted:{{RANDOM_CHANNEL_NAME}}', 'token', (message) => {
+  const token = message.data;
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) return;
+  if (completedResponses.has(responseId)) return;
+
+  setInProgressResponses((prev) => {
+    const next = new Map(prev);
+    next.set(responseId, (next.get(responseId) || '') + token);
+    return next;
+  });
+});
+
+// Fetch history on mount
+useEffect(() => {
+  if (hydrated.current) return;
+  hydrated.current = true;
+
+  (async () => {
+    let page = await history({ untilAttach: true });
+    let done = false;
+    while (page && !done) {
+      for (const message of page.items) {
+        const token = message.data;
+        const responseId = message.extras?.headers?.responseId;
+
+        // Stop when we reach a response already loaded from database
+        if (completedResponses.has(responseId)) {
+          done = true;
+          break;
+        }
+
+        // Prepend historical tokens (newest-first order)
+        setInProgressResponses((prev) => {
+          const next = new Map(prev);
+          next.set(responseId, token + (next.get(responseId) || ''));
+          return next;
+        });
+      }
+      page = page.hasNext() ? await page.next() : null;
+    }
+  })();
+}, [history, completedResponses]);
 ```
 </Code>

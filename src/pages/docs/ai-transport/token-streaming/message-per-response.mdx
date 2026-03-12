@@ -449,6 +449,31 @@ channel.subscribe(message -> {
     }
 });
 ```
+```react
+const [responses, setResponses] = useState(new Map());
+
+// Subscribe to live messages
+useChannel('ai:{{RANDOM_CHANNEL_NAME}}', (message) => {
+  setResponses((prev) => {
+    const next = new Map(prev);
+    switch (message.action) {
+      case 'message.create':
+        // New response started
+        next.set(message.serial, message.data);
+        break;
+      case 'message.append':
+        // Append token to existing response
+        next.set(message.serial, (next.get(message.serial) || '') + message.data);
+        break;
+      case 'message.update':
+        // Replace entire response content
+        next.set(message.serial, message.data);
+        break;
+    }
+    return next;
+  });
+});
+```
 </Code>
 
 ## Client hydration <a id="hydration"/>
@@ -547,6 +572,31 @@ channel.subscribe(message -> {
             responses.put(message.serial, (String) message.data);
             break;
     }
+});
+```
+```react
+// Set rewind via ChannelProvider options={{ params: { rewind: '2m' } }}
+
+const [responses, setResponses] = useState(new Map());
+
+// Receive both recent historical (via rewind) and live messages
+useChannel('ai:{{RANDOM_CHANNEL_NAME}}', (message) => {
+  setResponses((prev) => {
+    const next = new Map(prev);
+    switch (message.action) {
+      case 'message.create':
+        next.set(message.serial, message.data);
+        break;
+      case 'message.append':
+        const current = next.get(message.serial) || '';
+        next.set(message.serial, current + message.data);
+        break;
+      case 'message.update':
+        next.set(message.serial, message.data);
+        break;
+    }
+    return next;
+  });
 });
 ```
 </Code>
@@ -677,6 +727,46 @@ while (page != null) {
     // Move to next page if available
     page = page.hasNext() ? page.next() : null;
 }
+```
+```react
+const [responses, setResponses] = useState(new Map());
+const hydrated = useRef(false);
+
+// Subscribe to live messages and get the history function
+const { history } = useChannel('ai:{{RANDOM_CHANNEL_NAME}}', (message) => {
+  setResponses((prev) => {
+    const next = new Map(prev);
+    switch (message.action) {
+      case 'message.create':
+        next.set(message.serial, message.data);
+        break;
+      case 'message.append':
+        next.set(message.serial, (next.get(message.serial) || '') + message.data);
+        break;
+      case 'message.update':
+        next.set(message.serial, message.data);
+        break;
+    }
+    return next;
+  });
+});
+
+// Fetch history on mount
+useEffect(() => {
+  if (hydrated.current) return;
+  hydrated.current = true;
+
+  (async () => {
+    let page = await history({ untilAttach: true });
+    while (page) {
+      for (const message of page.items) {
+        // message.data contains the full concatenated text
+        setResponses((prev) => new Map(prev).set(message.serial, message.data));
+      }
+      page = page.hasNext() ? await page.next() : null;
+    }
+  })();
+}, [history]);
 ```
 </Code>
 
@@ -911,6 +1001,37 @@ channel.subscribe(message -> {
     }
 });
 ```
+```react
+// Set rewind via ChannelProvider options={{ params: { rewind: '2m' } }}
+
+const [inProgressResponses, setInProgressResponses] = useState(new Map());
+
+// Receive both recent historical and live messages
+useChannel('ai:responses', (message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) return;
+
+  // Skip messages for responses already loaded from database
+  if (completedResponses.has(responseId)) return;
+
+  setInProgressResponses((prev) => {
+    const next = new Map(prev);
+    switch (message.action) {
+      case 'message.create':
+        next.set(responseId, message.data);
+        break;
+      case 'message.append':
+        next.set(responseId, (next.get(responseId) || '') + message.data);
+        break;
+      case 'message.update':
+        next.set(responseId, message.data);
+        break;
+    }
+    return next;
+  });
+});
+```
 </Code>
 
 <Aside data-type="note">
@@ -1117,6 +1238,53 @@ while (page != null) {
     // Move to next page if available
     page = page.hasNext() ? page.next() : null;
 }
+```
+```react
+const [inProgressResponses, setInProgressResponses] = useState(new Map());
+const hydrated = useRef(false);
+
+// Subscribe to live messages and get the history function
+const { history } = useChannel('ai:{{RANDOM_CHANNEL_NAME}}', (message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) return;
+  if (completedResponses.has(responseId)) return;
+
+  setInProgressResponses((prev) => {
+    const next = new Map(prev);
+    switch (message.action) {
+      case 'message.create':
+        next.set(responseId, message.data);
+        break;
+      case 'message.append':
+        next.set(responseId, (next.get(responseId) || '') + message.data);
+        break;
+      case 'message.update':
+        next.set(responseId, message.data);
+        break;
+    }
+    return next;
+  });
+});
+
+// Fetch history from the last completed response until attachment
+useEffect(() => {
+  if (hydrated.current) return;
+  hydrated.current = true;
+
+  (async () => {
+    let page = await history({ untilAttach: true, start: latestTimestamp });
+    while (page) {
+      for (const message of page.items) {
+        const responseId = message.extras?.headers?.responseId;
+        if (responseId) {
+          setInProgressResponses((prev) => new Map(prev).set(responseId, message.data));
+        }
+      }
+      page = page.hasNext() ? await page.next() : null;
+    }
+  })();
+}, [history]);
 ```
 </Code>
 
