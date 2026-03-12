@@ -1,0 +1,156 @@
+---
+title: "Message counting"
+meta_description: "Understand which operations across all Ably products count as messages, including Pub/Sub, Chat, LiveObjects, Spaces, AI Transport, and LiveSync."
+meta_keywords: "message counting, pricing, Pub/Sub messages, Chat messages, LiveObjects messages, Spaces messages, AI Transport messages, LiveSync messages"
+intro: "Messages are the primary unit of consumption that Ably charges for. Understanding which operations count as messages helps you estimate and manage costs."
+---
+
+<Aside data-type="further-reading">
+For package comparison and volume discounts, see the [pricing](https://ably.com/pricing) page. For general billing information, see [billing](/docs/platform/pricing/billing).
+</Aside>
+
+## How Ably counts messages <a id="how-messages-are-counted"/>
+
+As a general rule, most operations involve publishing and receiving messages. Each operation generates:
+
+* 1 inbound message when a client publishes or performs an operation
+* 1 outbound message for each subscriber that receives it
+
+For example, if 1 client publishes a message to a channel with 10 subscribers, this counts as **11 messages** (1 inbound + 10 outbound).
+
+By default, [echo messages](/docs/pub-sub/advanced#echo) are enabled, which means the publisher also receives its own message as an outbound delivery. In the example above, echo adds 1 outbound message for a total of **12 messages**.
+
+Client-side [message filtering](/docs/api/realtime-sdk/channels#subscribe) does not reduce your message count. Ably counts all messages delivered to a connection, regardless of whether the client filters them.
+
+The tables below list all operations that count as messages. Unless noted otherwise, each operation follows this inbound/outbound pattern. `Time` and `Ping` operations are not counted.
+
+## Message size <a id="message-size"/>
+
+Ably calculates message size as the sum of the `name`, `clientId`, `data`, and `extras` [properties](/docs/api/realtime-sdk/messages#properties) before any compression or expansion occurs in the serialization process. This applies to all products built on Pub/Sub, including Chat.
+
+* `name` and `clientId` are calculated as the size in bytes of their UTF-8 representation.
+* `data` is calculated as the size in bytes if it is binary, or its UTF-8 byte length if it is a string.
+* `extras` is calculated as the string length of its JSON representation.
+
+Ably bills messages in 5KiB chunks. A message up to 5KiB counts as 1 message. A 50KiB message counts as 10 messages, and a 16KiB message counts as 4 messages.
+
+Each package has a bandwidth allowance based on an average message size of 5KiB. If your total bandwidth for the month exceeds this baseline, Ably charges overage per GiB. See [maximum message size](/docs/platform/pricing/limits#message) for the size limits per package type.
+
+## Pub/Sub operations <a id="pubsub-operations"/>
+
+The following table shows how [Pub/Sub](/docs/pub-sub) operations contribute to your message count:
+
+| Operation | Messages counted |
+| --- | --- |
+| [Publish](/docs/channels/messages#publish) | 1 inbound message |
+| Message delivery | 1 outbound message per subscriber |
+| [Presence enter](/docs/presence-occupancy/presence) | 1 inbound message |
+| [Presence leave](/docs/presence-occupancy/presence) | 1 inbound message |
+| [Presence update](/docs/presence-occupancy/presence) | 1 inbound message |
+| Presence event delivery | 1 outbound message per presence subscriber |
+| [Persistence](/docs/storage-history/storage) storage | 1 additional message per stored message |
+| [History](/docs/storage-history/history) retrieval | 1 message per retrieved message |
+| [Integration](/docs/platform/integrations) delivery | 1 outbound message per integration target |
+| [Rewind](/docs/channels/options/rewind) on attach | 1 message per rewound message (up to 100) |
+| [Push notification](/docs/push) delivery | 1 message per delivered notification |
+| [Presence REST](/docs/presence-occupancy/presence) query | 1 message per member returned |
+| [Batch presence](/docs/presence-occupancy/presence) request | 1 message per member across all queried channels |
+| [Annotation](/docs/messages/annotations) publish | 1 inbound message |
+| [Annotation](/docs/messages/annotations) delete | 1 inbound message |
+| [Annotation summary](/docs/messages/annotations#annotation-summaries) delivery | 1 outbound message per subscriber; multiple annotations may be rolled up into a single summary |
+| [Lifecycle event](/docs/metadata-stats/metadata) (`[meta]connection.lifecycle`, `[meta]channel.lifecycle`) | 1 message per event |
+| [`[meta]stats:minute`](/docs/metadata-stats/metadata) event | 1 message per event |
+| [`[meta]log`](/docs/metadata-stats/metadata) subscription | Not counted |
+
+For Pub/Sub-specific cost optimization strategies, see [Pub/Sub pricing](/docs/pub-sub/pricing).
+
+## Chat operations <a id="chat-operations"/>
+
+The [Chat SDK](/docs/chat) is built on top of [Pub/Sub](/docs/pub-sub). All Chat operations generate Pub/Sub messages that follow the same counting rules.
+
+| Operation | Messages counted |
+| --- | --- |
+| [Send message](/docs/chat/rooms/messages) | 1 inbound message |
+| Message delivery | 1 outbound message per subscriber |
+| [Update message](/docs/chat/rooms/messages#update) | 1 inbound message |
+| Message update delivery | 1 outbound message per subscriber |
+| [Delete message](/docs/chat/rooms/messages#delete) | 1 inbound message |
+| Message deletion delivery | 1 outbound message per subscriber |
+| [History](/docs/chat/rooms/history) retrieval | 1 message per retrieved message |
+| [Typing indicator](/docs/chat/rooms/typing) keystroke | 1 inbound message; repeats every heartbeat interval (default 10s) |
+| Typing indicator delivery | 1 outbound message per subscriber per heartbeat |
+| [Typing indicator](/docs/chat/rooms/typing) stop | 1 inbound message |
+| Typing stop delivery | 1 outbound message per subscriber |
+| [Room reaction](/docs/chat/rooms/reactions) | 1 inbound message |
+| Room reaction delivery | 1 outbound message per subscriber |
+| [Message reaction](/docs/chat/rooms/message-reactions) send | 1 inbound message |
+| [Message reaction](/docs/chat/rooms/message-reactions) delete | 1 inbound message |
+| Message reaction summary delivery | 1 outbound message per subscriber; multiple reactions may be rolled up into a single summary |
+| [Presence enter](/docs/chat/rooms/presence) | 1 inbound message |
+| [Presence leave](/docs/chat/rooms/presence) | 1 inbound message |
+| [Presence update](/docs/chat/rooms/presence) | 1 inbound message |
+| Presence event delivery | 1 outbound message per presence subscriber |
+| [Occupancy](/docs/chat/rooms/occupancy) event | 1 outbound message per subscriber (generated on membership changes, debounced up to 15s) |
+| [Moderation](/docs/chat/moderation) action | 1 inbound message; triggers a message update or delete which follows standard delivery |
+
+For Chat-specific cost optimization strategies, see [Chat pricing](/docs/chat/pricing).
+
+## LiveObjects operations <a id="liveobjects-operations"/>
+
+[LiveObjects](/docs/liveobjects) operations are billed using ObjectMessages. Each ObjectMessage follows the standard inbound/outbound counting pattern.
+
+| Operation | Messages counted |
+| --- | --- |
+| [LiveMap](/docs/liveobjects/pricing#livemap-operations) set or remove | 1 inbound message per operation |
+| [LiveMap](/docs/liveobjects/pricing#livemap-operations) create (shallow) | 2 inbound messages (create + assign) |
+| [LiveCounter](/docs/liveobjects/pricing#livecounter-operations) increment or decrement | 1 inbound message |
+| [LiveCounter](/docs/liveobjects/pricing#livecounter-operations) create | 2 inbound messages (create + assign) |
+| ObjectMessage delivery | 1 outbound message per connected client |
+| [Synchronization](/docs/liveobjects/pricing#synchronization) | 1 message per object synchronized |
+| [REST API](/docs/liveobjects/pricing#rest-api) fetch | 1 message per object in response |
+| [Batch](/docs/liveobjects/pricing#livemap-operations) operation | 1 message per operation in the batch |
+
+Nested object creation generates additional messages for each nested object. See the [LiveObjects pricing](/docs/liveobjects/pricing) page for detailed examples.
+
+## Spaces operations <a id="spaces-operations"/>
+
+The [Spaces SDK](/docs/spaces) is built on top of [Pub/Sub](/docs/pub-sub) channels and [presence](/docs/presence-occupancy/presence). All Spaces operations generate Pub/Sub messages that follow the same counting rules.
+
+| Operation | Messages counted |
+| --- | --- |
+| [Enter](/docs/spaces/space#enter) space | 1 inbound message |
+| [Leave](/docs/spaces/space#leave) space | 1 inbound message |
+| [Update profile](/docs/spaces/space#update-profile) | 1 inbound message |
+| Space event delivery | 1 outbound message per subscriber |
+| [Set location](/docs/spaces/locations#set) | 1 inbound message |
+| Location event delivery | 1 outbound message per subscriber |
+| [Set cursor position](/docs/spaces/cursors#set) | 1 inbound message per batch (default batch interval 25ms) |
+| Cursor event delivery | 1 outbound message per subscriber |
+| [Lock acquire](/docs/spaces/locking#acquire) | 1 inbound message |
+| [Lock release](/docs/spaces/locking#release) | 1 inbound message |
+| Lock event delivery | 1 outbound message per subscriber |
+
+Live cursors use a [separate channel](/docs/spaces/cursors#foundations) from other space features due to their high update frequency. Registering multiple subscription listeners for the same event does not increase your message count, as these are [client-side filtered events](/docs/spaces/space#subscribe).
+
+## AI Transport operations <a id="ai-transport-operations"/>
+
+[AI Transport](/docs/ai-transport) uses standard Pub/Sub messaging. Each token or message published to Ably counts as an inbound message, and each delivery to a subscriber counts as an outbound message.
+
+| Operation | Messages counted |
+| --- | --- |
+| Token publish | 1 inbound message per published message |
+| Token delivery | 1 outbound message per subscriber |
+| [Persistence](/docs/storage-history/storage) storage | 1 additional message per stored message |
+
+The total cost depends on the [token streaming pattern](/docs/ai-transport/token-streaming#token-streaming-patterns) you choose. With [message-per-response](/docs/ai-transport/token-streaming/message-per-response), [append rollup](/docs/ai-transport/token-streaming/token-rate-limits#per-response) conflates multiple tokens into fewer inbound messages. For example, 300 tokens published individually can be conflated to approximately 100 inbound messages. See the [AI support chatbot pricing example](/docs/platform/pricing/examples/ai-chatbot) for a full breakdown.
+
+## LiveSync operations <a id="livesync-operations"/>
+
+[LiveSync](/docs/livesync) publishes database changes as Pub/Sub messages. Each update follows the standard inbound/outbound counting pattern.
+
+| Operation | Messages counted |
+| --- | --- |
+| Database update publish | 1 inbound message |
+| Update delivery | 1 outbound message per subscriber |
+
+For example, if the database connector publishes 1 update and 3 clients are subscribed, this counts as **4 messages** (1 inbound + 3 outbound).
