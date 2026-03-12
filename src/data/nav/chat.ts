@@ -224,7 +224,7 @@ export default {
       ],
     },
     {
-      name: 'Pricing',
+      name: 'Chat pricing',
       link: '/docs/chat/pricing',
     },
     {
