@@ -40,10 +40,10 @@ async function initTasks(tasks: PathObject<LiveMap<Tasks>>) {
 
     // Handle individual task updates
     const { operation } = message;
-    if (operation.action === 'map.set' && operation.mapOp?.key) {
-      tasksOnUpdated(operation.mapOp.key, tasks);
-    } else if (operation.action === 'map.remove' && operation.mapOp?.key) {
-      tasksOnRemoved(operation.mapOp.key);
+    if (operation.action === 'map.set' && operation.mapSet) {
+      tasksOnUpdated(operation.mapSet.key, tasks);
+    } else if (operation.action === 'map.remove' && operation.mapRemove) {
+      tasksOnRemoved(operation.mapRemove.key);
     }
   });
 
