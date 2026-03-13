@@ -224,6 +224,10 @@ export default {
       ],
     },
     {
+      name: 'Chat pricing',
+      link: '/docs/chat/pricing',
+    },
+    {
       name: 'Guides',
       pages: [
         {
