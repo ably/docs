@@ -99,6 +99,10 @@ export default {
           link: '/docs/liveobjects/storage',
         },
         {
+          name: 'Using the REST SDK',
+          link: '/docs/liveobjects/rest-sdk-usage',
+        },
+        {
           name: 'Using the REST API',
           link: '/docs/liveobjects/rest-api-usage',
         },
