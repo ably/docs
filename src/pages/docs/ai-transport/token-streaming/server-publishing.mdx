@@ -1,0 +1,71 @@
+---
+title: Publish from your server
+meta_description: "Learn how to publish AI response tokens from your server over a Realtime WebSocket connection, covering ordering, channel limits, and concurrent streams."
+---
+
+When streaming AI responses with [message per response](/docs/ai-transport/token-streaming/message-per-response) or [message per token](/docs/ai-transport/token-streaming/message-per-token), your server should publish tokens to Ably channels using a Realtime client. Realtime clients maintain persistent WebSocket connections to the Ably service, which provide the low-latency, ordered delivery needed for token streaming.
+
+## Realtime connections <a id="realtime"/>
+
+Use a Realtime client for server-side publishing with `message.append` or `message.create`. A Realtime client maintains a WebSocket connection to the Ably service, which provides low-latency publishing and guarantees that messages published on the same connection are delivered to subscribers in the order they were published. For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
+
+While `publish()` and `appendMessage()` are available on both [REST](/docs/api/rest-sdk) and Realtime clients, REST does not guarantee [message ordering](/docs/platform/architecture/message-ordering) at high publish rates. Use a Realtime client when publishing at the rates typical of LLM token streaming.
+
+Create a Realtime client on your server:
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  echoMessages: false
+});
+```
+```python
+ably = AblyRealtime(
+    key='{{API_KEY}}',
+    echo_messages=False
+)
+```
+```java
+ClientOptions options = new ClientOptions();
+options.key = "{{API_KEY}}";
+options.echoMessages = false;
+AblyRealtime ably = new AblyRealtime(options);
+```
+</Code>
+
+<Aside data-type="note">
+Set [`echoMessages`](/docs/api/realtime-sdk/types#client-options) to `false` on server-side clients to prevent the server from receiving its own published messages. This avoids unnecessary message delivery and billing for [echoed messages](/docs/pub-sub/advanced#echo).
+</Aside>
+
+## Message ordering <a id="ordering"/>
+
+Ably guarantees that messages published on a single connection are delivered to subscribers in the order they were published. This ordering guarantee is essential for token streaming, because tokens must arrive in sequence for the final message to be correct.
+
+This guarantee is per-connection. If you use [multiple clients](#multiple-streams) to handle higher concurrency, route all operations for a given channel through the same client. This ensures that all `publish()` and `appendMessage()` calls for a given response maintain their order.
+
+For more detail on how Ably preserves message order across its globally distributed infrastructure, see [message ordering](/docs/platform/architecture/message-ordering).
+
+## Transient publishing and channel limits <a id="transient"/>
+
+In a typical AI application, your server publishes responses to many distinct channels, often one per user session. When your server publishes to a channel without attaching first, the SDK uses a [transient publish](/docs/pub-sub/advanced#transient-publish). Transient publishes do not count toward the limit on the [number of channels per connection](/docs/platform/pricing/limits#connection).
+
+<Aside data-type="note">
+The server must attach to the channel in order to subscribe to it. In this case, the SDK client instance will not use transient publishing.
+</Aside>
+
+Because transient publishing removes the channel limit as a constraint, the limiting factor becomes the [per-connection inbound message rate](/docs/platform/pricing/limits#connection). Typically, each channel represents a conversation between a user and an agent, so a single connection publishes to multiple channels simultaneously. The per-connection and per-channel inbound rate limits are the same value, but the connection limit is shared across all channels on that connection, making it the constraint you will reach first. See [per-connection rate limits](#rate-limits) for how this interacts with each token streaming pattern.
+
+## Per-connection rate limits <a id="rate-limits"/>
+
+Each connection has an [inbound message rate limit](/docs/platform/pricing/limits#connection) that caps how many messages per second can be published on that connection. How this limit interacts with your publish rate depends on the token streaming pattern you use:
+
+- With [message per response](/docs/ai-transport/token-streaming/message-per-response), Ably rolls up multiple appends into fewer published messages. The rollup window determines how many concurrent streams a single connection can support. See [token streaming limits](/docs/ai-transport/token-streaming/token-rate-limits#rollup) for rollup configuration and concurrent stream capacity.
+- With [message per token](/docs/ai-transport/token-streaming/message-per-token), each token is a separate publish with no rollup. Every publish counts directly against the connection's rate limit. See [token streaming limits](/docs/ai-transport/token-streaming/token-rate-limits#per-token) for strategies to stay within limits.
+
+## Multiple concurrent streams <a id="multiple-streams"/>
+
+When your server handles more concurrent AI response streams than a single connection supports, create additional Realtime clients. Each client uses its own connection with its own message rate budget, so throughput scales linearly with the number of clients.
+
+Route all operations for a given channel through the same client to preserve [message ordering](#ordering). Use a hash of the channel name to deterministically select a client, ensuring that all `publish()` and `appendMessage()` calls for a given response go through the same connection.
+
