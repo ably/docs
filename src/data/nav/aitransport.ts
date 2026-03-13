@@ -109,6 +109,10 @@ export default {
               link: '/docs/ai-transport/guides/anthropic/anthropic-human-in-the-loop',
             },
             {
+              name: 'Chain of thought',
+              link: '/docs/guides/ai-transport/anthropic/anthropic-chain-of-thought',
+            },
+            {
               name: 'Citations',
               link: '/docs/ai-transport/guides/anthropic/anthropic-citations',
             },
@@ -128,6 +132,10 @@ export default {
             {
               name: 'Human-in-the-loop',
               link: '/docs/ai-transport/guides/openai/openai-human-in-the-loop',
+            },
+            {
+              name: 'Chain of thought',
+              link: '/docs/guides/ai-transport/openai/openai-chain-of-thought',
             },
             {
               name: 'Citations',
