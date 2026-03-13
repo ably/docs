@@ -99,7 +99,7 @@ msg_serial = result.serials[0]
 async for event in stream:
     # Append each token as it arrives
     if event['type'] == 'token':
-        channel.append_message(serial=msg_serial, data=event['text'])
+        asyncio.create_task(channel.append_message(serial=msg_serial, data=event['text']))
 ```
 ```java
 // Publish initial message and capture the serial for appending tokens
@@ -150,10 +150,10 @@ for await (const event of stream) {
 }
 ```
 ```python
-# ✅ Do this - append without await for maximum throughput
+# ✅ Do this - use create_task for fire-and-forget throughput
 async for event in stream:
     if event['type'] == 'token':
-        channel.append_message(serial=msg_serial, data=event['text'])
+        asyncio.create_task(channel.append_message(serial=msg_serial, data=event['text']))
 
 # ❌ Don't do this - awaiting each append reduces throughput
 async for event in stream:
@@ -231,8 +231,8 @@ message = Message(name='response', data='')
 result = await channel.publish(message)
 msg_serial = result.serials[0]
 
-# Track all append operations
-append_operations = []
+# Track all append tasks
+append_tasks = []
 
 # Track the full response for recovery
 full_response = ''
@@ -240,12 +240,12 @@ full_response = ''
 async for event in stream:
     if event['type'] == 'token':
         full_response += event['text']
-        append_operations.append(
-            channel.append_message(serial=msg_serial, data=event['text'])
+        append_tasks.append(
+            asyncio.create_task(channel.append_message(serial=msg_serial, data=event['text']))
         )
 
 # Check for any failures after the stream completes
-results = await asyncio.gather(*append_operations, return_exceptions=True)
+results = await asyncio.gather(*append_tasks, return_exceptions=True)
 failed = any(isinstance(r, Exception) for r in results)
 
 if failed:
@@ -733,7 +733,7 @@ msg_serial = result.serials[0]
 # Append tokens, including extras to preserve headers
 async for event in stream:
     if event['type'] == 'token':
-        channel.append_message(
+        asyncio.create_task(channel.append_message(
             serial=msg_serial,
             data=event['text'],
             extras={
@@ -741,7 +741,7 @@ async for event in stream:
                     'responseId': 'resp_abc123'
                 }
             }
-        )
+        ))
 ```
 ```java
 // Publish initial message with responseId in extras
