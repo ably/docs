@@ -342,16 +342,16 @@ import Ably
 let options = ARTClientOptions()
 options.authCallback = { params, callback in
     // Fetch a JWT from your auth server
-    var request = URLRequest(url: URL(string: "http://localhost:3001/api/auth/token")!)
-    request.httpMethod = "GET"
-    URLSession.shared.dataTask(with: request) { data, response, error in
-        if let error {
+    Task {
+        do {
+            let url = URL(string: "/api/auth/token")!
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let token = String(data: data, encoding: .utf8)!
+            callback(token as ARTTokenDetailsCompatible, nil)
+        } catch {
             callback(nil, error)
-            return
         }
-        let token = String(data: data!, encoding: .utf8)!
-        callback(token as ARTTokenDetailsCompatible, nil)
-    }.resume()
+    }
 }
 
 let ably = ARTRealtime(options: options)
@@ -599,22 +599,54 @@ announcementsChannel.subscribe(msg -> System.out.println(msg)); // succeeds
 
 {/*
 Swift test harness:
-func identifyingUsersAndAgents5(ably: ARTRealtime) {
+func identifyingUsersAndAgents5(ably: ARTRealtime) async throws {
     // insert example code here
 }
 */}
 ```swift
 // Client code
 let acmeChannel = ably.channels.get("org:acme:{{RANDOM_CHANNEL_NAME}}")
-acmeChannel.publish("prompt", data: "What is the weather like today?") // succeeds
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    acmeChannel.publish("prompt", data: "What is the weather like today?") { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+} // succeeds
 
 let foobarChannel = ably.channels.get("org:foobar:{{RANDOM_CHANNEL_NAME}}")
-foobarChannel.publish("prompt", data: "What is the weather like today?") // fails
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    foobarChannel.publish("prompt", data: "What is the weather like today?") { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+} // fails
 
 let announcementsChannel = ably.channels.get("announcements")
-announcementsChannel.publish("prompt", data: "What is the weather like today?") // fails
-announcementsChannel.subscribe { message in
-    print(message)
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    announcementsChannel.publish("prompt", data: "What is the weather like today?") { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+} // fails
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    announcementsChannel.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        print(message)
+    })
 } // succeeds
 ```
 
@@ -837,7 +869,7 @@ channel.publish("prompt", "What is the weather like today?");
 
 {/*
 Swift test harness:
-func identifyingUsersAndAgents9(ably: ARTRealtime) {
+func identifyingUsersAndAgents9(ably: ARTRealtime) async throws {
     // insert example code here
 }
 */}
@@ -846,7 +878,15 @@ func identifyingUsersAndAgents9(ably: ARTRealtime) {
 let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
 
 // Publish a message - the clientId is automatically attached
-channel.publish("prompt", data: "What is the weather like today?")
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.publish("prompt", data: "What is the weather like today?") { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
 ```
 
 </Code>
@@ -900,7 +940,7 @@ channel.subscribe("prompt", message -> {
 
 {/*
 Swift test harness:
-func identifyingUsersAndAgents10(ably: ARTRealtime) {
+func identifyingUsersAndAgents10(ably: ARTRealtime) async throws {
     // insert example code here
 }
 */}
@@ -909,13 +949,21 @@ func identifyingUsersAndAgents10(ably: ARTRealtime) {
 let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
 
 // Subscribe to messages from clients
-channel.subscribe("prompt") { message in
-    // Access the verified clientId from the message
-    let userID = message.clientId
-    let prompt = message.data as? String
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe("prompt", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        // Access the verified clientId from the message
+        guard let userID = message.clientId else { return }
+        let prompt = message.data as? String
 
-    print("Received message from user: \(userID ?? "")")
-    print("Prompt: \(prompt ?? "")")
+        print("Received message from user: \(userID)")
+        print("Prompt: \(prompt ?? "")")
+    })
 }
 ```
 
@@ -1293,7 +1341,7 @@ channel.publish(new Message("update", "It's raining in London", new MessageExtra
 
 {/*
 Swift test harness:
-func identifyingUsersAndAgents14() {
+func identifyingUsersAndAgents14() async throws {
     // insert example code here
 }
 */}
@@ -1308,13 +1356,21 @@ let ably = ARTRealtime(options: options)
 
 let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
 
-let extras: NSDictionary = [
+let extras = [
     "headers": [
         "model": "gpt-4"
     ]
-]
+] as ARTJsonCompatible
 
-channel.publish("update", data: "It's raining in London", extras: extras as ARTJsonCompatible)
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.publish("update", data: "It's raining in London", extras: extras) { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
 ```
 
 </Code>
@@ -1359,7 +1415,7 @@ channel.subscribe(message -> {
 
 {/*
 Swift test harness:
-func identifyingUsersAndAgents15(ably: ARTRealtime) {
+func identifyingUsersAndAgents15(ably: ARTRealtime) async throws {
     // insert example code here
 }
 */}
@@ -1367,13 +1423,22 @@ func identifyingUsersAndAgents15(ably: ARTRealtime) {
 // Client code
 let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
 
-channel.subscribe { message in
-    if message.clientId == "weather-agent" {
-        let extras = (try? message.extras?.toJSON()) as? [String: Any]
-        let headers = extras?["headers"] as? [String: Any]
-        let model = headers?["model"] as? String
-        print("Response from weather agent using \(model ?? ""): \(message.data ?? "" as Any)")
-    }
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        if message.clientId == "weather-agent" {
+            let extras = (try? message.extras?.toJSON()) as? [String: Any]
+            let headers = extras?["headers"] as? [String: Any]
+            let model = headers?["model"] as? String
+            guard let data = message.data else { return }
+            print("Response from weather agent using \(model ?? ""): \(data)")
+        }
+    })
 }
 ```
 

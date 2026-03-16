@@ -222,20 +222,23 @@ func exampleCitations1(realtime: ARTRealtime) async throws {
 }
 */}
 ```swift
-import Ably
-
 let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
 
 // Publish the AI response message
 let response = "The James Webb Space Telescope launched in December 2021 and its first images were released in July 2022."
-let msgSerial: String = try await withCheckedThrowingContinuation { continuation in
+let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
     channel.publish("response", data: response) { result, error in
         if let error {
             continuation.resume(throwing: error)
         } else {
-            continuation.resume(returning: result!.serials[0].value!)
+            continuation.resume(returning: result!)
         }
     }
+}
+
+guard let msgSerial = publishResult.serials.first?.value else {
+    print("No serial returned")
+    return
 }
 
 // Add citations by annotating the response message
@@ -477,9 +480,9 @@ let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}", options: optio
 channel.annotations.subscribe { annotation in
     if annotation.action == .create,
        annotation.type == "citations:multiple.v1" {
-        let data = annotation.data as! NSDictionary
-        let url = data["url"] as! String
-        let title = data["title"] as! String
+        guard let data = annotation.data as? NSDictionary,
+              let url = data["url"] as? String,
+              let title = data["title"] as? String else { return }
         print("Citation: \(title) (\(url))")
         // Output: Citation: James Webb Space Telescope - Wikipedia (https://en.wikipedia.org/wiki/James_Webb_Space_Telescope)
     }

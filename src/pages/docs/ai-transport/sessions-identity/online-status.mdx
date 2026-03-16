@@ -311,7 +311,9 @@ let members = try await withCheckedThrowingContinuation { (continuation: Checked
     }
 }
 for member in members {
-    print(member.clientId!, member.connectionId, member.data!)
+    guard let clientID = member.clientId else { continue }
+    let data = member.data ?? ""
+    print(clientID, member.connectionId, data)
 }
 // Example output:
 // user-123 hd67s4!abcdef-0 { device = desktop; }
@@ -532,17 +534,26 @@ Dependencies (Package.swift):
 
 import Ably
 
-func example(channel: ARTRealtimeChannel) {
+func example(channel: ARTRealtimeChannel) async throws {
     // insert example code here
 }
 */}
 ```swift
 // Subscribe to leave events to see why members left
-channel.presence.subscribe(.leave) { presenceMessage in
-    print("\(presenceMessage.clientId!) left")
-    if let data = presenceMessage.data as? [String: Any] {
-        print("Reason: \(data["reason"]!)")
-    }
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.presence.subscribe(.leave, onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { presenceMessage in
+        print("\(presenceMessage.clientId ?? "") left")
+        if let data = presenceMessage.data as? [String: Any],
+           let reason = data["reason"] {
+            print("Reason: \(reason)")
+        }
+    })
 }
 ```
 </Code>
@@ -683,7 +694,7 @@ let members = try await withCheckedThrowingContinuation { (continuation: Checked
 
 // Display each member - the same user will appear once per distinct connection
 for member in members {
-    print("\(member.clientId!) (connection: \(member.connectionId))")
+    print("\(member.clientId ?? "") (connection: \(member.connectionId))")
 }
 ```
 </Code>
@@ -750,7 +761,7 @@ Dependencies (Package.swift):
 
 import Ably
 
-func example(ably: ARTRealtime) {
+func example(ably: ARTRealtime) async throws {
     // insert example code here
 }
 */}
@@ -759,16 +770,24 @@ func example(ably: ARTRealtime) {
 let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
 
 // Subscribe to changes to the presence set
-channel.presence.subscribe { presenceMessage in
-    // Get the current synced presence set after any change
-    channel.presence.get { members, error in
-        guard let members else { return }
-
-        // Display each member - the same user will appear once per distinct connection
-        for member in members {
-            print("\(member.clientId!) (connection: \(member.connectionId))")
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.presence.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
         }
-    }
+    }, callback: { presenceMessage in
+        // Get the current synced presence set after any change
+        channel.presence.get { members, error in
+            guard let members else { return }
+
+            // Display each member - the same user will appear once per distinct connection
+            for member in members {
+                print("\(member.clientId ?? "") (connection: \(member.connectionId))")
+            }
+        }
+    })
 }
 ```
 </Code>
@@ -819,19 +838,35 @@ Dependencies (Package.swift):
 
 import Ably
 
-func example(channel: ARTRealtimeChannel) {
+func example(channel: ARTRealtimeChannel) async throws {
     // insert example code here
 }
 */}
 ```swift
 // Subscribe only to enter events
-channel.presence.subscribe(.enter) { presenceMessage in
-    print("\(presenceMessage.clientId!) joined on connection \(presenceMessage.connectionId)")
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.presence.subscribe(.enter, onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { presenceMessage in
+        print("\(presenceMessage.clientId ?? "") joined on connection \(presenceMessage.connectionId)")
+    })
 }
 
 // Subscribe only to leave events
-channel.presence.subscribe(.leave) { presenceMessage in
-    print("\(presenceMessage.clientId!) left on connection \(presenceMessage.connectionId)")
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.presence.subscribe(.leave, onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { presenceMessage in
+        print("\(presenceMessage.clientId ?? "") left on connection \(presenceMessage.connectionId)")
+    })
 }
 ```
 </Code>
@@ -916,7 +951,7 @@ Dependencies (Package.swift):
 
 import Ably
 
-func example(ably: ARTRealtime, targetUserID: String) {
+func example(ably: ARTRealtime, targetUserID: String) async throws {
     // insert example code here
 }
 */}
@@ -924,21 +959,29 @@ func example(ably: ARTRealtime, targetUserID: String) {
 // Agent code
 let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
 
-channel.presence.subscribe { presenceMessage in
-    // Get the current synced presence set
-    channel.presence.get { members, error in
-        guard let members else { return }
-
-        // Check if all clients are offline
-        if members.isEmpty {
-            print("All clients are offline")
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.presence.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
         }
+    }, callback: { presenceMessage in
+        // Get the current synced presence set
+        channel.presence.get { members, error in
+            guard let members else { return }
 
-        // Check if a specific client is offline
-        if !members.map({ $0.clientId }).contains(targetUserID) {
-            print("\(targetUserID) is now offline on all devices")
+            // Check if all clients are offline
+            if members.isEmpty {
+                print("All clients are offline")
+            }
+
+            // Check if a specific client is offline
+            if !members.map({ $0.clientId }).contains(targetUserID) {
+                print("\(targetUserID) is now offline on all devices")
+            }
         }
-    }
+    })
 }
 ```
 </Code>
