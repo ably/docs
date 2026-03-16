@@ -133,6 +133,58 @@ for (Event event : stream) {
     }
 }
 ```
+
+{/*
+Swift test harness:
+func example(realtime: ARTRealtime, stream: [(type: String, text: String, responseID: String)]) async throws {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like:
+// { type: "reasoning", text: "Let's break down the problem: 27 * 12", responseId: "resp_abc123" }
+// { type: "reasoning", text: "First, I can split this into 27 * 10 + 27 * 2", responseId: "resp_abc123" }
+// { type: "reasoning", text: "That gives us 270 + 54 = 324", responseId: "resp_abc123" }
+// { type: "message", text: "27 * 12 = 324", responseId: "resp_abc123" }
+
+for event in stream {
+    if event.type == "reasoning" {
+        // Publish reasoning messages
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            channel.publish(
+                "reasoning",
+                data: event.text,
+                extras: ["headers": ["responseId": event.responseID]] as ARTJsonCompatible,
+                callback: { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            )
+        }
+    } else if event.type == "message" {
+        // Publish model output messages
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            channel.publish(
+                "message",
+                data: event.text,
+                extras: ["headers": ["responseId": event.responseID]] as ARTJsonCompatible,
+                callback: { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            )
+        }
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -256,6 +308,60 @@ channel.subscribe(message -> {
     // Display the reasoning and response for this turn
     System.out.println("Response " + responseId + ": " + response);
 });
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(realtime: ARTRealtime) async throws {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID, each containing reasoning messages and final response
+var responses: [String: (reasoning: [String], message: String)] = [:]
+
+// Subscribe to all events on the channel
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        MainActor.assumeIsolated {
+            guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+                  let headers = extras["headers"] as? [String: Any],
+                  let responseID = headers["responseId"] as? String else {
+                print("Message missing responseId")
+                return
+            }
+
+            // Initialize response object if needed
+            if responses[responseID] == nil {
+                responses[responseID] = (reasoning: [], message: "")
+            }
+
+            // Handle each message type
+            switch message.name {
+            case "message":
+                responses[responseID]?.message = message.data as? String ?? ""
+            case "reasoning":
+                if let data = message.data as? String {
+                    responses[responseID]?.reasoning.append(data)
+                }
+            default:
+                break
+            }
+
+            // Display the reasoning and response for this turn
+            print("Response \(responseID):", responses[responseID] as Any)
+        }
+    })
+}
 ```
 </Code>
 
@@ -403,6 +509,72 @@ for (Event event : stream) {
     }
 }
 ```
+
+{/*
+Swift test harness:
+func example(realtime: ARTRealtime, stream: [(type: String, text: String, responseID: String)]) async throws {
+    // insert example code here
+}
+*/}
+```swift
+let conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like:
+// { type: "start", responseId: "resp_abc123" }
+// { type: "reasoning", text: "Let's break down the problem: 27 * 12", responseId: "resp_abc123" }
+// { type: "reasoning", text: "First, I can split this into 27 * 10 + 27 * 2", responseId: "resp_abc123" }
+// { type: "reasoning", text: "That gives us 270 + 54 = 324", responseId: "resp_abc123" }
+// { type: "message", text: "27 * 12 = 324", responseId: "resp_abc123" }
+
+for event in stream {
+    if event.type == "start" {
+        // Publish response start control message
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            conversationChannel.publish(
+                "start",
+                data: nil,
+                extras: ["headers": ["responseId": event.responseID]] as ARTJsonCompatible,
+                callback: { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            )
+        }
+    } else if event.type == "reasoning" {
+        // Publish reasoning to separate reasoning channel
+        let reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:\(event.responseID)")
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            reasoningChannel.publish("reasoning", data: event.text, callback: { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            })
+        }
+    } else if event.type == "message" {
+        // Publish model output to main channel
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            conversationChannel.publish(
+                "message",
+                data: event.text,
+                extras: ["headers": ["responseId": event.responseID]] as ARTJsonCompatible,
+                callback: { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            )
+        }
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -538,6 +710,73 @@ void onClickViewReasoning(String responseId) {
     reasoningChannel.subscribe(message -> {
         System.out.println("[Reasoning]: " + message.data);
     });
+}
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(realtime: ARTRealtime) async throws {
+    // insert example code here
+}
+*/}
+```swift
+let conversationChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID
+var responses: [String: String] = [:]
+
+// Subscribe to all messages on the main channel
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    conversationChannel.subscribe(attachCallback: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        MainActor.assumeIsolated {
+            guard let extras = (try? message.extras?.toJSON()) as? [String: Any],
+                  let headers = extras["headers"] as? [String: Any],
+                  let responseID = headers["responseId"] as? String else {
+                print("Message missing responseId")
+                return
+            }
+
+            // Handle response start control message
+            if message.name == "start" {
+                responses[responseID] = ""
+            }
+
+            // Handle model output message
+            if message.name == "message" {
+                responses[responseID] = message.data as? String ?? ""
+            }
+        }
+    })
+}
+
+// Subscribe to reasoning on demand (e.g., when user clicks to view reasoning)
+func onClickViewReasoning(responseID: String) async throws {
+    // Derive reasoning channel name from responseId and
+    // use rewind to retrieve historical reasoning
+    let channelOptions = ARTRealtimeChannelOptions()
+    channelOptions.params = ["rewind": "2m"]
+
+    let reasoningChannel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}:\(responseID)", options: channelOptions)
+
+    // Subscribe to reasoning messages
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+        reasoningChannel.subscribe(attachCallback: { error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume()
+            }
+        }, callback: { message in
+            print("[Reasoning]: \(message.data ?? "")")
+        })
+    }
 }
 ```
 </Code>

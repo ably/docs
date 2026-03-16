@@ -91,6 +91,36 @@ channel.subscribe("user-input", message -> {
     processAndRespond(channel, text, promptId, userId);
 });
 ```
+
+{/*
+Swift test harness:
+func example(
+    channel: ARTRealtimeChannel,
+    processAndRespond: @escaping @Sendable (ARTRealtimeChannel, String, String, String) -> Void
+) async throws {
+    // insert example code here
+}
+*/}
+```swift
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe("user-input", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        guard let userID = message.clientId else { return }
+        // promptId is a user-generated UUID for correlating responses
+        guard let data = message.data as? [String: Any],
+              let promptID = data["promptId"] as? String,
+              let text = data["text"] as? String else { return }
+
+        print("Received prompt from user \(userID)")
+        processAndRespond(channel, text, promptID, userID)
+    })
+}
+```
 </Code>
 
 ### Verify by role <a id="verify-role"/>
@@ -164,6 +194,41 @@ channel.subscribe("user-input", message -> {
     processAndRespond(channel, text, promptId);
 });
 ```
+
+{/*
+Swift test harness:
+func example(
+    channel: ARTRealtimeChannel,
+    processAndRespond: @escaping @Sendable (ARTRealtimeChannel, String, String) -> Void
+) async throws {
+    // insert example code here
+}
+*/}
+```swift
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe("user-input", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        guard let extras = try? message.extras?.toJSON() as? [String: Any],
+              let role = extras["userClaim"] as? String else { return }
+        // promptId is a user-generated UUID for correlating responses
+        guard let data = message.data as? [String: Any],
+              let promptID = data["promptId"] as? String,
+              let text = data["text"] as? String else { return }
+
+        if role != "user" {
+            print("Ignoring message from non-user")
+            return
+        }
+
+        processAndRespond(channel, text, promptID)
+    })
+}
+```
 </Code>
 
 ## Publish user input <a id="publish"/>
@@ -203,6 +268,27 @@ JsonObject data = new JsonObject();
 data.addProperty("promptId", promptId);
 data.addProperty("text", "What is the weather like today?");
 channel.publish("user-input", data);
+```
+
+{/*
+Swift test harness:
+func example(ably: ARTRealtime) async throws {
+    // insert example code here
+}
+*/}
+```swift
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+let promptID = UUID().uuidString
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.publish("user-input", data: ["promptId": promptID, "text": "What is the weather like today?"] as [String: String]) { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
 ```
 </Code>
 
@@ -270,6 +356,41 @@ channel.subscribe("user-input", message -> {
     processAndRespond(channel, text, promptId);
 });
 ```
+
+{/*
+Swift test harness:
+func example(
+    processAndRespond: @escaping @Sendable (ARTRealtimeChannel, String, String) -> Void
+) async throws {
+    // insert example code here
+}
+*/}
+```swift
+import Ably
+
+let ably = ARTRealtime(key: "{{API_KEY}}")
+let channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe("user-input", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        guard let data = message.data as? [String: Any],
+              let promptID = data["promptId"] as? String,
+              let text = data["text"] as? String else { return }
+        let userID = message.clientId
+
+        print("Received prompt from \(userID ?? ""): \(text)")
+
+        // Process the prompt and generate a response
+        processAndRespond(channel, text, promptID)
+    })
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -332,6 +453,36 @@ void processAndRespond(Channel channel, String prompt, String promptId) {
     Message message = new Message("agent-response", response, new MessageExtras(extras));
 
     channel.publish(message);
+}
+```
+
+{/*
+Swift test harness:
+func example(
+    channel: ARTRealtimeChannel,
+    generateAIResponse: @escaping @Sendable (String) async -> String
+) {
+    // insert example code here
+}
+*/}
+```swift
+func processAndRespond(channel: ARTRealtimeChannel, prompt: String, promptID: String) async throws {
+    // Generate the response (e.g., call your AI model)
+    let response = await generateAIResponse(prompt)
+
+    // Publish the response with the promptId for correlation
+    let message = ARTMessage(name: "agent-response", data: response)
+    message.extras = ["headers": ["promptId": promptID]] as ARTJsonCompatible
+
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        channel.publish([message]) { error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume()
+            }
+        }
+    }
 }
 ```
 </Code>
@@ -414,6 +565,55 @@ channel.subscribe("agent-response", message -> {
         pendingPrompts.remove(promptId);
     }
 });
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(channel: ARTRealtimeChannel) async throws {
+    // insert example code here
+}
+*/}
+```swift
+var pendingPrompts: [String: String] = [:]
+
+// Send a prompt and track it
+func sendPrompt(text: String) async throws -> String {
+    let promptID = UUID().uuidString
+    pendingPrompts[promptID] = text
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        channel.publish("user-input", data: ["promptId": promptID, "text": text] as [String: String]) { error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume()
+            }
+        }
+    }
+    return promptID
+}
+
+// Handle responses
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe("agent-response", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        MainActor.assumeIsolated {
+            guard let extras = try? message.extras?.toJSON() as? [String: Any],
+                  let headers = extras["headers"] as? [String: Any],
+                  let promptID = headers["promptId"] as? String else { return }
+
+            if let originalText = pendingPrompts[promptID] {
+                print("Response for \"\(originalText)\": \(message.data ?? "")")
+                pendingPrompts.removeValue(forKey: promptID)
+            }
+        }
+    })
+}
 ```
 </Code>
 
@@ -515,6 +715,56 @@ void streamResponse(Channel channel, String prompt, String promptId) throws Exce
     }
 }
 ```
+
+{/*
+Swift test harness:
+func example(
+    channel: ARTRealtimeChannel,
+    generateTokens: @escaping @Sendable (String) -> any AsyncSequence<String, Never> & Sendable
+) {
+    // insert example code here
+}
+*/}
+```swift
+func streamResponse(channel: ARTRealtimeChannel, prompt: String, promptID: String) async throws {
+    // Create initial message for message-per-response pattern
+    let initialMessage = ARTMessage(name: "agent-response", data: "")
+    initialMessage.extras = ["headers": ["promptId": promptID]] as ARTJsonCompatible
+
+    let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
+        channel.publish([initialMessage]) { result, error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume(returning: result!)
+            }
+        }
+    }
+
+    guard let messageSerial = publishResult.serials.first?.value else {
+        print("No serial returned")
+        return
+    }
+
+    // Stream tokens by appending to the message
+    for await token in generateTokens(prompt) {
+        let appendMessage = ARTMessage()
+        appendMessage.serial = messageSerial
+        appendMessage.data = token
+        appendMessage.extras = ["headers": ["promptId": promptID]] as ARTJsonCompatible
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            channel.append(appendMessage, operation: nil, params: nil) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -591,5 +841,45 @@ channel.subscribe("user-input", message -> {
         activeRequests.remove(promptId);
     }
 });
+```
+
+{/*
+Swift test harness:
+@MainActor
+func example(
+    channel: ARTRealtimeChannel,
+    streamResponse: @escaping @Sendable (ARTRealtimeChannel, String, String) async throws -> Void
+) async throws {
+    // insert example code here
+}
+*/}
+```swift
+// Agent handling multiple concurrent prompts
+var activeRequests: [String: (userID: String, text: String)] = [:]
+
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe("user-input", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        MainActor.assumeIsolated {
+            guard let data = message.data as? [String: Any],
+                  let promptID = data["promptId"] as? String,
+                  let text = data["text"] as? String else { return }
+            guard let userID = message.clientId else { return }
+
+            // Track active request
+            activeRequests[promptID] = (userID: userID, text: text)
+
+            Task {
+                defer { activeRequests.removeValue(forKey: promptID) }
+                try await streamResponse(channel, text, promptID)
+            }
+        }
+    })
+}
 ```
 </Code>

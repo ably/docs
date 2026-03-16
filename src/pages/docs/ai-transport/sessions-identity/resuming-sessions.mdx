@@ -240,6 +240,107 @@ for (Message message : missedMessages) {
     saveLastProcessedTimestamp(message.timestamp);
 }
 ```
+
+{/*
+Swift test harness:
+Dependencies (Package.swift):
+  .package(url: "https://github.com/ably/ably-cocoa", from: "1.2.0")
+
+Stub functions provided by harness (not shown in documentation):
+  func loadChannelName() async -> String
+  func loadLastProcessedTimestamp() async -> Date
+  func processMessage(_ message: ARTMessage)
+  func saveLastProcessedTimestamp(_ timestamp: Date)
+
+The translated code is wrapped in `func resumingSessions1() async throws`.
+*/}
+```swift
+// Agent code
+import Ably
+
+let ably = ARTRealtime(options: {
+    let options = ARTClientOptions()
+    options.key = "{{API_KEY}}"
+    options.clientId = "agent:assistant"
+    return options
+}())
+
+// Load persisted session state
+let channelName = await loadChannelName()
+let lastProcessedTimestamp = await loadLastProcessedTimestamp()
+
+// Use a channel in a namespace with persistence enabled
+// to access more than 2 minutes of message history
+let channel = ably.channels.get(channelName)
+
+// Subscribe to live messages (implicitly attaches the channel)
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.subscribe("prompt", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        // Process the live message
+        processMessage(message)
+
+        // Persist the timestamp after successful processing
+        if let timestamp = message.timestamp {
+            saveLastProcessedTimestamp(timestamp)
+        }
+    })
+}
+
+// Fetch history from the attachment point back to the last checkpoint
+var page: ARTPaginatedResult<ARTMessage>? = try await withCheckedThrowingContinuation { continuation in
+    do {
+        try channel.history(
+            {
+                let query = ARTRealtimeHistoryQuery()
+                query.untilAttach = true
+                query.start = lastProcessedTimestamp
+                return query
+            }()
+        ) { result, error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume(returning: result!)
+            }
+        }
+    } catch {
+        continuation.resume(throwing: error)
+    }
+}
+
+// Paginate through all missed messages, storing in oldest-to-newest order
+var missedMessages: [ARTMessage] = []
+while let currentPage = page {
+    missedMessages.insert(contentsOf: currentPage.items.reversed(), at: 0)
+
+    // Move to next page if available
+    if currentPage.hasNext {
+        page = await withCheckedContinuation { continuation in
+            currentPage.next { result, _ in
+                continuation.resume(returning: result)
+            }
+        }
+    } else {
+        page = nil
+    }
+}
+
+// Process messages oldest-to-newest
+for message in missedMessages {
+    processMessage(message)
+
+    // Persist the timestamp after successful processing
+    if let timestamp = message.timestamp {
+        saveLastProcessedTimestamp(timestamp)
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">

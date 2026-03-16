@@ -181,6 +181,103 @@ for (Event event : stream) {
     }
 }
 ```
+
+{/*
+Swift test harness:
+
+import Ably
+
+struct StreamEvent {
+    let type: String
+    let name: String
+    let args: String
+    let result: String
+    let text: String
+    let responseID: String
+    let toolCallID: String
+}
+
+func toolCalls1(realtime: ARTRealtime, stream: [StreamEvent]) async throws {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Example: stream returns events like:
+// { type: "tool_call", name: "get_weather", args: "{\"location\":\"San Francisco\"}", toolCallID: "tool_123", responseID: "resp_abc123" }
+// { type: "tool_result", name: "get_weather", result: "{\"temp\":72,\"conditions\":\"sunny\"}", toolCallID: "tool_123", responseID: "resp_abc123" }
+// { type: "message", text: "The weather in San Francisco is 72°F and sunny.", responseID: "resp_abc123" }
+
+for event in stream {
+    if event.type == "tool_call" {
+        // Publish tool call arguments
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            channel.publish(
+                "tool_call",
+                data: [
+                    "name": event.name,
+                    "args": event.args
+                ] as [String: String],
+                extras: [
+                    "headers": [
+                        "responseId": event.responseID,
+                        "toolCallId": event.toolCallID
+                    ]
+                ] as NSDictionary as ARTJsonCompatible
+            ) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    } else if event.type == "tool_result" {
+        // Publish tool call results
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            channel.publish(
+                "tool_result",
+                data: [
+                    "name": event.name,
+                    "result": event.result
+                ] as [String: String],
+                extras: [
+                    "headers": [
+                        "responseId": event.responseID,
+                        "toolCallId": event.toolCallID
+                    ]
+                ] as NSDictionary as ARTJsonCompatible
+            ) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    } else if event.type == "message" {
+        // Publish model output messages
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            channel.publish(
+                "message",
+                data: event.text,
+                extras: [
+                    "headers": [
+                        "responseId": event.responseID
+                    ]
+                ] as NSDictionary as ARTJsonCompatible
+            ) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -342,6 +439,80 @@ channel.subscribe(message -> {
     System.out.println("Response " + responseId + ": " + response);
 });
 ```
+
+{/*
+Swift test harness:
+
+import Ably
+
+struct ToolCallInfo {
+    var name: String
+    var args: String
+    var result: String?
+}
+
+struct ResponseInfo {
+    var toolCalls: [String: ToolCallInfo]
+    var message: String
+}
+
+@MainActor
+func toolCalls2(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track responses by ID, each containing tool calls and final response
+var responses: [String: ResponseInfo] = [:]
+
+// Subscribe to all events on the channel
+channel.subscribe { message in
+    let extras = try? message.extras?.toJSON()
+    let headers = extras?["headers"] as? [String: String]
+    let responseID = headers?["responseId"]
+
+    guard let responseID else {
+        print("Message missing responseId")
+        return
+    }
+
+    MainActor.assumeIsolated {
+        // Initialize response object if needed
+        if responses[responseID] == nil {
+            responses[responseID] = ResponseInfo(
+                toolCalls: [:],
+                message: ""
+            )
+        }
+
+        // Handle each message type
+        switch message.name {
+        case "message":
+            responses[responseID]?.message = message.data as? String ?? ""
+        case "tool_call":
+            let toolCallID = headers?["toolCallId"]
+            if let toolCallID, let data = message.data as? [String: String] {
+                responses[responseID]?.toolCalls[toolCallID] = ToolCallInfo(
+                    name: data["name"] ?? "",
+                    args: data["args"] ?? ""
+                )
+            }
+        case "tool_result":
+            let resultToolCallID = headers?["toolCallId"]
+            if let resultToolCallID, let data = message.data as? [String: String] {
+                responses[responseID]?.toolCalls[resultToolCallID]?.result = data["result"]
+            }
+        default:
+            break
+        }
+
+        // Display the tool calls and response for this turn
+        print("Response \(responseID):", responses[responseID]!)
+    }
+}
+```
 </Code>
 
 <Aside data-type="further-reading">
@@ -410,6 +581,39 @@ channel.subscribe(message -> {
         }
     }
 });
+```
+
+{/*
+Swift test harness:
+
+import Ably
+
+func renderWeatherCard(_ data: [String: Any]) {}
+
+func toolCalls3(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe { message in
+    // Render component when tool is invoked
+    if message.name == "tool_call", let data = message.data as? [String: String], data["name"] == "get_weather" {
+        if let argsJSON = data["args"]?.data(using: .utf8),
+           let args = try? JSONSerialization.jsonObject(with: argsJSON) as? [String: Any] {
+            renderWeatherCard(["location": args["location"] as Any, "loading": true])
+        }
+    }
+
+    // Update component with results
+    if message.name == "tool_result", let data = message.data as? [String: String], data["name"] == "get_weather" {
+        if let resultJSON = data["result"]?.data(using: .utf8),
+           let result = try? JSONSerialization.jsonObject(with: resultJSON) as? [String: Any] {
+            renderWeatherCard(result)
+        }
+    }
+}
 ```
 </Code>
 
@@ -525,6 +729,62 @@ channel.subscribe("tool_call", message -> {
     }
 });
 ```
+
+{/*
+Swift test harness:
+
+import Ably
+
+struct GeolocationResult {
+    struct Coords {
+        let latitude: Double
+        let longitude: Double
+    }
+    let coords: Coords
+}
+
+func getGeolocationPosition() async -> GeolocationResult {
+    GeolocationResult(coords: .init(latitude: 0, longitude: 0))
+}
+
+func toolCalls4(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+channel.subscribe("tool_call") { message in
+    guard let data = message.data as? [String: Any] else { return }
+    let name = data["name"] as? String ?? ""
+    let extras = try? message.extras?.toJSON()
+    let headers = extras?["headers"] as? [String: String]
+    let responseID = headers?["responseId"] ?? ""
+    let toolCallID = headers?["toolCallId"] ?? ""
+
+    if name == "get_location" {
+        Task {
+            let result = await getGeolocationPosition()
+            channel.publish(
+                "tool_result",
+                data: [
+                    "name": name,
+                    "result": [
+                        "lat": result.coords.latitude,
+                        "lng": result.coords.longitude
+                    ] as [String: Double]
+                ] as [String: Any],
+                extras: [
+                    "headers": [
+                        "responseId": responseID,
+                        "toolCallId": toolCallID
+                    ]
+                ] as NSDictionary as ARTJsonCompatible
+            )
+        }
+    }
+}
+```
 </Code>
 
 <Aside data-type="note">
@@ -589,6 +849,37 @@ channel.subscribe("tool_result", message -> {
 
     pendingToolCalls.remove(toolCallId);
 });
+```
+
+{/*
+Swift test harness:
+
+import Ably
+
+func processResult(_ responseID: String, _ toolCallID: String, _ result: Any) {}
+
+@MainActor
+func toolCalls5(channel: ARTRealtimeChannel) {
+    // insert example code here
+}
+*/}
+```swift
+var pendingToolCalls: [String: (responseID: String, toolCallID: String)] = [:]
+
+channel.subscribe("tool_result") { message in
+    guard let data = message.data as? [String: Any] else { return }
+    let toolCallID = data["toolCallId"] as? String ?? ""
+    let result = data["result"]
+
+    MainActor.assumeIsolated {
+        guard let pending = pendingToolCalls[toolCallID] else { return }
+
+        // Pass result back to the AI model to continue the conversation
+        processResult(pending.responseID, toolCallID, result as Any)
+
+        pendingToolCalls.removeValue(forKey: toolCallID)
+    }
+}
 ```
 </Code>
 
@@ -805,6 +1096,113 @@ Message resultMsg = new Message(
 );
 channel.publish(resultMsg);
 ```
+
+{/*
+Swift test harness:
+
+import Ably
+
+func toolCalls6(realtime: ARTRealtime) async throws {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Publish initial tool call
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.publish(
+        "tool_call",
+        data: [
+            "name": "process_document",
+            "args": ["documentId": "doc_123", "pages": 100] as [String: Any]
+        ] as [String: Any],
+        extras: [
+            "headers": [
+                "responseId": "resp_abc123",
+                "toolCallId": "tool_456"
+            ]
+        ] as NSDictionary as ARTJsonCompatible
+    ) { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
+
+// Publish progress updates as tool executes
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.publish(
+        "tool_progress",
+        data: [
+            "name": "process_document",
+            "status": "Processing page 25 of 100",
+            "percentComplete": 25
+        ] as [String: Any],
+        extras: [
+            "headers": [
+                "responseId": "resp_abc123",
+                "toolCallId": "tool_456"
+            ]
+        ] as NSDictionary as ARTJsonCompatible
+    ) { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
+
+// Continue publishing progress as work progresses
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.publish(
+        "tool_progress",
+        data: [
+            "name": "process_document",
+            "status": "Processing page 75 of 100",
+            "percentComplete": 75
+        ] as [String: Any],
+        extras: [
+            "headers": [
+                "responseId": "resp_abc123",
+                "toolCallId": "tool_456"
+            ]
+        ] as NSDictionary as ARTJsonCompatible
+    ) { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
+
+// Publish final result
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    channel.publish(
+        "tool_result",
+        data: [
+            "name": "process_document",
+            "result": ["processedPages": 100, "summary": "Document processed successfully"] as [String: Any]
+        ] as [String: Any],
+        extras: [
+            "headers": [
+                "responseId": "resp_abc123",
+                "toolCallId": "tool_456"
+            ]
+        ] as NSDictionary as ARTJsonCompatible
+    ) { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
+```
 </Code>
 
 Subscribe to progress updates on the client by listening for the `tool_progress` message type:
@@ -924,6 +1322,70 @@ channel.subscribe(message -> {
             break;
     }
 });
+```
+
+{/*
+Swift test harness:
+
+import Ably
+
+struct ToolProgressInfo {
+    var name: String
+    var status: String
+    var percentComplete: Int
+}
+
+func renderProgressBar(_ toolCallID: String, _ percentComplete: Int) {}
+func renderCompleted(_ toolCallID: String, _ result: Any) {}
+
+@MainActor
+func toolCalls7(realtime: ARTRealtime) {
+    // insert example code here
+}
+*/}
+```swift
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+
+// Track tool execution progress
+var toolProgress: [String: ToolProgressInfo] = [:]
+
+channel.subscribe { message in
+    let extras = try? message.extras?.toJSON()
+    let headers = extras?["headers"] as? [String: String]
+    let toolCallID = headers?["toolCallId"]
+
+    MainActor.assumeIsolated {
+        switch message.name {
+        case "tool_call":
+            if let toolCallID, let data = message.data as? [String: Any] {
+                toolProgress[toolCallID] = ToolProgressInfo(
+                    name: data["name"] as? String ?? "",
+                    status: "Starting...",
+                    percentComplete: 0
+                )
+                renderProgressBar(toolCallID, 0)
+            }
+
+        case "tool_progress":
+            if let toolCallID, toolProgress[toolCallID] != nil, let data = message.data as? [String: Any] {
+                toolProgress[toolCallID]?.status = data["status"] as? String ?? ""
+                toolProgress[toolCallID]?.percentComplete = data["percentComplete"] as? Int ?? 0
+                renderProgressBar(toolCallID, data["percentComplete"] as? Int ?? 0)
+            }
+
+        case "tool_result":
+            if let toolCallID {
+                toolProgress.removeValue(forKey: toolCallID)
+                if let data = message.data as? [String: Any] {
+                    renderCompleted(toolCallID, data["result"] as Any)
+                }
+            }
+
+        default:
+            break
+        }
+    }
+}
 ```
 </Code>
 
