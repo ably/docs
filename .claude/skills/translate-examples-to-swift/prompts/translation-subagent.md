@@ -207,13 +207,159 @@ For examples of how JavaScript code is typically translated to Swift (e.g., how 
 
 - Keep the translated code as close to the original JavaScript as possible; don't make material changes without good reason
 
+#### Bridging ably-cocoa callbacks with `async` / `await`
+
+The ably-cocoa SDK uses Objective-C-style callbacks, but all translated Swift code should use `async` / `await` to match the JavaScript examples' structure. Bridge one-shot SDK callbacks with `withCheckedThrowingContinuation`.
+
+There are three categories of SDK call, each translated differently:
+
+##### One-shot calls where JS uses `await`
+
+When JavaScript `await`s a one-shot SDK call (publish, history, annotations.publish, etc.), bridge it with `withCheckedThrowingContinuation`. Always `await` when JS does, even if the result isn't used — this preserves the JS semantics and keeps translations consistent.
+
+##### One-shot calls where JS does NOT `await` (fire-and-forget)
+
+When JavaScript intentionally does not `await` a one-shot SDK call (e.g. `channel.appendMessage(...)` with no `await`), wrap it in a `Task` with a continuation whose result is not awaited. This makes the fire-and-forget intent explicit — a reader can see the `Task { }` and know that the work is deliberately launched without waiting for it, just as the missing `await` signals this in JS.
+
+For example, given this JavaScript:
+
+```javascript
+const { serials: [msgSerial] } = await channel.publish({ name: 'response', data: '' });
+
+for await (const event of stream) {
+  // No await — fire-and-forget
+  channel.appendMessage({ serial: msgSerial, data: event.text });
+}
+```
+
+The `publish` is awaited, so it gets a continuation. The `appendMessage` is not awaited, so it becomes a `Task` that nobody awaits:
+
+```swift
+let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
+    channel.publish("response", data: "") { result, error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume(returning: result!)
+        }
+    }
+}
+
+guard let msgSerial = publishResult.serials.first?.value else {
+    print("No serial returned")
+    return
+}
+
+for await event in stream {
+    let messageToAppend = ARTMessage()
+    messageToAppend.serial = msgSerial
+    messageToAppend.data = event.text
+
+    Task {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+}
+```
+
+If the JS code fires off multiple operations and then _later_ checks for failures (e.g. collecting promises and checking with `Promise.allSettled`), use `Task` + task groups with continuations inside the task group to mirror the deferred error-checking pattern.
+
+##### Persistent listeners (subscribe)
+
+`channel.subscribe` callbacks fire multiple times, so they cannot be bridged to a single `await`. These remain as callbacks in the translated code.
+
+However, when the JS `await`s the subscribe call itself (e.g. `await channel.subscribe('prompt', callback)`), the `await` is waiting for the implicit channel attach. Bridge this with `subscribe(_:onAttach:callback:)`:
+
+```swift
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.subscribe("prompt", onAttach: { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }, callback: { message in
+        // This callback fires for each message — it stays as a callback
+        processMessage(message)
+    })
+}
+```
+
+If the JS does NOT `await` the subscribe (just `channel.subscribe('prompt', callback)` with no `await`), use the simple form without `onAttach:`.
+
+#### The `(result, error)` callback convention
+
+ably-cocoa callbacks pass `(Result?, Error?)` where the convention is exactly one is non-nil. When bridging with a continuation, force-unwrap the result — this enforces the convention and is the only acceptable use of force-unwrap:
+
+```swift
+let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
+    channel.publish("response", data: data) { result, error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume(returning: result!)  // Force-unwrap: if no error, result is non-nil
+        }
+    }
+}
+```
+
+For error-only callbacks (like `ARTCallback` used by `annotations.publish`), there is no result to unwrap:
+
+```swift
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.annotations.publish(forMessageSerial: msgSerial, annotation: annotation) { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
+```
+
+After the continuation, use optional chaining + `guard` for anything else — never force-unwrap beyond the callback convention itself:
+
+```swift
+guard let msgSerial = publishResult.serials.first?.value else {
+    print("No serial returned")
+    return
+}
+```
+
+#### The `channel.history` special case
+
+`ARTRealtimeChannel.history(_:callback:)` is unusual: the ObjC method signature is `- (BOOL)history:callback:error:`, which Swift bridges as `throws`. The continuation closure passed to `withCheckedThrowingContinuation` is non-throwing (`(CheckedContinuation<T, Error>) -> Void`), so you need a `do`/`catch` _inside_ the continuation to handle the synchronous `throws`:
+
+```swift
+var page = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPaginatedResult<ARTMessage>?, Error>) in
+    do {
+        try channel.history(query) { page, error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume(returning: page)
+            }
+        }
+    } catch {
+        continuation.resume(throwing: error)
+    }
+}
+```
+
 #### Handling mutable state with @MainActor
+
+This section applies when **subscribe callbacks mutate local state**. Since subscribe callbacks remain as callbacks (they can't be bridged to `await`), and they need to access mutable state declared outside the callback, you need `@MainActor` isolation.
 
 **Do NOT create custom actor types** (e.g., `actor PendingPrompts { ... }` or `actor ActiveRequestsStore { ... }`). This adds unnecessary complexity and diverges from the JavaScript's simple approach.
 
-Instead, when the JavaScript example uses mutable local variables (like `Map`, arrays, or objects that get mutated), use `@MainActor` isolation with plain local variables. This keeps the Swift code close to the JavaScript structure.
-
-Mark the harness function with `@MainActor`. Since ably-cocoa executes callbacks on the main thread by default, use `MainActor.assumeIsolated { }` inside callbacks to access main-actor-isolated state:
+Instead, mark the harness function with `@MainActor` and use plain local variables. Since ably-cocoa executes callbacks on the main thread by default, use `MainActor.assumeIsolated { }` inside subscribe callbacks to access main-actor-isolated state:
 
 ```swift
 @MainActor
@@ -232,10 +378,28 @@ func example(channel: ARTRealtimeChannel) {
 }
 ```
 
-This pattern:
-- Mirrors JavaScript's straightforward mutable variable approach
-- Avoids custom actor types, which are rarely used in typical Swift code and would be unfamiliar to most readers
-- Is simpler for readers to understand
+If a subscribe callback needs to do async work (e.g. calling a nested `async` function) that also touches the mutable state, use `Task { }` inside `MainActor.assumeIsolated { }`. The `Task` inherits `@MainActor` isolation from the `assumeIsolated` closure, so an explicit `@MainActor` annotation on the `Task` is not needed:
+
+```swift
+@MainActor
+func example(channel: ARTRealtimeChannel) {
+    var activeRequests: [String: String] = [:]
+
+    channel.subscribe("user-input") { message in
+        MainActor.assumeIsolated {
+            let promptID = (message.data as? [String: Any])?["promptId"] as? String ?? ""
+            activeRequests[promptID] = "processing"
+
+            Task {
+                defer { activeRequests.removeValue(forKey: promptID) }
+                await processRequest(promptID)
+            }
+        }
+    }
+}
+```
+
+**When `@MainActor` is NOT needed**: If no subscribe callback mutates local state — i.e. callbacks just pass data to functions or print output — then `@MainActor` should not be used on the harness function. If a subscribe callback needs to launch async work but doesn't touch shared mutable state, a plain `Task { }` (without `@MainActor` or `MainActor.assumeIsolated`) suffices.
 
 #### Nested functions
 
@@ -295,30 +459,14 @@ guard let userID = message.clientId else { return }
 ```
 Exception: `?? ""` is acceptable inside string interpolation purely for display (e.g., `print("User: \(member.clientId ?? "")")`).
 
-**C7. `async throws` with continuations**: When the JavaScript has `async function`, the Swift equivalent should be `async throws` using `withCheckedThrowingContinuation` to bridge callback-based SDK calls:
-```swift
-func sendPrompt(text: String) async throws {
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-        channel.publish("prompt", data: text) { error in
-            if let error {
-                continuation.resume(throwing: error)
-            } else {
-                continuation.resume()
-            }
-        }
-    }
-}
-```
-Use this when the JavaScript function awaits SDK calls. Use plain callback chaining when only demonstrating SDK call sequences.
-
-**C8. Avoid `as Any` casts**: `as Any` is a code smell. Fix depending on cause:
+**C7. Avoid `as Any` casts**: `as Any` is a code smell. Fix depending on cause:
 - **Optional in dictionary literal**: Guard/unwrap the optional first, then put the unwrapped value in the dictionary.
 - **Discriminated data**: Use an enum with associated data so each case carries exactly the fields it needs.
 - **Optional in non-optional context**: Guard/unwrap.
 
-**C9. No `(value: T, Void)` tuples for single-property types**: Do NOT use tuples like `(text: String, Void)` to mimic JS objects with one property. Use `T` directly — e.g., `[String: String]` instead of `[String: (text: String, Void)]`.
+**C8. No `(value: T, Void)` tuples for single-property types**: Do NOT use tuples like `(text: String, Void)` to mimic JS objects with one property. Use `T` directly — e.g., `[String: String]` instead of `[String: (text: String, Void)]`.
 
-**C10. No `nonisolated(unsafe)`**: Never use `nonisolated(unsafe)` for mutable state. Instead, mark the harness function with `@MainActor` and use `MainActor.assumeIsolated { }` inside ably-cocoa callbacks to access main-actor-isolated state. See the [Handling mutable state with @MainActor](#handling-mutable-state-with-mainactor) section above.
+**C9. No `nonisolated(unsafe)`**: Never use `nonisolated(unsafe)` for mutable state. Instead, mark the harness function with `@MainActor` and use `MainActor.assumeIsolated { }` inside ably-cocoa subscribe callbacks to access main-actor-isolated state. See the [Handling mutable state with @MainActor](#handling-mutable-state-with-mainactor) section above.
 
 ---
 
@@ -326,33 +474,45 @@ For example, a candidate translation of the running example would be:
 
 ```swift
 // Publish initial message and capture the serial for appending tokens
-channel.publish("response", data: "") { publishResult, error in
-    if let error {
-        print("Error publishing message: \(error)")
-        return
+let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
+    channel.publish("response", data: "") { result, error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume(returning: result!)
+        }
     }
+}
 
-    let msgSerial = publishResult!.serials[0].value!
+guard let msgSerial = publishResult.serials.first?.value else {
+    print("No serial returned")
+    return
+}
 
-    Task {
-        // Example: stream returns events like { type: 'token', text: 'Hello' }
-        for await event in stream {
-          // Append each token as it arrives
-          if (event.type == "token") {
-              let messageToAppend = ARTMessage()
-              messageToAppend.serial = msgSerial
-              messageToAppend.data = event.text
+// Example: stream returns events like { type: 'token', text: 'Hello' }
+for await event in stream {
+    // Append each token as it arrives
+    if event.type == "token" {
+        let messageToAppend = ARTMessage()
+        messageToAppend.serial = msgSerial
+        messageToAppend.data = event.text
 
-              channel.append(messageToAppend, operation: nil, params: nil) { _, error in
-                  if let error {
-                      print("Error appending to message: \(error)")
-                  }
-              }
-          }
+        Task {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            }
         }
     }
 }
 ```
+
+Note how the JS `await channel.publish(...)` becomes a `try await withCheckedThrowingContinuation`, while the JS `channel.appendMessage(...)` (no `await`) becomes a `Task { }` that nobody awaits.
 
 ---
 
@@ -361,31 +521,41 @@ channel.publish("response", data: "") { publishResult, error in
 Insert the translated code from step 2 into the test harness from step 1:
 
 ```swift
-func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable) async throws {
+func example_streaming_1(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable) async throws {
     // Publish initial message and capture the serial for appending tokens
-    channel.publish("response", data: "") { publishResult, error in
-        if let error {
-            print("Error publishing message: \(error)")
-            return
+    let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
+        channel.publish("response", data: "") { result, error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume(returning: result!)
+            }
         }
+    }
 
-        let msgSerial = publishResult!.serials[0].value!
+    guard let msgSerial = publishResult.serials.first?.value else {
+        print("No serial returned")
+        return
+    }
 
-        Task {
-            // Example: stream returns events like { type: 'token', text: 'Hello' }
-            for await event in stream {
-              // Append each token as it arrives
-              if (event.type == "token") {
-                  let messageToAppend = ARTMessage()
-                  messageToAppend.serial = msgSerial
-                  messageToAppend.data = event.text
+    // Example: stream returns events like { type: 'token', text: 'Hello' }
+    for await event in stream {
+        // Append each token as it arrives
+        if event.type == "token" {
+            let messageToAppend = ARTMessage()
+            messageToAppend.serial = msgSerial
+            messageToAppend.data = event.text
 
-                  channel.append(messageToAppend, operation: nil, params: nil) { _, error in
-                      if let error {
-                          print("Error appending to message: \(error)")
-                      }
-                  }
-              }
+            Task {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    channel.append(messageToAppend, operation: nil, params: nil) { _, error in
+                        if let error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume()
+                        }
+                    }
+                }
             }
         }
     }
