@@ -125,7 +125,20 @@ Compare the Swift translation to the original JavaScript code block in the same 
 
 Rate faithfulness as: faithful, minor_differences (list them), or significant_deviation (explain)
 
-### 5. Write verification JSON
+### 5. Check convention compliance
+
+Read the "Guidance" and "Conventions" sections of `.claude/skills/translate-examples-to-swift/prompts/translation-subagent.md`. Check each Swift example for violations. In particular, look for:
+
+- `nonisolated(unsafe)` (forbidden by C9)
+- Force-unwraps beyond the `(result, error)` callback convention (i.e. force-unwrapping a result that isn't being used)
+- Logic inside continuation callbacks beyond resuming the continuation (values should be extracted after the `await`, not inside the callback)
+- Fire-and-forget SDK calls using bare callbacks instead of `Task { }` with a continuation inside
+- `@MainActor` on functions where no subscribe callback mutates local state
+- Missing `onAttach:` / `attachCallback:` on subscribe calls where the JS `await`s the subscribe
+
+Record any violations in the faithfulness notes. Rate as minor_differences if there are convention violations even if the code is otherwise faithful to the JS.
+
+### 6. Write verification JSON
 
 Write the results to swift-translations/verifications/{FILENAME}.json conforming to the schema, then validate with `npx ajv-cli validate` — do not use python or other tools for JSON validation. Each example in the `examples` array must include:
 
@@ -137,7 +150,7 @@ Write the results to swift-translations/verifications/{FILENAME}.json conforming
 - `compilation`: `{ "status": "pass" }` or `{ "status": "fail", "errorMessage": "..." }`
 - `faithfulness`: `{ "rating": "faithful" }` or `{ "rating": "minor_differences", "notes": "..." }`
 
-### 6. Report findings
+### 7. Report findings
 
 Provide a summary of what you verified and any issues found.
 
