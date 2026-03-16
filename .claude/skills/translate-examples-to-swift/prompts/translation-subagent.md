@@ -296,7 +296,9 @@ If the JS does NOT `await` the subscribe (just `channel.subscribe('prompt', call
 
 #### The `(result, error)` callback convention
 
-ably-cocoa callbacks pass `(Result?, Error?)` where the convention is exactly one is non-nil. When bridging with a continuation, force-unwrap the result — this enforces the convention and is the only acceptable use of force-unwrap:
+ably-cocoa callbacks pass `(Result?, Error?)` where the convention is exactly one is non-nil.
+
+**When you need the result**, force-unwrap `result!` inside the continuation — this enforces the convention and is the only acceptable use of force-unwrap:
 
 ```swift
 let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
@@ -310,26 +312,28 @@ let publishResult = try await withCheckedThrowingContinuation { (continuation: C
 }
 ```
 
-For error-only callbacks (like `ARTCallback` used by `annotations.publish`), there is no result to unwrap:
+After the continuation, use optional chaining + `guard` for everything else — never force-unwrap beyond the callback convention itself:
+
+```swift
+guard let msgSerial = publishResult.serials.first?.value else {
+    print("No serial returned")
+    return
+}
+```
+
+The callback body should do nothing beyond resuming the continuation. Do not extract values, perform logic, or branch inside the callback — the whole point of the continuation is to get the result out so you can work with it sequentially after the `await`.
+
+**When you only care about success or failure** (you don't need the result value), just check the error — do not force-unwrap a result you're going to discard:
 
 ```swift
 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-    channel.annotations.publish(forMessageSerial: msgSerial, annotation: annotation) { error in
+    channel.publish([message]) { _, error in
         if let error {
             continuation.resume(throwing: error)
         } else {
             continuation.resume()
         }
     }
-}
-```
-
-After the continuation, use optional chaining + `guard` for anything else — never force-unwrap beyond the callback convention itself:
-
-```swift
-guard let msgSerial = publishResult.serials.first?.value else {
-    print("No serial returned")
-    return
 }
 ```
 
