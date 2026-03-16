@@ -108,60 +108,6 @@ MessageMetadata metadata = new MessageMetadata();
 metadata.put("phase", "done");
 channel.appendMessage(msgSerial, "", metadata);
 ```
-{/*
-Swift test harness:
-func example(realtime: ARTRealtime, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable) {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-// Publish initial message
-channel.publish("response", data: "") { publishResult, error in
-    if let error {
-        print("Error publishing message: \(error)")
-        return
-    }
-
-    guard let msgSerial = publishResult?.serials.first?.value else {
-        print("No serial returned")
-        return
-    }
-
-    Task {
-        // Stream tokens
-        for await event in stream {
-            if event.type == "token" {
-                let messageToAppend = ARTMessage()
-                messageToAppend.serial = msgSerial
-                messageToAppend.data = event.text
-
-                let operation = ARTMessageOperation(
-                    clientId: nil,
-                    descriptionText: nil,
-                    metadata: ["phase": "streaming"]
-                )
-
-                channel.append(messageToAppend, operation: operation, params: nil, callback: nil)
-            }
-        }
-
-        // Signal content-part completion with an empty append
-        let completionMessage = ARTMessage()
-        completionMessage.serial = msgSerial
-        completionMessage.data = ""
-
-        let completionOperation = ARTMessageOperation(
-            clientId: nil,
-            descriptionText: nil,
-            metadata: ["phase": "done"]
-        )
-
-        channel.append(completionMessage, operation: completionOperation, params: nil, callback: nil)
-    }
-}
-```
 </Code>
 
 <Aside data-type="note">
@@ -205,23 +151,6 @@ headers.addProperty("responseId", "resp_abc123");
 extras.add("headers", headers);
 
 channel.publish(new Message("response-end", "", new MessageExtras(extras)));
-```
-{/*
-Swift test harness:
-func example(channel: ARTRealtimeChannel) {
-    // insert example code here
-}
-*/}
-```swift
-// After all content parts are done, signal response-level completion
-let message = ARTMessage(name: "response-end", data: "")
-message.extras = [
-    "headers": [
-        "responseId": "resp_abc123"
-    ]
-] as ARTJsonCompatible
-
-channel.publish([message], callback: nil)
 ```
 </Code>
 
@@ -298,51 +227,6 @@ while (page != null) {
     page = page.hasNext() ? page.next() : null;
 }
 ```
-{/*
-Swift test harness:
-func example(realtime: ARTRealtime) throws {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-channel.subscribe { message in
-    // ...handle message actions as normal...
-}
-
-let query = ARTRealtimeHistoryQuery()
-query.untilAttach = true
-
-try channel.history(query) { page, error in
-    if let error {
-        print("Error fetching history: \(error)")
-        return
-    }
-
-    func processPage(_ page: ARTPaginatedResult<ARTMessage>?) {
-        guard let page else { return }
-
-        for message in page.items {
-            let phase = message.version?.metadata?["phase"]
-
-            if phase == "done" {
-                // Content part is complete, render as final
-            } else {
-                // Content part may still be streaming, listen for live appends
-            }
-        }
-
-        if page.hasNext {
-            page.next { nextPage, error in
-                processPage(nextPage)
-            }
-        }
-    }
-
-    processPage(page)
-}
-```
 </Code>
 
 <Aside data-type="important">
@@ -402,25 +286,6 @@ headers.addProperty("responseId", "resp_abc123");
 extras.add("headers", headers);
 
 channel.publish(new Message("cancel", "", new MessageExtras(extras)));
-```
-{/*
-Swift test harness:
-func example(realtime: ARTRealtime) {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-// Send cancellation request for a specific response
-let message = ARTMessage(name: "cancel", data: "")
-message.extras = [
-    "headers": [
-        "responseId": "resp_abc123"
-    ]
-] as ARTJsonCompatible
-
-channel.publish([message], callback: nil)
 ```
 </Code>
 
@@ -508,49 +373,6 @@ channel.subscribe("cancel", message -> {
 
     channel.publish(new Message("cancelled", "", new MessageExtras(confirmExtras)));
 });
-```
-{/*
-Swift test harness:
-@MainActor
-func example(realtime: ARTRealtime, stopGeneration: @escaping @MainActor (String) -> Void) {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-// Track pending appends for flushing
-var pendingAppends: [Task<Void, Never>] = []
-
-// Listen for cancellation requests
-channel.subscribe("cancel") { message in
-    MainActor.assumeIsolated {
-        let extras = (try? message.extras?.toJSON()) as? [String: Any]
-        let headers = extras?["headers"] as? [String: Any]
-        guard let responseID = headers?["responseId"] as? String else { return }
-
-        // Stop generation for the matching response
-        stopGeneration(responseID)
-
-        // Flush any pending appends before confirming
-        let appends = pendingAppends
-        Task {
-            for append in appends {
-                await append.value
-            }
-
-            // Optionally confirm cancellation to all subscribers
-            let confirmMessage = ARTMessage(name: "cancelled", data: "")
-            confirmMessage.extras = [
-                "headers": [
-                    "responseId": responseID
-                ]
-            ] as ARTJsonCompatible
-
-            channel.publish([confirmMessage], callback: nil)
-        }
-    }
-}
 ```
 </Code>
 
