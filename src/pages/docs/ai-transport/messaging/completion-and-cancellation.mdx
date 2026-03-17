@@ -341,8 +341,22 @@ try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<V
 let query = ARTRealtimeHistoryQuery()
 query.untilAttach = true
 
-func processPage(_ page: ARTPaginatedResult<ARTMessage>) {
-    for message in page.items {
+var page = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPaginatedResult<ARTMessage>?, Error>) in
+    do {
+        try channel.history(query) { page, error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume(returning: page)
+            }
+        }
+    } catch {
+        continuation.resume(throwing: error)
+    }
+}
+
+while let currentPage = page {
+    for message in currentPage.items {
         let phase = message.version?.metadata?["phase"]
 
         if phase == "done" {
@@ -352,28 +366,15 @@ func processPage(_ page: ARTPaginatedResult<ARTMessage>) {
         }
     }
 
-    if page.hasNext {
-        page.next { nextPage, error in
-            if let nextPage {
-                processPage(nextPage)
+    if currentPage.hasNext {
+        page = await withCheckedContinuation { continuation in
+            currentPage.next { nextPage, _ in
+                continuation.resume(returning: nextPage)
             }
         }
+    } else {
+        break
     }
-}
-
-do {
-    try channel.history(query) { page, error in
-        if let error {
-            print("Failed to get history: \(error.message)")
-            return
-        }
-
-        if let page {
-            processPage(page)
-        }
-    }
-} catch {
-    print("History query error: \(error)")
 }
 ```
 </Code>
@@ -574,8 +575,8 @@ try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<V
     }, callback: { message in
         MainActor.assumeIsolated {
             guard let extras = try? message.extras?.toJSON() as? [String: Any],
-                  let headers = extras["headers"] as? [String: String] else { return }
-            let responseID = headers["responseId"]
+                  let headers = extras["headers"] as? [String: String],
+                  let responseID = headers["responseId"] else { return }
 
             // Stop generation for the matching response
             stopGeneration(responseID)
@@ -591,7 +592,7 @@ try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<V
 
                 // Optionally confirm cancellation to all subscribers
                 let confirmMessage = ARTMessage(name: "cancelled", data: "")
-                confirmMessage.extras = ["headers": ["responseId": responseID ?? ""]] as ARTJsonCompatible
+                confirmMessage.extras = ["headers": ["responseId": responseID]] as ARTJsonCompatible
 
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                     channel.publish([confirmMessage]) { error in
