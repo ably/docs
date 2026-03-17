@@ -1,0 +1,168 @@
+---
+title: Connection
+meta_description: "API reference for the Connection interface in the Ably Chat Kotlin SDK."
+meta_keywords: "Ably Chat SDK, Kotlin, Connection API, onStatusChange, statusAsFlow, status, error, ConnectionStatus"
+---
+
+The `Connection` interface represents the connection to Ably and provides methods to monitor connection status changes. Access the connection via `chatClient.connection`.
+
+<Code>
+```kotlin
+val connection = chatClient.connection
+```
+</Code>
+
+## Properties
+
+The `Connection` interface has the following properties:
+
+<Table id='ConnectionProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| status | The current connection status. | <Table id='ConnectionStatus'/> |
+| error | The error that caused the connection to enter its current status, if any. | [ErrorInfo?](/docs/chat/api/kotlin/chat-client#errorinfo) |
+
+</Table>
+
+<Table id='ConnectionStatus' hidden>
+
+| Status | Description |
+| --- | --- |
+| Initialized | A temporary state for when the library is first initialized. The value is `initialized`. |
+| Connecting | The library is currently connecting to Ably. The value is `connecting`. |
+| Connected | A connection exists and is active. The value is `connected`. |
+| Disconnected | The library is currently disconnected from Ably, but will attempt to reconnect. The value is `disconnected`. |
+| Suspended | The library is in an extended state of disconnection, but will attempt to reconnect. The value is `suspended`. |
+| Failed | The library is currently disconnected from Ably and will not attempt to reconnect. The value is `failed`. |
+| Closing | An explicit request by the developer to close the connection has been sent to the Ably service. The value is `closing`. |
+| Closed | The connection has been explicitly closed by the client. No reconnection attempts are made automatically. The value is `closed`. |
+
+</Table>
+
+## Subscribe to connection status changes <a id="onStatusChange"/>
+
+<MethodSignature>{`connection.onStatusChange(listener: ConnectionStatusListener): Subscription`}</MethodSignature>
+
+Registers a listener to be notified of connection status changes.
+
+<Code>
+```kotlin
+val subscription = chatClient.connection.onStatusChange { change ->
+    println("Status changed from ${change.previous} to ${change.current}")
+    change.error?.let { error ->
+        println("Error: $error")
+    }
+    change.retryIn?.let { retryIn ->
+        println("Retrying in $retryIn ms")
+    }
+}
+
+// To unsubscribe
+subscription.unsubscribe()
+```
+</Code>
+
+### Parameters <a id="onStatusChange-params"/>
+
+The `onStatusChange()` method takes the following parameters:
+
+<Table id='OnStatusChangeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Required | A callback invoked on status changes. | <Table id='ConnectionStatusListener'/> |
+
+</Table>
+
+<Table id='ConnectionStatusListener' hidden>
+
+| Parameter | Description | Type |
+| --- | --- | --- |
+| change | The status change event. | <Table id='ConnectionStatusChange'/> |
+
+</Table>
+
+<Table id='ConnectionStatusChange' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| current | The new connection status. | <Table id='ConnectionStatus'/> |
+| previous | The previous connection status. | <Table id='ConnectionStatus'/> |
+| error | An error that provides a reason why the connection has entered the new status, if applicable. | [ErrorInfo?](/docs/chat/api/kotlin/chat-client#errorinfo) |
+| retryIn | The time in milliseconds that the client will wait before attempting to reconnect, if applicable. | Long? |
+
+</Table>
+
+### Returns <a id="onStatusChange-returns"/>
+
+[`Subscription`](/docs/chat/api/kotlin/rooms#Subscription)
+
+Returns a `Subscription` object.
+
+#### Deregister the listener <a id="onStatusChange-unsubscribe"/>
+
+<MethodSignature>{`subscription.unsubscribe(): Unit`}</MethodSignature>
+
+Call `unsubscribe()` to deregister the connection status listener.
+
+## Collect connection status changes as a Flow <a id="statusAsFlow"/>
+
+<MethodSignature>{`Connection.statusAsFlow(): Flow<ConnectionStatusChange>`}</MethodSignature>
+
+Returns a Kotlin `Flow` that emits connection status changes. This is an extension function on the `Connection` interface that provides a reactive alternative to listener-based subscriptions.
+
+<Code>
+```kotlin
+import kotlinx.coroutines.launch
+
+launch {
+    chatClient.connection.statusAsFlow().collect { change ->
+        println("Status changed from ${change.previous} to ${change.current}")
+    }
+}
+```
+</Code>
+
+### Returns <a id="statusAsFlow-returns"/>
+
+`Flow<ConnectionStatusChange>`
+
+Returns a `Flow` that emits `ConnectionStatusChange` events. The flow automatically manages the underlying subscription.
+
+## Example
+
+<Code>
+```kotlin
+import com.ably.chat.ConnectionStatus
+import kotlinx.coroutines.launch
+
+// Monitor connection status with a listener
+val subscription = chatClient.connection.onStatusChange { change ->
+    when (change.current) {
+        ConnectionStatus.Connected ->
+            println("Connected to Ably")
+        ConnectionStatus.Disconnected ->
+            println("Disconnected, will retry...")
+        ConnectionStatus.Suspended ->
+            println("Connection suspended, retrying in ${change.retryIn} ms")
+        ConnectionStatus.Failed ->
+            println("Connection failed: ${change.error}")
+        else -> {}
+    }
+}
+
+// Or use Flow for reactive collection
+launch {
+    chatClient.connection.statusAsFlow().collect { change ->
+        println("Status: ${change.current}")
+    }
+}
+
+// Check current status
+println("Current status: ${chatClient.connection.status}")
+
+// Clean up
+subscription.unsubscribe()
+```
+</Code>
