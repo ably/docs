@@ -27,14 +27,11 @@ As you work through these steps, collect the data needed for the translation JSO
 
 ### Example IDs
 
-Generate a unique ID for each example using the format `{filename}-{sequential}`, numbering ALL JavaScript examples in the file sequentially:
-- `streaming-1` for the first JavaScript example in `streaming.mdx`
-- `streaming-2` for the second JavaScript example
-- etc.
+Generate a unique ID for each translated example. IDs are random 6-character alphanumeric strings (mixed case), e.g. `Kx9mQ3`, `tR4wBn`, `Hj7nPq`. Just pick a random-looking string — the only requirement is uniqueness.
 
-**Important**: Number all JavaScript examples, even those you don't translate (like data structure literals). This keeps IDs stable and predictable. If you skip translating an example, just skip that ID - don't renumber.
+IDs are written into the MDX harness comment (so the verification agent can read them) and used in your JSON output. They are also used in the harness function name (e.g., `func example_Kx9mQ3(...)`) during compilation.
 
-IDs are used in the harness function name (e.g., `func example_streaming_1(...)`) and in your JSON output. They are **not** written into the MDX harness comment — they are internal to the translation/verification workflow only.
+Only generate IDs for examples you actually translate. Examples you skip (like data structure literals) do not need IDs.
 
 ---
 
@@ -149,10 +146,10 @@ func example(...) {
 
 The key question is: does the type name appear *inside* the translated code, or only in the harness's function signature?
 
-When stub type declarations are needed, wrap them in an enclosing function to provide scope. Use a unique identifier in the function name in case you later want to use the same test harness for multiple examples (for efficiency):
+When stub type declarations are needed, wrap them in an enclosing function to provide scope. Use the example ID in the function name:
 
 ```swift
-func exampleContext_7EEA145D_060F_4DAD_BFBF_1A4CC28856E8() {
+func exampleContext_Kx9mQ3() {
     // Stub type declaration needed because translated code references `ResponseData` by name
     struct ResponseData {
         var timestamp: Date
@@ -171,8 +168,8 @@ For the running example (which doesn't need stub type declarations), create a si
 
 ```swift
 // The body of this function is the translation of the example.
-// Function name includes the example ID (streaming-1 -> example_streaming_1)
-func example_streaming_1(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
+// Function name includes the example ID
+func example_Kx9mQ3(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
     // TODO: fill in with translation of example (to come in next step)
 }
 ```
@@ -525,7 +522,7 @@ Note how the JS `await channel.publish(...)` becomes a `try await withCheckedThr
 Insert the translated code from step 2 into the test harness from step 1:
 
 ```swift
-func example_streaming_1(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable) async throws {
+func example_Kx9mQ3(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never> & Sendable) async throws {
     // Publish initial message and capture the serial for appending tokens
     let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
         channel.publish("response", data: "") { result, error in
@@ -596,7 +593,7 @@ Insert the verified Swift code into the documentation file, within the same `<Co
 ```
 
 {/*
-Swift test harness:
+Swift test harness (id: Kx9mQ3):
 func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type: String, text: String), Never>) async throws {
     // insert example code here
 }
@@ -616,7 +613,7 @@ When **stub types are needed** (the translated code references a type by name), 
 ```
 
 {/*
-Swift test harness:
+Swift test harness (id: tR4wBn):
 struct ResponseData {
     var timestamp: Date
     var content: String

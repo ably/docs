@@ -22,17 +22,17 @@ For each Swift code block that has an accompanying test harness comment:
 ### 1. Extract the code from the MDX
 
 For each `<Code>` block containing both JavaScript and Swift:
-- **Assign an ID** by counting all JavaScript examples in the file sequentially, using the format `{filename}-{sequential}` (e.g., `streaming-1`, `streaming-2`). Number ALL JavaScript examples, even those without Swift translations — if a JS example has no Swift translation, skip that ID number. This must match the same convention used by the translation agent.
+- **Read the ID** from the harness comment. The format is `Swift test harness (id: Kx9mQ3):` — extract the 6-character alphanumeric ID. Do NOT invent or assign your own IDs.
 - Extract the JavaScript code (this goes in `original.code`)
 - Extract the Swift code (this goes in `translation.code`)
-- Extract the function signature from the JSX harness comment (this goes in `harness.functionSignature`)
+- Extract the function signature from the harness comment (this goes in `harness.functionSignature`)
 - Build the full compilable context (this goes in `harness.fullContext`)
 
 The harness comment format is:
 
 ```
 {/*
-Swift test harness:
+Swift test harness (id: Kx9mQ3):
 func example(...) {
     // insert example code here
 }
@@ -83,7 +83,7 @@ The harness file must be assembled mechanically as follows:
 
 1. Start with `import Ably`
 2. For each translated example, wrap its harness comment contents in a scoping function to isolate stub types:
-   - Create an outer function `func scope_{id}()` (using the example ID)
+   - Create an outer function `func scope_{id}()` using the ID from the harness comment
    - Inside the outer function, copy the harness comment contents verbatim: any stub type declarations, then the `func example(...)` with the example code inserted into its body
    - This prevents type name conflicts between examples (e.g., two examples both defining `struct ToolCall` with different fields)
 3. End with the `@main` struct
@@ -91,8 +91,8 @@ The harness file must be assembled mechanically as follows:
 ```swift
 import Ably
 
-// MARK: - Example streaming-1
-func scope_streaming_1() {
+// MARK: - Example Kx9mQ3
+func scope_Kx9mQ3() {
     // (stub types from harness comment, if any, go here)
 
     func example(channel: ARTRealtimeChannel) {
@@ -100,9 +100,8 @@ func scope_streaming_1() {
     }
 }
 
-// MARK: - Example streaming-3
-// (streaming-2 was not translated, so there's a gap in numbering)
-func scope_streaming_3() {
+// MARK: - Example tR4wBn
+func scope_tR4wBn() {
     func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<String, Never> & Sendable) async {
         // Example code from MDX inserted here
     }
@@ -123,8 +122,7 @@ struct SwiftVerification {
 This ensures:
 1. All translated examples are verified in a single compilation
 2. The harness comment's completeness is itself verified — if it's missing context, that's a bug
-3. Function names match the IDs in the JSON output for easy correlation
-4. Gaps in numbering are expected (some JS examples may not have Swift translations)
+3. IDs match between the MDX, the JSON output, and the harness function names
 
 ### 4. Verify compilation
 
@@ -163,7 +161,7 @@ Record any violations in the faithfulness notes. Rate as minor_differences if th
 
 Write the results to swift-translations/verifications/{FILENAME}.json conforming to the schema, then validate with `npx ajv-cli validate` — do not use python or other tools for JSON validation. Each example in the `examples` array must include:
 
-- `id`: The ID assigned by sequential counting (e.g., "streaming-1", "streaming-2")
+- `id`: The ID read from the harness comment (e.g., "Kx9mQ3", "tR4wBn")
 - `lineNumber`: Line number of the JavaScript code block in the MDX (for human reference)
 - `original`: `{ "language": "javascript", "code": "..." }` - the extracted JavaScript code
 - `translation`: `{ "language": "swift", "code": "..." }` - the extracted Swift code
