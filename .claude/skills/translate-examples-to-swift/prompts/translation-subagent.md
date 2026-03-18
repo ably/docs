@@ -81,13 +81,13 @@ Create a Swift package with ably-cocoa as a dependency:
 
 2. Update `Package.swift`:
    ```swift
-   // swift-tools-version: 6.0
+   // swift-tools-version: 6.2
    import PackageDescription
 
    let package = Package(
        name: "SwiftTestHarness",
        platforms: [
-           .macOS(.v15)  // Required for modern Swift features like typed AsyncSequence
+           .macOS(.v26)  // Required for Task.immediate (Swift 6.2+)
        ],
        dependencies: [
            .package(url: "https://github.com/ably/ably-cocoa", from: "1.2.0")
@@ -216,7 +216,7 @@ When JavaScript `await`s a one-shot SDK call (publish, history, annotations.publ
 
 ##### One-shot calls where JS does NOT `await` (fire-and-forget)
 
-When JavaScript intentionally does not `await` a one-shot SDK call (e.g. `channel.appendMessage(...)` with no `await`), wrap it in a `Task` with a continuation whose result is not awaited. This makes the fire-and-forget intent explicit — a reader can see the `Task { }` and know that the work is deliberately launched without waiting for it, just as the missing `await` signals this in JS.
+When JavaScript intentionally does not `await` a one-shot SDK call (e.g. `channel.appendMessage(...)` with no `await`), simply call the ably-cocoa method without a callback (or with a no-op callback `{ _, _ in }` if the API requires one). Do NOT wrap it in a `Task` — this preserves call ordering (important when appending tokens in a loop) and is the most concise translation.
 
 For example, given this JavaScript:
 
@@ -229,7 +229,7 @@ for await (const event of stream) {
 }
 ```
 
-The `publish` is awaited, so it gets a continuation. The `appendMessage` is not awaited, so it becomes a `Task` that nobody awaits:
+The `publish` is awaited, so it gets a continuation. The `appendMessage` is not awaited, so it's called directly without a callback:
 
 ```swift
 let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
@@ -252,7 +252,36 @@ for await event in stream {
     messageToAppend.serial = msgSerial
     messageToAppend.data = event.text
 
-    Task {
+    channel.append(messageToAppend, operation: nil, params: nil)
+}
+```
+
+##### Deferred error checking (`Promise.allSettled` pattern)
+
+When the JS code fires off multiple operations and then _later_ checks for failures (e.g. collecting promises and checking with `Promise.allSettled`), use `Task.immediate` with a continuation inside. `Task.immediate` (Swift 6.2+) starts executing immediately on the current executor before yielding, which preserves the ordering of SDK calls — unlike `Task { }`, which provides no ordering guarantee. Collect the `Task` handles and await them after the loop.
+
+Include a comment in the translated code explaining why `Task.immediate` is used, along the lines of:
+
+```
+// Task.immediate starts on the calling context and continues until it suspends,
+// preserving the order of append calls. Users targeting OS versions prior to
+// macOS 26 / iOS 26 may need to use a callback-based approach instead.
+```
+
+Example:
+
+```swift
+var appendTasks: [Task<Void, Error>] = []
+
+for await event in stream {
+    let messageToAppend = ARTMessage()
+    messageToAppend.serial = msgSerial
+    messageToAppend.data = event.text
+
+    // Task.immediate starts on the calling context and continues until it suspends,
+    // preserving the order of append calls. Users targeting OS versions prior to
+    // macOS 26 / iOS 26 may need to use a callback-based approach instead.
+    let task = Task.immediate {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             channel.append(messageToAppend, operation: nil, params: nil) { _, error in
                 if let error {
@@ -263,10 +292,19 @@ for await event in stream {
             }
         }
     }
+    appendTasks.append(task)
+}
+
+// Check for any failures after the stream completes
+var failed = false
+for task in appendTasks {
+    do {
+        try await task.value
+    } catch {
+        failed = true
+    }
 }
 ```
-
-If the JS code fires off multiple operations and then _later_ checks for failures (e.g. collecting promises and checking with `Promise.allSettled`), use `Task` + task groups with continuations inside the task group to mirror the deferred error-checking pattern.
 
 ##### Persistent listeners (subscribe)
 
@@ -498,22 +536,12 @@ for await event in stream {
         messageToAppend.serial = msgSerial
         messageToAppend.data = event.text
 
-        Task {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                channel.append(messageToAppend, operation: nil, params: nil) { _, error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume()
-                    }
-                }
-            }
-        }
+        channel.append(messageToAppend, operation: nil, params: nil)
     }
 }
 ```
 
-Note how the JS `await channel.publish(...)` becomes a `try await withCheckedThrowingContinuation`, while the JS `channel.appendMessage(...)` (no `await`) becomes a `Task { }` that nobody awaits.
+Note how the JS `await channel.publish(...)` becomes a `try await withCheckedThrowingContinuation`, while the JS `channel.appendMessage(...)` (no `await`) is called directly without a callback.
 
 ---
 
@@ -547,17 +575,7 @@ func example_Kx9mQ3(channel: ARTRealtimeChannel, stream: any AsyncSequence<(type
             messageToAppend.serial = msgSerial
             messageToAppend.data = event.text
 
-            Task {
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    channel.append(messageToAppend, operation: nil, params: nil) { _, error in
-                        if let error {
-                            continuation.resume(throwing: error)
-                        } else {
-                            continuation.resume()
-                        }
-                    }
-                }
-            }
+            channel.append(messageToAppend, operation: nil, params: nil)
         }
     }
 }

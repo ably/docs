@@ -53,13 +53,13 @@ swift package init --type executable
 Update `Package.swift`:
 
 ```swift
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "SwiftVerification",
     platforms: [
-        .macOS(.v15)
+        .macOS(.v26)
     ],
     dependencies: [
         .package(url: "https://github.com/ably/ably-cocoa", from: "1.2.0")
