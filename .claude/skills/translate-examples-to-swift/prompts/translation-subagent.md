@@ -465,7 +465,7 @@ Exception: `?? ""` is acceptable inside string interpolation purely for display 
 - **Discriminated data**: Use an enum with associated data so each case carries exactly the fields it needs.
 - **Optional in non-optional context**: Guard/unwrap.
 
-**C8. No `(value: T, Void)` tuples for single-property types**: Do NOT use tuples like `(text: String, Void)` to mimic JS objects with one property. Use `T` directly — e.g., `[String: String]` instead of `[String: (text: String, Void)]`.
+**C8. No `(value: T, Void)` tuples in user-visible code**: Do NOT use tuples like `(text: String, Void)` to mimic JS objects with one property in the **translated example code** that readers see. Use `T` directly — e.g., `[String: String]` instead of `[String: (text: String, Void)]`. However, `(value: T, Void)` tuples are acceptable in **harness parameters** (the function signature in the harness comment) where they provide labelled property access matching the JS original (e.g., `latest: () -> (timestamp: Date, Void)` so the visible code can write `.latest().timestamp`).
 
 **C9. No `nonisolated(unsafe)`**: Never use `nonisolated(unsafe)` for mutable state. Instead, mark the harness function with `@MainActor` and use `MainActor.assumeIsolated { }` inside ably-cocoa subscribe callbacks to access main-actor-isolated state. See the [Handling mutable state with @MainActor](#handling-mutable-state-with-mainactor) section above.
 
