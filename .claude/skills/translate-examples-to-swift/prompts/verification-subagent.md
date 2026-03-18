@@ -41,9 +41,9 @@ func example(...) {
 
 It may also include stub type declarations before the function.
 
-### 2. Recreate the test harness from scratch
+### 2. Create a fresh Swift package
 
-Create a new Swift package in swift-translations/verify-{FILENAME}/:
+Create a new Swift package in swift-translations/verify-{FILENAME}/ (do NOT reuse any package created by the translation agent):
 
 ```bash
 mkdir -p swift-translations/verify-{FILENAME} && cd swift-translations/verify-{FILENAME}
@@ -75,20 +75,37 @@ let package = Package(
 )
 ```
 
-Create the harness in `Sources/SwiftVerification/main.swift`. **Important**: Include ALL Swift examples from the MDX file in a single harness file. Use the assigned example ID in each function name:
+### 3. Assemble the harness strictly from the MDX harness comment
+
+Populate `Sources/SwiftVerification/main.swift` using **only** what the MDX harness comment provides. Do NOT add any types, functions, variables, or other declarations that are not present in the harness comment.
+
+The harness file must be assembled mechanically as follows:
+
+1. Start with `import Ably`
+2. For each translated example, wrap its harness comment contents in a scoping function to isolate stub types:
+   - Create an outer function `func scope_{id}()` (using the example ID)
+   - Inside the outer function, copy the harness comment contents verbatim: any stub type declarations, then the `func example(...)` with the example code inserted into its body
+   - This prevents type name conflicts between examples (e.g., two examples both defining `struct ToolCall` with different fields)
+3. End with the `@main` struct
 
 ```swift
 import Ably
 
 // MARK: - Example streaming-1
-func example_streaming_1(channel: ARTRealtimeChannel) {
-    // Example code from MDX inserted here
+func scope_streaming_1() {
+    // (stub types from harness comment, if any, go here)
+
+    func example(channel: ARTRealtimeChannel) {
+        // Example code from MDX inserted here
+    }
 }
 
 // MARK: - Example streaming-3
 // (streaming-2 was not translated, so there's a gap in numbering)
-func example_streaming_3(channel: ARTRealtimeChannel, stream: any AsyncSequence<String, Never> & Sendable) async {
-    // Example code from MDX inserted here
+func scope_streaming_3() {
+    func example(channel: ARTRealtimeChannel, stream: any AsyncSequence<String, Never> & Sendable) async {
+        // Example code from MDX inserted here
+    }
 }
 
 // ... include ALL translated examples ...
@@ -101,20 +118,24 @@ struct SwiftVerification {
 }
 ```
 
+**Critical rule**: You must NOT invent, infer, or supplement any context beyond what the harness comment provides. If the example code references a type like `ToolCall` or a function like `displayApprovalUI` that does not appear in the harness comment, do NOT create a stub for it yourself. Instead, let compilation fail — this is a legitimate failure indicating the harness comment is incomplete.
+
 This ensures:
 1. All translated examples are verified in a single compilation
-2. The harness file can be compared with the translation harness for discrepancies
+2. The harness comment's completeness is itself verified — if it's missing context, that's a bug
 3. Function names match the IDs in the JSON output for easy correlation
 4. Gaps in numbering are expected (some JS examples may not have Swift translations)
 
-### 3. Insert the example code and verify compilation
+### 4. Verify compilation
 
-- Copy the Swift example code from the documentation (the code between the ``` markers, NOT the harness comment)
-- Insert it into the function body in your recreated harness
 - Run `swift build`
-- Record: "pass" if it compiles, "fail" with error message if not
+- Record the result:
+  - `"pass"` if it compiles
+  - `"fail"` with `errorMessage` if it does not. In the error message, distinguish between:
+    - **Incomplete harness comment**: The code references types or functions that aren't provided by the harness comment (e.g., "use of undeclared type 'ToolCall'" when ToolCall is not in the comment). Note this explicitly — it means the translation agent failed to include necessary context in the harness comment.
+    - **Mistranslation**: Other compilation errors (wrong method names, type mismatches, syntax errors, etc.)
 
-### 4. Check faithfulness to original JavaScript
+### 5. Check faithfulness to original JavaScript
 
 Compare the Swift translation to the original JavaScript code block in the same <Code> section:
 
@@ -125,7 +146,7 @@ Compare the Swift translation to the original JavaScript code block in the same 
 
 Rate faithfulness as: faithful, minor_differences (list them), or significant_deviation (explain)
 
-### 5. Check convention compliance
+### 6. Check convention compliance
 
 Read the "Guidance" and "Conventions" sections of `.claude/skills/translate-examples-to-swift/prompts/translation-subagent.md`. Check each Swift example for violations. In particular, look for:
 
@@ -138,7 +159,7 @@ Read the "Guidance" and "Conventions" sections of `.claude/skills/translate-exam
 
 Record any violations in the faithfulness notes. Rate as minor_differences if there are convention violations even if the code is otherwise faithful to the JS.
 
-### 6. Write verification JSON
+### 7. Write verification JSON
 
 Write the results to swift-translations/verifications/{FILENAME}.json conforming to the schema, then validate with `npx ajv-cli validate` — do not use python or other tools for JSON validation. Each example in the `examples` array must include:
 
@@ -150,7 +171,7 @@ Write the results to swift-translations/verifications/{FILENAME}.json conforming
 - `compilation`: `{ "status": "pass" }` or `{ "status": "fail", "errorMessage": "..." }`
 - `faithfulness`: `{ "rating": "faithful" }` or `{ "rating": "minor_differences", "notes": "..." }`
 
-### 7. Report findings
+### 8. Report findings
 
 Provide a summary of what you verified and any issues found.
 
@@ -158,7 +179,7 @@ Provide a summary of what you verified and any issues found.
 
 ## Important
 
-- Do NOT modify any documentation files - you are only verifying
-- If you cannot recreate a harness from the comment alone, note this as an issue (the comment is incomplete)
+- Do NOT modify any documentation files — you are only verifying
+- Do NOT invent stub types, functions, or any other declarations that are not in the MDX harness comment. The harness comment must be self-contained. If it isn't, that is a compilation failure with cause "incomplete harness comment" — not something for you to fix.
 - Be objective and thorough
 - You MUST include the actual extracted code in your JSON output
