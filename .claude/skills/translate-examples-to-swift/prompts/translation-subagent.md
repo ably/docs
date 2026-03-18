@@ -15,7 +15,7 @@ The JSON must conform to the schema at `.claude/skills/translate-examples-to-swi
 
 ## Translation Steps
 
-For each JavaScript code block in the documentation, you will:
+Translate every JavaScript code block in the documentation unless explicitly told otherwise. For each one, you will:
 
 1. Generate a Swift test harness
 2. Translate the JavaScript code
@@ -31,7 +31,7 @@ Generate a unique ID for each translated example. IDs are random 6-character alp
 
 IDs are written into the MDX harness comment (so the verification agent can read them) and used in your JSON output. They are also used in the harness function name (e.g., `func example_Kx9mQ3(...)`) during compilation.
 
-Only generate IDs for examples you actually translate. Examples you skip (like data structure literals) do not need IDs.
+Generate an ID for each translated example.
 
 ---
 
