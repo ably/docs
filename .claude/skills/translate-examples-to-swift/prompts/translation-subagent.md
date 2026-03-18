@@ -333,6 +333,8 @@ If the JS does NOT `await` the subscribe (just `channel.subscribe('prompt', call
 
 ably-cocoa callbacks pass `(Result?, Error?)` where the convention is exactly one is non-nil.
 
+**Exception — pagination callbacks**: `ARTPaginatedResult.next` calls back with `(nil, nil)` when there are no more pages (per spec point TG4). Use an optional continuation type for pagination and check for nil after the `await`.
+
 **When you need the result**, force-unwrap `result!` inside the continuation — this enforces the convention and is the only acceptable use of force-unwrap:
 
 ```swift
