@@ -108,73 +108,6 @@ MessageMetadata metadata = new MessageMetadata();
 metadata.put("phase", "done");
 channel.appendMessage(msgSerial, "", metadata);
 ```
-
-{/*
-Swift test harness:
-struct StreamEvent {
-    let type: String
-    let text: String
-}
-
-func example(realtime: ARTRealtime, stream: any AsyncSequence<StreamEvent, Never> & Sendable) async throws {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-// Publish initial message
-let publishResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPublishResult, Error>) in
-    channel.publish([.init(name: "response", data: "")]) { result, error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume(returning: result!)
-        }
-    }
-}
-
-guard let msgSerial = publishResult.serials.first?.value else {
-    print("No serial available")
-    return
-}
-
-// Stream tokens
-for await event in stream {
-    if event.type == "token" {
-        let appendMessage = ARTMessage(name: nil, data: event.text)
-        appendMessage.serial = msgSerial
-
-        Task {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                channel.append(appendMessage, operation: .init(clientId: nil, descriptionText: nil, metadata: ["phase": "streaming"]), params: nil) { _, error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume()
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Signal content-part completion with an empty append
-let doneMessage = ARTMessage(name: nil, data: "")
-doneMessage.serial = msgSerial
-
-Task {
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-        channel.append(doneMessage, operation: .init(clientId: nil, descriptionText: nil, metadata: ["phase": "done"]), params: nil) { _, error in
-            if let error {
-                continuation.resume(throwing: error)
-            } else {
-                continuation.resume()
-            }
-        }
-    }
-}
-```
 </Code>
 
 <Aside data-type="note">
@@ -218,28 +151,6 @@ headers.addProperty("responseId", "resp_abc123");
 extras.add("headers", headers);
 
 channel.publish(new Message("response-end", "", new MessageExtras(extras)));
-```
-
-{/*
-Swift test harness:
-func example(channel: ARTRealtimeChannel) async throws {
-    // insert example code here
-}
-*/}
-```swift
-// After all content parts are done, signal response-level completion
-let message = ARTMessage(name: "response-end", data: "")
-message.extras = ["headers": ["responseId": "resp_abc123"]] as ARTJsonCompatible
-
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-    channel.publish([message]) { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }
-}
 ```
 </Code>
 
@@ -316,67 +227,6 @@ while (page != null) {
     page = page.hasNext() ? page.next() : null;
 }
 ```
-
-{/*
-Swift test harness:
-func example(realtime: ARTRealtime) async throws {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-    channel.subscribe(attachCallback: { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }, callback: { message in
-        // ...handle message actions as normal...
-    })
-}
-
-let query = ARTRealtimeHistoryQuery()
-query.untilAttach = true
-
-var page = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ARTPaginatedResult<ARTMessage>?, Error>) in
-    do {
-        try channel.history(query) { page, error in
-            if let error {
-                continuation.resume(throwing: error)
-            } else {
-                continuation.resume(returning: page)
-            }
-        }
-    } catch {
-        continuation.resume(throwing: error)
-    }
-}
-
-while let currentPage = page {
-    for message in currentPage.items {
-        let phase = message.version?.metadata?["phase"]
-
-        if phase == "done" {
-            // Content part is complete, render as final
-        } else {
-            // Content part may still be streaming, listen for live appends
-        }
-    }
-
-    if currentPage.hasNext {
-        page = await withCheckedContinuation { continuation in
-            currentPage.next { nextPage, _ in
-                continuation.resume(returning: nextPage)
-            }
-        }
-    } else {
-        break
-    }
-}
-```
 </Code>
 
 <Aside data-type="important">
@@ -436,30 +286,6 @@ headers.addProperty("responseId", "resp_abc123");
 extras.add("headers", headers);
 
 channel.publish(new Message("cancel", "", new MessageExtras(extras)));
-```
-
-{/*
-Swift test harness:
-func example(realtime: ARTRealtime) async throws {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-// Send cancellation request for a specific response
-let message = ARTMessage(name: "cancel", data: "")
-message.extras = ["headers": ["responseId": "resp_abc123"]] as ARTJsonCompatible
-
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-    channel.publish([message]) { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }
-}
 ```
 </Code>
 
@@ -547,66 +373,6 @@ channel.subscribe("cancel", message -> {
 
     channel.publish(new Message("cancelled", "", new MessageExtras(confirmExtras)));
 });
-```
-
-{/*
-Swift test harness:
-func stopGeneration(_ responseID: String?) {}
-
-@MainActor
-func example(realtime: ARTRealtime) async throws {
-    // insert example code here
-}
-*/}
-```swift
-let channel = realtime.channels.get("ai:{{RANDOM_CHANNEL_NAME}}")
-
-// Track pending appends for flushing
-var pendingAppends: [Task<Void, any Error>] = []
-
-// Listen for cancellation requests
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-    channel.subscribe("cancel", onAttach: { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }, callback: { message in
-        MainActor.assumeIsolated {
-            guard let extras = try? message.extras?.toJSON() as? [String: Any],
-                  let headers = extras["headers"] as? [String: String],
-                  let responseID = headers["responseId"] else { return }
-
-            // Stop generation for the matching response
-            stopGeneration(responseID)
-
-            // Flush any pending appends before confirming
-            let appendsToAwait = pendingAppends
-            pendingAppends.removeAll()
-
-            Task {
-                for task in appendsToAwait {
-                    _ = try? await task.value
-                }
-
-                // Optionally confirm cancellation to all subscribers
-                let confirmMessage = ARTMessage(name: "cancelled", data: "")
-                confirmMessage.extras = ["headers": ["responseId": responseID]] as ARTJsonCompatible
-
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    channel.publish([confirmMessage]) { error in
-                        if let error {
-                            continuation.resume(throwing: error)
-                        } else {
-                            continuation.resume()
-                        }
-                    }
-                }
-            }
-        }
-    })
-}
 ```
 </Code>
 

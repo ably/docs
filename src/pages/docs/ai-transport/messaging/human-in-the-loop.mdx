@@ -90,45 +90,6 @@ String requestHumanApproval(ToolCall toolCall) {
     return requestId;
 }
 ```
-
-{/*
-Swift test harness:
-func example(realtime: ARTRealtime) async throws {
-    // insert example code here
-}
-*/}
-```swift
-import Ably
-
-let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
-var pendingApprovals: [String: ToolCall] = [:]
-
-func requestHumanApproval(_ toolCall: ToolCall) async throws {
-    pendingApprovals[toolCall.id] = toolCall
-
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-        channel.publish(
-            "approval-request",
-            data: [
-                "tool": toolCall.name,
-                "arguments": toolCall.arguments
-            ],
-            extras: [
-                "headers": [
-                    "toolCallId": toolCall.id
-                ]
-            ] as ARTJsonCompatible,
-            callback: { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        )
-    }
-}
-```
 </Code>
 
 <Aside data-type="note">
@@ -158,19 +119,6 @@ claims = {
 Map<String, String> claims = new HashMap<>();
 claims.put("x-ably-clientId", "user-123");
 claims.put("ably.channel.*", "user");
-```
-
-{/*
-Swift test harness:
-func example() {
-    // insert example code here
-}
-*/}
-```swift
-let claims: [String: String] = [
-    "x-ably-clientId": "user-123",
-    "ably.channel.*": "user"
-]
 ```
 </Code>
 
@@ -262,80 +210,6 @@ void reject(String requestId) {
     data.addProperty("requestId", requestId);
     data.addProperty("decision", "rejected");
     channel.publish("approval-response", data);
-}
-```
-
-{/*
-Swift test harness:
-func example(realtime: ARTRealtime) async throws {
-    // insert example code here
-}
-*/}
-```swift
-import Ably
-
-let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
-
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-    channel.subscribe("approval-request", onAttach: { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }, callback: { message in
-        guard let request = message.data else { return }
-        let extras = (try? message.extras?.toJSON()) as? [String: Any]
-        guard let toolCallID = (extras?["headers"] as? [String: Any])?["toolCallId"] as? String else { return }
-        // Display request for human review
-        displayApprovalUI(request, toolCallID)
-    })
-}
-
-func approve(_ toolCallID: String) async throws {
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-        channel.publish(
-            "approval-response",
-            data: [
-                "decision": "approved"
-            ],
-            extras: [
-                "headers": [
-                    "toolCallId": toolCallID
-                ]
-            ] as ARTJsonCompatible,
-            callback: { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        )
-    }
-}
-
-func reject(_ toolCallID: String) async throws {
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-        channel.publish(
-            "approval-response",
-            data: [
-                "decision": "rejected"
-            ],
-            extras: [
-                "headers": [
-                    "toolCallId": toolCallID
-                ]
-            ] as ARTJsonCompatible,
-            callback: { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        )
-    }
 }
 ```
 </Code>
@@ -451,57 +325,6 @@ channel.subscribe("approval-response", message -> {
 
     pendingApprovals.remove(response.get("requestId").getAsString());
 });
-```
-
-{/*
-Swift test harness:
-@MainActor
-func example(channel: ARTRealtimeChannel) async throws {
-    // insert example code here
-}
-*/}
-```swift
-var pendingApprovals: [String: ToolCall] = [:]
-
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-    channel.subscribe("approval-response", onAttach: { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }, callback: { message in
-        MainActor.assumeIsolated {
-            guard let response = message.data as? [String: Any],
-                  let extras = (try? message.extras?.toJSON()) as? [String: Any],
-                  let toolCallID = (extras["headers"] as? [String: Any])?["toolCallId"] as? String,
-                  let pending = pendingApprovals[toolCallID] else { return }
-
-            // The clientId is the trusted approver identity
-            guard let approverID = message.clientId else { return }
-
-            Task {
-                // Look up user-specific permissions from your database
-                let userPermissions = await getUserPermissions(approverID)
-
-                if !userPermissions.canApprove(pending.name) {
-                    print("User \(approverID) not authorized to approve \(pending.name)")
-                    return
-                }
-
-                if response["decision"] as? String == "approved" {
-                    let result = await executeToolCall(pending)
-                    print("Action approved by \(approverID)")
-                    _ = result
-                } else {
-                    print("Action rejected by \(approverID)")
-                }
-
-                pendingApprovals.removeValue(forKey: toolCallID)
-            }
-        }
-    })
-}
 ```
 </Code>
 
@@ -626,69 +449,5 @@ channel.subscribe("approval-response", message -> {
 
     pendingApprovals.remove(response.get("requestId").getAsString());
 });
-```
-
-{/*
-Swift test harness:
-@MainActor
-func example(channel: ARTRealtimeChannel) async throws {
-    var pendingApprovals: [String: ToolCall] = [:]
-    // insert example code here
-}
-*/}
-```swift
-let roleHierarchy = ["editor", "publisher", "admin"]
-
-let approvalPolicies: [String: String] = [
-    "publish_blog_post": "publisher"
-]
-
-func canApprove(approverRole: String, requiredRole: String) -> Bool {
-    let approverLevel = roleHierarchy.firstIndex(of: approverRole) ?? -1
-    let requiredLevel = roleHierarchy.firstIndex(of: requiredRole) ?? -1
-
-    return approverLevel >= requiredLevel
-}
-
-// When processing approval response
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-    channel.subscribe("approval-response", onAttach: { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }, callback: { message in
-        MainActor.assumeIsolated {
-            guard let response = message.data as? [String: Any],
-                  let extras = (try? message.extras?.toJSON()) as? [String: Any],
-                  let toolCallID = (extras["headers"] as? [String: Any])?["toolCallId"] as? String,
-                  let pending = pendingApprovals[toolCallID] else { return }
-
-            guard let policy = approvalPolicies[pending.name] else { return }
-
-            // Get the trusted role from the JWT claim
-            guard let approverRole = extras["userClaim"] as? String else { return }
-
-            // Verify the approver's role meets the minimum required role for this action
-            if !canApprove(approverRole: approverRole, requiredRole: policy) {
-                print("Approver role '\(approverRole)' insufficient: minimum required role is '\(policy)'")
-                return
-            }
-
-            if response["decision"] as? String == "approved" {
-                Task {
-                    let result = await executeToolCall(pending)
-                    print("Action approved by role \(approverRole)")
-                    _ = result
-                    pendingApprovals.removeValue(forKey: toolCallID)
-                }
-            } else {
-                print("Action rejected by role \(approverRole)")
-                pendingApprovals.removeValue(forKey: toolCallID)
-            }
-        }
-    })
-}
 ```
 </Code>
