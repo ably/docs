@@ -140,6 +140,9 @@ const files = translations.map(t => {
         }
     });
 
+    // Sort by line number so review order matches document order
+    examples.sort((a, b) => a.lineNumber - b.lineNumber);
+
     return {
         path: t.data.file,
         examples
