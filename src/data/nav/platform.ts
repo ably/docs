@@ -326,6 +326,10 @@ export default {
           ],
         },
         {
+          name: 'Access tokens',
+          link: '/docs/platform/account/access-tokens',
+        },
+        {
           name: 'Programmatic management using Control API',
           link: '/docs/platform/account/control-api',
         },
