@@ -22,6 +22,7 @@ import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
 import Admonition from './mdx/Admonition';
 import { MethodSignature } from './mdx/MethodSignature';
+import { Tabs, Tab } from './mdx/Tabs';
 
 import { Frontmatter, PageContextType } from './Layout';
 import { ActivePage } from './utils/nav';
@@ -339,6 +340,8 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
               td: Table.Cell,
               Tiles,
               MethodSignature,
+              Tabs,
+              Tab,
             }}
           >
             <PageHeader title={title} intro={intro} />
