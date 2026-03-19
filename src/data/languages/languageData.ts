@@ -3,10 +3,10 @@ import { LanguageData } from './types';
 
 export default {
   platform: {
-    javascript: '2.20',
-    nodejs: '2.20',
-    typescript: '2.20',
-    react: '2.20',
+    javascript: '2.21',
+    nodejs: '2.21',
+    typescript: '2.21',
+    react: '2.21',
     csharp: '1.2',
     flutter: '1.2',
     java: '1.6',
@@ -19,10 +19,10 @@ export default {
     go: '1.3',
   },
   pubsub: {
-    javascript: '2.20',
-    nodejs: '2.20',
-    typescript: '2.20',
-    react: '2.20',
+    javascript: '2.21',
+    nodejs: '2.21',
+    typescript: '2.21',
+    react: '2.21',
     csharp: '1.2',
     flutter: '1.2',
     java: '1.6',
@@ -43,7 +43,7 @@ export default {
     android: '1.2',
   },
   aiTransport: {
-    javascript: '2.20',
+    javascript: '2.21',
     java: '1.6',
     python: '3.1',
     swift: '1.2',
@@ -53,7 +53,7 @@ export default {
     react: '0.5',
   },
   liveObjects: {
-    javascript: '2.20',
+    javascript: '2.21',
     swift: '0.4',
     java: '1.6',
   },
