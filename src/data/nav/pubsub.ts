@@ -268,6 +268,10 @@ export default {
               name: 'FCM',
               link: '/docs/push/getting-started/fcm',
             },
+            {
+              name: 'Next.js',
+              link: '/docs/push/getting-started/nextjs',
+            },
           ],
         },
         {
