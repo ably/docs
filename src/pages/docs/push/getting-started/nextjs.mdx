@@ -149,6 +149,7 @@ Add the following functions inside `PushPage`, after the `useEffect`:
 
 <Code>
 ```typescript
+// Activate push notifications
 async function activatePush() {
   const realtime = realtimeRef.current;
   if (!realtime) return;
@@ -163,6 +164,7 @@ async function activatePush() {
   }
 }
 
+// Deactivate push notifications
 async function deactivatePush() {
   const realtime = realtimeRef.current;
   if (!realtime) return;
@@ -201,6 +203,7 @@ Create `public/service-worker.js`:
 self.addEventListener('push', (event) => {
   const eventData = event.data.json();
 
+  // Prepare the notification object suitable for both `showNotification` and `postMessage`
   const notification = {
     title: eventData.notification.title,
     body: eventData.notification.body,
@@ -239,10 +242,12 @@ Add a `notificationclick` listener in `public/service-worker.js` to handle what 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
+  // Open or focus the app window
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       const url = event.notification.data?.url || '/push';
 
+      // Check if there's already a window open
       for (const client of clientList) {
         if ((client.url.endsWith('/push') || url === '/push') && client.focus) {
           client.postMessage({
@@ -257,6 +262,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
 
+      // Open a new window if none exists
       if (clients.openWindow) {
         return clients.openWindow(url);
       }
@@ -274,6 +280,7 @@ Add a second `useEffect` inside `PushPage` to receive messages from the service 
 
 <Code>
 ```typescript
+// Listen for messages from the service worker about push notifications
 useEffect(() => {
   if (!navigator.serviceWorker) return;
 
@@ -296,39 +303,45 @@ useEffect(() => {
 ```
 </Code>
 
-### Subscribe to channel push <a id="step-3-subscribe-channel"/>
+### Channel push notifications <a id="step-3-subscribe-channel"/>
 
-Add the following functions to subscribe and unsubscribe the device from channel-based push:
+Push notifications can be sent either directly to your `deviceId` (or `clientId`), or posted to a channel, in which case you first need to subscribe your device to that channel:
 
 <Code>
 ```typescript
+// Subscribe to push notifications on the channel
 async function subscribeToChannel() {
   const channel = channelRef.current;
   if (!channel) return;
   try {
     await channel.push.subscribeDevice();
-    setStatus('Subscribed to push on channel: ' + CHANNEL_NAME);
+    setStatus('Subscribed to push notifications on channel: ' + CHANNEL_NAME);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    setStatus('Failed to subscribe: ' + message);
+    setStatus('Failed to subscribe to channel push: ' + message);
   }
 }
 
+// Unsubscribe from push notifications on the channel
 async function unsubscribeFromChannel() {
   const channel = channelRef.current;
   if (!channel) return;
   try {
     await channel.push.unsubscribeDevice();
-    setStatus('Unsubscribed from push on channel: ' + CHANNEL_NAME);
+    setStatus('Unsubscribed from push notifications on channel: ' + CHANNEL_NAME);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    setStatus('Failed to unsubscribe: ' + message);
+    setStatus('Failed to unsubscribe from channel push: ' + message);
   }
 }
 ```
 </Code>
 
-To test push notifications using the Ably CLI, send a push directly to the client ID:
+Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability for your API key. Use this method for testing purposes. In a production environment, you would typically send push notifications from your backend server (by posting messages with `push` `extras` field to a channel).
+
+To test push notifications in your app, you can use [Ably dashboard](https://ably.com/dashboard) or Ably CLI.
+
+To send to your client using Ably CLI paste the following command into your terminal:
 
 <Code>
 ```shell
@@ -338,6 +351,8 @@ ably push publish --client-id push-tutorial-client \
   --data '{"foo":"bar","baz":"qux"}'
 ```
 </Code>
+
+For sending pushes via a channel, we need some actual UI to be able to subscribe to this channel. So, let's build one.
 
 ## Step 4: Build the UI <a id="step-4"/>
 
@@ -360,9 +375,6 @@ return (
       <button onClick={deactivatePush}>Deactivate Push</button>
       <button onClick={subscribeToChannel}>Subscribe to Channel</button>
       <button onClick={unsubscribeFromChannel}>Unsubscribe from Channel</button>
-      <button onClick={sendPushToDevice}>Send to Device</button>
-      <button onClick={sendPushToClient}>Send to Client</button>
-      <button onClick={sendPushToChannel}>Send to Channel</button>
       <button onClick={() => setLog([])}>Clear</button>
     </div>
 
@@ -386,7 +398,9 @@ npm run dev
 
 Navigate to `http://localhost:3000/push` in your browser. Click **Activate Push**, grant notification permission, and wait for the device ID to appear in the log.
 
-To test channel push, click **Subscribe to Channel**, then publish a message with a `push` `extras` field using the Ably CLI:
+### Send push via channel <a id="step-4-send-channel"/>
+
+To test pushes via channel, subscribe to the channel in the UI and post a message to the "exampleChannel1" with a `push` `extras` field using Ably CLI:
 
 <Code>
 ```shell
@@ -394,12 +408,19 @@ ably channels publish exampleChannel1 '{"name":"example","data":"Hello from CLI!
 ```
 </Code>
 
+If you unsubscribe from this channel in the app's UI, you will no longer receive push notifications for that channel. Send the same command again and verify that no notification is received.
+
+You can also send push notifications right from your app. The next step will show you how.
+
 ## Step 5: Send push with code <a id="step-5"/>
 
-Add the following functions inside `PushPage` to send push notifications programmatically using the Push Admin API:
+Just as you can send push notifications through the Ably CLI or dashboard, you can also send them directly from your app using device ID (or client ID), or channel publishing methods. For channel publishing, you don't need the admin capabilities for your API key.
+
+Add the following functions inside `PushPage`:
 
 <Code>
 ```typescript
+// Send push notification to a specific device ID
 async function sendPushToDevice() {
   const realtime = realtimeRef.current;
   if (!realtime) return;
@@ -419,6 +440,7 @@ async function sendPushToDevice() {
   }
 }
 
+// Send push notification to a specific client ID
 async function sendPushToClient() {
   const realtime = realtimeRef.current;
   if (!realtime) return;
@@ -437,7 +459,13 @@ async function sendPushToClient() {
     setStatus('Error sending to client: ' + message);
   }
 }
+```
+</Code>
 
+Sending to a channel is just publishing a message on a channel with a `push` `extras` field:
+
+<Code>
+```typescript
 async function sendPushToChannel() {
   const channel = channelRef.current;
   if (!channel) return;
@@ -468,6 +496,16 @@ The `extras.push` object has two parts:
 
 - `notification`: Contains `title` and `body` displayed in the browser notification.
 - `data`: Custom key-value pairs delivered to the service worker but not shown directly.
+
+Add the three send buttons to the JSX inside the buttons `div`:
+
+<Code>
+```typescript
+<button onClick={sendPushToDevice}>Send to Device</button>
+<button onClick={sendPushToClient}>Send to Client</button>
+<button onClick={sendPushToChannel}>Send to Channel</button>
+```
+</Code>
 
 ## Next steps <a id="next-steps"/>
 
