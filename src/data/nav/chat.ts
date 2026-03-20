@@ -295,9 +295,49 @@ export default {
           ],
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-react.html',
-          name: 'React SDK',
-          external: true,
+          name: 'React',
+          pages: [
+            {
+              link: '/docs/chat/api/react/providers',
+              name: 'Providers',
+            },
+            {
+              link: '/docs/chat/api/react/use-chat-client',
+              name: 'useChatClient',
+            },
+            {
+              link: '/docs/chat/api/react/use-chat-connection',
+              name: 'useChatConnection',
+            },
+            {
+              link: '/docs/chat/api/react/use-room',
+              name: 'useRoom',
+            },
+            {
+              link: '/docs/chat/api/react/use-messages',
+              name: 'useMessages',
+            },
+            {
+              link: '/docs/chat/api/react/use-presence',
+              name: 'usePresence',
+            },
+            {
+              link: '/docs/chat/api/react/use-presence-listener',
+              name: 'usePresenceListener',
+            },
+            {
+              link: '/docs/chat/api/react/use-occupancy',
+              name: 'useOccupancy',
+            },
+            {
+              link: '/docs/chat/api/react/use-typing',
+              name: 'useTyping',
+            },
+            {
+              link: '/docs/chat/api/react/use-room-reactions',
+              name: 'useRoomReactions',
+            },
+          ],
         },
         {
           name: 'Kotlin',

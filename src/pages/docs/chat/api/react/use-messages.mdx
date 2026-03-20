@@ -1,0 +1,628 @@
+---
+title: useMessages
+meta_description: "API reference for the useMessages hook in the Ably Chat React SDK."
+meta_keywords: "Ably Chat SDK, React, useMessages, hooks, messages, send, history, update, delete, reactions"
+---
+
+The `useMessages` hook provides access to message operations within a chat room, including sending, retrieving, updating, and deleting messages, as well as managing message reactions. When a listener is supplied, the hook automatically subscribes to new messages.
+
+<Code>
+```react
+import { useMessages } from '@ably/chat/react';
+
+const MyComponent = () => {
+  const { sendMessage, history } = useMessages({
+    listener: (event) => {
+      console.log('New message:', event.message.text);
+    },
+  });
+
+  return <button onClick={() => sendMessage({ text: 'Hello!' })}>Send</button>;
+};
+```
+</Code>
+
+This hook must be used within a [`ChatRoomProvider`](/docs/chat/api/react/providers#chatRoomProvider).
+
+## Parameters <a id="parameters"/>
+
+The `useMessages` hook accepts an optional configuration object:
+
+<Table id='UseMessagesParams'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| listener | Optional | A callback invoked when chat message events occur. | <Table id='MessageListener'/> |
+| reactionsListener | Optional | A callback invoked when reaction summaries change for messages in the room. | <Table id='MessageReactionListener'/> |
+| rawReactionsListener | Optional | A callback invoked for individual reaction events on messages in the room. | <Table id='MessageRawReactionListener'/> |
+| onDiscontinuity | Optional | A callback to detect and respond to discontinuities in the message stream. | [DiscontinuityListener](/docs/chat/api/react/providers#discontinuityListener) |
+| onRoomStatusChange | Optional | A callback invoked when the room status changes. Removed when the component unmounts. | [RoomStatusChange](/docs/chat/api/react/use-room#roomStatusChange) |
+| onConnectionStatusChange | Optional | A callback invoked when the connection status changes. Removed when the component unmounts. | [ConnectionStatusChange](/docs/chat/api/react/use-chat-connection#connectionStatusChange) |
+
+</Table>
+
+<Table id='MessageListener' hidden>
+
+| Parameter | Description | Type |
+| --- | --- | --- |
+| event | The message event that was received. | <Table id='ChatMessageEvent'/> |
+
+</Table>
+
+<Table id='ChatMessageEvent' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | The type of the message event. | <Table id='ChatMessageEventType'/> |
+| message | The message that was received. | [Message](#Message) |
+
+</Table>
+
+<Table id='ChatMessageEventType' hidden>
+
+| Value | Description |
+| --- | --- |
+| Created | A new chat message was received. The value is `message.created`. |
+| Updated | A chat message was updated. The value is `message.updated`. |
+| Deleted | A chat message was deleted. The value is `message.deleted`. |
+
+</Table>
+
+<Table id='MessageReactionListener' hidden>
+
+| Parameter | Description | Type |
+| --- | --- | --- |
+| event | The reaction summary event. | <Table id='MessageReactionSummaryEvent'/> |
+
+</Table>
+
+<Table id='MessageReactionSummaryEvent' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | The event type. The value is `reaction.summary`. | String |
+| messageSerial | The serial of the message. | String |
+| reactions | The aggregated reaction counts. | <Table id='MessageReactionSummary'/> |
+
+</Table>
+
+<Table id='MessageReactionSummary' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| unique | Reactions counted with the "unique" strategy (one per client per message). Maps reaction name to summary. | <Table id='SummaryClientIdList'/> |
+| distinct | Reactions counted with the "distinct" strategy (one of each type per client). Maps reaction name to summary. | <Table id='SummaryClientIdList'/> |
+| multiple | Reactions counted with the "multiple" strategy (unlimited per client). Maps reaction name to summary. | <Table id='SummaryClientIdCounts'/> |
+
+</Table>
+
+<Table id='SummaryClientIdList' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| total | The total number of clients who have reacted with this name. | Number |
+| clientIds | A list of the client IDs of all clients who have reacted with this name. | String[] |
+
+</Table>
+
+<Table id='SummaryClientIdCounts' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| total | The total count of reactions with this name across all clients. | Number |
+| clientIds | A map of client ID to the count each client has contributed. | `Record<string, number>` |
+| totalUnidentified | The total count from unidentified clients not included in `clientIds`. | Number |
+
+</Table>
+
+<Table id='MessageRawReactionListener' hidden>
+
+| Parameter | Description | Type |
+| --- | --- | --- |
+| event | The individual reaction event. | <Table id='MessageReactionRawEvent'/> |
+
+</Table>
+
+<Table id='MessageReactionRawEvent' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | The event type. The value is `reaction.create` or `reaction.delete`. | MessageReactionRawEventType |
+| timestamp | When the event occurred. | Date |
+| reaction | The reaction details. | <Table id='MessageReactionRawEventReaction'/> |
+
+</Table>
+
+<Table id='MessageReactionRawEventReaction' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| messageSerial | Required | The serial of the message. | String |
+| type | Required | The counting strategy. | <Table id='MessageReactionType'/> |
+| name | Required | The reaction identifier. | String |
+| count | Optional | The count for Multiple type reactions. | Number |
+| clientId | Required | The client ID who sent the reaction. | String |
+| userClaim | Optional | The user claim attached to this reaction by the server. Only present if the user's [JWT](/docs/auth/token#jwt) contained a claim for the room. | String or Undefined |
+
+</Table>
+
+<Table id='MessageReactionType' hidden>
+
+| Value | Description |
+| --- | --- |
+| Unique | One reaction per client per message. A second reaction replaces the first. Similar to iMessage, Facebook Messenger, or WhatsApp. The value is `unique`. |
+| Distinct | One reaction of each type per client per message. Multiple different reactions allowed. Similar to Slack. The value is `distinct`. |
+| Multiple | Unlimited reactions including repeats. Includes a count for batch reactions. Similar to Medium claps. The value is `multiple`. |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+The `useMessages` hook returns an object with the following properties:
+
+<Table id='UseMessagesResponse'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| sendMessage | Sends a message to the chat room. | [sendMessage()](#send) |
+| getMessage | Retrieves a single message by its serial. | [getMessage()](#get) |
+| updateMessage | Updates a message's content. | [updateMessage()](#update) |
+| deleteMessage | Soft-deletes a message. | [deleteMessage()](#delete) |
+| history | Retrieves historical messages with pagination. | [history()](#history) |
+| historyBeforeSubscribe | Retrieves messages sent before the subscription was established. Only available when a `listener` is provided. | [historyBeforeSubscribe()](#historyBeforeSubscribe) |
+| sendReaction | Sends a reaction to a message. | [sendReaction()](#send-reaction) |
+| deleteReaction | Removes a reaction from a message. | [deleteReaction()](#delete-reaction) |
+| roomStatus | The current status of the room, kept up to date by the hook. | [RoomStatus](/docs/chat/api/react/use-room#roomStatus) |
+| roomError | An error object if the room is in an errored state. | [ErrorInfo](/docs/chat/api/react/providers#errorInfo) or Undefined |
+| connectionStatus | The current connection status, kept up to date by the hook. | [ConnectionStatus](/docs/chat/api/react/use-chat-connection#connectionStatus) |
+| connectionError | An error object if there is a connection error. | [ErrorInfo](/docs/chat/api/react/providers#errorInfo) or Undefined |
+
+</Table>
+
+## Send a message <a id="send"/>
+
+<MethodSignature>{`sendMessage(params: SendMessageParams): Promise<Message>`}</MethodSignature>
+
+Send a message to the chat room. The message will be delivered to all subscribers in realtime.
+
+This method uses the Ably Chat REST API and does not require the room to be attached.
+
+### Parameters <a id="send-params"/>
+
+<Table id='SendMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Required | Message parameters containing the text and optional metadata/headers. | <Table id='SendMessageParams'/> |
+
+</Table>
+
+<Table id='SendMessageParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| text | Required | The text content of the message. | String |
+| metadata | Optional | Extra information attached to the message for features like animations or linking to external resources. | <Table id='MessageMetadata'/> |
+| headers | Optional | Additional information in Ably message extras, usable for features like livestream timestamping or message flagging. | <Table id='MessageHeaders'/> |
+
+</Table>
+
+<Table id='MessageMetadata' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| | Key-value pairs that can be attached to a message for features like animations, styling hints, or links to external resources. Keys must be non-empty strings. Values can be any JSON-serializable type. Always present on a message, defaults to an empty object if not provided. | `Record<string, any>` |
+
+</Table>
+
+<Table id='MessageHeaders' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| | Key-value pairs stored in Ably message extras, accessible to integrations such as webhooks, queues, or serverless functions. Keys must be non-empty strings. Always present on a message, defaults to an empty object if none provided. | `Record<string, number \| string \| boolean \| null \| undefined>` |
+
+</Table>
+
+### Returns <a id="send-returns"/>
+
+`Promise<Message>`
+
+Returns a promise. The promise is fulfilled with the sent [Message](#Message) object, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+## Get a message <a id="get"/>
+
+<MethodSignature>{`getMessage(serial: string): Promise<Message>`}</MethodSignature>
+
+Get a specific message by its unique serial identifier.
+
+This method uses the Ably Chat REST API and does not require the room to be attached.
+
+### Parameters <a id="get-params"/>
+
+<Table id='GetMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serial | Required | The unique serial identifier of the message to retrieve. | String |
+
+</Table>
+
+### Returns <a id="get-returns"/>
+
+`Promise<Message>`
+
+Returns a promise. The promise is fulfilled with the [Message](#Message) object matching the given serial, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+## Update a message <a id="update"/>
+
+<MethodSignature>{`updateMessage(serial: string, params: UpdateMessageParams, details?: OperationDetails): Promise<Message>`}</MethodSignature>
+
+Update a message in the chat room. This method modifies an existing message's content, metadata, or headers. The update creates a new version of the message while preserving the original serial identifier. Subscribers will receive an update event in realtime.
+
+This method uses the Ably Chat REST API and does not require the room to be attached.
+
+### Parameters <a id="update-params"/>
+
+<Table id='UpdateMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serial | Required | The unique identifier of the message to update. | String |
+| params | Required | The new message content and properties. | <Table id='UpdateMessageParams'/> |
+| details | Optional | Details to record about the update action. | <Table id='OperationDetails'/> |
+
+</Table>
+
+<Table id='UpdateMessageParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| text | Required | The new text content of the message. | String |
+| metadata | Optional | New metadata for the message. | <Table id='MessageMetadata'/> |
+| headers | Optional | New headers for the message. | <Table id='MessageHeaders'/> |
+
+</Table>
+
+<Table id='OperationDetails' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| description | Optional | A human-readable description of why the operation was performed. | String |
+| metadata | Optional | Additional metadata about the operation. | <Table id='OperationMetadata'/> |
+
+</Table>
+
+<Table id='OperationMetadata' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| | Metadata supplied to a message update or deletion request. Do not use metadata for authoritative information. There is no server-side validation. When reading the metadata, treat it like user input. | `Record<string, string>` |
+
+</Table>
+
+### Returns <a id="update-returns"/>
+
+`Promise<Message>`
+
+Returns a promise. The promise is fulfilled with the updated [Message](#Message) object, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object. The returned message will have its `action` property set to `updated`.
+
+## Delete a message <a id="delete"/>
+
+<MethodSignature>{`deleteMessage(serial: string, details?: OperationDetails): Promise<Message>`}</MethodSignature>
+
+Delete a message in the chat room. This method performs a "soft delete" on a message, marking it as deleted rather than permanently removing it. The deleted message will still be visible in message history but will be flagged as deleted. Subscribers will receive a deletion event in realtime.
+
+This method uses the Ably Chat REST API and does not require the room to be attached.
+
+### Parameters <a id="delete-params"/>
+
+<Table id='DeleteMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serial | Required | The unique identifier of the message to delete. | String |
+| details | Optional | Details to record about the delete action. | <Table id='OperationDetails'/> |
+
+</Table>
+
+### Returns <a id="delete-returns"/>
+
+`Promise<Message>`
+
+Returns a promise. The promise is fulfilled with the deleted [Message](#Message) object, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object. The returned message will have its `action` property set to `deleted`.
+
+## Get message history <a id="history"/>
+
+<MethodSignature>{`history(params: HistoryParams): Promise<PaginatedResult<Message>>`}</MethodSignature>
+
+Get messages that have been previously sent to the chat room. This method retrieves historical messages based on the provided query options, allowing you to paginate through message history, filter by time ranges, and control the order of results.
+
+This method uses the Ably Chat REST API and does not require the room to be attached.
+
+### Parameters <a id="history-params"/>
+
+<Table id='HistoryParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Required | Query parameters to filter and control message retrieval. | <Table id='HistoryParams'/> |
+
+</Table>
+
+<Table id='HistoryParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| limit | Optional | Maximum number of messages to retrieve. Default: `100`. | Number |
+| orderBy | Optional | Order in which to return results: `oldestFirst` or `newestFirst`. Default: `newestFirst`. | <Table id='OrderBy'/> |
+| start | Optional | Start of the time window to query, as a Unix timestamp in milliseconds. | Number |
+| end | Optional | End of the time window to query, as a Unix timestamp in milliseconds. | Number |
+
+</Table>
+
+<Table id='OrderBy' hidden>
+
+| Value | Description |
+| --- | --- |
+| OldestFirst | Return results starting with the oldest messages. The value is `oldestFirst`. |
+| NewestFirst | Return results starting with the newest messages. The value is `newestFirst`. |
+
+</Table>
+
+### Returns <a id="history-returns"/>
+
+`Promise<PaginatedResult<Message>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](#PaginatedResult) containing an array of [Message](#Message) objects, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+## Get messages before subscription <a id="historyBeforeSubscribe"/>
+
+<MethodSignature>{`historyBeforeSubscribe(params?: HistoryBeforeSubscribeParams): Promise<PaginatedResult<Message>>`}</MethodSignature>
+
+Get messages sent to the room up to the point at which the subscription was established. Only available when a `listener` is provided to the hook. Returns `undefined` if no listener was supplied.
+
+### Parameters <a id="historyBeforeSubscribe-params"/>
+
+<Table id='HistoryBeforeSubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Optional | Query parameters to filter message retrieval. Messages are returned in order of most recent to oldest. | <Table id='HistoryBeforeSubscribeParams'/> |
+
+</Table>
+
+<Table id='HistoryBeforeSubscribeParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| limit | Optional | Maximum number of messages to retrieve. Default: `100`. | Number |
+| start | Optional | Start of the time window to query, as a Unix timestamp in milliseconds. | Number |
+| end | Optional | End of the time window to query, as a Unix timestamp in milliseconds. | Number |
+
+</Table>
+
+### Returns <a id="historyBeforeSubscribe-returns"/>
+
+`Promise<PaginatedResult<Message>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](#PaginatedResult) containing an array of [Message](#Message) objects, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+## Send a reaction <a id="send-reaction"/>
+
+<MethodSignature>{`sendReaction(serial: string, params: SendMessageReactionParams): Promise<void>`}</MethodSignature>
+
+Sends a reaction to a specific chat message. The reaction is persisted and contributes to the message's reaction summary.
+
+This method uses the Ably Chat REST API and does not require the room to be attached.
+
+### Parameters <a id="send-reaction-params"/>
+
+<Table id='SendReactionParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serial | Required | The serial of the message to react to. | String |
+| params | Required | The reaction parameters. | <Table id='SendMessageReactionParams'/> |
+
+</Table>
+
+<Table id='SendMessageReactionParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| name | Required | The reaction identifier, typically an emoji. | String |
+| type | Optional | The counting strategy for this reaction. Defaults vary by room configuration. | <Table id='MessageReactionType'/> |
+| count | Optional | Number of times to count this reaction. Only applies to `Multiple` type. Defaults to `1`. | Number |
+
+</Table>
+
+### Returns <a id="send-reaction-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the reaction has been sent, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+## Delete a reaction <a id="delete-reaction"/>
+
+<MethodSignature>{`deleteReaction(serial: string, params?: DeleteMessageReactionParams): Promise<void>`}</MethodSignature>
+
+Removes a previously sent reaction from a chat message.
+
+### Parameters <a id="delete-reaction-params"/>
+
+<Table id='DeleteReactionParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serial | Required | The serial of the message to remove the reaction from. | String |
+| params | Optional | Parameters identifying which reaction to delete. | <Table id='DeleteMessageReactionParams'/> |
+
+</Table>
+
+<Table id='DeleteMessageReactionParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| name | Optional | The reaction identifier to delete. Required except for `Unique` type. | String |
+| type | Optional | The counting strategy of the reaction to delete. | <Table id='MessageReactionType'/> |
+
+</Table>
+
+### Returns <a id="delete-reaction-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the reaction has been deleted, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+## Message <a id="Message"/>
+
+The `Message` interface represents a single message in a chat room.
+
+<Table id='MessageProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| serial | The unique identifier of the message. | String |
+| clientId | The client ID of the user who created the message. | String |
+| userClaim | The user claim attached to this message by the server. Only present if the publishing user's [JWT](/docs/auth/token#jwt) contained a claim for the room in which this message was published. | String or Undefined |
+| text | The text content of the message. | String |
+| timestamp | The timestamp at which the message was created. | Date |
+| metadata | Extra information attached to the message for features like animations or linking to external resources. Always set; empty object if no metadata was provided. | <Table id='MessageMetadata'/> |
+| headers | Additional information in Ably realtime message extras, usable for features like livestream timestamping or message flagging. Always set; empty object if none provided. | <Table id='MessageHeaders'/> |
+| action | The action type indicating if the message was created, updated, or deleted. | <Table id='ChatMessageAction'/> |
+| version | Information about the current version of this message. | <Table id='MessageVersion'/> |
+| reactions | The reactions summary for this message. | <Table id='MessageReactionSummary'/> |
+
+</Table>
+
+<Table id='ChatMessageAction' hidden>
+
+| Value | Description |
+| --- | --- |
+| MessageCreate | The message was newly created. The value is `message.create`. |
+| MessageUpdate | The message was updated. The value is `message.update`. |
+| MessageDelete | The message was deleted. The value is `message.delete`. |
+
+</Table>
+
+<Table id='MessageVersion' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| serial | Required | The unique identifier for this version. | String |
+| timestamp | Required | When this version was created. | Date |
+| clientId | Optional | The client ID of the user who performed an update or deletion. | String or Undefined |
+| description | Optional | A description of why this version was created. | String or Undefined |
+| metadata | Optional | Additional metadata about the operation. | <Table id='OperationMetadata'/> or Undefined |
+
+</Table>
+
+## PaginatedResult <a id="PaginatedResult"/>
+
+A `PaginatedResult` represents a page of results from a paginated query such as `history()` or `historyBeforeSubscribe()`.
+
+<Table id='PaginatedResultProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| items | The current page of results. | [Message](#Message)[] |
+
+</Table>
+
+### Check for more pages <a id="PaginatedResult-hasNext"/>
+
+<MethodSignature>hasNext(): boolean</MethodSignature>
+
+Returns `true` if there are more pages available by calling `next()`.
+
+### Check if last page <a id="PaginatedResult-isLast"/>
+
+<MethodSignature>isLast(): boolean</MethodSignature>
+
+Returns `true` if this is the last page of results.
+
+### Get next page <a id="PaginatedResult-next"/>
+
+<MethodSignature>{`next(): Promise<PaginatedResult<Message> | null>`}</MethodSignature>
+
+Returns a promise. The promise is fulfilled with the next page of results, or `null` if there are no more pages, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+### Get first page <a id="PaginatedResult-first"/>
+
+<MethodSignature>{`first(): Promise<PaginatedResult<Message>>`}</MethodSignature>
+
+Returns a promise. The promise is fulfilled with the first page of results, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+### Get current page <a id="PaginatedResult-current"/>
+
+<MethodSignature>{`current(): Promise<PaginatedResult<Message>>`}</MethodSignature>
+
+Returns a promise. The promise is fulfilled with the current page of results, or rejected with an [`ErrorInfo`](/docs/chat/api/react/providers#errorInfo) object.
+
+## Example
+
+<Code>
+```react
+import { ChatMessageEventType, OrderBy, MessageReactionType } from '@ably/chat';
+import { useMessages } from '@ably/chat/react';
+import { useState, useCallback } from 'react';
+
+function ChatMessages() {
+  const [messages, setMessages] = useState([]);
+
+  const { sendMessage, updateMessage, deleteMessage, history, sendReaction } = useMessages({
+    listener: (event) => {
+      setMessages((prev) => {
+        switch (event.type) {
+          case ChatMessageEventType.Created:
+            return [...prev, event.message];
+          case ChatMessageEventType.Updated:
+          case ChatMessageEventType.Deleted:
+            return prev.map((msg) =>
+              msg.serial === event.message.serial ? event.message : msg
+            );
+          default:
+            return prev;
+        }
+      });
+    },
+    reactionsListener: (event) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.serial === event.messageSerial
+            ? msg.with(event)
+            : msg
+        )
+      );
+    },
+  });
+
+  const loadHistory = useCallback(async () => {
+    const result = await history({ limit: 50, orderBy: OrderBy.OldestFirst });
+    setMessages(result.items);
+  }, [history]);
+
+  const handleSend = useCallback(async (text) => {
+    await sendMessage({ text });
+  }, [sendMessage]);
+
+  const handleReact = useCallback(async (serial, emoji) => {
+    await sendReaction(serial, { name: emoji, type: MessageReactionType.Distinct });
+  }, [sendReaction]);
+
+  return (
+    <div>
+      <button onClick={loadHistory}>Load History</button>
+      {messages.map((msg) => (
+        <div key={msg.serial}>
+          <strong>{msg.clientId}</strong>: {msg.text}
+          <button onClick={() => handleReact(msg.serial, '👍')}>👍</button>
+          <button onClick={() => deleteMessage(msg.serial)}>Delete</button>
+        </div>
+      ))}
+      <button onClick={() => handleSend('Hello!')}>Send</button>
+    </div>
+  );
+}
+```
+</Code>

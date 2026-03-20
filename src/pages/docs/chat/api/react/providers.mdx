@@ -1,0 +1,194 @@
+---
+title: Providers
+meta_description: "API reference for the ChatClientProvider and ChatRoomProvider components in the Ably Chat React SDK."
+meta_keywords: "Ably Chat SDK, React, ChatClientProvider, ChatRoomProvider, providers, context, hooks"
+---
+
+The Ably Chat React SDK provides two context providers that supply chat functionality to your component tree. All chat hooks must be used within these providers.
+
+An API key is required to authenticate with Ably. API keys are used either to authenticate directly with Ably using basic authentication, or to generate tokens for untrusted clients using [JWT authentication](/docs/auth/token#jwt). Authenticate an `Ably.Realtime` Pub/Sub client and then pass it to the `ChatClientProvider`.
+
+<Aside data-type='important'>
+Basic authentication should never be used on the client-side in production, as it exposes your Ably API key. Instead, use JWT authentication.
+</Aside>
+
+<Code>
+```react
+import * as Ably from 'ably';
+import { ChatClient } from '@ably/chat';
+import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
+
+const realtimeClient = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+const chatClient = new ChatClient(realtimeClient);
+
+function App() {
+  return (
+    <ChatClientProvider client={chatClient}>
+      <ChatRoomProvider name="my-room">
+        {/* Chat hooks can be used here */}
+      </ChatRoomProvider>
+    </ChatClientProvider>
+  );
+}
+```
+</Code>
+
+<Aside data-type='important'>
+Create the `ChatClient` and underlying `Ably.Realtime` client outside of React components to avoid creating duplicate connections on re-renders.
+</Aside>
+
+## ChatClientProvider <a id="chatClientProvider"/>
+
+Provides a `ChatClient` instance to all descendant components via React context. All chat hooks, including [`useChatClient`](/docs/chat/api/react/use-chat-client) and [`useChatConnection`](/docs/chat/api/react/use-chat-connection), require this provider to be present in the component tree.
+
+The `client` property should be memoized to prevent unnecessary context updates. The provider manages room reference counting internally, only detaching rooms when no references remain.
+
+### Properties <a id="chatClientProvider-properties"/>
+
+<Table id='ChatClientProviderProps'>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| client | Required | An instance of the ChatClient. | ChatClient |
+| children | Optional | Child components that will have access to the chat client context. | ReactNode or ReactNode[] |
+
+</Table>
+
+## ChatRoomProvider <a id="chatRoomProvider"/>
+
+Provides room context to descendant components. All room-level hooks such as [`useMessages`](/docs/chat/api/react/use-messages), [`usePresence`](/docs/chat/api/react/use-presence), and [`useTyping`](/docs/chat/api/react/use-typing) require this provider.
+
+The provider automatically handles room attachment and detachment. Multiple providers for the same room with the same options share the same underlying room instance through reference counting.
+
+### Properties <a id="chatRoomProvider-properties"/>
+
+<Table id='ChatRoomProviderProps'>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| name | Required | The name of the room. | String |
+| options | Optional | Options to use when creating the room. Must be memoized to prevent unnecessary room recreations. Room options are immutable after creation; using different options for the same room name will reject with a `RoomExistsWithDifferentOptions` error. | <Table id='RoomOptions'/> |
+| children | Optional | Child components that will have access to the room context. | ReactNode or ReactNode[] |
+
+</Table>
+
+<Table id='RoomOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| typing | Optional | Configuration for typing indicators. | <Table id='TypingOptions'/> |
+| presence | Optional | Configuration for presence events. | <Table id='PresenceOptions'/> |
+| occupancy | Optional | Configuration for occupancy events. | <Table id='OccupancyOptions'/> |
+| messages | Optional | Configuration for message reactions. | <Table id='MessagesOptions'/> |
+
+</Table>
+
+<Table id='TypingOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| heartbeatThrottleMs | Optional | Minimum time in milliseconds between consecutive typing started events. The first call emits immediately; later calls are no-ops until the interval has elapsed. Calling typing.stop resets the interval. The default value is `10000`. | Number |
+
+</Table>
+
+<Table id='PresenceOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| enableEvents | Optional | Whether the client receives presence events from the server. Can be disabled if presence is used but this client does not need the messages. The default value is `true`. | Boolean |
+
+</Table>
+
+<Table id='OccupancyOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| enableEvents | Optional | Whether to receive occupancy events. Enabling this increases message volume as the server sends additional updates for occupancy changes. The default value is `false`. | Boolean |
+
+</Table>
+
+<Table id='MessagesOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| rawMessageReactions | Optional | Whether to receive raw individual message reactions from the realtime channel. Reaction summaries remain available regardless of this setting. The default value is `false`. | Boolean |
+| defaultMessageReactionType | Optional | The default message reaction type for sending reactions. Individual types can still be specified via the send method parameter. The default value is `Distinct`. | <Table id='MessageReactionType'/> |
+
+</Table>
+
+<Table id='MessageReactionType' hidden>
+
+| Value | Description |
+| --- | --- |
+| Distinct | Allows at most one reaction of each type per client per message. Duplicates are not counted in the summary. Similar to reactions on Slack. The value is `distinct`. |
+| Multiple | Allows any number of reactions, including repeats, counted in the summary. The reaction payload includes a count. Similar to the clap feature on Medium. The value is `multiple`. |
+| Unique | Allows at most one reaction per client per message. If a client reacts again, only the second reaction is counted. Similar to reactions on iMessage or WhatsApp. The value is `unique`. |
+
+</Table>
+
+## ErrorInfo <a id="errorInfo"/>
+
+A standardized, generic Ably error object that contains an Ably-specific status code, and a generic HTTP status code. All errors returned from Ably are compatible with the `ErrorInfo` structure.
+
+<Table id='ErrorInfo'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| code | Ably-specific error code. | Number |
+| statusCode | HTTP status code corresponding to this error, where applicable. | Number |
+| message | Additional information about the error. | String |
+| cause | The underlying cause of the error, where applicable. | [ErrorInfo](#errorInfo) or Undefined |
+| detail | Optional map of string key-value pairs containing structured metadata associated with the error. | `Record<string, string>` or Undefined |
+
+</Table>
+
+## DiscontinuityListener <a id="discontinuityListener"/>
+
+A callback to detect and respond to discontinuities in the event stream. Discontinuities occur when the client may have missed events due to connectivity issues.
+
+<Table id='DiscontinuityListener'>
+
+| Parameter | Description | Type |
+| --- | --- | --- |
+| error | An error providing context about why the discontinuity occurred. | [ErrorInfo](#errorInfo) |
+
+</Table>
+
+## Example
+
+<Code>
+```react
+import * as Ably from 'ably';
+import { ChatClient } from '@ably/chat';
+import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
+import { useMemo } from 'react';
+
+// Create clients outside of components
+const realtimeClient = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  clientId: 'user-123'
+});
+const chatClient = new ChatClient(realtimeClient);
+
+function App() {
+  // Memoize room options to prevent unnecessary recreations
+  const roomOptions = useMemo(() => ({
+    typing: { heartbeatThrottleMs: 5000 },
+    occupancy: { enableEvents: true },
+  }), []);
+
+  return (
+    <ChatClientProvider client={chatClient}>
+      <ChatRoomProvider name="my-room" options={roomOptions}>
+        <ChatRoom />
+      </ChatRoomProvider>
+    </ChatClientProvider>
+  );
+}
+
+function ChatRoom() {
+  // All chat hooks can be used here
+  return <div>Chat room content</div>;
+}
+```
+</Code>
