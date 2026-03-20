@@ -42,7 +42,7 @@ const SANDPACK_TSCONFIG = JSON.stringify({ compilerOptions: examplesTsConfig.com
 
 const getDependencies = (id: string, products: string[], activeLanguage: LanguageKey) => {
   return {
-    ably: '~2.20.0',
+    ably: '~2.21.0',
     nanoid: '^5.0.7',
     minifaker: '1.34.1',
     'franken-ui': '^2.0.0',
