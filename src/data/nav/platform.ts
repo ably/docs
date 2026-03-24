@@ -272,8 +272,8 @@ export default {
           index: true,
         },
         {
-          name: 'User management',
-          link: '/docs/platform/account/users',
+          name: 'Team',
+          link: '/docs/platform/account/team',
         },
         {
           name: 'Organizations',
@@ -300,28 +300,70 @@ export default {
               index: true,
             },
             {
-              name: 'Stats',
-              link: '/docs/platform/account/app/stats',
+              name: 'Products',
+              pages: [
+                {
+                  name: 'Pub/Sub',
+                  link: '/docs/platform/account/app/products/pubsub',
+                },
+                {
+                  name: 'Chat',
+                  link: '/docs/platform/account/app/products/chat',
+                },
+                {
+                  name: 'Spaces',
+                  link: '/docs/platform/account/app/products/spaces',
+                },
+                {
+                  name: 'LiveObjects',
+                  link: '/docs/platform/account/app/products/liveobjects',
+                },
+                {
+                  name: 'LiveSync',
+                  link: '/docs/platform/account/app/products/livesync',
+                },
+                {
+                  name: 'Push notifications',
+                  link: '/docs/platform/account/app/products/push-notifications',
+                },
+              ],
             },
             {
-              name: 'API keys',
-              link: '/docs/platform/account/app/api',
+              name: 'Connections',
+              link: '/docs/platform/account/app/connections',
             },
             {
               name: 'Queues',
               link: '/docs/platform/account/app/queues',
             },
             {
-              name: 'Notifications',
-              link: '/docs/platform/account/app/notifications',
+              name: 'Monitoring',
+              link: '/docs/platform/account/app/monitoring',
             },
             {
-              name: 'Dev console',
-              link: '/docs/platform/account/app/console',
+              name: 'Configuration',
+              pages: [
+                {
+                  name: 'API keys',
+                  link: '/docs/platform/account/app/configuration/api-keys',
+                },
+                {
+                  name: 'Rules',
+                  link: '/docs/platform/account/app/configuration/rules',
+                },
+                {
+                  name: 'Integrations',
+                  link: '/docs/platform/account/app/configuration/integrations',
+                },
+                {
+                  name: 'Application settings',
+                  link: '/docs/platform/account/app/configuration/settings',
+                },
+              ],
             },
             {
-              name: 'Settings',
-              link: '/docs/platform/account/app/settings',
+              name: 'Web client',
+              link: '/docs/platform/account/app/client',
             },
           ],
         },
