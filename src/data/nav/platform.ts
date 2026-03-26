@@ -272,8 +272,8 @@ export default {
           index: true,
         },
         {
-          name: 'User management',
-          link: '/docs/platform/account/users',
+          name: 'Team',
+          link: '/docs/platform/account/team',
         },
         {
           name: 'Organizations',
