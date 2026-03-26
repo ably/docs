@@ -292,40 +292,6 @@ export default {
           link: '/docs/platform/account/enterprise-customization',
         },
         {
-          name: 'App management',
-          pages: [
-            {
-              name: 'Overview',
-              link: '/docs/platform/account/app',
-              index: true,
-            },
-            {
-              name: 'Stats',
-              link: '/docs/platform/account/app/stats',
-            },
-            {
-              name: 'API keys',
-              link: '/docs/platform/account/app/api',
-            },
-            {
-              name: 'Queues',
-              link: '/docs/platform/account/app/queues',
-            },
-            {
-              name: 'Notifications',
-              link: '/docs/platform/account/app/notifications',
-            },
-            {
-              name: 'Dev console',
-              link: '/docs/platform/account/app/console',
-            },
-            {
-              name: 'Settings',
-              link: '/docs/platform/account/app/settings',
-            },
-          ],
-        },
-        {
           name: 'Programmatic management using Control API',
           link: '/docs/platform/account/control-api',
         },
