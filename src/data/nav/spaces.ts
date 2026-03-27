@@ -57,6 +57,10 @@ export default {
         },
       ],
     },
+    {
+      name: 'Spaces pricing',
+      link: '/docs/spaces/pricing',
+    },
   ],
   api: [
     {

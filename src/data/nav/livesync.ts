@@ -43,6 +43,10 @@ export default {
         },
       ],
     },
+    {
+      name: 'LiveSync pricing',
+      link: '/docs/livesync/pricing',
+    },
   ],
   api: [
     {
