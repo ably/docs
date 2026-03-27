@@ -2,38 +2,12 @@
 title: "LiveObjects pricing"
 meta_description: "Understand how LiveObjects operations contribute to your message count, including LiveMap, LiveCounter, synchronization, and REST API usage."
 meta_keywords: "LiveObjects pricing, message counting, LiveMap, LiveCounter, ObjectMessages"
-intro: "How LiveObjects operations contribute to your message count."
+intro: "How LiveObjects operations contribute to your message count and strategies to optimize costs."
 redirect_from:
   - /docs/liveobjects/concepts/billing
 ---
 
-<If lang="javascript">
-  <Aside data-type='public-preview'>
-  LiveObjects JavaScript is in Public Preview. Ably is committed to supporting the LiveObjects JavaScript API and welcomes adoption and feedback.
-
-  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
-  </Aside>
-</If>
-<If lang="swift">
-  <Aside data-type='experimental'>
-  LiveObjects Swift is currently Experimental. Its features are still in development and subject to rapid change.
-
-  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
-  </Aside>
-</If>
-<If lang="java">
-  <Aside data-type='experimental'>
-  LiveObjects Java is currently Experimental. Its features are still in development and subject to rapid change.
-
-  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
-  </Aside>
-</If>
-
-LiveObjects operations are billed using ObjectMessages. Each ObjectMessage follows the standard inbound/outbound counting pattern.
-
-<Aside data-type="further-reading">
-For how all Ably products count messages, see [message counting](/docs/platform/pricing/message-counting). For package comparison and volume discounts, see the [pricing](https://ably.com/pricing) page.
-</Aside>
+Ably bills LiveObjects operations using ObjectMessages. An ObjectMessage is the unit of change in LiveObjects. Each state mutation, such as setting a key, incrementing a counter, or creating an object, generates one or more ObjectMessages. Each ObjectMessage follows the standard inbound/outbound counting pattern.
 
 ## LiveObjects operations <a id="operations"/>
 
@@ -41,16 +15,20 @@ The following table shows how LiveObjects operations contribute to your message 
 
 | Operation | Messages counted |
 | --- | --- |
-| [LiveMap](#livemap-operations) set or remove | 1 inbound message per operation |
-| [LiveMap](#livemap-operations) create (shallow) | 2 inbound messages (create + assign) |
-| [LiveCounter](#livecounter-operations) increment or decrement | 1 inbound message |
-| [LiveCounter](#livecounter-operations) create | 2 inbound messages (create + assign) |
+| [LiveMap](/docs/liveobjects/map) set or remove | 1 inbound message per operation |
+| [LiveMap](/docs/liveobjects/map) create (shallow) | 2 inbound messages (create + assign) |
+| [LiveCounter](/docs/liveobjects/counter) increment or decrement | 1 inbound message |
+| [LiveCounter](/docs/liveobjects/counter) create | 2 inbound messages (create + assign) |
 | ObjectMessage delivery | 1 outbound message per connected client |
 | [Synchronization](#synchronization) | 1 message per object synchronized |
 | [REST API](#rest-api) fetch | 1 message per object in response |
-| [Batch](#livemap-operations) operation | 1 message per operation in the batch |
+| [Batch](/docs/liveobjects/batch) operation | 1 message per operation in the batch |
 
-Nested object creation generates additional messages for each nested object. See the [examples below](#livemap-operations) for details.
+Nested object creation generates additional messages for each nested object.
+
+<Aside data-type="further-reading">
+For how all Ably products count messages, see [message counting](/docs/platform/pricing/message-counting).
+</Aside>
 
 ## Channels and connections <a id="channels-connections"/>
 
@@ -58,126 +36,23 @@ Each LiveObjects channel contributes to your [channel count](/docs/platform/pric
 
 Subscribing to updates does not affect the number of messages received by a client. Any client attached to a channel with the `object-subscribe` capability automatically receives all object messages for that channel. Subscribing to updates on an object adds a listener that is called whenever the client receives updates for that object.
 
-<If lang="javascript">
+## Cost optimization <a id="optimization"/>
 
-## LiveMap operation examples <a id="livemap-operations"/>
+### Prefer flat data structures
 
-Removing a key and setting a primitive value always sends one message:
+Setting a primitive value on a LiveMap costs one message. Creating a nested LiveMap costs two or more messages (one to create the object, one to assign it), plus additional messages for each level of nesting. Flatten your data model where possible to reduce the number of messages per update.
 
-<Code>
-```javascript
-// One message
-await myObject.get('settings').set('theme', 'dark');
+### Minimize objects per channel
 
-// One message
-await myObject.get('settings').remove('theme');
-```
-</Code>
-
-Creating a shallow `LiveMap` sends two messages: one to create the new `LiveMap` object, and one to assign it to the target object:
-
-<Code>
-```javascript
-// Two messages: create map + assign to 'settings'
-await myObject.set('settings', LiveMap.create({
-  shallow: 'data'
-}));
-```
-</Code>
-
-Nested `LiveMap` or `LiveCounter` objects each generate their own creation messages:
-
-<Code>
-```javascript
-// Four messages:
-// - create visits counter
-// - create stats map
-// - create settings map
-// - assign to 'settings'
-await myObject.set('settings', LiveMap.create({
-  stats: LiveMap.create({
-    visits: LiveCounter.create()
-  })
-}));
-```
-</Code>
-
-Batch operations result in a message for each operation included in the batch:
-
-<Code>
-```javascript
-// Four messages
-await myObject.get('settings').batch((ctx) => {
-  ctx.set('theme', 'dark');
-  ctx.set('fontSize', 14);
-  ctx.set('notifications', true);
-  ctx.remove('oldSetting');
-});
-```
-</Code>
-
-## LiveCounter operation examples <a id="livecounter-operations"/>
-
-Incrementing and decrementing a counter always sends one message:
-
-<Code>
-```javascript
-// One message
-await myObject.get('visits').increment(5);
-
-// One message
-await myObject.get('visits').decrement(3);
-```
-</Code>
-
-Creating a `LiveCounter` sends two messages: one to create the new `LiveCounter` object, and one to assign it to the target object:
-
-<Code>
-```javascript
-// Two messages: create counter + assign to 'visits'
-await myObject.set('visits', LiveCounter.create(0));
-```
-</Code>
-
-Creating a counter nested within a `LiveMap` also generates messages for the parent map:
-
-<Code>
-```javascript
-// Four messages:
-// - create visits counter
-// - create stats map
-// - create settings map
-// - assign to 'settings'
-await myObject.set('settings', LiveMap.create({
-  stats: LiveMap.create({
-    visits: LiveCounter.create(0)
-  })
-}));
-```
-</Code>
-
-Batch operations result in a message for each operation included in the batch:
-
-<Code>
-```javascript
-// Three messages
-await myObject.get('visits').batch((ctx) => {
-  ctx.increment(5);
-  ctx.increment(3);
-  ctx.decrement(2);
-});
-```
-</Code>
-
-</If>
+Each object on a channel is synchronized when a client attaches or resynchronizes. Fewer objects per channel reduces the cost of synchronization. Distribute objects across channels based on which clients need access to them.
 
 ## Synchronization <a id="synchronization"/>
 
-During initial synchronization and resynchronization, each object on the channel is sent as one or more messages. Large objects, such as maps with many entries, may be split across multiple messages.
+During initial synchronization and resynchronization, Ably sends each object on the channel as a message.
 
-For example, if a channel contains 10 objects (such as `LiveMap` and `LiveCounter` instances), a client attaching to the channel will receive at least 10 messages during synchronization.
+For example, if a channel contains 10 objects (such as `LiveMap` and `LiveCounter` instances), a client attaching to the channel receives 10 messages during synchronization.
 
-Similarly, if a client becomes disconnected and needs to resynchronize, it will receive messages for each object that needs to be synchronized.
+Similarly, if a client becomes disconnected and needs to resynchronize, it receives messages for each object that needs to be synchronized.
 
 Only [reachable](/docs/liveobjects/concepts/objects#reachability) objects are counted. Ably may send [tombstone](/docs/liveobjects/concepts/objects#tombstones) objects to the client, but these will not count towards your usage.
 
