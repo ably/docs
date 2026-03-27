@@ -35,7 +35,7 @@ const Breadcrumbs: React.FC = () => {
   })();
 
   return (
-    <nav aria-label="breadcrumb" className="flex mt-8 items-center gap-1">
+    <nav aria-label="breadcrumb" className="flex items-center gap-1 min-w-0">
       {lastActiveNodeIndex === null && (
         <Icon
           name="icon-gui-chevron-left-micro"
