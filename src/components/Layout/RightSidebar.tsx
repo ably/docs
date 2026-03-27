@@ -269,7 +269,7 @@ const RightSidebar = () => {
     >
       <div className="flex flex-col h-full overflow-y-auto pt-8">
         {showLanguageSelector && (
-          <div className="mb-6 pb-6 border-b border-neutral-300 dark:border-neutral-1000">
+          <div className="mb-6">
             <LanguageSelector />
           </div>
         )}

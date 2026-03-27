@@ -12,7 +12,7 @@ export type LayoutOptions = {
 const mdxWrapper = path.resolve('src/components/Layout/MDXWrapper.tsx');
 
 const pageLayoutOptions: Record<string, LayoutOptions> = {
-  '/docs': { leftSidebar: true, rightSidebar: false, template: 'index', mdx: false },
+  '/docs': { leftSidebar: false, rightSidebar: false, template: 'index', mdx: false },
   '/docs/api/control-api': {
     leftSidebar: false,
     rightSidebar: false,

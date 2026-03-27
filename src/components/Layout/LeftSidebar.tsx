@@ -51,7 +51,7 @@ const accordionTriggerClassName = cn(
   '[&[data-state=open]>svg]:rotate-90',
 );
 
-const accordionLinkClassName = 'pl-3 py-[6px]';
+const accordionLinkClassName = 'pl-3 py-1';
 
 const iconClassName = 'text-neutral-1300 dark:text-neutral-000 transition-transform';
 
@@ -184,13 +184,13 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
 /** Render top-level nav sections as static headings with their content always expanded. */
 const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductContent)[]; tree: number[] }) => {
   return (
-    <div className="px-3 pt-8 pb-3">
+    <div className="px-3 pt-9 pb-3">
       {content.map((page, index) => {
         const hasDeeperLayer = 'pages' in page && page.pages;
 
         return (
-          <div key={page.name} className={cn(index > 0 && 'mt-2 pt-2')}>
-            <div className="ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 py-[6px]">
+          <div key={page.name}>
+            <div className={cn('ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 pb-1.5', index > 0 ? 'pt-5' : 'pt-0')}>
               {page.name}
             </div>
             {hasDeeperLayer && <ChildAccordion content={page.pages} tree={[...tree, index]} />}
@@ -236,12 +236,12 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   // When the product bar is visible (non-platform products), add its height to the sticky offset
   const hasProductBar = activeProductKey !== null && activeProductKey !== 'platform';
   const stickyTopPx = HEADER_HEIGHT + (hasProductBar ? PRODUCT_BAR_HEIGHT : 0);
-  const stickyTopStyle = inHeader ? undefined : { top: `${stickyTopPx}px` };
+  const stickyTopStyle = inHeader ? undefined : { top: `${stickyTopPx}px`, height: `calc(100dvh - ${stickyTopPx}px)` };
   const stickyTopClass = inHeader ? 'top-16' : '';
 
   return (
     <div
-      className={cn('sticky h-full', stickyTopClass, inHeader ? 'w-full' : 'w-[312px] hidden md:block', className)}
+      className={cn('sticky', stickyTopClass, inHeader ? 'w-full' : 'w-[312px] hidden md:block', className)}
       style={stickyTopStyle}
     >
       {inHeader && (
@@ -258,10 +258,7 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
           'bg-neutral-000 dark:bg-neutral-1300 overflow-x-hidden overflow-y-auto',
           inHeader
             ? 'w-full h-[calc(100dvh-64px-128px)]'
-            : [
-                'w-[312px] border-r border-neutral-300 dark:border-neutral-1000',
-                `h-[calc(100dvh-${stickyTopPx}px)]`,
-              ],
+            : 'w-[312px] h-full border-r border-neutral-300 dark:border-neutral-1000',
         )}
       >
         {content.length > 0 ? (
