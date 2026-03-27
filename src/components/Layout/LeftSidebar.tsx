@@ -3,6 +3,7 @@ import { graphql, useStaticQuery } from 'gatsby';
 import { useLocation } from '@reach/router';
 import * as Accordion from '@radix-ui/react-accordion';
 import cn from '@ably/ui/core/utils/cn';
+import { HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
 import Icon from '@ably/ui/core/Icon';
 
 import { productData } from 'src/data';
@@ -10,6 +11,7 @@ import { NavProductContent, NavProductPage } from 'src/data/nav/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { interactiveButtonClassName } from './utils/styles';
+import { PRODUCT_BAR_HEIGHT } from './utils/heights';
 
 // Build link preserving all language params across navigation
 const buildLinkWithParams = (targetLink: string, searchParams: URLSearchParams): string => {
@@ -63,7 +65,11 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   const preExpandedItems = content
     .map((page, index) => 'expand' in page && page.expand && `item-${tree.join('-')}-${index}`)
     .filter((item) => typeof item === 'string');
-  const [openSections, setOpenSections] = useState<string[]>([`item-${previousTree.join('-')}`, ...preExpandedItems]);
+
+  const [openSections, setOpenSections] = useState<string[]>([
+    `item-${previousTree.join('-')}`,
+    ...preExpandedItems,
+  ]);
 
   useEffect(() => {
     if (activeTriggerRef.current) {
@@ -105,7 +111,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   return (
     <Accordion.Root
       type="multiple"
-      className={cn(layer > 0 ? 'pl-3' : 'px-2 py-3')}
+      className={cn(layer > 1 ? 'pl-3' : '')}
       value={openSections}
       onValueChange={(value) => {
         setOpenSections(value);
@@ -124,7 +130,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
               ref={isSelected ? activeTriggerRef : null}
               className={cn(accordionTriggerClassName, 'font-medium rounded-lg', {
                 'border-l border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 rounded-l-none':
-                  layer > 0,
+                  layer > 1,
                 'text-neutral-1300 dark:text-neutral-000 font-bold': isActive,
                 'border-orange-600 bg-orange-100 hover:bg-orange-100': isSelected,
               })}
@@ -175,15 +181,28 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   );
 };
 
+/** Render top-level nav sections as static headings with their content always expanded. */
+const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductContent)[]; tree: number[] }) => {
+  return (
+    <div className="px-3 pt-8 pb-3">
+      {content.map((page, index) => {
+        const hasDeeperLayer = 'pages' in page && page.pages;
+
+        return (
+          <div key={page.name} className={cn(index > 0 && 'mt-2 pt-2')}>
+            <div className="ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 py-[6px]">
+              {page.name}
+            </div>
+            {hasDeeperLayer && <ChildAccordion content={page.pages} tree={[...tree, index]} />}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
-
-  const defaultPageItems = useMemo(
-    () => (activePage.tree[0]?.index !== undefined ? [`item-${activePage.tree[0].index}`] : []),
-    [activePage.tree],
-  );
-
-  const [openProducts, setOpenProducts] = useState(defaultPageItems);
 
   const {
     site: {
@@ -201,81 +220,58 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
     }
   `);
 
-  useEffect(() => {
-    if (activePage.tree[0]?.index !== undefined) {
-      setOpenProducts((openProducts) => Array.from(new Set([...openProducts, `item-${activePage.tree[0].index}`])));
-    }
-  }, [activePage.tree]);
+  // Resolve the active product's nav content
+  const activeProductKey = activePage.product;
+  const activeProduct = activeProductKey ? productData[activeProductKey] : null;
+  const content = useMemo(
+    () => (activeProduct ? [...activeProduct.nav.content, ...activeProduct.nav.api] : []),
+    [activeProduct],
+  );
+
+  // The tree indices from the original sidebar started at [productIndex, sectionIndex, ...].
+  // Since we no longer wrap in a product accordion, the tree now starts at [productIndex, sectionIndex, ...].
+  // The ChildAccordion uses tree[1+] for section expansion, so we pass tree=[productIndex] as the base.
+  const productIndex = activePage.tree[0]?.index ?? 0;
+
+  // When the product bar is visible (non-platform products), add its height to the sticky offset
+  const hasProductBar = activeProductKey !== null && activeProductKey !== 'platform';
+  const stickyTopPx = HEADER_HEIGHT + (hasProductBar ? PRODUCT_BAR_HEIGHT : 0);
+  const stickyTopStyle = inHeader ? undefined : { top: `${stickyTopPx}px` };
+  const stickyTopClass = inHeader ? 'top-16' : '';
 
   return (
-    <div className={cn('sticky top-16 h-full', inHeader ? 'w-full' : 'w-[280px] hidden md:block', className)}>
+    <div
+      className={cn('sticky h-full', stickyTopClass, inHeader ? 'w-full' : 'w-[312px] hidden md:block', className)}
+      style={stickyTopStyle}
+    >
+      {inHeader && (
+        <div
+          id="inkeep-search-mobile-mount"
+          className={cn(
+            'bg-neutral-100 dark:bg-neutral-1200 sticky top-0',
+            externalScriptsData.inkeepSearchEnabled && 'p-1',
+          )}
+        />
+      )}
       <div
-        id={inHeader ? 'inkeep-search-mobile-mount' : 'inkeep-search-mount'}
-        className={cn(
-          'bg-neutral-100 dark:bg-neutral-1200',
-          externalScriptsData.inkeepSearchEnabled && 'p-1',
-          inHeader ? 'sticky top-0' : 'border-r border-neutral-300 dark:border-neutral-1000',
-        )}
-      ></div>
-      <Accordion.Root
-        type="multiple"
-        value={openProducts}
         className={cn(
           'bg-neutral-000 dark:bg-neutral-1300 overflow-x-hidden overflow-y-auto',
           inHeader
             ? 'w-full h-[calc(100dvh-64px-128px)]'
             : [
-                'w-[280px] border-r border-neutral-300 dark:border-neutral-1000',
-                externalScriptsData.inkeepSearchEnabled ? 'h-[calc(100dvh-64px-44px)]' : 'h-[calc(100dvh-64px)]',
+                'w-[312px] border-r border-neutral-300 dark:border-neutral-1000',
+                `h-[calc(100dvh-${stickyTopPx}px)]`,
               ],
         )}
-        onValueChange={(value) => {
-          setOpenProducts(value);
-        }}
       >
-        {Object.entries(productData).map(([productKey, productObj], index) => {
-          const isSelected = activePage.tree[0]?.index === index;
-
-          return (
-            <Accordion.Item
-              key={productKey}
-              value={`item-${index}`}
-              className="border-b border-neutral-300 dark:border-neutral-1000"
-            >
-              <Accordion.Trigger
-                className={cn(
-                  'group/accordion-trigger z-10',
-                  accordionTriggerClassName,
-                  'data-[state=open]:border-b data-[state=open]:sticky data-[state=open]:top-0 h-12 px-4 py-3 font-bold',
-                  isSelected && 'text-neutral-1300 dark:text-neutral-000',
-                )}
-              >
-                <div className="flex-1 flex items-center gap-2">
-                  <Icon
-                    name={isSelected ? productObj.nav.icon.open : productObj.nav.icon.closed}
-                    additionalCSS={cn(
-                      iconClassName,
-                      isSelected
-                        ? 'text-orange-600'
-                        : 'text-neutral-900 dark:text-neutral-400 group-hover/accordion-trigger:text-neutral-1300 dark:group-hover/accordion-trigger:text-neutral-000',
-                    )}
-                    size="20px"
-                  />
-                  <span>{productObj.nav.name}</span>
-                </div>
-                <Icon
-                  name="icon-gui-chevron-right-outline"
-                  additionalCSS={cn(iconClassName, '!text-neutral-900 dark:!text-neutral-400')}
-                  size="12px"
-                />
-              </Accordion.Trigger>
-              <Accordion.Content className={accordionContentClassName}>
-                <ChildAccordion content={[...productObj.nav.content, ...productObj.nav.api]} tree={[index]} />
-              </Accordion.Content>
-            </Accordion.Item>
-          );
-        })}
-      </Accordion.Root>
+        {content.length > 0 ? (
+          <SectionNav content={content} tree={[productIndex]} />
+        ) : (
+          <div className="p-4 text-neutral-700 dark:text-neutral-600 ui-text-p3">
+            Select a product above to browse documentation.
+          </div>
+        )}
+      </div>
     </div>
   );
 };
