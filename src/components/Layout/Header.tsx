@@ -4,6 +4,7 @@ import { graphql, useStaticQuery } from 'gatsby';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { throttle } from 'es-toolkit/compat';
+import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
 import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
@@ -11,6 +12,7 @@ import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
 import { IconName } from '@ably/ui/core/Icon/types';
 import LeftSidebar from './LeftSidebar';
+import ProductBar from './ProductBar';
 import UserContext from 'src/contexts/user-context';
 import ExamplesList from '../Examples/ExamplesList';
 import Link from '../Link';
@@ -23,16 +25,12 @@ const MD_BREAKPOINT = 1040;
 const CLI_ENABLED = false;
 const MAX_MOBILE_MENU_WIDTH = '560px';
 
-const desktopTabs = [
-  <Link key="docs" to="/docs" className="p-4">
-    Documentation
-  </Link>,
-  <Link key="examples" to="/examples" className="p-4">
-    Examples
-  </Link>,
-];
+const headerLinkClassName = 'px-3 py-1.5 rounded-lg ui-text-label3 font-medium transition-colors';
+const activeHeaderLinkClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1000';
+const inactiveHeaderLinkClassName =
+  'text-neutral-800 dark:text-neutral-500 hover:text-neutral-1300 dark:hover:text-neutral-000 hover:bg-neutral-100 dark:hover:bg-neutral-1200';
 
-const mobileTabs = ['Documentation', 'Examples'];
+const mobileTabs = ['Platform', 'Products', 'Examples'];
 
 const helpResourcesItems = [
   {
@@ -151,24 +149,46 @@ const Header: React.FC = () => {
   }, [sessionState.logOut]);
 
   return (
-    <div className="flex items-center justify-between h-16 px-6 fixed w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000">
-      <div className="flex items-center gap-8">
+    <div className="fixed top-0 w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000">
+      <div className="flex items-center justify-between h-16 px-6 max-w-[1856px] mx-auto">
+      <div className="flex items-center gap-8 shrink-0">
         <a href="/docs" className="flex items-center gap-2 focus-base p-2 rounded -ml-2">
           <img src={Logo} width="96px" alt="Ably" />
-          <span className="bg-orange-100 dark:bg-orange-1000 text-[10px] font-bold text-neutral-700 dark:text-neutral-600 px-1.5 py-[3px] rounded-md uppercase">
+          <span className="bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 text-[10px] font-bold text-neutral-1000 dark:text-neutral-400 px-1.5 py-[3px] rounded-md uppercase">
             Docs
           </span>
         </a>
-        <TabMenu
-          rootClassName="hidden md:flex h-16"
-          tabs={desktopTabs}
-          tabClassName="!p-0 !ui-text-label3"
-          options={{
-            underline: false,
-            flexibleTabHeight: true,
-            defaultTabIndex: location.pathname.includes('/examples') ? 1 : 0,
-          }}
-        />
+        <nav className="hidden md:flex items-center gap-1">
+          <Link
+            to="/docs/platform"
+            className={cn(
+              headerLinkClassName,
+              activePage.product === 'platform' ? activeHeaderLinkClassName : inactiveHeaderLinkClassName,
+            )}
+          >
+            Platform
+          </Link>
+          <Link
+            to="/docs/pub-sub"
+            className={cn(
+              headerLinkClassName,
+              activePage.product && activePage.product !== 'platform'
+                ? activeHeaderLinkClassName
+                : inactiveHeaderLinkClassName,
+            )}
+          >
+            Products
+          </Link>
+          <Link
+            to="/examples"
+            className={cn(
+              headerLinkClassName,
+              location.pathname.includes('/examples') ? activeHeaderLinkClassName : inactiveHeaderLinkClassName,
+            )}
+          >
+            Examples
+          </Link>
+        </nav>
         {isMobileMenuOpen && (
           <div
             ref={mobileMenuRef}
@@ -182,7 +202,13 @@ const Header: React.FC = () => {
             <TabMenu
               tabs={mobileTabs}
               contents={[
-                <LeftSidebar inHeader key="nav-mobile-documentation-tab" />,
+                <div key="nav-mobile-platform-tab">
+                  <LeftSidebar inHeader />
+                </div>,
+                <div key="nav-mobile-products-tab">
+                  <ProductBar />
+                  <LeftSidebar inHeader />
+                </div>,
                 <ExamplesList key="nav-mobile-examples-tab" />,
               ]}
               rootClassName="h-full overflow-y-hidden min-h-[3.1875rem] flex flex-col"
@@ -193,12 +219,39 @@ const Header: React.FC = () => {
           </div>
         )}
       </div>
+      <div
+        id="inkeep-search-mount"
+        className="hidden md:flex items-center justify-center flex-1 min-w-0 mx-4"
+      >
+        {!externalScriptsData.inkeepSearchEnabled && (
+          <div className="w-full max-w-[480px]">
+            <button
+              className={cn(
+                secondaryButtonClassName,
+                'w-full justify-start gap-2 text-neutral-600 dark:text-neutral-700 font-normal',
+              )}
+              onClick={() => {
+                // Inkeep renders its chat widget inside a shadow DOM; this reaches in to
+                // programmatically open it. Will silently no-op if the widget structure changes.
+                const chatContainer = document.querySelector('#inkeep-ai-chat > div');
+                const chatButton = chatContainer?.shadowRoot?.querySelector('button');
+                if (chatButton) chatButton.click();
+              }}
+            >
+              <Icon name="icon-gui-magnifying-glass-outline" size="16px" />
+              <span>Search docs...</span>
+            </button>
+          </div>
+        )}
+      </div>
       <Tooltip.Provider delayDuration={0} disableHoverableContent>
-        <div className="hidden md:flex gap-2 pt-3 md:py-0 px-4 md:px-0">
+        <div className="hidden md:flex gap-2 pt-3 md:py-0 px-4 md:px-0 shrink-0">
           {externalScriptsData.inkeepChatEnabled && (
             <button
               className={secondaryButtonClassName}
               onClick={() => {
+                // Inkeep renders its chat widget inside a shadow DOM; this reaches in to
+                // programmatically open it. Will silently no-op if the widget structure changes.
                 const chatContainer = document.querySelector('#inkeep-ai-chat > div');
                 const chatButton = chatContainer?.shadowRoot?.querySelector('button');
 
@@ -320,6 +373,7 @@ const Header: React.FC = () => {
         {externalScriptsData.inkeepChatEnabled && (
           <InkeepSearchBar ref={chatBarRef} instanceType="chat" extraInputStyle={{ backgroundColor: 'white' }} />
         )}
+      </div>
       </div>
     </div>
   );
