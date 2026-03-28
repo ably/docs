@@ -54,6 +54,10 @@ export default {
           name: 'Token streaming limits',
           link: '/docs/ai-transport/token-streaming/token-rate-limits',
         },
+        {
+          name: 'Publish from your server',
+          link: '/docs/ai-transport/token-streaming/server-publishing',
+        },
       ],
     },
     {

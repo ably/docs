@@ -16,26 +16,36 @@ The limits in the second category, however, cannot be increased arbitrarily and 
 
 ## Message-per-response <a id="per-response"/>
 
-The [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern includes automatic rate limit protection. AI Transport prevents a single response stream from reaching the message rate limit for a connection by rolling up multiple appends into a single published message:
+The [message-per-response](/docs/ai-transport/token-streaming/message-per-response) pattern includes automatic rate limit protection. AI Transport rolls up multiple appends into a single published message before applying [connection](/docs/platform/pricing/limits#connection) and [channel](/docs/platform/pricing/limits#channel) rate limits. This means the rate limits apply to the rolled-up messages, not to individual `appendMessage()` calls. The rollup works as follows:
 
 1. Your agent streams tokens to the channel at the model's output rate
-2. Ably publishes the first token immediately, then automatically rolls up subsequent tokens on receipt
-3. Clients receive the same content, delivered in fewer discrete messages
+2. Ably publishes the first token immediately, then automatically rolls up subsequent tokens as they are received
+3. Clients receive the same content, delivered in fewer discrete messages and as larger contiguous chunks
 
-By default, Ably delivers a single response stream at 25 messages per second or the model output rate, whichever is lower. This means you can publish two simultaneous response streams on the same channel or connection with any [Ably package](/docs/platform/pricing#packages), because each stream uses half of the [connection inbound message rate](/docs/platform/pricing/limits#connection). Ably charges for the number of published messages, not for the number of streamed tokens.
+By default, Ably delivers a single response stream at 25 messages per second or the model output rate, whichever is lower. This means you can publish two simultaneous response streams on the same channel or connection with any [Ably package](/docs/platform/pricing#packages), because each stream uses half of the [connection inbound message rate](/docs/platform/pricing/limits#connection). Ably charges for the number of published messages after rollup, not for the number of streamed tokens.
 
 ### Configure rollup behaviour <a id="rollup"/>
 
 Ably concatenates all appends for a single response that are received during the rollup window into one published message. You can specify the rollup window for a particular connection by setting the `appendRollupWindow` [transport parameter](/docs/api/realtime-sdk#client-options). This allows you to determine how much of the connection message rate can be consumed by a single response stream and control your consumption costs.
 
+For example, if your server publishes appends at 100 tokens per second with a 40ms rollup window:
 
-| `appendRollupWindow` | Maximum message rate for a single response |
-|---|---|
-| 0ms | Model output rate |
-| 20ms | 50 messages/s |
-| 40ms *(default)* | 25 messages/s |
-| 100ms | 10 messages/s |
-| 500ms *(max)* | 2 messages/s |
+- 40ms window = 25 windows per second (1000ms / 40ms)
+- Ably produces 25 rolled-up messages per second, each containing approximately 4 tokens
+- The 25 msg/s rolled-up rate is what counts against the connection's inbound message rate limit
+
+The following table shows how different rollup windows affect the rate of messages received by subscribers and the number of concurrent token streams a single connection can support, assuming the model output is 50 tokens per second or greater:
+
+| `appendRollupWindow` | Subscriber delivery rate | Concurrent streams per connection |
+|---|---|---|
+| 20ms | 50 msg/s | 1 |
+| 40ms *(default)* | 25 msg/s | 2 |
+| 100ms | 10 msg/s | 5 |
+| 500ms *(max)* | 2 msg/s | 25 |
+
+_Concurrent streams per connection is calculated based on the [connection inbound message rate limit](/docs/platform/pricing/limits#connection)._
+
+A longer rollup window allows more concurrent streams per connection, but subscribers receive tokens in larger, less frequent batches. The default 40ms window provides smooth delivery for up to two concurrent streams. Increasing the window to 100ms or 200ms accommodates more streams with a modest reduction in delivery granularity.
 
 The following example code demonstrates establishing a connection to Ably with `appendRollupWindow` set to 100ms:
 
