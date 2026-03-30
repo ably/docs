@@ -44,6 +44,7 @@ export default {
   },
   aiTransport: {
     javascript: '2.21',
+    react: '2.21',
     java: '1.6',
     python: '3.1',
     swift: '1.2',
