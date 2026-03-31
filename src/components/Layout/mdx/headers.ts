@@ -16,7 +16,9 @@ export const useCopyableHeaders = () => {
 
         // Prioritize name attribute, fall back to href
         if (firstAnchor.hasAttribute('id')) {
-          header.setAttribute('href', `#${firstAnchor.getAttribute('id')}`);
+          const rawId = firstAnchor.getAttribute('id') ?? '';
+          const id = rawId.startsWith('#') ? rawId.slice(1) : rawId;
+          header.setAttribute('href', `#${id}`);
         } else if (firstAnchor.hasAttribute('href')) {
           header.setAttribute('href', firstAnchor.getAttribute('href') || '');
         }
@@ -42,7 +44,8 @@ export const useCopyableHeaders = () => {
 
       if (firstAnchor?.hasAttribute('id')) {
         // First priority: name attribute on first anchor
-        anchor = `#${firstAnchor.getAttribute('id')}`;
+        const rawId = firstAnchor.getAttribute('id') ?? '';
+        anchor = `#${rawId.startsWith('#') ? rawId.slice(1) : rawId}`;
       } else if (firstAnchor?.hasAttribute('href')) {
         // Second priority: href attribute on first anchor
         anchor = firstAnchor.getAttribute('href') || '';
