@@ -9,7 +9,7 @@ export default {
   },
   content: [
     {
-      name: 'Overview',
+      name: 'About AI Transport',
       link: '/docs/ai-transport',
       index: true,
     },
