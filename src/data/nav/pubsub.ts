@@ -357,6 +357,10 @@ export default {
       ],
     },
     {
+      name: 'Pub/Sub pricing',
+      link: '/docs/pub-sub/pricing',
+    },
+    {
       name: 'Guides',
       pages: [
         {
