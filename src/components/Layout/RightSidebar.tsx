@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
-import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { INKEEP_ASK_BUTTON_HEIGHT, PRODUCT_BAR_HEIGHT } from './utils/heights';
+import { useLayoutContext } from 'src/contexts/layout-context';
+import { LanguageSelector } from './LanguageSelector';
+import { useShowLanguageSelector } from './hooks/useShowLanguageSelector';
 
 type SidebarHeader = {
   id: string;
@@ -49,6 +52,12 @@ const getElementIndent = (type: string, isStepped: boolean) => {
 
 const RightSidebar = () => {
   const location = useLocation();
+  const { activePage } = useLayoutContext();
+  const hasProductBar = activePage.product !== null && activePage.product !== 'platform';
+  const stickyTopPx = HEADER_HEIGHT + (hasProductBar ? PRODUCT_BAR_HEIGHT : 0);
+
+  const showLanguageSelector = useShowLanguageSelector();
+
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({
     id: location.hash ? location.hash.slice(1) : '#',
@@ -252,12 +261,18 @@ const RightSidebar = () => {
 
   return (
     <div
-      className="absolute md:sticky w-60 top-24 right-6"
+      className="hidden md:block sticky w-[312px] shrink-0"
       style={{
+        top: `${stickyTopPx}px`,
         height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, 32),
       }}
     >
-      <div className="hidden md:flex flex-col h-full overflow-y-auto">
+      <div className="flex flex-col h-full overflow-y-auto pt-8">
+        {showLanguageSelector && (
+          <div className="mb-6">
+            <LanguageSelector />
+          </div>
+        )}
         {headers.length > 0 ? (
           <>
             <p className="ui-text-label4 font-semibold text-neutral-1300 dark:text-neutral-000 mb-3">On this page</p>

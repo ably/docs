@@ -5,4 +5,5 @@
 */
 
 export const LANGUAGE_SELECTOR_HEIGHT = 32;
+export const PRODUCT_BAR_HEIGHT = 44;
 export const INKEEP_ASK_BUTTON_HEIGHT = 48;

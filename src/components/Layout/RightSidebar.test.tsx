@@ -12,6 +12,14 @@ jest.mock('@reach/router', () => ({
   useLocation: jest.fn(),
 }));
 
+jest.mock('./LanguageSelector', () => ({
+  LanguageSelector: () => <div data-testid="language-selector">Language Selector</div>,
+}));
+
+jest.mock('./hooks/useShowLanguageSelector', () => ({
+  useShowLanguageSelector: () => false,
+}));
+
 const mockUseLayoutContext = useLayoutContext as jest.Mock;
 const mockUseLocation = useLocation as jest.Mock;
 
