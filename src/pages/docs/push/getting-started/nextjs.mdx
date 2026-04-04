@@ -1,0 +1,513 @@
+---
+title: "Getting started: Push Notifications in Next.js"
+meta_description: "Get started with Ably Push Notifications in Next.js. Learn how to register a service worker, activate push on your client, handle incoming notifications, and send push messages from a Next.js app."
+meta_keywords: "Push Notifications Next.js, Ably Push, Web Push, Service Worker, Next.js push notifications, Ably Push Notifications guide, realtime push Next.js, push notification example, Ably tutorial Next.js, device registration, push messaging"
+---
+
+This guide will get you started with Ably Push Notifications in a Next.js application using the App Router.
+
+You'll learn how to set up an Ably Realtime client with push notification support, register a service worker, activate push notifications, subscribe to channel-based push, send push notifications, and handle incoming notifications in both the service worker and the React component.
+
+## Prerequisites <a id="prerequisites"/>
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
+3. Your API key will need the `publish` and `subscribe` capabilities. For sending push notifications from your app, you'll also need the `push-admin` capability.
+4. For channel-based push, add a rule for the channel with **Push notifications enabled** checked. In the dashboard left sidebar: **Configuration** → **Rules** → **Add** or **Edit** a rule, then enable the Push notifications option. See [rules](/docs/channels#rules) for details.
+5. A modern browser that supports the [Push API](https://developer.mozilla.org/en-US/docs/Web/API/Push_API) (Chrome, Firefox, or Edge recommended).
+6. [Node.js](https://nodejs.org/) 18 or higher.
+
+### (Optional) Install Ably CLI <a id="install-cli"/>
+
+Use the [Ably CLI](https://github.com/ably/cli) as an additional client to quickly test Pub/Sub features and push notifications.
+
+1. Install the Ably CLI:
+
+<Code>
+```shell
+npm install -g @ably/cli
+```
+</Code>
+
+2. Run the following to log in to your Ably account and set the default app and API key:
+
+<Code>
+```shell
+ably login
+```
+</Code>
+
+### Create a Next.js project <a id="create-project"/>
+
+Create a new Next.js project using the official create command:
+
+<Code>
+```shell
+npx create-next-app@latest ably-push-tutorial --typescript --app --no-tailwind --eslint --src-dir
+cd ably-push-tutorial
+```
+</Code>
+
+Then install the Ably SDK and React hooks package:
+
+<Code>
+```shell
+npm install ably
+```
+</Code>
+
+## Step 1: Set up Ably <a id="step-1"/>
+
+This step initializes the Ably Realtime client with push notification support and wraps the app in `AblyProvider` so that all child components can access the client via hooks.
+
+Because the Ably SDK runs in the browser, the component must not be server-side rendered. Use Next.js [`dynamic`](https://nextjs.org/docs/app/building-your-application/optimizing/lazy-loading) with `ssr: false` to ensure the Ably client is only ever created in the browser.
+
+Create `src/app/push/page.tsx` as the entry point:
+
+<Code>
+```javascript
+'use client';
+
+import dynamic from 'next/dynamic';
+
+const PushApp = dynamic(() => import('./PushApp'), { ssr: false });
+
+export default function PushPage() {
+  return <PushApp />;
+}
+```
+</Code>
+
+Then create `src/app/push/PushApp.tsx`. Because this module is only ever loaded client-side (due to `ssr: false`), it is safe to instantiate the Ably client at module scope:
+
+<Code>
+```javascript
+'use client';
+
+import * as Ably from 'ably';
+import AblyPushPlugin from 'ably/push';
+import { AblyProvider, ChannelProvider } from 'ably/react';
+import { useState } from 'react';
+import { PushActivationBanner } from './PushActivationBanner';
+import { ChannelSubscription } from './ChannelSubscription';
+import { NotificationLog } from './NotificationLog';
+
+const CHANNEL_NAME = 'exampleChannel1';
+
+const client = new Ably.Realtime({
+  key: '{{API_KEY}}', // Do not use an API key in production — use token authentication instead
+  clientId: 'push-tutorial-client',
+  plugins: { Push: AblyPushPlugin },
+  pushServiceWorkerUrl: '/service-worker.js',
+});
+
+export default function PushApp() {
+  const [output, setOutput] = useState<string[]>([]);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+
+  function log(message: string) {
+    setOutput((prev) => [...prev, message]);
+  }
+
+  return (
+    <AblyProvider client={client}>
+      <main style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+        <h1 style={{ marginBottom: '20px' }}>Ably Push Notifications — Next.js</h1>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ flex: '0 0 250px', padding: '15px', background: '#f0f0f0', borderRadius: '5px', height: 'fit-content' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Push Notifications</h3>
+            <PushActivationBanner onLog={log} onDeviceChange={setDeviceId} />
+            <ChannelProvider channelName={CHANNEL_NAME}>
+              <ChannelSubscription onLog={log} />
+            </ChannelProvider>
+          </div>
+          <div style={{ flex: 1 }}>
+            {deviceId && <div style={{ padding: '10px 12px', marginBottom: '10px', background: '#f0f0f0', borderRadius: '5px', fontSize: '13px', color: '#555' }}>Device ID: {deviceId}</div>}
+            <NotificationLog output={output} onClear={() => setOutput([])} />
+          </div>
+        </div>
+      </main>
+    </AblyProvider>
+  );
+}
+```
+</Code>
+
+Key configuration options:
+
+- **`key`**: Your Ably API key.
+- **`clientId`**: A unique identifier for this client.
+- **`plugins`**: The `AblyPushPlugin` enables push notification support.
+- **`pushServiceWorkerUrl`**: Path to the service worker file. In Next.js, files in `public/` are served from the root, so `/service-worker.js` maps to `public/service-worker.js`.
+
+`PushActivationBanner` sits directly under `AblyProvider` and handles device-level push activation. `ChannelSubscription` sits inside a `ChannelProvider`, which scopes it to `exampleChannel1`.
+
+## Step 2: Activate push notifications <a id="step-2"/>
+
+Create `src/app/push/PushActivationBanner.tsx`. This component uses the `usePushActivation` hook to activate and deactivate the device.
+
+<Code>
+```javascript
+'use client';
+
+import { useEffect } from 'react';
+import { usePushActivation } from 'ably/react';
+
+export function PushActivationBanner({ onLog, onDeviceChange }: { onLog: (msg: string) => void; onDeviceChange: (id: string | null) => void }) {
+  const { activate, deactivate, localDevice } = usePushActivation();
+
+  useEffect(() => {
+    onDeviceChange(localDevice?.id ?? null);
+  }, [localDevice]);
+
+  async function handleActivate() {
+    try {
+      await activate();
+      onLog('Push activated. Device ID: ' + localDevice?.id);
+    } catch (error: unknown) {
+      onLog('Failed to activate push: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  async function handleDeactivate() {
+    try {
+      await deactivate();
+      onLog('Push notifications deactivated.');
+    } catch (error: unknown) {
+      onLog('Failed to deactivate push: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  const buttonStyle = { padding: '12px 20px', margin: '5px 0', width: '100%', display: 'block', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', color: '#fff' };
+
+  return (
+    <>
+      <button onClick={handleActivate} style={{ ...buttonStyle, background: '#28a745' }}>Activate Push</button>
+      <button onClick={handleDeactivate} style={{ ...buttonStyle, background: '#dc3545' }}>Deactivate Push</button>
+    </>
+  );
+}
+```
+</Code>
+
+`usePushActivation` returns:
+
+- **`activate`**: Registers the browser for push notifications. Requests notification permission, registers the service worker, and records the device with Ably.
+- **`deactivate`**: Removes the device registration from Ably's servers. Call this only on explicit user opt-out.
+- **`localDevice`**: The current `LocalDevice` if activated, `null` otherwise. Reactive — updates immediately when `activate` or `deactivate` is called, and is re-populated from `localStorage` on page load if the device was activated in a prior session. Here it is propagated upward via `onDeviceChange` so the parent can display the device ID above the log.
+
+## Step 3: Receive push notifications <a id="step-3"/>
+
+A service worker runs in the background and receives push notifications even when the page is not open. In Next.js, place the service worker in `public/` so it is served from the root path.
+
+### Create the service worker <a id="step-3-service-worker"/>
+
+Create `public/service-worker.js`:
+
+<Code>
+```javascript
+// Handle push events
+self.addEventListener('push', (event) => {
+  const eventData = event.data.json();
+
+  // Prepare the notification object suitable for both `showNotification` and `postMessage`
+  const notification = {
+    title: eventData.notification.title,
+    body: eventData.notification.body,
+    data: eventData.data,
+  };
+
+  // Display a native browser notification
+  self.registration.showNotification(notification.title, notification);
+
+  // Also forward to open pages (optional, for demonstration purposes)
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      clientList.forEach((client) => {
+        client.postMessage({ type: 'tutorial-push', notification });
+      });
+    })
+  );
+});
+```
+</Code>
+
+### Handle notification clicks <a id="step-3-notification-clicks"/>
+
+Add a `notificationclick` listener in `public/service-worker.js` to handle what happens when the user clicks a notification:
+
+<Code>
+```javascript
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  // Open or focus the app window
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const url = event.notification.data?.url || '/push';
+
+      // Check if there's already a window open
+      for (const client of clientList) {
+        if ((client.url.endsWith('/push') || url === '/push') && client.focus) {
+          client.postMessage({
+            type: 'tutorial-push-click',
+            notification: {
+              title: event.notification.title,
+              body: event.notification.body,
+              data: event.notification.data,
+            },
+          });
+          return client.focus();
+        }
+      }
+
+      // Open a new window if none exists
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
+});
+```
+</Code>
+
+When a notification is clicked, the handler closes the notification, looks for an existing window, sends it the notification data via `postMessage`, and focuses it. If no window exists, it opens a new one.
+
+### Handle notifications in the component <a id="step-3-handle-notifications"/>
+
+Add a `useEffect` to `PushApp.tsx` to receive messages forwarded from the service worker and write them to the log:
+
+<Code>
+```javascript
+import { useEffect, useState } from 'react';
+
+// Inside PushApp, after the log function:
+useEffect(() => {
+  if (!navigator.serviceWorker) return;
+
+  const handler = (event: MessageEvent) => {
+    const notification = event.data?.notification;
+    if (!notification) return;
+    switch (event.data?.type) {
+      case 'tutorial-push':
+        log(`Received push: ${notification.title} — ${notification.body}, with data: ${JSON.stringify(notification.data)}`);
+        break;
+      case 'tutorial-push-click':
+        log(`Clicked push: ${notification.title} — ${notification.body}, with data: ${JSON.stringify(notification.data)}`);
+        break;
+    }
+  };
+
+  navigator.serviceWorker.addEventListener('message', handler);
+  return () => navigator.serviceWorker.removeEventListener('message', handler);
+}, []);
+```
+</Code>
+
+This listener is placed in `PushApp` rather than in a child component because push events are not channel-specific — a notification can arrive for any channel, or directly by device or client ID.
+
+### Build the notification log <a id="step-3-notification-log"/>
+
+Create `src/app/push/NotificationLog.tsx` as a presentational component with no Ably dependency:
+
+<Code>
+```javascript
+export function NotificationLog({ output, onClear }: { output: string[]; onClear: () => void }) {
+  const buttonStyle = { padding: '12px 20px', margin: '5px 0', width: '100%', display: 'block', background: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' };
+
+  return (
+    <>
+      <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '12px', minHeight: '500px', background: '#fff' }}>
+        {output.map((entry, i) => (
+          <p key={i} style={{ margin: '4px 0', borderLeft: '3px solid #007bff', paddingLeft: '8px', color: '#171717', whiteSpace: 'pre-line' }}>{entry}</p>
+        ))}
+      </div>
+      <button onClick={onClear} style={buttonStyle}>Clear</button>
+    </>
+  );
+}
+```
+</Code>
+
+Start the development server:
+
+<Code>
+```shell
+npm run dev
+```
+</Code>
+
+Navigate to `http://localhost:3000/push` in your browser. Click **Activate Push**, grant notification permission, and wait for the device ID to appear.
+
+### Test push notifications <a id="step-3-test"/>
+
+Once the device is activated, send a test push notification directly to your client ID using the Ably CLI or from code:
+
+<Code>
+```shell
+ably push publish --client-id push-tutorial-client \
+  --title "Test push" \
+  --body "Hello from CLI!" \
+  --data '{"foo":"bar"}'
+```
+
+```javascript
+await client.push.admin.publish(
+  { clientId: 'push-tutorial-client' },
+  {
+    notification: { title: 'Test push', body: 'Hello from code!' },
+    data: { foo: 'bar' },
+  },
+);
+```
+</Code>
+
+A native browser notification should appear and the log should display the received push event. You can also send to the specific device ID shown in the log:
+
+<Code>
+```shell
+ably push publish --device-id <your-device-id> \
+  --title "Test push" \
+  --body "Hello from CLI!"
+```
+
+```javascript
+await client.push.admin.publish(
+  { deviceId: client.device().id },
+  {
+    notification: { title: 'Test push', body: 'Hello from code!' },
+  },
+);
+```
+</Code>
+
+![Screenshot of the Next.js push tutorial application showing push notifications received](../../../../images/content/screenshots/getting-started/nextjs-push-getting-started-guide.png)
+
+<Aside data-type='note'>
+Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability on your API key. In production, send push notifications from your backend server rather than from the client.
+</Aside>
+
+## Step 4: Subscribe to channel push <a id="step-4"/>
+
+Create `src/app/push/ChannelSubscription.tsx`. This component uses two hooks:
+
+- `usePush` to manage push subscriptions for the channel and expose `isActivated`
+- `useChannel` to subscribe to realtime messages on the same channel
+
+<Code>
+```javascript
+'use client';
+
+import { useChannel, usePush } from 'ably/react';
+
+const CHANNEL_NAME = 'exampleChannel1';
+
+export function ChannelSubscription({ onLog }: { onLog: (msg: string) => void }) {
+  const {
+    subscribeDevice,
+    unsubscribeDevice,
+    isActivated,
+    connectionError,
+    channelError,
+  } = usePush(CHANNEL_NAME);
+
+  // Subscribe to realtime messages on the channel
+  useChannel({ channelName: CHANNEL_NAME }, (message) => {
+    let logMessage = 'Received message: ' + message.name;
+    if (message.data) {
+      logMessage += '\n- data: ' + JSON.stringify(message.data);
+    }
+    if (message.extras?.push) {
+      logMessage += '\n- push: ' + message.extras.push.notification.title
+        + ' — ' + message.extras.push.notification.body;
+    }
+    onLog(logMessage);
+  });
+
+  async function handleSubscribe() {
+    try {
+      await subscribeDevice();
+      onLog('Subscribed to push on channel: ' + CHANNEL_NAME);
+    } catch (error: unknown) {
+      onLog('Failed to subscribe: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  async function handleUnsubscribe() {
+    try {
+      await unsubscribeDevice();
+      onLog('Unsubscribed from push on channel: ' + CHANNEL_NAME);
+    } catch (error: unknown) {
+      onLog('Failed to unsubscribe: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  if (connectionError) return <p>Connection error: {connectionError.message}</p>;
+  if (channelError) return <p>Channel error: {channelError.message}</p>;
+
+  const buttonStyle = { padding: '12px 20px', margin: '5px 0', width: '100%', display: 'block', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', color: '#fff' };
+
+  return (
+    <>
+      <button onClick={handleSubscribe} disabled={!isActivated} style={{ ...buttonStyle, background: '#6f42c1' }}>Subscribe to Channel</button>
+      <button onClick={handleUnsubscribe} disabled={!isActivated} style={{ ...buttonStyle, background: '#fd7e14' }}>Unsubscribe from Channel</button>
+      {!isActivated && <p style={{ fontSize: '12px', color: '#666', margin: '4px 0' }}>Activate push notifications first.</p>}
+    </>
+  );
+}
+```
+</Code>
+
+`usePush` returns `isActivated` — a reactive boolean shared with `usePushActivation` via a module-level store. When `PushActivationBanner` calls `activate()`, all `usePush` instances update automatically, so the subscribe buttons enable without any extra wiring.
+
+To test channel push, subscribe to the channel in the UI then send a message with push extras using the Ably CLI or from code:
+
+<Code>
+```shell
+ably channels publish exampleChannel1 '{"name":"example","data":"Hello from CLI!","extras":{"push":{"notification":{"title":"Ably CLI","body":"Hello from CLI!"},"data":{"foo":"bar"}}}}'
+```
+
+```javascript
+await channel.publish({
+  name: 'example',
+  data: 'Hello from code!',
+  extras: {
+    push: {
+      notification: { title: 'Channel Push', body: 'Hello from code!' },
+      data: { foo: 'bar' },
+    },
+  },
+});
+```
+</Code>
+
+Sending push notifications via a channel publish requires the `push` object to be included in the `extras` of the realtime message. The `extras.push` object has two parts:
+
+- `notification`: Contains `title` and `body` displayed in the browser notification.
+- `data`: Custom key-value pairs delivered to the service worker but not shown directly.
+
+## Browser compatibility <a id="browser-compatibility"/>
+
+Web Push notification support varies across browsers:
+
+| Feature | Chrome/Edge | Firefox | Safari |
+|---|---|---|---|
+| Push API | Full support | Full support | Partial (macOS 13+) |
+| Service Worker | Full support | Full support | Full support |
+| Notification actions (buttons) | Supported | Limited | Not supported |
+| Silent push | Supported | Supported | Not supported |
+
+<Aside data-type="note">
+Safari on macOS 13+ supports Web Push, but with some limitations. Notification action buttons are not supported in Safari or Firefox on macOS.
+</Aside>
+
+## Next steps <a id="next-steps"/>
+
+* Understand [token authentication](/docs/auth/token) before going to production.
+* Explore [push notification administration](/docs/push#push-admin) for managing devices and subscriptions.
+* Learn about [channel rules](/docs/channels#rules) for channel-based push notifications.
+* Read more about the [Push Admin API](/docs/api/realtime-sdk/push-admin).
+* Check out the [Web Push Notifications](/docs/push/configure/web) documentation for advanced use cases.
+
+You can also explore the [Ably JavaScript SDK](https://github.com/ably/ably-js) on GitHub, or visit the [API references](/docs/api/realtime-sdk?lang=javascript) for additional functionality.
