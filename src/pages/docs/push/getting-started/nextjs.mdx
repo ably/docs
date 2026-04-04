@@ -264,6 +264,39 @@ self.addEventListener('notificationclick', (event) => {
 
 When a notification is clicked, the handler closes the notification, looks for an existing window, sends it the notification data via `postMessage`, and focuses it. If no window exists, it opens a new one.
 
+### Handle notifications in the component <a id="step-3-handle-notifications"/>
+
+Add a `useEffect` to `PushApp.tsx` to receive messages forwarded from the service worker and write them to the log:
+
+<Code>
+```javascript
+import { useEffect, useState } from 'react';
+
+// Inside PushApp, after the log function:
+useEffect(() => {
+  if (!navigator.serviceWorker) return;
+
+  const handler = (event: MessageEvent) => {
+    const notification = event.data?.notification;
+    if (!notification) return;
+    switch (event.data?.type) {
+      case 'tutorial-push':
+        log(`Received push: ${notification.title} — ${notification.body}, with data: ${JSON.stringify(notification.data)}`);
+        break;
+      case 'tutorial-push-click':
+        log(`Clicked push: ${notification.title} — ${notification.body}, with data: ${JSON.stringify(notification.data)}`);
+        break;
+    }
+  };
+
+  navigator.serviceWorker.addEventListener('message', handler);
+  return () => navigator.serviceWorker.removeEventListener('message', handler);
+}, []);
+```
+</Code>
+
+This listener is placed in `PushApp` rather than in a child component because push events are not channel-specific — a notification can arrive for any channel, or directly by device or client ID.
+
 ### Build the notification log <a id="step-3-notification-log"/>
 
 Create `src/app/push/NotificationLog.tsx` as a presentational component with no Ably dependency:
@@ -352,14 +385,11 @@ Create `src/app/push/ChannelSubscription.tsx`. This component uses two hooks:
 - `usePush` to manage push subscriptions for the channel and expose `isActivated`
 - `useChannel` to subscribe to realtime messages on the same channel
 
-It also listens for `postMessage` events from the service worker via a `useEffect`.
-
 <Code>
 ```javascript
 'use client';
 
 import { useChannel, usePush } from 'ably/react';
-import { useEffect } from 'react';
 
 const CHANNEL_NAME = 'exampleChannel1';
 
@@ -384,27 +414,6 @@ export function ChannelSubscription({ onLog }: { onLog: (msg: string) => void })
     }
     onLog(logMessage);
   });
-
-  // Listen for messages forwarded from the service worker
-  useEffect(() => {
-    if (!navigator.serviceWorker) return;
-
-    const handler = (event: MessageEvent) => {
-      const notification = event.data?.notification;
-      if (!notification) return;
-      switch (event.data?.type) {
-        case 'tutorial-push':
-          onLog(`Received push: ${notification.title} — ${notification.body}, with data: ${JSON.stringify(notification.data)}`);
-          break;
-        case 'tutorial-push-click':
-          onLog(`Clicked push: ${notification.title} — ${notification.body}, with data: ${JSON.stringify(notification.data)}`);
-          break;
-      }
-    };
-
-    navigator.serviceWorker.addEventListener('message', handler);
-    return () => navigator.serviceWorker.removeEventListener('message', handler);
-  }, [onLog]);
 
   async function handleSubscribe() {
     try {
