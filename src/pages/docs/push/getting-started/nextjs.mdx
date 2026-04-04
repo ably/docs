@@ -299,7 +299,7 @@ Navigate to `http://localhost:3000/push` in your browser. Click **Activate Push*
 
 ### Test push notifications <a id="step-3-test"/>
 
-Once the device is activated, send a test push notification directly to your client ID using the Ably CLI:
+Once the device is activated, send a test push notification directly to your client ID using the Ably CLI or from code:
 
 <Code>
 ```shell
@@ -307,6 +307,16 @@ ably push publish --client-id push-tutorial-client \
   --title "Test push" \
   --body "Hello from CLI!" \
   --data '{"foo":"bar"}'
+```
+
+```javascript
+await client.push.admin.publish(
+  { clientId: 'push-tutorial-client' },
+  {
+    notification: { title: 'Test push', body: 'Hello from code!' },
+    data: { foo: 'bar' },
+  },
+);
 ```
 </Code>
 
@@ -317,6 +327,15 @@ A native browser notification should appear and the log should display the recei
 ably push publish --device-id <your-device-id> \
   --title "Test push" \
   --body "Hello from CLI!"
+```
+
+```javascript
+await client.push.admin.publish(
+  { deviceId: client.device().id },
+  {
+    notification: { title: 'Test push', body: 'Hello from code!' },
+  },
+);
 ```
 </Code>
 
@@ -423,141 +442,31 @@ export function ChannelSubscription({ onLog }: { onLog: (msg: string) => void })
 
 `usePush` returns `isActivated` — a reactive boolean shared with `usePushActivation` via a module-level store. When `PushActivationBanner` calls `activate()`, all `usePush` instances update automatically, so the subscribe buttons enable without any extra wiring.
 
-To test channel push using the Ably CLI, subscribe to the channel in the UI then run:
+To test channel push, subscribe to the channel in the UI then send a message with push extras using the Ably CLI or from code:
 
 <Code>
 ```shell
 ably channels publish exampleChannel1 '{"name":"example","data":"Hello from CLI!","extras":{"push":{"notification":{"title":"Ably CLI","body":"Hello from CLI!"},"data":{"foo":"bar"}}}}'
 ```
-</Code>
 
-## Step 5: Send push with code <a id="step-5"/>
-
-Just as you can send push notifications through the Ably CLI or dashboard, you can also send them directly from your app using device ID, client ID, or by publishing to a channel.
-
-### Send to device or client ID <a id="step-5-device-client"/>
-
-Add `useAbly` to `PushActivationBanner.tsx` to access the client for `push.admin.publish`. Add the two send functions and their buttons:
-
-<Code>
 ```javascript
-import { useAbly, usePushActivation } from 'ably/react';
-
-export function PushActivationBanner({ onLog }: { onLog: (msg: string) => void }) {
-  const { activate, deactivate, localDevice } = usePushActivation();
-  const client = useAbly();
-
-  // ...existing handleActivate and handleDeactivate functions...
-
-  async function sendPushToDevice() {
-    try {
-      const deviceId = client.device().id;
-      await client.push.admin.publish(
-        { deviceId },
-        {
-          notification: { title: 'Push Tutorial', body: 'Hello from device ID!' },
-          data: { foo: 'bar', baz: 'qux' },
-        },
-      );
-      onLog('Sent push to device ID: ' + deviceId);
-    } catch (error: unknown) {
-      onLog('Error sending to device: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  }
-
-  async function sendPushToClient() {
-    try {
-      const clientId = client.auth.clientId;
-      await client.push.admin.publish(
-        { clientId },
-        {
-          notification: { title: 'Push Tutorial', body: 'Hello from client ID!' },
-          data: { foo: 'bar', baz: 'qux' },
-        },
-      );
-      onLog('Sent push to client ID: ' + clientId);
-    } catch (error: unknown) {
-      onLog('Error sending to client: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  }
-
-  return (
-    <>
-      {localDevice && <p style={{ margin: '0 0 8px' }}>Device ID: {localDevice.id}</p>}
-      <button onClick={handleActivate} style={{ ...buttonStyle, background: '#28a745' }}>Activate Push</button>
-      <button onClick={handleDeactivate} style={{ ...buttonStyle, background: '#dc3545' }}>Deactivate Push</button>
-      {localDevice && (
-        <>
-          <button onClick={sendPushToDevice} style={{ ...buttonStyle, background: '#007bff' }}>Send to Device</button>
-          <button onClick={sendPushToClient} style={{ ...buttonStyle, background: '#007bff' }}>Send to Client</button>
-        </>
-      )}
-    </>
-  );
-}
+await channel.publish({
+  name: 'example',
+  data: 'Hello from code!',
+  extras: {
+    push: {
+      notification: { title: 'Channel Push', body: 'Hello from code!' },
+      data: { foo: 'bar' },
+    },
+  },
+});
 ```
 </Code>
 
-The send buttons are only rendered once `localDevice` is non-null, which guards against calling `client.device()` before activation.
-
-### Send to channel <a id="step-5-channel"/>
-
-Add `channel` to the `usePush` destructure in `ChannelSubscription.tsx` and add the send function and button:
-
-<Code>
-```javascript
-  const {
-    channel,
-    subscribeDevice,
-    unsubscribeDevice,
-    isActivated,
-    connectionError,
-    channelError,
-  } = usePush(CHANNEL_NAME);
-
-  // ...existing handleSubscribe and handleUnsubscribe functions...
-
-  async function sendPushToChannel() {
-    try {
-      await channel.publish({
-        name: 'example',
-        data: 'Hello from channel!',
-        extras: {
-          push: {
-            notification: {
-              title: 'Channel Push',
-              body: 'Sent via channel: ' + CHANNEL_NAME,
-            },
-            data: { customKey: 'customValue' },
-          },
-        },
-      });
-      onLog('Sent push to channel: ' + CHANNEL_NAME);
-    } catch (error: unknown) {
-      onLog('Error sending to channel: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  }
-```
-</Code>
-
-Add the button to the JSX:
-
-<Code>
-```javascript
-      <button onClick={sendPushToChannel} style={{ ...buttonStyle, background: '#007bff' }}>Send to Channel</button>
-```
-</Code>
-
-Sending push notifications via a channel publish requires the `push` object to be included in the `extras` of the realtime message.
-
-The `extras.push` object has two parts:
+Sending push notifications via a channel publish requires the `push` object to be included in the `extras` of the realtime message. The `extras.push` object has two parts:
 
 - `notification`: Contains `title` and `body` displayed in the browser notification.
 - `data`: Custom key-value pairs delivered to the service worker but not shown directly.
-
-Now you can send push notifications to your device, client, or channel using the buttons in the UI:
-
-![Screenshot of the Next.js push tutorial application showing push notifications received](../../../../images/content/screenshots/getting-started/nextjs-push-getting-started-guide-2.png)
 
 ## Browser compatibility <a id="browser-compatibility"/>
 
