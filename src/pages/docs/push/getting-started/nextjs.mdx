@@ -66,6 +66,8 @@ Create `src/app/push/page.tsx` as the entry point:
 
 <Code>
 ```javascript
+'use client';
+
 import dynamic from 'next/dynamic';
 
 const PushApp = dynamic(() => import('./PushApp'), { ssr: false });
@@ -101,6 +103,7 @@ const client = new Ably.Realtime({
 
 export default function PushApp() {
   const [output, setOutput] = useState<string[]>([]);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
 
   function log(message: string) {
     setOutput((prev) => [...prev, message]);
@@ -110,15 +113,18 @@ export default function PushApp() {
     <AblyProvider client={client}>
       <main style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
         <h1 style={{ marginBottom: '20px' }}>Ably Push Notifications — Next.js</h1>
-        <div style={{ display: 'flex', gap: '20px' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <div style={{ flex: '0 0 250px', padding: '15px', background: '#f0f0f0', borderRadius: '5px', height: 'fit-content' }}>
             <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Push Notifications</h3>
-            <PushActivationBanner onLog={log} />
+            <PushActivationBanner onLog={log} onDeviceChange={setDeviceId} />
             <ChannelProvider channelName={CHANNEL_NAME}>
               <ChannelSubscription onLog={log} />
             </ChannelProvider>
           </div>
-          <NotificationLog output={output} onClear={() => setOutput([])} />
+          <div style={{ flex: 1 }}>
+            {deviceId && <div style={{ padding: '10px 12px', marginBottom: '10px', background: '#f0f0f0', borderRadius: '5px', fontSize: '13px', color: '#555' }}>Device ID: {deviceId}</div>}
+            <NotificationLog output={output} onClear={() => setOutput([])} />
+          </div>
         </div>
       </main>
     </AblyProvider>
@@ -144,10 +150,15 @@ Create `src/app/push/PushActivationBanner.tsx`. This component uses the `usePush
 ```javascript
 'use client';
 
+import { useEffect } from 'react';
 import { usePushActivation } from 'ably/react';
 
-export function PushActivationBanner({ onLog }: { onLog: (msg: string) => void }) {
+export function PushActivationBanner({ onLog, onDeviceChange }: { onLog: (msg: string) => void; onDeviceChange: (id: string | null) => void }) {
   const { activate, deactivate, localDevice } = usePushActivation();
+
+  useEffect(() => {
+    onDeviceChange(localDevice?.id ?? null);
+  }, [localDevice]);
 
   async function handleActivate() {
     try {
@@ -171,7 +182,6 @@ export function PushActivationBanner({ onLog }: { onLog: (msg: string) => void }
 
   return (
     <>
-      {localDevice && <p style={{ margin: '0 0 8px' }}>Device ID: {localDevice.id}</p>}
       <button onClick={handleActivate} style={{ ...buttonStyle, background: '#28a745' }}>Activate Push</button>
       <button onClick={handleDeactivate} style={{ ...buttonStyle, background: '#dc3545' }}>Deactivate Push</button>
     </>
@@ -184,7 +194,7 @@ export function PushActivationBanner({ onLog }: { onLog: (msg: string) => void }
 
 - **`activate`**: Registers the browser for push notifications. Requests notification permission, registers the service worker, and records the device with Ably.
 - **`deactivate`**: Removes the device registration from Ably's servers. Call this only on explicit user opt-out.
-- **`localDevice`**: The current `LocalDevice` if activated, `null` otherwise. Reactive — updates immediately when `activate` or `deactivate` is called, and is re-populated from `localStorage` on page load if the device was activated in a prior session.
+- **`localDevice`**: The current `LocalDevice` if activated, `null` otherwise. Reactive — updates immediately when `activate` or `deactivate` is called, and is re-populated from `localStorage` on page load if the device was activated in a prior session. Here it is propagated upward via `onDeviceChange` so the parent can display the device ID above the log.
 
 ## Step 3: Receive push notifications <a id="step-3"/>
 
@@ -307,14 +317,14 @@ export function NotificationLog({ output, onClear }: { output: string[]; onClear
   const buttonStyle = { padding: '12px 20px', margin: '5px 0', width: '100%', display: 'block', background: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' };
 
   return (
-    <div style={{ flex: 1 }}>
-      <button onClick={onClear} style={buttonStyle}>Clear</button>
-      <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '12px', minHeight: '500px', background: '#fff', marginTop: '10px' }}>
+    <>
+      <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '12px', minHeight: '500px', background: '#fff' }}>
         {output.map((entry, i) => (
           <p key={i} style={{ margin: '4px 0', borderLeft: '3px solid #007bff', paddingLeft: '8px', color: '#171717', whiteSpace: 'pre-line' }}>{entry}</p>
         ))}
       </div>
-    </div>
+      <button onClick={onClear} style={buttonStyle}>Clear</button>
+    </>
   );
 }
 ```
@@ -442,7 +452,6 @@ export function ChannelSubscription({ onLog }: { onLog: (msg: string) => void })
     <>
       <button onClick={handleSubscribe} disabled={!isActivated} style={{ ...buttonStyle, background: '#6f42c1' }}>Subscribe to Channel</button>
       <button onClick={handleUnsubscribe} disabled={!isActivated} style={{ ...buttonStyle, background: '#fd7e14' }}>Unsubscribe from Channel</button>
-      {!isActivated && <p style={{ fontSize: '12px', color: '#666', margin: '4px 0' }}>Activate push notifications first.</p>}
     </>
   );
 }
