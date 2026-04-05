@@ -386,6 +386,10 @@ export default {
           link: '/docs/api/control-api',
           name: 'Control API',
         },
+        {
+          link: '/docs/cli',
+          name: 'Ably CLI Reference',
+        },
       ],
     },
   ],
