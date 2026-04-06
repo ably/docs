@@ -271,6 +271,7 @@ export default {
             {
               name: 'React Native',
               link: '/docs/push/getting-started/react-native',
+              languages: ['javascript'],
             },
           ],
         },
