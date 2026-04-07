@@ -1,0 +1,73 @@
+---
+title: "History and replay"
+meta_description: "Load conversation history from Ably channels with AI Transport. Paginated history, gapless continuity, and scroll-back patterns."
+meta_keywords: "history, replay, conversation history, AI Transport, Ably, pagination, scroll-back"
+---
+
+History in AI Transport comes from the Ably channel itself. Every message - user prompts, agent responses, lifecycle events - persists on the channel. Clients load history on connect and paginate backward through the conversation. There is no separate database to maintain.
+
+## How it works <a id="how-it-works"/>
+
+The client transport loads history using `view.loadOlder()` with `untilAttach` for gapless continuity. This ensures no gap between historical messages and live messages arriving through the real-time subscription.
+
+`loadOlder()` returns `Promise<void>` - it expands the view window internally rather than returning a paginated result. The `useView` hook exposes the loaded conversation as `nodes`, along with `hasOlder` and `loadOlder` for pagination:
+
+<Code>
+```javascript
+const { nodes, hasOlder, loadOlder } = useView(transport, { limit: 30 })
+
+// Load the next page of older messages
+if (hasOlder) {
+  await loadOlder()
+}
+```
+</Code>
+
+## Minimal code <a id="minimal-code"/>
+
+The `useView` hook handles history loading on mount:
+
+<Code>
+```javascript
+const { nodes, hasOlder, loadOlder } = useView(transport, { limit: 30 })
+```
+</Code>
+
+This loads 30 messages when the component mounts. `nodes` contains the decoded conversation. `hasOlder` indicates whether more history is available. `loadOlder()` fetches the next page.
+
+<Aside data-type='note'>
+Without durable sessions, history requires a separate database, sync logic, and consistency guarantees. You need to store every message server-side, expose a pagination API, handle ordering conflicts, and reconcile the database with any in-flight messages. AI Transport eliminates this - the channel is the database.
+</Aside>
+
+## Scroll-back pattern <a id="scroll-back"/>
+
+Load more messages as the user scrolls up. The `useView` hook provides everything needed for infinite scroll:
+
+<Code>
+```javascript
+const { nodes, hasOlder, loading, loadOlder } = useView(transport, { limit: 30 })
+
+function handleScrollToTop() {
+  if (hasOlder && !loading) {
+    loadOlder()
+  }
+}
+```
+</Code>
+
+`loading` is `true` while a history page is being fetched. Use it to show a spinner at the top of the conversation. When `hasOlder` is `false`, the user has reached the beginning of the conversation.
+
+## History and branching <a id="history-and-branching"/>
+
+History includes branch information. Messages carry `parent` and `forkOf` headers that indicate which conversation branch they belong to. When history is loaded, the conversation tree reconstructs branches from these headers, placing each message on the correct branch.
+
+This means loading history does not just produce a flat list of messages. It rebuilds the full tree structure, including any points where the conversation forked due to edits, regenerations, or explicit branching.
+
+## Related features <a id="related"/>
+
+- [Token streaming](/docs/ai-transport/features/token-streaming) - how streamed responses are persisted and replayed from history.
+- [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery) - how history loading fits into reconnection.
+- [Conversation branching](/docs/ai-transport/features/branching) - how branches are created and navigated.
+- [Client transport API](/docs/ai-transport/api-reference/client-transport) - reference for `loadOlder` and other client methods.
+- [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) - how sessions persist conversation history.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

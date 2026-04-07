@@ -1,0 +1,98 @@
+---
+title: "Authentication"
+meta_description: "Understand how authentication works in Ably AI Transport: Ably token auth for channel access, HTTP headers for server endpoints, and cancel authorization."
+meta_keywords: "AI Transport, authentication, token auth, cancel authorization, HTTP headers, credentials"
+---
+
+Authentication in AI Transport operates at three levels: Ably client authentication for channel access, HTTP headers for server endpoint authorization, and cancel authorization for controlling who can cancel turns.
+
+## Ably client authentication <a id="ably-auth"/>
+
+The Ably Realtime client handles authentication before the transport is created. Both server and client need authenticated Ably clients to access channels.
+
+**Server side**: Use an API key directly. The server is trusted.
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY })
+```
+</Code>
+
+**Client side**: Use token authentication. Never expose API keys in client code. Create a token endpoint on your server that issues JWTs or Ably tokens:
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    const response = await fetch('/api/auth/ably-token')
+    const jwt = await response.text()
+    callback(null, jwt)
+  },
+})
+```
+</Code>
+
+The token controls the client's identity (`clientId`) and channel permissions (publish, subscribe, history).
+
+<Aside data-type='note'>
+AI Transport uses `clientId` throughout the SDK to identify who started a turn, who is sending messages, and who is requesting cancellation. Set the client ID in the Ably token to ensure it is verified by the Ably service and cannot be spoofed.
+</Aside>
+
+See [Ably token authentication](/docs/auth/token) for full details on token auth.
+
+## Server endpoint authentication <a id="server-auth"/>
+
+When the client sends user messages, it makes an HTTP POST to the server endpoint. The `ClientTransportOptions` provide two mechanisms for authenticating these requests:
+
+**headers**: Static or dynamic HTTP headers sent with every POST.
+
+<Code>
+```javascript
+const transport = useClientTransport({
+  channel,
+  codec: UIMessageCodec,
+  headers: () => ({
+    'Authorization': `Bearer ${getAuthToken()}`,
+  }),
+})
+```
+</Code>
+
+**credentials**: Sets the `credentials` option on the fetch request (for cookie-based auth).
+
+<Code>
+```javascript
+const transport = useClientTransport({
+  channel,
+  codec: UIMessageCodec,
+  credentials: 'include',
+})
+```
+</Code>
+
+The server endpoint validates these credentials however it normally would: JWT verification, session cookies, or API keys.
+
+## Cancel authorization <a id="cancel-auth"/>
+
+When a client publishes a cancel signal, the server can authorize or reject it. The `onCancel` hook on `NewTurnOptions` receives a `CancelRequest` with the filter, matched turn IDs, and a map of turn owners:
+
+<Code>
+```javascript
+const turn = transport.newTurn({
+  turnId,
+  clientId,
+  onCancel: async (request) => {
+    // Only allow the turn owner to cancel
+    const owner = request.turnOwners.get(request.filter.turnId)
+    return owner === request.message.clientId
+  },
+})
+```
+</Code>
+
+If `onCancel` returns `false`, the cancellation is rejected. If `onCancel` is not provided, all cancel requests are accepted by default.
+
+## What to read next <a id="next"/>
+
+- [Getting started](/docs/ai-transport/getting-started/vercel-ai-sdk): Set up authentication in a working app.
+- [Cancellation](/docs/ai-transport/features/cancellation): How cancel signals and authorization work in detail.

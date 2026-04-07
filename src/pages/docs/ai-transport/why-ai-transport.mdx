@@ -1,0 +1,107 @@
+---
+title: "Why AI Transport"
+meta_description: "Understand why direct HTTP streaming limits AI applications and how durable sessions solve resilience, multi-device, and live control challenges."
+meta_keywords: "AI Transport, durable sessions, HTTP streaming, SSE, AI architecture, realtime AI"
+---
+
+AI Transport exists because the default pattern for AI streaming - direct HTTP connections between clients and agents - limits the quality and richness of the experiences you can build.
+
+## The default pattern <a id="default-pattern"/>
+
+Most AI frameworks use server-sent events (SSE) or similar HTTP streaming. The client makes a request, establishes a persistent point-to-point connection to the agent, and the agent pipes LLM tokens back over that connection.
+
+This works well for getting started. It's simple and every framework supports it. But the pattern is oriented around a single client establishing a single connection to a single agent. Everything is coupled to that one request.
+
+## Where it falls short <a id="where-it-falls-short"/>
+
+### Streams die on disconnect <a id="streams-die"/>
+
+The health of a response stream is tied to the health of the connection. When the connection drops, the stream dies with it.
+
+This happens constantly in practice: a phone switches from Wi-Fi to cellular, a user refreshes the page, a laptop lid closes mid-response. The LLM keeps generating tokens, but there's nowhere for them to go.
+
+To support resumable streams with direct HTTP, you need to buffer events in an external store, assign sequence numbers for ordering, build an explicit resume handler, and work out what the client missed. You build all this plumbing from scratch because the stream is explicitly managed by the agent.
+
+### Sessions don't span devices <a id="sessions-dont-span"/>
+
+With direct HTTP streaming, the connection is a private pipe between the requesting client and the agent. A second tab or a phone can't access the stream. It only exists for the client that established the connection.
+
+Users move between surfaces constantly: a second browser tab, a phone, a tablet. Without a shared session layer, each surface is isolated. There's no way for a new device to see the in-progress stream, the conversation history, or the current state.
+
+### Clients can't reach the agent <a id="clients-cant-reach"/>
+
+SSE is one-way: server to client. The client has no way to send a signal to the agent through the same connection.
+
+This creates a fundamental conflict. Take a "stop" button that cancels an in-progress generation. The only mechanism available is closing the connection. But if you close the connection to cancel, you lose the ability to resume. Cancel and resume become mutually exclusive.
+
+<Aside data-type='note'>
+With SSE-based frameworks, abort is typically incompatible with stream resumption. Closing the connection is the only way to signal cancellation, but doing so also prevents resuming the stream.
+</Aside>
+
+Even with a bidirectional transport like WebSockets, the connection is still a private pipe. Other devices have no upstream channel to the agent. You can't interrupt or steer from a second device.
+
+### Multi-agent architectures are complex <a id="multi-agent"/>
+
+In multi-agent systems, an orchestrator handles the client's connection and delegates to specialized subagents. If you want users to see granular progress from subagents, every update must flow through the orchestrator, adding complexity and coupling.
+
+## Durable sessions <a id="durable-sessions"/>
+
+The pattern engineering teams are adopting to solve these problems is to decouple the agent layer from the client layer through a durable session - a shared, persistent medium through which they interact.
+
+Instead of a private pipe between one client and one agent:
+
+- The agent writes events to the session
+- Clients independently connect to the session
+- The session persists across connection drops, device switches, and time
+- Any participant can publish to the session, enabling bidirectional control
+
+This changes what's possible:
+
+| Capability | Direct HTTP | Durable session |
+| --- | --- | --- |
+| Resume after disconnect | Build from scratch: buffer, sequence, resume handler | Automatic. Client reconnects and picks up where it left off. |
+| Multi-device sync | Not possible without custom infrastructure | Any device subscribes to the same session. |
+| Cancel mid-stream | Close the connection (loses resume) | Publish a cancel signal. Stream and session survive. |
+| Steer or interrupt | Requires separate backchannel | Signal the agent through the session. |
+| Multi-agent visibility | Route all updates through orchestrator | Each agent publishes directly to the session. |
+
+## How AI Transport implements this <a id="how-ait-implements"/>
+
+Ably AI Transport implements durable sessions on top of [Ably channels](/docs/channels). Ably channels provide the properties that a durable session requires:
+
+- Any client or agent connects to the session by specifying the channel name.
+- Messages on the channel outlive any single connection, device, or agent.
+- Events arrive in the order they were published, regardless of reconnection.
+- A client that drops its connection automatically reconnects and picks up where it left off.
+- Any participant can publish to the channel. Cancel, steer, interrupt - all through the same session.
+- Multiple participants subscribe to the same channel. Every participant sees every event.
+
+On top of these channel properties, the AI Transport SDK adds:
+
+- Turns that structure prompt-response cycles with clear boundaries, concurrent lifecycles, and scoped cancellation
+- A codec layer that maps between your AI framework's event types and Ably messages
+- A conversation tree that supports branching, edit, regenerate, and history navigation
+- React hooks for building UIs with streaming, pagination, and branch navigation
+- Framework adapters that drop into Vercel AI SDK's `useChat` with one line of code
+
+## What to read next <a id="next"/>
+
+<Tiles>
+{[
+  {
+    title: 'How it works',
+    description: 'Understand sessions, turns, and the transport architecture.',
+    link: '/docs/ai-transport/how-it-works',
+  },
+  {
+    title: 'Get started',
+    description: 'Build a streaming AI app in 5 minutes.',
+    link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
+  },
+  {
+    title: 'Framework guides',
+    description: 'See how AI Transport complements your framework.',
+    link: '/docs/ai-transport/framework-guides/vercel-ai-sdk',
+  },
+]}
+</Tiles>

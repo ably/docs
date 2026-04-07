@@ -1,0 +1,123 @@
+---
+title: "Edit and regenerate"
+meta_description: "Edit user messages and regenerate AI responses with Ably AI Transport. Fork conversations and navigate between branches."
+meta_keywords: "edit message, regenerate response, conversation fork, branching, AI Transport, Ably"
+---
+
+Edit and regenerate let users revise their input or request a new response. Both operations fork the conversation tree - the original branch is preserved, and a new branch starts from the edit or regeneration point.
+
+## How it works <a id="how-it-works"/>
+
+When a user edits a message, the SDK creates a new sibling node in the conversation tree. The original message and everything below it remain intact. A new turn is triggered so the agent responds to the revised input.
+
+Regeneration works similarly - it creates a sibling of an assistant message and starts a new turn from the same parent. The original response stays in the tree, and a fresh response streams alongside it as an alternative.
+
+Both operations send `forkOf` and `parent` headers to the server, telling it where the new branch diverges from the existing tree. The server uses these to build history up to the fork point, so the LLM sees only the messages leading to the new branch.
+
+<Aside data-type='note'>
+Edit and regenerate never delete messages. Every version of every message is preserved in the conversation tree. Users navigate between versions using [branch navigation](/docs/ai-transport/features/branching#branch-navigation).
+</Aside>
+
+## Edit a message <a id="edit"/>
+
+Edit replaces a user message with new content and triggers a fresh turn from that point. The original message and all its descendants remain in the tree as a separate branch.
+
+<Code>
+```javascript
+// Using the view directly
+await view.edit(messageId, [
+  { role: 'user', content: 'Updated question here' }
+])
+
+// Using the React hook
+const edit = useEdit(view)
+
+await edit(messageId, [
+  { role: 'user', content: 'Updated question here' }
+])
+```
+</Code>
+
+The edit creates a new user message as a sibling of the original, then sends a turn request to the server. The server receives the new message along with `forkOf` (the original message ID) and `parent` (the message before the edited one). It builds conversation history up to the parent, appends the new content, and streams a response.
+
+You can send multiple messages in a single edit:
+
+<Code>
+```javascript
+await view.edit(messageId, [
+  { role: 'user', content: 'First part of my revised input' },
+  { role: 'user', content: 'Second part with additional context' }
+])
+```
+</Code>
+
+## Regenerate a response <a id="regenerate"/>
+
+Regenerate creates a sibling of an assistant message and starts a new turn. The original response stays in the tree - the user can switch between the original and regenerated responses.
+
+<Code>
+```javascript
+// Using the view directly
+await view.regenerate(messageId)
+
+// Using the React hook
+const regenerate = useRegenerate(view)
+
+await regenerate(messageId)
+```
+</Code>
+
+The new turn is sent to the server with `forkOf` set to the original assistant message ID and `parent` set to the user message that preceded it. The server generates a new response from that point in the conversation, and the response streams to all connected clients.
+
+## How forks create siblings <a id="forks"/>
+
+Each edit or regeneration adds a sibling node in the tree. Siblings share the same parent but represent alternative paths. The view flattens the selected path into a linear list for rendering.
+
+For example, if a user edits their second message twice, the tree has three sibling branches from that point. Each branch has its own assistant response and any subsequent messages. The view shows whichever branch is currently selected.
+
+<Code>
+```javascript
+// Check how many alternatives exist at a message
+const siblings = view.getSiblings(messageId) // Message[]
+const selected = view.getSelectedIndex(messageId) // number
+
+// Navigate to a different version
+view.select(messageId, selected + 1)
+```
+</Code>
+
+## Server handling <a id="server"/>
+
+The server receives `forkOf` and `parent` in the request body. Pass them to `newTurn()` so the transport publishes messages with the correct tree metadata:
+
+<Code>
+```javascript
+app.post('/chat', async (req, res) => {
+  const { messages, turnId, clientId, forkOf, parent } = req.body
+
+  const turn = transport.newTurn({ turnId, clientId, forkOf, parent })
+  await turn.start()
+
+  // messages is auto-truncated to the fork point
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages,
+    abortSignal: turn.abortSignal,
+  })
+
+  const { reason } = await turn.streamResponse(result.toUIMessageStream())
+  await turn.end(reason)
+})
+```
+</Code>
+
+The `messages` array in the request body contains the conversation history truncated to the fork point, with the new user message appended. The client handles this truncation automatically - the server receives exactly the history the LLM needs.
+
+## Related features <a id="related"/>
+
+- [Conversation branching](/docs/ai-transport/features/branching) - tree structure, branch navigation, and split-pane views
+- [Token streaming](/docs/ai-transport/features/token-streaming) - how regenerated responses stream to clients
+- [Multi-device sessions](/docs/ai-transport/features/multi-device) - edits and regenerations sync across devices
+- [React hooks](/docs/ai-transport/api-reference/react-hooks) - reference for `useEdit`, `useRegenerate`, and other hooks.
+- [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) - how forks create new branches in the conversation tree.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

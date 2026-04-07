@@ -1,0 +1,71 @@
+---
+title: "Chain of thought"
+meta_description: "Stream reasoning and thinking content alongside responses with Ably AI Transport. Display chain-of-thought in real time."
+meta_keywords: "chain of thought, reasoning, thinking, AI Transport, Ably, streaming reasoning"
+---
+
+Chain of thought in AI Transport streams reasoning content alongside the main response text. The codec supports multiple stream types within a single turn - text and reasoning are delivered as separate streams that render independently in the UI.
+
+## How it works <a id="how-it-works"/>
+
+When an LLM produces reasoning or thinking tokens, the codec multiplexes them alongside text tokens on the same Ably channel. Each stream type is tagged so the client can route reasoning content to one part of the UI and response text to another.
+
+With the Vercel AI SDK integration, reasoning arrives as a separate `reasoning` stream type within the UI message stream:
+
+<Code>
+```javascript
+// Server: stream a response that includes reasoning
+app.post('/api/chat', async (req, res) => {
+  const { turnId, clientId, messages } = req.body
+  const turn = transport.newTurn({ turnId, clientId })
+
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages,
+    abortSignal: turn.abortSignal,
+  })
+
+  // The codec handles multiplexing text and reasoning streams
+  await turn.streamResponse(result.toUIMessageStream())
+  await turn.end('complete')
+  res.json({ ok: true })
+})
+```
+</Code>
+
+No additional server configuration is needed. If the model produces reasoning tokens, the codec encodes them as a distinct stream within the turn.
+
+## Display reasoning in the UI <a id="displaying-reasoning"/>
+
+On the client, message nodes include both text and reasoning content. Render them separately to show the agent's thinking process:
+
+<Code>
+```javascript
+const { nodes } = useView(transport)
+
+// Each node may contain text parts, reasoning parts, or both
+for (const node of nodes) {
+  for (const part of node.message.parts) {
+    if (part.type === 'reasoning') {
+      renderThinkingPanel(part.reasoning)
+    } else if (part.type === 'text') {
+      renderResponsePanel(part.text)
+    }
+  }
+}
+```
+</Code>
+
+Both streams update in real time. Users see the reasoning content appear as the model thinks, followed by (or alongside) the response text.
+
+<Aside data-type='note'>
+Chain of thought support depends on the model and framework. Not all models produce reasoning tokens, and not all codec integrations surface them as separate stream types. Check your framework guide for details on reasoning support.
+</Aside>
+
+## Related features <a id="related"/>
+
+- [Token streaming](/docs/ai-transport/features/token-streaming) - how text tokens are streamed and accumulated
+- [Tool calling](/docs/ai-transport/features/tool-calling) - another multi-part stream type within a turn
+- [Codec API](/docs/ai-transport/api-reference/codec) - reference for the codec that multiplexes reasoning and text streams.
+- [Transport architecture](/docs/ai-transport/how-it-works/transport) - how the codec encodes multiple stream types.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

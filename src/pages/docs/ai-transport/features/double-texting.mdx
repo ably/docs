@@ -1,0 +1,94 @@
+---
+title: "Double texting"
+meta_description: "Handle users sending multiple messages while the AI is streaming with Ably AI Transport. Queue or run messages concurrently."
+meta_keywords: "double texting, multiple messages, concurrent messages, queue messages, AI Transport, Ably"
+---
+
+Double texting is when a user sends a new message while the agent is still streaming a response. AI Transport supports this through [concurrent turns](/docs/ai-transport/features/concurrent-turns) - the new message starts a new turn that runs alongside the existing one.
+
+## Default behavior <a id="default-behavior"/>
+
+By default, sending a message while the agent is streaming starts a new concurrent turn. Both the existing response and the new turn run in parallel:
+
+<Code>
+```javascript
+// User sends a message
+await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Explain quantum computing' }] }])
+
+// Agent starts streaming a response...
+
+// User sends another message before the response finishes
+await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Also, what is superposition?' }] }])
+
+// Both turns stream concurrently
+```
+</Code>
+
+Each turn has its own stream and cancel handle. The conversation tree contains both exchanges.
+
+## Queue-while-streaming <a id="queue-while-streaming"/>
+
+If you want to prevent concurrent turns and instead queue messages, detect active turns and show a queued indicator in the UI:
+
+<Code>
+```javascript
+const activeTurns = useActiveTurns(transport)
+
+const handleSend = async (text) => {
+  if (activeTurns.size > 0) {
+    // Show a queued indicator in the UI
+    addToQueue(text)
+    return
+  }
+
+  await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }])
+}
+
+// When the active turn finishes, send the next queued message
+useEffect(() => {
+  if (activeTurns.size === 0 && queue.length > 0) {
+    const next = queue.shift()
+    send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: next }] }])
+  }
+}, [activeTurns.size])
+```
+</Code>
+
+This gives users feedback that their message was received and will be processed next, without interrupting the current response.
+
+## Cancel-then-send <a id="cancel-then-send"/>
+
+An alternative is to cancel the current turn before sending the new message. This is the [interruption](/docs/ai-transport/features/interruption) pattern:
+
+<Code>
+```javascript
+const handleSend = async (text) => {
+  if (activeTurns.size > 0) {
+    await transport.cancel()
+  }
+
+  await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }])
+}
+```
+</Code>
+
+The current response stops, and the new message starts a fresh turn. This works well when the user's new message supersedes the previous one.
+
+## Choose a pattern <a id="choosing-a-pattern"/>
+
+| Pattern | Behavior | Best for |
+| --- | --- | --- |
+| Concurrent (default) | Both turns run in parallel | Multi-topic conversations, research tasks |
+| Queue-while-streaming | New message waits for current turn to finish | Sequential conversations, chatbots |
+| Cancel-then-send | Current turn is aborted, new turn starts | Corrections, redirections |
+
+The right pattern depends on your application. Concurrent turns work well for exploratory conversations. Queuing is better for sequential interactions where order matters. Cancel-then-send is best when the new message replaces the previous one.
+
+## Related features <a id="related"/>
+
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns) - the underlying mechanism for parallel turns
+- [Interruption and barge-in](/docs/ai-transport/features/interruption) - the cancel-then-send pattern in detail
+- [Cancellation](/docs/ai-transport/features/cancellation) - cancel signals and scoped cancellation
+- [Client transport API](/docs/ai-transport/api-reference/client-transport) - reference for `send`, `cancel`, and other client methods.
+- [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) - how concurrent turns are managed within a session.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

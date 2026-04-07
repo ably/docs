@@ -1,0 +1,96 @@
+---
+title: "Transport architecture"
+meta_description: "Understand the two-layer transport architecture in Ably AI Transport: a generic core transport and a pluggable codec that bridges your AI framework to Ably."
+meta_keywords: "AI Transport, transport architecture, codec, server transport, client transport, Ably"
+---
+
+AI Transport uses a two-layer architecture. The core transport handles turn lifecycle, cancellation, conversation history, and multi-client sync. A pluggable codec bridges your AI framework's event types to Ably messages. This separation means the transport works with any AI framework without modification.
+
+## Server transport <a id="server-transport"/>
+
+The server transport publishes to an Ably channel. It manages turns and listens for control signals (like cancel requests) from clients.
+
+The data flow for a single turn is:
+
+1. The client sends an HTTP POST with the user's message.
+2. The server creates a turn and publishes the user message to the channel.
+3. The server invokes the LLM and pipes the token stream through the codec to the channel.
+4. The server ends the turn.
+
+The HTTP response is immediate (status 200, empty body). The response stream is decoupled from the HTTP request. Tokens flow through the Ably channel, not through the HTTP response.
+
+<Code>
+```javascript
+const transport = createServerTransport({ channel, codec: UIMessageCodec })
+const turn = transport.newTurn({ turnId, clientId })
+
+await turn.start()
+await turn.addMessages(messages, { clientId })
+const { reason } = await turn.streamResponse(llmStream)
+await turn.end(reason)
+```
+</Code>
+
+## Client transport <a id="client-transport"/>
+
+The client transport subscribes to the Ably channel and builds a conversation tree from incoming messages. It provides a `View`, a paginated, branch-aware projection of the conversation.
+
+The client transport manages the following:
+
+- Subscribes to the channel before attaching so no messages are missed.
+- Decodes Ably messages through the codec into domain events.
+- Builds a conversation tree with branching support.
+- Provides views for pagination and branch navigation.
+- Tracks active turns across all clients.
+- Handles optimistic insertion of user messages before server confirmation.
+
+<Code>
+```javascript
+const transport = useClientTransport({ channel, codec: UIMessageCodec, clientId })
+const { nodes, send, hasOlder, loadOlder } = useView(transport)
+```
+</Code>
+
+## The codec <a id="codec"/>
+
+The codec is the bridge between your AI framework and Ably messages. It has four responsibilities:
+
+1. **Encoder.** Converts domain events (like LLM tokens) into Ably publish operations (create, append, update).
+2. **Decoder.** Converts inbound Ably messages back into domain events.
+3. **Accumulator.** Builds complete messages from a stream of events, used for history and multi-client sync.
+4. **Terminal detection.** Identifies events that end a stream, such as finish, error, or abort.
+
+The SDK ships `UIMessageCodec` for the Vercel AI SDK, which maps `UIMessageChunk` events to `UIMessage` messages.
+
+For other frameworks, implement the `Codec` interface:
+
+<Code>
+```javascript
+interface Codec<TEvent, TMessage> {
+  createEncoder(channel, options?): StreamEncoder<TEvent, TMessage>
+  createDecoder(): StreamDecoder<TEvent, TMessage>
+  createAccumulator(): MessageAccumulator<TEvent, TMessage>
+  isTerminal(event: TEvent): boolean
+}
+```
+</Code>
+
+See the [Codec API reference](/docs/ai-transport/api-reference/codec) for the full interface.
+
+## Entry points <a id="entry-points"/>
+
+| Entry point | Import path | Use when |
+| --- | --- | --- |
+| Core | `@ably/ai-transport` | Building with a custom codec or non-React client |
+| React | `@ably/ai-transport/react` | Building a React UI with any codec |
+| Vercel | `@ably/ai-transport/vercel` | Server-side Vercel AI SDK integration |
+| Vercel React | `@ably/ai-transport/vercel/react` | Client-side Vercel AI SDK with `useChat` |
+
+The Vercel AI SDK has the deepest integration. The `@ably/ai-transport/vercel/react` entry point provides `useChatTransport`, which wraps the core transport for direct use with Vercel's `useChat` hook. Other frameworks use the core entry point with a custom or framework-specific codec.
+
+## What to read next <a id="next"/>
+
+- [Authentication](/docs/ai-transport/how-it-works/authentication): configure authentication for AI Transport sessions.
+- [Token streaming](/docs/ai-transport/features/token-streaming): understand how tokens flow from the LLM through the transport to connected clients.
+- [Getting started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk): build your first AI Transport application.
+- [Codec API reference](/docs/ai-transport/api-reference/codec): the full codec interface specification.
