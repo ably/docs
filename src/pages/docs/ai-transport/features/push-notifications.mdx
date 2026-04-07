@@ -1,0 +1,78 @@
+---
+title: "Push notifications"
+meta_description: "Notify users when AI agents complete background tasks with Ably Push Notifications. Reach users even when they're offline."
+meta_keywords: "push notifications, background tasks, offline notifications, AI Transport, Ably"
+---
+
+Push notifications let you notify users when an agent completes a long-running task, even if the user has closed the app. This uses Ably's native [Push Notifications](/docs/push) alongside AI Transport.
+
+<Aside data-type='note'>
+Push notifications are not built into the AI Transport SDK. They use the Ably Push API to deliver notifications to devices that are no longer connected to the session channel.
+</Aside>
+
+## The pattern <a id="the-pattern"/>
+
+The flow works as follows:
+
+1. A user sends a message that triggers a long-running agent task (research, code generation, data analysis).
+2. The user closes the app or navigates away.
+3. The agent completes the task and publishes the result to the session channel.
+4. A push rule on the channel triggers a notification to the user's device.
+5. The user taps the notification and returns to the completed conversation.
+
+Because AI Transport persists messages on the Ably channel, the full response is available when the user returns. There is no need to store results separately.
+
+## Set up push rules <a id="push-rules"/>
+
+Configure a channel rule in the Ably dashboard to trigger push notifications when the agent publishes a completion event:
+
+<Code>
+```javascript
+// Server: publish a completion event when the agent finishes
+app.post('/api/chat', async (req, res) => {
+  const { turnId, clientId, userId, sessionId, messages } = req.body
+  const turn = transport.newTurn({ turnId, clientId })
+
+  const result = streamText({
+    model: openai('gpt-4o'),
+    messages,
+    abortSignal: turn.abortSignal,
+  })
+
+  await turn.streamResponse(result.toUIMessageStream())
+  await turn.end('complete')
+
+  // Publish a push-eligible event on a notification channel
+  const notificationChannel = ably.channels.get(`notifications:${userId}`)
+  await notificationChannel.publish('agent-complete', {
+    title: 'Your agent has finished',
+    body: 'Tap to view the response',
+    sessionId,
+  })
+  res.json({ ok: true })
+})
+```
+</Code>
+
+On the client, register the device for push notifications and subscribe to the notification channel:
+
+<Code>
+```javascript
+// Client: subscribe for push notifications
+const notificationChannel = ably.channels.get(`notifications:${userId}`)
+await notificationChannel.push.subscribeDevice()
+```
+</Code>
+
+## Combine with AI Transport sessions <a id="combining-with-sessions"/>
+
+The notification payload can include the session ID, so the client opens directly to the right conversation. When the user taps the notification, load the session and use [history and replay](/docs/ai-transport/features/history) to display the full conversation including the completed response.
+
+## Related features <a id="related"/>
+
+- [Push Notifications](/docs/push) - the Ably Push API used for device notifications
+- [History and replay](/docs/ai-transport/features/history) - loading completed responses after reconnecting
+- [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery) - resuming sessions after disconnection
+- [Ably Push](/docs/push) - full reference for the Push Notifications API.
+- [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) - how durable sessions persist while users are offline.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

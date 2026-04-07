@@ -1,0 +1,142 @@
+---
+title: "Human-in-the-loop"
+meta_description: "Add human approval gates to AI agent workflows with Ably AI Transport. Approve tool executions and provide input across devices."
+meta_keywords: "human-in-the-loop, approval gate, tool approval, AI agent, AI Transport, Ably"
+---
+
+Human-in-the-loop in AI Transport uses the tool calling primitives to create approval gates. The agent requests approval, the turn pauses, and any connected client can approve or reject. Because the session is durable, the approval request reaches the user even after reconnecting or switching devices.
+
+## How it works <a id="how-it-works"/>
+
+The pattern builds on [tool calling](/docs/ai-transport/features/tool-calling). The agent defines a tool that requires human approval. When the LLM invokes that tool, the turn ends with a pending tool call. The client presents the approval request to the user. When the user approves or rejects, the client submits the result via `view.update()`, which triggers a continuation turn.
+
+The flow:
+
+1. The agent streams a response that includes a tool call requiring approval.
+2. The turn ends. The pending tool call is published to the channel.
+3. Any connected client sees the pending approval and presents it to the user.
+4. The user approves or rejects. The client calls `view.update()` with the result.
+5. A continuation turn starts. The agent receives the approval result and proceeds.
+
+<Aside data-type='note'>
+Because the approval request is an Ably message on the channel, it persists in history. If the user is offline when the agent requests approval, they see the request when they reconnect. If they switch devices, the request appears on the new device. No polling or push infrastructure is needed.
+</Aside>
+
+## Define an approval tool <a id="approval-tool"/>
+
+On the server, define a tool without an `execute` function. The tool's description tells the LLM when to request approval:
+
+<Code>
+```javascript
+const result = streamText({
+  model: anthropic('claude-sonnet-4-20250514'),
+  messages: conversationHistory,
+  tools: {
+    requestApproval: {
+      description: 'Request user approval before executing a sensitive action',
+      inputSchema: z.object({
+        action: z.string().describe('Description of the action to approve'),
+        details: z.string().describe('Additional context for the user'),
+      }),
+      // No execute function - requires client-side approval
+    },
+    // Other tools that the agent can use after approval
+    executeTransfer: {
+      description: 'Execute a bank transfer',
+      inputSchema: z.object({ amount: z.number(), recipient: z.string() }),
+      execute: async ({ amount, recipient }) => {
+        return await processTransfer(amount, recipient)
+      },
+    },
+  },
+  abortSignal: turn.abortSignal,
+})
+
+const { reason } = await turn.streamResponse(result.toUIMessageStream())
+await turn.end(reason)
+```
+</Code>
+
+When the LLM decides an action needs approval, it invokes `requestApproval`. The turn ends with the tool call pending.
+
+## Handle approval on the client <a id="client-approval"/>
+
+On the client, detect pending approval requests and present them to the user:
+
+<Code>
+```javascript
+const { nodes } = useView(transport)
+
+// Find the node containing a pending approval request
+const pendingNode = nodes
+  .find(n => n.message.parts?.some(p =>
+    p.type === 'dynamic-tool' &&
+    p.toolName === 'requestApproval' &&
+    p.state === 'input-available'
+  ))
+
+const pendingApproval = pendingNode?.message.parts
+  ?.find(p => p.type === 'dynamic-tool' && p.state === 'input-available')
+
+if (pendingNode && pendingApproval) {
+  const { action, details } = pendingApproval.args
+
+  // Render an approval UI
+  // First argument to view.update() is the Ably message ID of the node containing the tool invocation
+  return (
+    <ApprovalDialog
+      action={action}
+      details={details}
+      onApprove={() =>
+        view.update(pendingNode.id, [{
+          type: 'tool-output-available',
+          toolCallId: pendingApproval.toolCallId,
+          output: { approved: true },
+        }])
+      }
+      onReject={() =>
+        view.update(pendingNode.id, [{
+          type: 'tool-output-available',
+          toolCallId: pendingApproval.toolCallId,
+          output: { approved: false, reason: 'User declined' },
+        }])
+      }
+    />
+  )
+}
+```
+</Code>
+
+When the user approves, `view.update()` submits the result and triggers a continuation turn. The agent receives `{ approved: true }` as the tool result and proceeds with the action. If the user rejects, the agent receives the rejection and can adjust its behavior.
+
+## Multi-device approval <a id="multi-device"/>
+
+Because the session is a shared Ably channel, the approval request is visible on every connected device. Any device can submit the approval - the first response wins.
+
+A user might start a conversation on their laptop, step away, and approve the request on their phone. The agent doesn't know or care which device approved it. The continuation turn starts as soon as any client submits the result.
+
+<Code>
+```javascript
+// Device A (laptop) - sees the approval request
+// Device B (phone) - also sees the same approval request
+// Either device can call view.update() to approve or reject
+```
+</Code>
+
+This is particularly useful for asynchronous workflows where the agent works on a task, hits a point requiring human judgment, and the user responds whenever they're available - from whichever device is convenient.
+
+## Durable approval requests <a id="durable"/>
+
+Approval requests survive disconnections. If the user is offline when the agent requests approval, the pending tool call persists in the channel history. When the user reconnects, the view loads the conversation including the pending request, and the approval UI appears.
+
+The agent's turn has already ended, so there's no connection or timeout to worry about. The continuation turn starts only when the user submits their response - minutes, hours, or days later.
+
+## Related features <a id="related"/>
+
+- [Tool calling](/docs/ai-transport/features/tool-calling) - the underlying mechanism for human-in-the-loop
+- [Multi-device sessions](/docs/ai-transport/features/multi-device) - approval from any connected device
+- [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery) - approval requests survive disconnections
+- [History and replay](/docs/ai-transport/features/history) - pending approvals persist in history
+- [Client transport API](/docs/ai-transport/api-reference/client-transport) - reference for `view.update` and other client methods.
+- [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) - how approval pauses and resumes turns.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

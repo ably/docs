@@ -1,0 +1,114 @@
+---
+title: "Conversation tree"
+meta_description: "How AI Transport maintains a branching conversation structure. Serial ordering, sibling groups, fork chains, and flatten algorithm."
+meta_keywords: "conversation tree, branching, fork, sibling groups, flatten algorithm, AI Transport, Ably"
+---
+
+AI Transport maintains conversations as a tree, not a list. Every message is a node with a parent pointer. Edits and regenerations create forks rather than replacements, so the full history is preserved. The tree is projected into a linear list for rendering by selecting one branch at each fork point.
+
+## Why a tree, not a list <a id="why-a-tree"/>
+
+In a simple chat interface, conversation looks linear. But as soon as a user edits a message or regenerates a response, a single list breaks down. Either you discard the original content (destructive) or you need a structure that can hold multiple versions.
+
+The tree solves this. An edit creates a sibling of the original message - both exist in the tree. A regenerate creates a sibling of the original response. Navigation between siblings lets users browse alternative branches. Nothing is ever lost.
+
+## Serial-first ordering <a id="serial-ordering"/>
+
+Messages in the tree are ordered by their Ably serial. Ably assigns a serial to every message published on a channel, providing a total order that is consistent across all subscribers.
+
+Optimistic messages do not have an Ably serial when first inserted - they exist only in the local tree. They receive a placeholder serial that sorts them after all confirmed messages. When the server publishes the same message to the channel, the client reconciles and promotes the placeholder serial to the real one. This is serial promotion.
+
+After promotion, the message's position in the sorted list may change to reflect the true publication order. In practice, the change is usually invisible because the optimistic message was published moments before the server confirmation.
+
+## Data structures <a id="data-structures"/>
+
+The conversation tree is maintained with three core structures:
+
+| Structure | Purpose |
+| --- | --- |
+| `nodeIndex` | A map from message ID to node. Each node holds the message, its serial, and its parent ID. This is the primary lookup. |
+| `sortedList` | All nodes sorted by serial. Used for iteration and pagination. |
+| `parentIndex` | A map from parent ID to the list of child node IDs. Used to find sibling groups. |
+
+<Aside data-type='note'>
+Branch selection (which sibling is active at each fork point) is managed by the View layer, not the tree itself. The tree is a pure data structure; the View maintains a `selections` map and uses it when flattening.
+</Aside>
+
+## Upsert as sole mutation <a id="upsert"/>
+
+The tree has a single mutation operation: upsert. Every inbound message, whether from a live subscription or history, passes through upsert. The operation either inserts a new node or updates an existing one.
+
+- **Insert**: creates a new node, adds it to `nodeIndex`, inserts it into `sortedList` at the correct position, and updates `parentIndex`.
+- **Update**: replaces the message content and serial on an existing node. If the serial changed (serial promotion), the node's position in `sortedList` is adjusted.
+
+Using a single mutation path keeps the tree consistent. There is no separate "insert from history" or "insert from live" path - both go through upsert.
+
+## Sibling groups <a id="sibling-groups"/>
+
+Messages that share the same parent form a sibling group. In a linear conversation, every parent has exactly one child. When a fork happens (edit or regenerate), the parent gains additional children.
+
+The `x-ably-fork-of` header marks the message that the new branch diverges from. When the tree receives a message with `fork-of`, it creates a sibling at the fork point:
+
+1. Find the node identified by `fork-of`.
+2. Use that node's parent as the parent for the new message.
+3. Add the new message to the parent's child list in `parentIndex`.
+
+The new message becomes a sibling of the forked message. The View layer's `selections` map determines which sibling is active.
+
+## Flatten algorithm <a id="flatten"/>
+
+The tree is rendered as a linear list by flattening the selected branch. The flatten algorithm walks from the root and at each node with children, follows the selected branch:
+
+1. Start at the root node (a node with no parent).
+2. Add the current node to the output list.
+3. Look up the current node's children in `parentIndex`.
+4. If there are children, select the one indicated by the View's `selections` map (default: the last child, which is the most recent).
+5. Repeat from step 2 with the selected child.
+6. Stop when the current node has no children.
+
+The result is a linear path through the tree that represents the currently selected conversation. Changing a selection and re-flattening produces a different linear path.
+
+<Aside data-type='note'>
+The following pseudocode shows a simplified top-down tree walk for clarity. The actual implementation is a linear scan of the serial-sorted list with parent-reachability filtering, which avoids recursive traversal and works efficiently with the sorted data structure.
+</Aside>
+
+<Code>
+```javascript
+// Simplified view - see note above for actual implementation
+function flatten(tree, selections) {
+  const result = []
+  let current = tree.root
+
+  while (current) {
+    result.push(current)
+    const children = tree.parentIndex.get(current.id)
+    if (!children || children.length === 0) break
+    const selectedIndex = selections.get(current.id) ?? children.length - 1
+    current = tree.nodeIndex.get(children[selectedIndex])
+  }
+
+  return result
+}
+```
+</Code>
+
+## Querying the tree <a id="querying"/>
+
+The tree exposes several query methods through the view:
+
+| Method | Return type | Description |
+| --- | --- | --- |
+| `getSiblings(messageId)` | `TMessage[]` | Get all sibling messages for a given message, ordered chronologically by serial. |
+| `hasSiblings(messageId)` | `boolean` | Check whether a message has siblings (is at a fork point). |
+| `getNode(messageId)` | `Node` | Get the full node for a message, including parent and serial. |
+| `getSelectedIndex(messageId)` | `number` | Get the currently selected index within a sibling group. |
+| `select(messageId, index)` | `void` | Change the selected sibling at a fork point. Triggers re-flatten. |
+
+These methods are used by branch navigation UI components to let users browse alternative branches.
+
+## Related pages <a id="related"/>
+
+- [Conversation branching](/docs/ai-transport/features/branching) - the user-facing branching feature.
+- [Optimistic updates](/docs/ai-transport/features/optimistic-updates) - how serial promotion works.
+- [Wire protocol](/docs/ai-transport/internals/wire-protocol) - the `x-ably-parent` and `x-ably-fork-of` headers that build the tree.
+- [Edit and regenerate](/docs/ai-transport/features/edit-and-regenerate) - operations that create forks.

@@ -1,0 +1,114 @@
+---
+title: "Token streaming"
+meta_description: "Stream LLM tokens through Ably AI Transport with durable delivery. Tokens survive disconnections and sync across devices automatically."
+meta_keywords: "token streaming, LLM streaming, AI Transport, Ably, real-time AI, durable streaming"
+---
+
+Token streaming in AI Transport delivers LLM responses progressively through an Ably channel. Tokens are published as they're generated and persist on the channel - clients that disconnect and reconnect receive the complete response without gaps.
+
+## How it works <a id="how-it-works"/>
+
+The server pipes an LLM response stream through the server transport. The transport's codec encodes each token as an Ably message append operation. Subscribing clients receive tokens in real time through their channel subscription. The channel accumulates tokens, so reconnecting clients get the assembled response, not individual deltas to replay.
+
+On the server, a single call streams the entire response:
+
+<Code>
+```javascript
+const { reason } = await turn.streamResponse(result.toUIMessageStream())
+```
+</Code>
+
+That single line reads the LLM stream, encodes tokens through the codec, publishes to the Ably channel, handles abort signals, and returns when the stream completes or is cancelled.
+
+On the client, the view updates as tokens arrive:
+
+<Code>
+```javascript
+const { nodes } = useView(transport)
+// nodes contains messages with streaming text that updates in real time
+```
+</Code>
+
+<Aside data-type='note'>
+Without a durable session layer, token streaming is tied to a single HTTP connection. If the connection drops, the stream dies and partial responses are lost. AI Transport decouples the stream from the connection - tokens persist on the channel and any client can receive them.
+</Aside>
+
+## Stream lifecycle <a id="stream-lifecycle"/>
+
+Each streamed response goes through three states:
+
+- `streaming` - tokens are being appended. The message grows as tokens arrive.
+- `finished` - the stream completed normally. The message is final.
+- `aborted` - the stream was cancelled or errored. The partial message is preserved.
+
+The stream status is tracked in the message header (`x-ably-status`). Clients can check whether a message is still streaming or complete.
+
+## Implement token streaming <a id="implement"/>
+
+### Server <a id="server"/>
+
+The server creates a turn, invokes the LLM, and streams the response:
+
+<Code>
+```javascript
+import { createServerTransport } from '@ably/ai-transport/vercel'
+
+const transport = createServerTransport({ channel })
+const turn = transport.newTurn({ turnId, clientId })
+
+await turn.start()
+await turn.addMessages(messages, { clientId })
+
+const result = streamText({
+  model: anthropic('claude-sonnet-4-20250514'),
+  messages: conversationHistory,
+  abortSignal: turn.abortSignal,
+})
+
+const { reason } = await turn.streamResponse(result.toUIMessageStream())
+await turn.end(reason)
+```
+</Code>
+
+`streamResponse` accepts any `ReadableStream`. For Vercel AI SDK, `result.toUIMessageStream()` provides the right format. For other frameworks, produce a `ReadableStream` of your codec's event type.
+
+### Client <a id="client"/>
+
+With Vercel's `useChat`:
+
+<Code>
+```javascript
+const transport = useClientTransport({ channel, codec: UIMessageCodec, clientId })
+const chatTransport = useChatTransport(transport)
+const { messages } = useChat({ transport: chatTransport })
+```
+</Code>
+
+With generic hooks:
+
+<Code>
+```javascript
+const { nodes } = useView(transport)
+// Each node.message contains the streamed content, updating in real time
+```
+</Code>
+
+## Under the hood <a id="under-the-hood"/>
+
+The codec converts domain events to Ably operations:
+
+- Start - creates a new Ably message on the channel.
+- Append - appends content to the existing message (Ably message append operation).
+- Close - updates the message with a terminal status (finished/aborted).
+
+If an append fails, for example due to a transient network issue, the encoder falls back to a full message update operation to recover. This ensures the accumulated response is never lost.
+
+## Related features <a id="related"/>
+
+- [Cancellation](/docs/ai-transport/features/cancellation) - stop a stream mid-response.
+- [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery) - resume streams after disconnection.
+- [History and replay](/docs/ai-transport/features/history) - load past streamed responses from channel history.
+- [Chain of thought](/docs/ai-transport/features/chain-of-thought) - stream reasoning alongside text.
+- [Server transport API](/docs/ai-transport/api-reference/server-transport) - reference for `streamResponse` and other server methods.
+- [Transport architecture](/docs/ai-transport/how-it-works/transport) - how the transport layer encodes and delivers tokens.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.
