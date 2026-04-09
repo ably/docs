@@ -11,63 +11,43 @@ redirect_from:
 The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
 </Aside>
 
-Sessions and turns are the two core abstractions in AI Transport. A session is a durable channel shared between agents and clients. A turn is one request-response cycle within a session.
+Sessions and turns are the two core concepts in AI Transport. A session is the conversation between agents and clients. A turn is one prompt-response cycle within that conversation.
 
 ## Sessions <a id="sessions"/>
 
-A session in AI Transport is an Ably channel shared between agents and clients. Unlike HTTP connections that die on disconnect, a session persists across connection drops, device switches, and time.
+A session is an Ably channel. It represents the ongoing conversation between one or more agents and one or more clients, including its full history. Every participant on the channel sees every message: user prompts, agent responses, cancel signals.
 
-With HTTP streaming, the connection is the session. Drop it and everything is gone: the token stream, the conversation state, the ability to resume. A session is the layer above connections. It decouples the conversation from any single transport link so that participants can come and go without losing state.
+Because a session is a channel rather than a connection, it survives disconnections. If a client drops off, the agent keeps publishing tokens. When the client reconnects, Ably's connection protocol resumes from the last received message. If the client has been offline longer, it loads the conversation from channel history.
 
-When a client disconnects, the session survives. The agent continues publishing tokens to the channel. On reconnect, Ably's connection protocol automatically resumes from the last received message. If the client has been offline longer, it loads the full conversation from channel history.
-
-### What a session requires <a id="session-requirements"/>
-
-| Property | Why it matters |
-| --- | --- |
-| Message ordering | Events arrive in published order. State is consistent on reload. |
-| Persistence | Recovery after disconnection needs messages stored. Returning clients get complete state. |
-| Accumulation | Reconnecting clients get the assembled response, not raw token deltas to reassemble. |
-| Fan-out | Multiple participants (users, agents, devices) subscribe. Everyone sees every event. |
-| Bidirectional | Users send signals to agents (cancel, interrupt, steer) over the same session. |
-
-AI Transport provides all of these on top of Ably's infrastructure.
+Multiple devices can join the same session. Open a second tab, switch to your phone, hand the session to a colleague. They all see the same conversation in real time.
 
 <Code>
 ```javascript
 const channel = ably.channels.get('my-session')
 const transport = useClientTransport({ channel, codec: UIMessageCodec })
-// Ordering, persistence, fan-out, bidirectional - in one line.
 ```
 </Code>
 
 ## Turns <a id="turns"/>
 
-A turn is one prompt-response cycle within a session. It wraps a raw token stream into a structured unit with clear boundaries.
+Each user prompt to the agent is wrapped as a turn. A turn contains the user's message and the agent's response, with clear start and end boundaries.
 
-A raw token stream has no structure. You can't cancel one response without killing the connection. Reconnecting means replaying thousands of individual events. The turn layer solves this by grouping tokens into discrete units with start signals, content, and end signals.
+Without turns, you'd have a flat stream of tokens with no structure. You couldn't cancel one response without killing the connection or distinguish between two concurrent responses. Turns group tokens into units you can track, cancel, and replay individually.
 
-### Turn lifecycle <a id="turn-lifecycle"/>
+### Server-side lifecycle <a id="server-lifecycle"/>
 
-On the server side, a turn lifecycle is explicit:
+On the server, you control the turn lifecycle explicitly:
 
-1. `turn.start()` signals all subscribers that a turn has begun.
-2. `turn.addMessages(messages)` publishes user input to the channel.
+1. `transport.newTurn({ turnId, clientId })` creates the turn.
+2. `turn.addMessages(messages)` publishes the user's input to the channel.
 3. `turn.streamResponse(stream)` pipes LLM tokens through the codec to the channel.
-4. `turn.end(reason)` marks the turn as complete, cancelled, or errored.
-
-On the client side, the lifecycle is implicit. Calling `view.send(messages)` creates a turn automatically and returns an `ActiveTurn` with a `stream` and `cancel()` method.
+4. `turn.end(reason)` marks the turn as complete.
 
 A turn ends with one of three reasons: `'complete'`, `'cancelled'`, or `'error'`.
 
-### What a turn layer requires <a id="turn-requirements"/>
+### Client-side lifecycle <a id="client-lifecycle"/>
 
-| Property | Why it matters |
-| --- | --- |
-| Structured boundaries | Each turn has clear start and end. Cancellation is scoped to a turn. |
-| Assembled history | Reconnecting clients get complete responses per turn, not raw tokens. |
-| Concurrent lifecycles | Multiple turns stream simultaneously. Each has its own cancel handle. |
-| Content multiplexing | A single turn can contain text, reasoning, tool calls - multiple content streams as one unit. |
+On the client, turns are implicit. Calling `view.send(messages)` creates a turn and returns an `ActiveTurn`:
 
 <Code>
 ```javascript
@@ -79,20 +59,15 @@ turn.cancel() // Cancel this turn only
 
 ### Concurrent turns <a id="concurrent-turns"/>
 
-Multiple turns can be active at the same time. Each has independent streams and cancel handles. Track them with `useActiveTurns(transport)`, which returns a reactive Map of active turns grouped by client ID. See [Concurrent turns](/docs/ai-transport/features/concurrent-turns) for details.
+Multiple turns can be active at the same time, each with independent streams and cancel handles. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for details.
 
 ### Cancellation <a id="cancellation"/>
 
-Cancellation is scoped. Cancel filters target specific turns (`turnId`), your own turns (`own: true`), a specific client's turns (`clientId`), or all turns (`all: true`). The server receives a cancel signal and can authorize or reject it via the `onCancel` hook. See [Cancellation](/docs/ai-transport/features/cancellation) for details.
+Cancel signals are scoped to specific turns. Filters can target a single turn by ID, all turns from a specific client, your own turns, or all turns. The server can authorize or reject cancel requests via the `onCancel` hook. See [cancellation](/docs/ai-transport/features/cancellation) for details.
 
-## What sessions and turns enable <a id="what-they-enable"/>
+## What to read next <a id="next"/>
 
-Sessions and turns are the foundation for the features that make AI Transport useful in production:
-
-- [Multi-device sessions](/docs/ai-transport/features/multi-device): Multiple devices share a single session. Each sees every event.
-- [History and replay](/docs/ai-transport/features/history): Persistent sessions mean full conversation history is always available.
-- [Cancellation](/docs/ai-transport/features/cancellation): Scoped cancel signals that target specific turns without killing the session.
-- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): Multiple prompt-response cycles streaming at the same time, each independently controllable.
-- [Token streaming](/docs/ai-transport/features/token-streaming): Stream tokens to clients in real time as the LLM generates them.
-
-Ready to build? [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk).
+- [Token streaming](/docs/ai-transport/features/token-streaming): How tokens flow from the LLM to connected clients.
+- [Multi-device sessions](/docs/ai-transport/features/multi-device): Sharing sessions across devices and users.
+- [History and replay](/docs/ai-transport/features/history): Loading conversation state on reconnect.
+- [Conversation branching](/docs/ai-transport/features/branching): Edit and regenerate to create alternative branches.
