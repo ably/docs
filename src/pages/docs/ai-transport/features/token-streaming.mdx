@@ -29,6 +29,7 @@ redirect_from:
   - /docs/guides/ai-transport/vercel-ai-sdk/vercel-message-per-response
   - /docs/guides/ai-transport/vercel-message-per-token
   - /docs/guides/ai-transport/vercel-ai-sdk/vercel-message-per-token
+  - /docs/ai-transport/token-streaming/token-rate-limits
 ---
 
 LLMs generate responses progressively - token by token - and the best user experience is achieved by delivering those tokens progressively also to clients, minimising perceived response latency. This token by token delivery, as a response is still being generated, is referred to as token streaming.
@@ -131,6 +132,43 @@ The codec converts domain events to Ably operations:
 - Close - updates the message with a terminal status (finished/aborted).
 
 If an append fails, for example due to a transient network issue, the encoder falls back to a full message update operation to recover. This ensures the accumulated response is never lost.
+
+## Append rollup <a id="rollup"/>
+
+LLM token streaming introduces high-rate traffic patterns, with some models outputting upwards of 150 distinct token events per second. AI Transport automatically manages this by rolling up multiple appends into a single published message, preventing a single response stream from reaching the [message rate limit](/docs/platform/pricing/limits#connection) for a connection.
+
+1. Your agent streams tokens to the channel at the model's output rate.
+2. Ably publishes the first token immediately, then automatically rolls up subsequent tokens on receipt.
+3. Clients receive the same content, delivered in fewer discrete messages.
+
+By default, Ably delivers a single response stream at 25 messages per second or the model output rate, whichever is lower. Ably charges for the number of published messages, not for the number of streamed tokens.
+
+### Configure rollup behaviour <a id="configure-rollup"/>
+
+Ably concatenates all appends for a single response that are received during the rollup window into one published message. Set the rollup window for a connection using the `appendRollupWindow` [transport parameter](/docs/api/realtime-sdk#client-options):
+
+| `appendRollupWindow` | Maximum message rate for a single response |
+|---|---|
+| 0ms | Model output rate |
+| 20ms | 50 messages/s |
+| 40ms *(default)* | 25 messages/s |
+| 100ms | 10 messages/s |
+| 500ms *(max)* | 2 messages/s |
+
+<Code>
+```javascript
+const ably = new Ably.Realtime(
+  {
+    key: '{{API_KEY}}',
+    transportParams: { appendRollupWindow: 100 }
+  }
+);
+```
+</Code>
+
+<Aside data-type="important">
+If you configure the `appendRollupWindow` to allow a single response to use more than your [connection inbound message rate](/docs/platform/pricing/limits#connection) you will see [limit enforcement](/docs/platform/pricing/limits#hitting) behaviour if you stream tokens faster than the allowed message rate.
+</Aside>
 
 ## Related features <a id="related"/>
 
