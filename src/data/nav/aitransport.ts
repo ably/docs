@@ -15,7 +15,7 @@ export default {
     },
     {
       name: 'Why AI Transport',
-      link: '/docs/ai-transport/why-ai-transport',
+      link: '/docs/ai-transport/why',
     },
     {
       name: 'How it works',
