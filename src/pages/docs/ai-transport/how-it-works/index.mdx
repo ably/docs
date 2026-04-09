@@ -4,38 +4,51 @@ meta_description: "Understand the core concepts behind Ably AI Transport: sessio
 meta_keywords: "AI Transport, sessions, turns, transport architecture, codec, Ably"
 ---
 
-AI Transport is built on three core concepts: sessions, turns, and a two-layer transport architecture. Sessions are durable communication channels shared between agents and clients. Turns are structured request-response cycles within a session. The transport architecture separates your AI framework from the messaging infrastructure, so you can swap either side without changing the other.
+AI Transport implements Durable Sessions as the layer than underpins client to agent interactions.
 
-## Understand sessions <a id="sessions"/>
+## Sessions <a id="sessions"/>
 
-A session is an Ably channel shared between one or more agents and one or more clients. It represents a single conversation and persists beyond any individual connection. When a client disconnects and reconnects, the session is still there. When a second device joins, it sees the same session.
+The central concept is of a session. This is a durable, addressable, communication channel, that carries client-to-agent, and agent-to-client events. A session may be shared between one or more agents and one or more clients. A single session would usually represent a single conversation or chat, but that can be long-lived, and can survive individual client connections, or episodes of client interactions. A single ChatGPT chat, for example, could be a session; you can revisit and continue that session multiple times, on different devices. A second device interacting with that chat would do so by joining the same session.
 
-Sessions provide four guarantees:
+In AI Transport, a session maps to an Ably Channel. Channels support realtime pub/sub messaging, so multiple (agent or client) partipants in a channel can each publish and subscribe to messages; channels support presence, so each connected participant can advertise its online status; and channels support structured state, so arbitrary data, in addition to messages, can be durably added, modified and observed by any participant.
 
-- Events arrive in the order they were published. Token streams render correctly without reordering logic.
-- Messages survive disconnections. A client that drops and reconnects picks up exactly where it left off.
-- All participants see all events. Every subscribed device receives every token, every control signal, every lifecycle event.
-- Clients signal agents through the same channel. Cancel requests, interrupts, and metadata flow back to the agent without a separate control plane.
+Messages in a session are ordered, so subscribers see events in the order in which they were published. This ordering ensures that it is possible to distribute streamed token events at a high rate, knowing that they are received in order by clients.
 
-When a client disconnects, the session continues to exist. The agent keeps publishing tokens to the channel. On reconnect, Ably's connection protocol automatically resumes from the last received message with no gaps. If the client has been offline longer, it loads the full conversation from channel history using `view.loadOlder()`.
+AI Transport sessions persist messages and structured state, so interaction history survives the disconnection of any client or agent. Clients can therefore retrieve historical messages, as well as receive them in real time. Sessions are a unifying primitive that expose the same message stream to be consumed either in real time or after the fact.
+
+Since sessions are based on a pub/sub primitive, multiple clients can receive messages, either serially (ie different devices at different times) or simultaneously .
+
+Sessions don't just carry client prompts and agent responses; they are bidirectional and capable of carrying multiple signals, whether that's for cancellation, interruption, steering, and whether it's chat text, artifacts, tool parameters, or other metadata.
+
+When a client disconnects, the session continues to exist and the agent keeps publishing tokens to the channel. On reconnect, Ably's connection protocol automatically resumes from the last received message with no gaps. If the client has been offline longer, it loads the full conversation from channel history.
 
 See [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) for a detailed explanation of how sessions and recovery work.
 
-## Understand turns <a id="turns"/>
+## Turns <a id="turns"/>
 
-A turn is one prompt-response cycle within a session. The user sends a prompt, the agent streams back a response. That exchange, from start to finish, is a single turn.
+A turn groups a related set of interactions in a session; the simplest and most typical example of a turn is ais one prompt-response cycle within a session: the client sends a prompt, and the agent streams back a response. In general, however, a turn can include more complex interactions, including those where the turn is initiated by some agent activity, such as an autonomous agent responding to an external event.
 
-Each turn has a lifecycle: it starts when the agent begins generating, streams tokens as they are produced, and ends when the agent completes its response. Turns have clear boundaries. Cancellation is scoped to a turn, not the whole session. Cancelling one turn does not affect other turns or the session itself. Each turn carries its own stream, its own cancel handle, and its own lifecycle events.
+Turns are the principal way of structuring interactions within a single session. Each turn has a livecycle; cancellation is scoped to a turn, so cancelling a turn does not affect other turns or the session itself. Each turn carries its own stream, its own cancel handle, and its own lifecycle events. Turns can also exist concurrently, such as if a user submits a follow-up prompt before the previous response finishes, or where multiple subagents are each interacting with the client at the same time. In general, you can think of turns as a way of multiplexing multiple independent threads in a shared session.
 
-Multiple turns can be active simultaneously. A user can send a follow-up prompt before the previous response finishes, and both turns stream independently. This enables concurrent interactions without waiting for each turn to complete.
+In many agent deployments, the client prompt that initiates a turn is made as a request to the server endpoint that makes the agent invocation, or initiates the agent workflow if using a durable execution framework. The agent workflow will usually end with the completion of that turn; therefore, turn lifecycle is often correlated with agent invocation lifecycle.
 
 See [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) for details on turn lifecycle, cancellation, and concurrent turns.
 
-## Understand the transport architecture <a id="transport"/>
+## Transport architecture <a id="transport"/>
 
-The transport has two layers: a core transport and a codec. The core transport manages the turn lifecycle, cancellation, conversation tree, and history. The codec translates between your AI framework's event types and Ably messages.
+Sessions are powered by Ably pub/sub channels. Channels provide:
 
-On the server, the transport takes the output stream from your AI framework and publishes it to the session channel. On the client, the transport subscribes to the channel and reconstructs the conversation from the incoming events. The HTTP POST that sends the user's prompt to the agent is fire-and-forget. Response tokens come back through the channel, not through the HTTP response.
+- pub/sub message delivery, including message persistence and history;
+- presence so that the state of participants in a channel can be observed in real time;
+- structured durable and collborative state via the LiveObjects API.
+
+The AI Transport library implements two principal protocol layers on top of the channel primitive:
+
+- a "transport" layer that implements the Turns abstraction. This supports the multiplexing of turns onto channels, so that turns can provide independent streams; and a conversation tree that exposes a branching conversation structure from the linear stream of channel messages. Together, these provide the rich message structure required to model AI conversations, both for real time and historical messages.
+
+- a "codec" that handles format conversion of messages between the domain event and message types associated with the agent or client framework - for example `UIMessage` in the case of the Vercel AI SDK - and messages suitable for exchange over the Ably channel.
+
+On the server, the transport takes the output stream from the AI framework and publishes it to channel via the turn's stream. On the client, the transport subscribes to the channel and reconstructs the conversation from the incoming events. Clients that initiate a turn via an HTTP request to the backend (containing the user's prompt) do not receive the agent response on that request; the response to that request simply confirms successful invocation of the agent. Response tokens come back through the turn stream.
 
 The SDK ships with a Vercel AI SDK codec (`UIMessageCodec`) that maps Vercel AI SDK message types to Ably messages. You can write custom codecs for other frameworks by implementing the codec interface. This keeps the core transport framework-agnostic while giving each framework a native integration surface.
 
