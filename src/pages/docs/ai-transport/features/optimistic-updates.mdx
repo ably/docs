@@ -1,0 +1,84 @@
+---
+title: "Optimistic updates"
+meta_description: "User messages appear instantly in Ably AI Transport. Optimistic insertion with automatic reconciliation when the server confirms."
+meta_keywords: "optimistic updates, optimistic UI, instant messages, reconciliation, AI Transport, Ably"
+---
+
+<Aside data-type='new'>
+The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
+</Aside>
+
+Optimistic updates in AI Transport make user messages appear in the conversation immediately, before the server confirms. The client inserts messages into the tree optimistically, and when the server publishes them to the channel, the transport reconciles automatically using message ID matching.
+
+## How it works <a id="how-it-works"/>
+
+When a user sends a message, the client inserts it into the conversation tree before the POST request reaches the server. The message appears in the UI instantly, with no waiting for a round trip.
+
+Behind the scenes:
+
+1. The client generates a message ID and inserts the message into the conversation tree.
+2. The POST request is sent to the server with the message content and generated ID.
+3. The server processes the message and publishes it to the Ably channel.
+4. The client receives the published message through its channel subscription.
+5. The transport matches the published message to the optimistic insert using the `x-ably-msg-id` header and reconciles them.
+
+After reconciliation, the optimistic message is replaced by the server-confirmed version. From the user's perspective, the message was always there - there's no flash, re-render, or position change.
+
+<Aside data-type='note'>
+Without optimistic updates, every user message would wait for a server round trip before appearing. In a real-time conversation, even a few hundred milliseconds of delay makes the UI feel sluggish. Optimistic insertion makes the conversation feel instant.
+</Aside>
+
+## Serial promotion <a id="serial-promotion"/>
+
+Optimistic messages don't have an Ably serial number - they exist only in the local tree. When the server publishes the message to the channel, the reconciled message receives a real Ably serial. This is serial promotion.
+
+Serial promotion matters for ordering. Messages in the conversation tree are ordered by their Ably serial. Optimistic messages are placed at the end of the tree until they're promoted. Once promoted, their position is determined by the serial assigned by the Ably channel, which reflects the true order of publication.
+
+## Multi-message chaining <a id="multi-message"/>
+
+A single turn can include multiple user messages. When sending more than one message, each is inserted optimistically in sequence:
+
+<Code>
+```javascript
+await view.edit(messageId, [
+  { role: 'user', content: 'Here is my updated question' },
+  { role: 'user', content: 'And some additional context' }
+])
+```
+</Code>
+
+Each message in the array is inserted into the tree optimistically. When the server publishes them, they're reconciled individually using their respective message IDs. The order is preserved.
+
+## Error handling <a id="error-handling"/>
+
+If the POST request fails, the optimistic message remains in the conversation tree and the transport emits an `error` event. The message is not automatically removed because the send is fire-and-forget - `view.send()` returns immediately with a stream handle, and the POST happens in the background.
+
+<Code>
+```javascript
+const turn = await view.send([{ role: 'user', content: 'Hello' }])
+
+// Listen for send errors
+transport.on('error', (error) => {
+  // The POST request failed - the optimistic message is still in the tree
+  // Handle the error in your UI (e.g. show a retry option)
+  console.error('Send failed:', error.message)
+})
+```
+</Code>
+
+Your application is responsible for handling these errors and deciding whether to notify the user, offer a retry, or take other action.
+
+## Reconciliation details <a id="reconciliation"/>
+
+The transport uses the `x-ably-msg-id` header to match published messages to optimistic inserts. When the client generates a message, it assigns an ID. The server includes this ID when publishing to the channel. When the client receives the published message through its subscription, it matches the ID and promotes the optimistic message to a confirmed one.
+
+If the client receives a published message that doesn't match any optimistic insert - for example, a message from another client - it's added to the tree normally. The reconciliation logic only applies to messages the current client sent.
+
+## Related features <a id="related"/>
+
+- [Token streaming](/docs/ai-transport/features/token-streaming) - how the agent's response streams after the user's message
+- [Edit and regenerate](/docs/ai-transport/features/edit-and-regenerate) - edits use optimistic updates for the revised message
+- [Multi-device sessions](/docs/ai-transport/features/multi-device) - optimistic messages reconcile across devices
+- [Client transport API](/docs/ai-transport/api-reference/client-transport) - reference for client transport methods.
+- [Transport architecture](/docs/ai-transport/how-it-works/transport) - how messages are encoded and reconciled.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

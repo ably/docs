@@ -1,0 +1,101 @@
+---
+title: "Agent presence"
+meta_description: "Show agent status in your AI application with Ably Presence. Display streaming, thinking, idle, and offline states in real time."
+meta_keywords: "agent presence, AI status, presence API, agent state, AI Transport, Ably"
+redirect_from:
+  - /docs/ai-transport/sessions-identity/online-status
+---
+
+<Aside data-type='new'>
+The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
+</Aside>
+
+Agent presence provides a realtime view to other session participants so they can know which agents are active in a session. Agent presence uses Ably's native [Presence](/docs/presence) API to show real-time agent status in your application, and this could include a sole or orcestrator agent, or multiple sub-agents. Presence can convey whether the agent is streaming, thinking, idle, or offline - across all connected clients.
+
+![Diagram showing presence-aware agent status updates](../../../../images/content/diagrams/ait-presence-aware.png)
+
+<Aside data-type='note'>
+Agent presence is not built into the AI Transport SDK. It uses the Ably Presence API alongside AI Transport to give users visibility into what the agent is doing.
+</Aside>
+
+## How it works <a id="how-it-works"/>
+
+The agent enters presence on the AI Transport session channel with status data. As the agent moves through its turn lifecycle - receiving a message, thinking, streaming, finishing - it updates its presence data. All connected clients receive these updates in real time.
+
+<Code>
+```javascript
+// Server: agent enters presence when it connects
+const channel = ably.channels.get(sessionChannelName)
+await channel.presence.enter({ status: 'idle' })
+
+// Update status during each turn lifecycle
+app.post('/api/chat', async (req, res) => {
+  const { turnId, clientId, messages } = req.body
+  const turn = transport.newTurn({ turnId, clientId })
+
+  await channel.presence.update({ status: 'thinking' })
+
+  const result = streamText({
+    model: openai('gpt-4o'),
+    messages,
+    abortSignal: turn.abortSignal,
+  })
+
+  await channel.presence.update({ status: 'streaming' })
+  await turn.streamResponse(result.toUIMessageStream())
+  await channel.presence.update({ status: 'idle' })
+  res.json({ ok: true })
+})
+```
+</Code>
+
+## Subscribe to agent status <a id="subscribing"/>
+
+On the client, subscribe to presence events to track the agent's current state:
+
+<Code>
+```javascript
+const channel = ably.channels.get(sessionChannelName)
+
+channel.presence.subscribe((member) => {
+  if (member.clientId === 'agent') {
+    console.log(`Agent is ${member.data.status}`)
+  }
+})
+
+// Get the current presence set
+const members = await channel.presence.get()
+const agent = members.find(m => m.clientId === 'agent')
+```
+</Code>
+
+## Combine with active turns <a id="combining-with-active-turns"/>
+
+For richer status indicators, combine presence data with `useActiveTurns`. Presence tells you the agent's self-reported state. Active turns tell you which turns are in progress:
+
+<Code>
+```javascript
+const activeTurns = useActiveTurns(transport)
+const agentStatus = useAgentPresence(channel) // your custom hook
+
+// Agent is streaming if it has active turns
+const isStreaming = activeTurns.has('agent')
+
+// Agent is online but idle if present with no active turns
+const isIdle = agentStatus === 'idle' && !isStreaming
+
+// Agent is offline if not in the presence set
+const isOffline = agentStatus === null
+```
+</Code>
+
+This gives the UI enough information to show a typing indicator while the agent is thinking, a streaming animation while tokens are arriving, and an offline badge when the agent disconnects.
+
+## Related features <a id="related"/>
+
+- [Presence](/docs/presence) - the Ably Presence API used for agent status
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns) - tracking active turns across clients
+- [Multi-device sessions](/docs/ai-transport/features/multi-device) - presence works across all connected devices
+- [Ably Presence](/docs/presence) - full reference for the Presence API.
+- [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) - how sessions and presence work together.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

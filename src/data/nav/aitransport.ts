@@ -9,186 +9,175 @@ export default {
   },
   content: [
     {
-      name: 'About AI Transport',
+      name: 'Overview',
       link: '/docs/ai-transport',
       index: true,
+    },
+    {
+      name: 'Why AI Transport',
+      link: '/docs/ai-transport/why',
+    },
+    {
+      name: 'How it works',
+      pages: [
+        {
+          name: 'Sessions and turns',
+          link: '/docs/ai-transport/how-it-works/sessions-and-turns',
+        },
+        {
+          name: 'Transport',
+          link: '/docs/ai-transport/how-it-works/transport',
+        },
+        {
+          name: 'Authentication',
+          link: '/docs/ai-transport/how-it-works/authentication',
+        },
+      ],
     },
     {
       name: 'Getting started',
       pages: [
         {
-          name: 'Anthropic',
-          link: '/docs/ai-transport/getting-started/anthropic',
-        },
-        {
-          name: 'OpenAI',
-          link: '/docs/ai-transport/getting-started/openai',
-        },
-        {
           name: 'Vercel AI SDK',
           link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
         },
+      ],
+    },
+    {
+      name: 'Framework guides',
+      pages: [
         {
-          name: 'LangGraph',
-          link: '/docs/ai-transport/getting-started/langgraph',
+          name: 'Vercel AI SDK',
+          link: '/docs/ai-transport/framework-guides/vercel-ai-sdk',
         },
       ],
     },
     {
-      name: 'Token streaming',
+      name: 'Features',
       pages: [
         {
-          name: 'Overview',
-          link: '/docs/ai-transport/token-streaming',
-          index: true,
+          name: 'Token streaming',
+          link: '/docs/ai-transport/features/token-streaming',
         },
         {
-          name: 'Message per response',
-          link: '/docs/ai-transport/token-streaming/message-per-response',
+          name: 'Cancellation',
+          link: '/docs/ai-transport/features/cancellation',
         },
         {
-          name: 'Message per token',
-          link: '/docs/ai-transport/token-streaming/message-per-token',
+          name: 'Reconnection and recovery',
+          link: '/docs/ai-transport/features/reconnection-and-recovery',
         },
         {
-          name: 'Token streaming limits',
-          link: '/docs/ai-transport/token-streaming/token-rate-limits',
-        },
-      ],
-    },
-    {
-      name: 'Sessions & Identity',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/docs/ai-transport/sessions-identity',
+          name: 'Multi-device sessions',
+          link: '/docs/ai-transport/features/multi-device',
         },
         {
-          name: 'Identifying users and agents',
-          link: '/docs/ai-transport/sessions-identity/identifying-users-and-agents',
+          name: 'History and replay',
+          link: '/docs/ai-transport/features/history',
         },
         {
-          name: 'Online status',
-          link: '/docs/ai-transport/sessions-identity/online-status',
+          name: 'Conversation branching',
+          link: '/docs/ai-transport/features/branching',
         },
         {
-          name: 'Push notifications',
-          link: '/docs/ai-transport/sessions-identity/push-notifications',
+          name: 'Interruption and barge-in',
+          link: '/docs/ai-transport/features/interruption',
         },
         {
-          name: 'Resuming sessions',
-          link: '/docs/ai-transport/sessions-identity/resuming-sessions',
-        },
-      ],
-    },
-    {
-      name: 'Messaging',
-      pages: [
-        {
-          name: 'Accepting user input',
-          link: '/docs/ai-transport/messaging/accepting-user-input',
+          name: 'Concurrent turns',
+          link: '/docs/ai-transport/features/concurrent-turns',
         },
         {
-          name: 'Tool calls',
-          link: '/docs/ai-transport/messaging/tool-calls',
+          name: 'Edit and regenerate',
+          link: '/docs/ai-transport/features/edit-and-regenerate',
+        },
+        {
+          name: 'Tool calling',
+          link: '/docs/ai-transport/features/tool-calling',
         },
         {
           name: 'Human-in-the-loop',
-          link: '/docs/ai-transport/messaging/human-in-the-loop',
+          link: '/docs/ai-transport/features/human-in-the-loop',
+        },
+        {
+          name: 'Optimistic updates',
+          link: '/docs/ai-transport/features/optimistic-updates',
+        },
+        {
+          name: 'Agent presence',
+          link: '/docs/ai-transport/features/agent-presence',
+        },
+        {
+          name: 'Push notifications',
+          link: '/docs/ai-transport/features/push-notifications',
         },
         {
           name: 'Chain of thought',
-          link: '/docs/ai-transport/messaging/chain-of-thought',
+          link: '/docs/ai-transport/features/chain-of-thought',
         },
         {
-          name: 'Citations',
-          link: '/docs/ai-transport/messaging/citations',
-        },
-        {
-          name: 'Completion and cancellation',
-          link: '/docs/ai-transport/messaging/completion-and-cancellation',
+          name: 'Double texting',
+          link: '/docs/ai-transport/features/double-texting',
         },
       ],
     },
     {
-      name: 'Guides',
-      expand: true,
+      name: 'API reference',
       pages: [
         {
-          name: 'Anthropic',
-          pages: [
-            {
-              name: 'Message per response',
-              link: '/docs/ai-transport/guides/anthropic/anthropic-message-per-response',
-            },
-            {
-              name: 'Message per token',
-              link: '/docs/ai-transport/guides/anthropic/anthropic-message-per-token',
-            },
-            {
-              name: 'Human-in-the-loop',
-              link: '/docs/ai-transport/guides/anthropic/anthropic-human-in-the-loop',
-            },
-            {
-              name: 'Citations',
-              link: '/docs/ai-transport/guides/anthropic/anthropic-citations',
-            },
-          ],
+          name: 'Overview',
+          link: '/docs/ai-transport/api-reference',
+          index: true,
         },
         {
-          name: 'OpenAI',
-          pages: [
-            {
-              name: 'Message per response',
-              link: '/docs/ai-transport/guides/openai/openai-message-per-response',
-            },
-            {
-              name: 'Message per token',
-              link: '/docs/ai-transport/guides/openai/openai-message-per-token',
-            },
-            {
-              name: 'Human-in-the-loop',
-              link: '/docs/ai-transport/guides/openai/openai-human-in-the-loop',
-            },
-            {
-              name: 'Citations',
-              link: '/docs/ai-transport/guides/openai/openai-citations',
-            },
-          ],
+          name: 'Client transport',
+          link: '/docs/ai-transport/api-reference/client-transport',
         },
         {
-          name: 'LangGraph',
-          pages: [
-            {
-              name: 'Message per response',
-              link: '/docs/ai-transport/guides/langgraph/langgraph-message-per-response',
-            },
-            {
-              name: 'Message per token',
-              link: '/docs/ai-transport/guides/langgraph/langgraph-message-per-token',
-            },
-            {
-              name: 'Human-in-the-loop',
-              link: '/docs/ai-transport/guides/langgraph/langgraph-human-in-the-loop',
-            },
-          ],
+          name: 'Server transport',
+          link: '/docs/ai-transport/api-reference/server-transport',
         },
         {
-          name: 'Vercel AI SDK',
-          pages: [
-            {
-              name: 'Message per response',
-              link: '/docs/ai-transport/guides/vercel-ai-sdk/vercel-message-per-response',
-            },
-            {
-              name: 'Message per token',
-              link: '/docs/ai-transport/guides/vercel-ai-sdk/vercel-message-per-token',
-            },
-            {
-              name: 'Human-in-the-loop',
-              link: '/docs/ai-transport/guides/vercel-ai-sdk/vercel-human-in-the-loop',
-            },
-          ],
+          name: 'React hooks',
+          link: '/docs/ai-transport/api-reference/react-hooks',
+        },
+        {
+          name: 'Vercel integration',
+          link: '/docs/ai-transport/api-reference/vercel',
+        },
+        {
+          name: 'Codec',
+          link: '/docs/ai-transport/api-reference/codec',
+        },
+        {
+          name: 'Error codes',
+          link: '/docs/ai-transport/api-reference/error-codes',
+        },
+      ],
+    },
+    {
+      name: 'Internals',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/internals',
+          index: true,
+        },
+        {
+          name: 'Wire protocol',
+          link: '/docs/ai-transport/internals/wire-protocol',
+        },
+        {
+          name: 'Codec architecture',
+          link: '/docs/ai-transport/internals/codec-architecture',
+        },
+        {
+          name: 'Conversation tree',
+          link: '/docs/ai-transport/internals/conversation-tree',
+        },
+        {
+          name: 'Transport patterns',
+          link: '/docs/ai-transport/internals/transport-patterns',
         },
       ],
     },

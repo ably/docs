@@ -1,0 +1,183 @@
+---
+title: "Server transport API"
+meta_description: "API reference for the AI Transport server transport. Turn lifecycle, cancel routing, and configuration."
+meta_keywords: "server transport, AI Transport, turn lifecycle, cancel, stream response, Ably"
+---
+
+<Aside data-type='new'>
+The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
+</Aside>
+
+The server transport publishes to an Ably channel, manages the turn lifecycle, and routes cancel signals from clients to active turns. It is the server-side counterpart to the [client transport](/docs/ai-transport/api-reference/client-transport).
+
+Import from the core entry point:
+
+<Code>
+```javascript
+import { createServerTransport } from '@ably/ai-transport'
+```
+</Code>
+
+Or use the [Vercel entry point](/docs/ai-transport/api-reference/vercel) which pre-binds the codec.
+
+## createServerTransport <a id="create-server-transport"/>
+
+Factory function that creates a `ServerTransport` instance.
+
+<Code>
+```javascript
+function createServerTransport(options: ServerTransportOptions): ServerTransport
+```
+</Code>
+
+### ServerTransportOptions <a id="server-transport-options"/>
+
+| Property | Required | Type | Description |
+| --- | --- | --- | --- |
+| channel | required | `Ably.RealtimeChannel` | The Ably channel for the session. |
+| codec | required | `Codec<TEvent, TMessage>` | Codec for encoding and decoding messages. See [Codec API](/docs/ai-transport/api-reference/codec). |
+| logger | optional | `Logger` | Logger instance for debug output. |
+| onError | optional | `(error: ErrorInfo) => void` | Callback for transport-level errors. |
+
+## ServerTransport <a id="server-transport"/>
+
+The `ServerTransport` object returned by the factory.
+
+### newTurn <a id="new-turn"/>
+
+Create a new turn. Returns a `Turn` object for managing the turn lifecycle.
+
+<Code>
+```javascript
+function newTurn(options: NewTurnOptions): Turn
+```
+</Code>
+
+### close <a id="close"/>
+
+Close the transport and release resources.
+
+<Code>
+```javascript
+function close(): void
+```
+</Code>
+
+## NewTurnOptions <a id="new-turn-options"/>
+
+| Property | Required | Type | Description |
+| --- | --- | --- | --- |
+| turnId | required | `string` | Unique identifier for this turn. |
+| clientId | optional | `string` | The client that initiated this turn. Used for scoping cancel signals. |
+| parent | optional | `string \| null` | The ID of the parent node in the conversation tree. Used for branching. |
+| forkOf | optional | `string` | The ID of the node this turn forks from, for edit and regenerate operations. |
+| onCancel | optional | `(request: CancelRequest) => Promise<boolean>` | Callback fired when a cancel signal matches this turn. Return `true` to allow cancellation, `false` to reject it. If not provided, all cancels are accepted. |
+| onAbort | optional | `(write: (event: TEvent) => Promise<void>) => void \| Promise<void>` | Callback fired when the turn is aborted. Receives a `write` function to publish final events before the abort finalizes. |
+| onMessage | optional | `(message: Ably.Message) => void` | Hook called before each Ably message is published in this turn. Mutate the message in place to add custom headers. |
+| onError | optional | `(error: ErrorInfo) => void` | Callback for errors during this turn. |
+
+## Turn <a id="turn"/>
+
+A `Turn` object manages the lifecycle of a single turn on the server.
+
+### start <a id="turn-start"/>
+
+Announce the start of the turn on the channel. Call this before publishing any messages.
+
+<Code>
+```javascript
+function start(): Promise<void>
+```
+</Code>
+
+### addMessages <a id="add-messages"/>
+
+Publish messages to the channel. Use this to publish user messages or any discrete messages that are not part of a stream.
+
+<Code>
+```javascript
+function addMessages(messages: MessageNode<TMessage>[], options?: { clientId?: string }): Promise<AddMessagesResult>
+```
+</Code>
+
+### streamResponse <a id="stream-response"/>
+
+Pipe a `ReadableStream` of events through the codec and publish them to the channel. Returns when the stream completes, with a reason indicating how it ended.
+
+<Code>
+```javascript
+function streamResponse(stream: ReadableStream<TEvent>, options?: StreamResponseOptions): Promise<{ reason: TurnEndReason }>
+```
+</Code>
+
+The stream is piped through the codec's encoder, which converts events into Ably publish operations. If the turn is cancelled while streaming, the stream is aborted and the returned reason is `'cancelled'`.
+
+### addEvents <a id="add-events"/>
+
+Publish a batch of events to the channel without streaming. Useful for publishing pre-computed events or events from a non-streaming source.
+
+<Code>
+```javascript
+function addEvents(nodes: EventsNode<TEvent>[]): Promise<void>
+```
+</Code>
+
+### end <a id="turn-end"/>
+
+End the turn with the given reason. Publishes a turn-end marker to the channel.
+
+<Code>
+```javascript
+function end(reason: TurnEndReason): Promise<void>
+```
+</Code>
+
+### abortSignal <a id="abort-signal"/>
+
+An `AbortSignal` that fires when the turn is cancelled. Pass this to your LLM call to stop generation when a cancel signal is received.
+
+<Code>
+```javascript
+const result = await streamText({
+  model: openai('gpt-4o'),
+  messages,
+  abortSignal: turn.abortSignal,
+})
+```
+</Code>
+
+## CancelRequest <a id="cancel-request"/>
+
+The object passed to the `onCancel` callback when a cancel signal matches a turn.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| message | `Ably.InboundMessage` | The raw Ably message that carried the cancel signal. |
+| filter | `CancelFilter` | The parsed cancel scope from the message headers. |
+| matchedTurnIds | `string[]` | The active turn IDs that would be cancelled if allowed. |
+| turnOwners | `Map<string, string>` | Map of turn ID to the owner's client ID for the matched turns. |
+
+## CancelFilter <a id="cancel-filter"/>
+
+| Property | Type | Description |
+| --- | --- | --- |
+| own | `true` | Cancel all turns started by the requesting client. |
+| turnId | `string` | Cancel a specific turn by ID. |
+| clientId | `string` | Cancel all turns by a specific client. |
+| all | `true` | Cancel all active turns on the channel. |
+
+Only one property should be set per filter. If no filter is provided, the default is `{ own: true }`.
+
+## TurnEndReason <a id="turn-end-reason"/>
+
+<Code>
+```javascript
+type TurnEndReason = 'complete' | 'cancelled' | 'error'
+```
+</Code>
+
+| Value | Description |
+| --- | --- |
+| `'complete'` | The turn finished normally. |
+| `'cancelled'` | The turn was cancelled by a client signal. |
+| `'error'` | The turn ended due to an error. |

@@ -1,0 +1,163 @@
+---
+title: "Conversation branching"
+meta_description: "Branch conversations with edit and regenerate in Ably AI Transport. Navigate sibling branches and maintain full conversation history."
+meta_keywords: "conversation branching, edit message, regenerate response, conversation tree, AI Transport, Ably"
+---
+
+<Aside data-type='new'>
+The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
+</Aside>
+
+The leading AI user experiences today expose more than just a simple linear message history or a conversation; it is possible to fork a conversation; ie to submit a prompt from an earlier time in the chat so that the conversation continues from that point, incorporating prior conversation history as context. It is also possible to re-generate a response to a given prompt, perhaps because the generation by the agent failed on the first attempt. These branching possibilies come in addition to the structure of turns, which can be concurrent and may have been interleaved at the time.
+
+Conversation branching in AI Transport suppose these use-cases by allowing users to edit messages and regenerate responses, creating alternative branches in the conversation. The SDK maintains a tree structure where each branch is a fork - the full history is preserved, and users navigate between branches with sibling navigation.
+
+![Diagram showing session continuity during interruption](../../../../images/content/diagrams/ait-session-continuity.png)
+
+## How it works <a id="how-it-works"/>
+
+The conversation is a tree, not a list; every message is a node with a parent pointer. When a user edits a message or regenerates a response, the SDK creates a new branch rather than overwriting the original.
+
+- `edit()` forks a user message. The original message and its descendants remain intact. A new child is added to the same parent, creating a sibling branch.
+- `regenerate()` forks an assistant message. The original response stays in the tree, and a new sibling is created with a fresh turn.
+
+Each fork creates a new branch with `forkOf` and `parent` headers that tell the server where in the tree this branch diverges. The `View` flattens the selected branch into a linear list for rendering.
+
+<Aside data-type='note'>
+Without branching, editing a message means discarding everything after it. With a tree structure, nothing is lost. Users can explore alternative responses and switch between them freely.
+</Aside>
+
+## Regenerate <a id="regenerate"/>
+
+Regenerate creates a sibling of an assistant message and starts a new turn. The original response remains in the tree.
+
+<Code>
+```javascript
+// Using the view directly
+await view.regenerate(messageId)
+
+// Using the React hook
+const regenerate = useRegenerate(view)
+
+await regenerate(messageId)
+```
+</Code>
+
+The new turn is sent to the server with `forkOf` set to the original assistant message ID and `parent` set to the user message that preceded it. The server generates a new response from that point in the conversation.
+
+## Edit <a id="edit"/>
+
+Edit replaces a user message and starts a new turn from that point. The original message and all its descendants remain in the tree as a separate branch.
+
+<Code>
+```javascript
+// Using the view directly
+await view.edit(messageId, [
+  { role: 'user', content: 'Updated question here' }
+])
+
+// Using the React hook
+const edit = useEdit(view)
+
+await edit(messageId, [
+  { role: 'user', content: 'Updated question here' }
+])
+```
+</Code>
+
+The edit creates a new user message as a sibling of the original, then triggers a new turn so the agent responds to the updated message.
+
+## Branch navigation <a id="branch-navigation"/>
+
+When a message has siblings (from edits or regenerations), the view provides methods to navigate between them. This supports a "1 of 3" UI pattern where users browse alternative branches.
+
+<Code>
+```javascript
+// Check if a message has siblings
+const siblings = view.hasSiblings(messageId) // boolean
+
+// Get all sibling message IDs
+const siblingIds = view.getSiblings(messageId) // Message[]
+
+// Get the currently selected index
+const index = view.getSelectedIndex(messageId) // number
+
+// Switch to a different sibling
+view.select(messageId, 2) // select the third sibling
+```
+</Code>
+
+A typical branch navigation component:
+
+<Code>
+```javascript
+function BranchNav({ messageId, view }) {
+  const siblings = view.getSiblings(messageId)
+  const selected = view.getSelectedIndex(messageId)
+
+  if (siblings.length <= 1) return null
+
+  return (
+    <div>
+      <button onClick={() => view.select(messageId, selected - 1)}
+        disabled={selected === 0}>←</button>
+      <span>{selected + 1} of {siblings.length}</span>
+      <button onClick={() => view.select(messageId, selected + 1)}
+        disabled={selected === siblings.length - 1}>→</button>
+    </div>
+  )
+}
+```
+</Code>
+
+When a user selects a different sibling, the view recalculates the flattened branch. All messages below the selection point update to reflect the chosen branch.
+
+## Split-pane views <a id="split-pane"/>
+
+Multiple views can exist over the same conversation tree. Each view has its own branch selection and pagination, so different parts of the UI can show different branches simultaneously.
+
+<Code>
+```javascript
+const view1 = useCreateView(transport)
+const view2 = useCreateView(transport)
+
+// view1 shows branch A, view2 shows branch B
+// Both read from the same underlying tree
+```
+</Code>
+
+This is useful for comparison UIs where a user wants to see two regenerated responses side by side without switching back and forth.
+
+## Server handling <a id="server"/>
+
+When the server receives an edit or regenerate request, the request body includes `forkOf` and `parent` fields that describe where the new branch starts. Pass these to `newTurn()`:
+
+<Code>
+```javascript
+app.post('/chat', async (req, res) => {
+  const { messages, turnId, clientId, forkOf, parent } = req.body
+
+  const turn = transport.newTurn({ turnId, clientId, forkOf, parent })
+  await turn.start()
+
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages,
+  })
+
+  const { reason } = await turn.streamResponse(result.toUIMessageStream())
+  await turn.end(reason)
+})
+```
+</Code>
+
+The `forkOf` field identifies the message being replaced (the original user message for edit, or the original assistant message for regenerate). The `parent` field identifies where the new branch connects to the existing tree. The server transport uses these to publish messages with the correct tree metadata so all clients maintain a consistent tree structure.
+
+## Related features <a id="related"/>
+
+- [Edit and regenerate](/docs/ai-transport/features/edit-and-regenerate) - API details for edit and regenerate operations
+- [History and replay](/docs/ai-transport/features/history) - loading conversation history including all branches
+- [Multi-device sessions](/docs/ai-transport/features/multi-device) - branch navigation syncs across devices
+- [React hooks](/docs/ai-transport/api-reference/react-hooks) - reference for `useView`, `useEdit`, `useRegenerate`, and other hooks.
+- [Sessions and turns](/docs/ai-transport/how-it-works/sessions-and-turns) - how turns and forks create the conversation tree.
+- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.

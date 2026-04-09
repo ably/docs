@@ -1,0 +1,108 @@
+---
+title: "Error codes"
+meta_description: "Error codes in Ably AI Transport. Codes, descriptions, HTTP status, and recovery guidance."
+meta_keywords: "error codes, AI Transport, error handling, ErrorInfo, errorInfoIs, Ably"
+---
+
+<Aside data-type='new'>
+The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
+</Aside>
+
+AI Transport uses numeric error codes to identify specific failure conditions. Errors are surfaced as `ErrorInfo` objects, which include a `code`, `statusCode`, and `message`. Use the `errorInfoIs` utility to match errors by code.
+
+## Error code reference <a id="reference"/>
+
+### General errors <a id="general"/>
+
+| Code | Name | HTTP status | Description | Recovery |
+| --- | --- | --- | --- | --- |
+| 40000 | BadRequest | 400 | The request was malformed or missing required fields. | Check the request payload and ensure all required fields are present. |
+| 40003 | InvalidArgument | 400 | An argument passed to a transport method was invalid. | Verify the arguments match the expected types and constraints. |
+
+### Transport errors <a id="transport"/>
+
+| Code | Name | HTTP status | Description | Recovery |
+| --- | --- | --- | --- | --- |
+| 104000 | EncoderRecoveryFailed | 500 | The encoder failed to recover after a publish error. The turn cannot continue. | End the turn with reason `'error'` and start a new one. The client will see the partial response up to the failure point. |
+| 104001 | TransportSubscriptionError | 500 | A channel subscription callback threw unexpectedly. | Check the subscription callback for unhandled exceptions. Inspect the underlying error for details. |
+| 104002 | CancelListenerError | 500 | The transport failed to register or process a cancel listener. | The turn may not respond to cancel signals. End the turn manually if needed. |
+| 104003 | TurnLifecycleError | 500 | A turn lifecycle event failed to publish. | Check channel permissions and connection state. The turn-start or turn-end message could not be published. |
+| 104004 | TransportClosed | 400 | An operation was attempted on a transport that has been closed. | Create a new transport instance. Do not reuse a closed transport. |
+| 104005 | TransportSendFailed | 500 | The client transport failed to send a message to the API endpoint. | Check the API endpoint URL, network connectivity, and authentication. Inspect the underlying error for details. |
+
+## errorInfoIs <a id="error-info-is"/>
+
+Utility function to check if an ErrorInfo matches a specific error code.
+
+<Code>
+```javascript
+import { errorInfoIs } from '@ably/ai-transport'
+
+function errorInfoIs(errorInfo: Ably.ErrorInfo, error: ErrorCode): boolean
+```
+</Code>
+
+<Code>
+```javascript
+transport.on('error', (error) => {
+  if (errorInfoIs(error, 104004)) {
+    // Transport was closed, create a new one
+    reconnect()
+  }
+})
+```
+</Code>
+
+## Handle errors <a id="handling"/>
+
+### Client-side <a id="client-side"/>
+
+Subscribe to transport-level errors using `on('error')`:
+
+<Code>
+```javascript
+const transport = createClientTransport({ channel, codec })
+
+transport.on('error', (error) => {
+  console.error(`Error ${error.code}: ${error.message}`)
+})
+```
+</Code>
+
+### Server-side <a id="server-side"/>
+
+Handle errors at two levels: the transport level and the turn level.
+
+<Code>
+```javascript
+// Transport-level errors
+const transport = createServerTransport({
+  channel,
+  codec,
+  onError(error) {
+    console.error('Transport error:', error)
+  },
+})
+
+// Turn-level errors
+const turn = transport.newTurn({
+  turnId,
+  onError(error) {
+    console.error('Turn error:', error)
+  },
+})
+```
+</Code>
+
+If a turn encounters an error during streaming, end the turn with reason `'error'`:
+
+<Code>
+```javascript
+try {
+  const { reason } = await turn.streamResponse(llmStream)
+  await turn.end(reason)
+} catch (error) {
+  await turn.end('error')
+}
+```
+</Code>
