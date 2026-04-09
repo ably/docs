@@ -6,45 +6,152 @@ redirect_from:
   - /docs/ai-transport/sessions-identity/identifying-users-and-agents
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
+AI Transport authentication for channel access is handled by the underlying Pub/Sub SDK. You authenticate an Ably Realtime client, then use that client's channels with AI Transport. AI Transport also authenticates HTTP requests to the server endpoint and optionally authorizes cancel signals.
+
+## Authentication flow <a id="auth-flow"/>
+
+1. Your auth server authenticates the user.
+2. Your auth server issues an Ably-compatible token (JWT format is recommended for most apps).
+3. The client SDK fetches tokens with `authCallback` and refreshes them automatically before expiry.
+4. The authenticated Pub/Sub client provides channels to AI Transport via `useChannel` or `channels.get`.
+
+<Aside data-type='important'>
+Never use API keys in client-side code. API keys do not expire and are not suitable for untrusted clients.
 </Aside>
 
-Authentication in AI Transport operates at three levels: Ably client authentication for channel access, HTTP headers for server endpoint authorization, and cancel authorization for controlling who can cancel turns.
+## Server setup <a id="server-setup"/>
 
-## Ably client authentication <a id="ably-auth"/>
-
-The Ably Realtime client handles authentication before the transport is created. Both server and client need authenticated Ably clients to access channels.
-
-**Server side**: Use an API key directly. The server is trusted.
+Create an endpoint that validates user-provided credentials and returns JWTs with the appropriate AI Transport capabilities:
 
 <Code>
 ```javascript
-const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY })
-```
-</Code>
+// Server-side JWT with AI Transport capabilities
+import jwt from 'jsonwebtoken';
 
-**Client side**: Use token authentication. Never expose API keys in client code. Create a token endpoint on your server that issues JWTs or Ably tokens:
+const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
 
-<Code>
-```javascript
-const ably = new Ably.Realtime({
-  authCallback: async (tokenParams, callback) => {
-    const response = await fetch('/api/auth/ably-token')
-    const jwt = await response.text()
-    callback(null, jwt)
+const ablyJwt = jwt.sign(
+  {
+    'x-ably-capability': JSON.stringify({
+      // Only allow access to a specific conversation channel
+      'your-conversation': ['publish', 'subscribe', 'history'],
+    }),
+    'x-ably-clientId': userId,
   },
-})
+  keySecret,
+  { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
+);
 ```
 </Code>
 
-The token controls the client's identity (`clientId`) and channel permissions (publish, subscribe, history).
+## Client setup <a id="client-setup"/>
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+
+const realtimeClient = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/ably-token', { credentials: 'include' });
+      if (!response.ok) throw new Error('Auth failed');
+      const jwt = await response.text();
+      callback(null, jwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+
+const channel = realtimeClient.channels.get('your-conversation');
+```
+
+```react
+'use client'
+
+import { useEffect, useState } from 'react';
+import * as Ably from 'ably';
+import { AblyProvider, useChannel } from 'ably/react';
+import { useClientTransport } from '@ably/ai-transport/react';
+
+// 1. Create an authenticated Ably client and wrap your app
+export function Providers({ children }) {
+  const [client, setClient] = useState(null);
+
+  useEffect(() => {
+    const ably = new Ably.Realtime({
+      authCallback: async (_tokenParams, callback) => {
+        try {
+          const response = await fetch('/api/ably-token', { credentials: 'include' });
+          callback(null, await response.text());
+        } catch (err) {
+          callback(err instanceof Error ? err.message : String(err), null);
+        }
+      },
+    });
+    setClient(ably);
+    return () => ably.close();
+  }, []);
+
+  if (!client) return null;
+  return <AblyProvider client={client}>{children}</AblyProvider>;
+}
+
+// 2. Inside the provider, get a channel and pass it to the transport
+function Chat({ conversationId }) {
+  const { channel } = useChannel({ channelName: conversationId });
+  const transport = useClientTransport({ channel, codec: yourCodec });
+  // ...
+}
+```
+</Code>
 
 <Aside data-type='note'>
 AI Transport uses `clientId` throughout the SDK to identify who started a turn, who is sending messages, and who is requesting cancellation. Set the client ID in the Ably token to ensure it is verified by the Ably service and cannot be spoofed.
 </Aside>
 
-See [Ably token authentication](/docs/auth/token) for full details on token auth.
+For more details, see [token authentication](/docs/auth/token), [capabilities](/docs/auth/capabilities), and [identified clients](/docs/auth/identified-clients).
+
+## Enable mutable messages <a id="mutable-messages"/>
+
+AI Transport requires the *Message annotations, updates, deletes, and appends* channel rule to be enabled on the channel namespace used for conversations. Without this rule, the transport cannot function correctly.
+
+See [enable message updates and deletes](/docs/messages/updates-deletes#enable) for instructions on configuring this via the dashboard, Control API, or Ably CLI.
+
+## AI Transport capabilities <a id="capabilities"/>
+
+Capabilities are permissions that control what operations a client can perform. When you create a token for an AI Transport user, specify which capabilities they have:
+
+| Feature | Required capabilities |
+|---------|----------------------|
+| Send user messages to channel | `publish` |
+| Receive streamed tokens | `subscribe` |
+| Replay history on reconnect | `subscribe`, `history` |
+| Cancel a turn | `publish` |
+| All AI Transport features | `publish`, `subscribe`, `history` |
+
+## Channel-scoped capabilities <a id="scoped-capabilities"/>
+
+You can scope capabilities to specific conversation channels, a namespace of channels, or all channels:
+
+* `my-conversation` - a specific conversation channel
+* `conversations:*` - all channels in the `conversations:` namespace
+* `*` - all channels
+
+## Token lifecycle and permission updates <a id="token-lifecycle"/>
+
+- With `authCallback` or `authUrl`, token refresh is automatic and handled by the SDK.
+- To change a user's capabilities during an active session, issue a new token from your auth server and re-authenticate:
+
+<Code>
+```javascript
+// Re-authenticate to pick up updated capabilities
+await realtimeClient.auth.authorize();
+```
+</Code>
+
+- To immediately remove access, [revoke issued tokens](/docs/auth/revocation).
+- If your capability JSON is too large for JWT or must remain confidential, use native [Ably Tokens](/docs/auth/token/ably-tokens).
 
 ## Server endpoint authentication <a id="server-auth"/>
 
@@ -64,7 +171,7 @@ const transport = useClientTransport({
 ```
 </Code>
 
-**credentials**: Sets the `credentials` option on the fetch request (for cookie-based auth).
+**credentials**: Controls whether cookies are sent with the POST request. This maps directly to the Fetch API `credentials` option. Set to `'include'` if your server uses cookie-based session authentication (for example, NextAuth or `express-session`) and the endpoint is cross-origin. For same-origin requests, the browser sends cookies by default and this option is not needed.
 
 <Code>
 ```javascript
