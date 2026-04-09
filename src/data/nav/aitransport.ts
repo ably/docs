@@ -21,11 +21,6 @@ export default {
       name: 'How it works',
       pages: [
         {
-          name: 'Overview',
-          link: '/docs/ai-transport/how-it-works',
-          index: true,
-        },
-        {
           name: 'Sessions and turns',
           link: '/docs/ai-transport/how-it-works/sessions-and-turns',
         },
