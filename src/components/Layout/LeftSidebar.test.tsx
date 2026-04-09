@@ -1,7 +1,6 @@
 import React from 'react';
 import { useLocation } from '@reach/router';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import LeftSidebar from './LeftSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
@@ -37,11 +36,12 @@ jest.mock('gatsby', () => ({
 }));
 
 jest.mock('../Link', () => {
-  const MockLink: React.FC<{ children: React.ReactNode; to: string }> = ({ children, to, ...props }) => (
-    <a href={to} {...props}>
+  const { forwardRef } = require('react');
+  const MockLink = forwardRef(({ children, to, ...props }: { children: React.ReactNode; to: string }, ref: React.Ref<HTMLAnchorElement>) => (
+    <a href={to} ref={ref} {...props}>
       {children}
     </a>
-  );
+  ));
   MockLink.displayName = 'MockLink';
   return MockLink;
 });
@@ -53,10 +53,10 @@ describe('LeftSidebar', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
-        page: { name: 'Introduction', link: '/platform/intro' },
+        page: { name: 'About Ably', link: '/docs/platform' },
         tree: [
           { index: 0, page: { name: 'Platform', link: '/platform' } },
-          { index: 0, page: { name: 'Introduction', link: '/platform/intro' } },
+          { index: 0, page: { name: 'About Ably', link: '/docs/platform' } },
         ],
         languages: [],
         language: 'javascript',
@@ -66,7 +66,8 @@ describe('LeftSidebar', () => {
     });
 
     mockUseLocation.mockReturnValue({
-      pathname: '/platform/intro',
+      pathname: '/docs/platform',
+      search: '',
     });
 
     const mockIntersectionObserver = jest.fn();
@@ -84,98 +85,39 @@ describe('LeftSidebar', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the sidebar with products', () => {
+  it('renders nav content for the active product only', () => {
     render(<LeftSidebar />);
-    expect(screen.getByRole('button', { name: 'Platform' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ably Pub/Sub' })).toBeInTheDocument();
-  });
-
-  it('shows Platform accordion expanded with first three child items when active page is under Platform', async () => {
-    render(<LeftSidebar />);
-
-    // Platform should be auto-expanded since active page is under Platform (index 0)
-    await waitFor(() => {
-      expect(screen.getByText('About Ably')).toBeInTheDocument();
-      expect(screen.getByText('Architecture')).toBeInTheDocument();
-      expect(screen.getByText('Products and SDKs')).toBeInTheDocument();
-    });
-
-    // Verify these are clickable accordion triggers
-    const aboutAblyButton = screen.getByText('About Ably').closest('button');
-    const archButton = screen.getByText('Architecture').closest('button');
-    const productsButton = screen.getByText('Products and SDKs').closest('button');
-
-    expect(aboutAblyButton).toBeInTheDocument();
-    expect(archButton).toBeInTheDocument();
-    expect(productsButton).toBeInTheDocument();
-  });
-
-  it('expands Platform/Architecture accordion and shows first three child items', async () => {
-    const user = userEvent.setup();
-    render(<LeftSidebar />);
-
-    // Platform should be auto-expanded since active page is under Platform (index 0)
-    await waitFor(() => {
-      expect(screen.getByText('Architecture')).toBeInTheDocument();
-    });
-
-    // Architecture children should not be visible yet
-    expect(screen.queryByText('Overview')).not.toBeInTheDocument();
-    expect(screen.queryByText('Edge network')).not.toBeInTheDocument();
-    expect(screen.queryByText('Infrastructure operations')).not.toBeInTheDocument();
-
-    // Find and click Architecture button to expand it
-    const architectureButton = screen.getByText('Architecture').closest('button');
-    if (!architectureButton) {
-      throw new Error('Architecture button not found');
-    }
-    await user.click(architectureButton);
-
-    // After clicking, verify the first three child items are visible
-    await waitFor(() => {
-      expect(screen.getByText('Overview')).toBeInTheDocument();
-      expect(screen.getByText('Edge network')).toBeInTheDocument();
-      expect(screen.getByText('Infrastructure operations')).toBeInTheDocument();
-    });
-
-    // Verify these are links (leaf nodes) not accordion triggers
-    const overviewLink = screen.getByText('Overview').closest('a');
-    const edgeNetworkLink = screen.getByText('Edge network').closest('a');
-    const infrastructureLink = screen.getByText('Infrastructure operations').closest('a');
-
-    expect(overviewLink).toBeInTheDocument();
-    expect(edgeNetworkLink).toBeInTheDocument();
-    expect(infrastructureLink).toBeInTheDocument();
-  });
-
-  it('clicks Ably Pub/Sub to expand Pub/Sub showing first three child items', async () => {
-    const user = userEvent.setup();
-    render(<LeftSidebar />);
-
-    // Platform should be auto-expanded since active page is under Platform (index 0)
-    await waitFor(() => {
-      expect(screen.getByText('Architecture')).toBeInTheDocument();
-    });
-
-    // Pub/Sub children should not be visible initially
-    expect(screen.queryByText('About Pub/Sub')).not.toBeInTheDocument();
-    expect(screen.queryByText('Getting started')).not.toBeInTheDocument();
-
-    // Click on Ably Pub/Sub button to expand it (type="multiple" so Platform stays open)
-    const pubsubButton = screen.getByRole('button', { name: 'Ably Pub/Sub' });
-    await user.click(pubsubButton);
-
-    // After clicking, verify the Pub/Sub child accordion items appear
-    await waitFor(() => {
-      expect(screen.getByText('About Pub/Sub')).toBeInTheDocument();
-      expect(screen.getByText('Getting started')).toBeInTheDocument();
-    });
-
-    // Verify both product sections are visible (Platform has "About Ably", Pub/Sub has "About Pub/Sub")
+    // Platform nav sections should be present
     expect(screen.getByText('About Ably')).toBeInTheDocument();
-    expect(screen.getByText('About Pub/Sub')).toBeInTheDocument();
-
-    // Platform's Architecture should still be visible since accordion type is "multiple"
     expect(screen.getByText('Architecture')).toBeInTheDocument();
+
+    // Other products should NOT appear
+    expect(screen.queryByText('Ably Pub/Sub')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ably Chat')).not.toBeInTheDocument();
+  });
+
+  it('shows placeholder when no product is active', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        page: { name: '', link: '' },
+        tree: [],
+        languages: [],
+        language: 'javascript',
+        product: null,
+        template: null,
+      },
+    });
+
+    render(<LeftSidebar />);
+    expect(screen.getByText('Select a product above to browse documentation.')).toBeInTheDocument();
+  });
+
+  it('renders top-level sections as static headings', () => {
+    render(<LeftSidebar />);
+    // Top-level sections render as plain headings, not accordion triggers
+    const aboutHeading = screen.getByText('About Ably');
+    expect(aboutHeading).toBeInTheDocument();
+    // Should not be inside an accordion trigger button
+    expect(aboutHeading.closest('button')).toBeNull();
   });
 });
