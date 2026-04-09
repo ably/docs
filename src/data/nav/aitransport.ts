@@ -55,18 +55,6 @@ export default {
           name: 'Vercel AI SDK',
           link: '/docs/ai-transport/framework-guides/vercel-ai-sdk',
         },
-        {
-          name: 'OpenAI',
-          link: '/docs/ai-transport/framework-guides/openai',
-        },
-        {
-          name: 'Anthropic',
-          link: '/docs/ai-transport/framework-guides/anthropic',
-        },
-        {
-          name: 'LangGraph',
-          link: '/docs/ai-transport/framework-guides/langgraph',
-        },
       ],
     },
     {
