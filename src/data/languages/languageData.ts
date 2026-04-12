@@ -23,6 +23,7 @@ export default {
     nodejs: '2.21',
     typescript: '2.21',
     react: '2.21',
+    nextjs: '2.21',
     csharp: '1.2',
     flutter: '1.2',
     java: '1.7',
