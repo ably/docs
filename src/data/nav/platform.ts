@@ -570,9 +570,7 @@ export default {
                     { name: 'history', link: '/docs/cli/logs/history' },
                     {
                       name: 'channel-lifecycle',
-                      pages: [
-                        { name: 'subscribe', link: '/docs/cli/logs/channel-lifecycle/subscribe' },
-                      ],
+                      pages: [{ name: 'subscribe', link: '/docs/cli/logs/channel-lifecycle/subscribe' }],
                     },
                     {
                       name: 'connection-lifecycle',
