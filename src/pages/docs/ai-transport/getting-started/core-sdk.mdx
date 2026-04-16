@@ -1,29 +1,24 @@
 ---
-title: "Get started with Vercel AI SDK"
-meta_description: "Build a streaming AI chat app with Vercel AI SDK and Ably AI Transport in 5 minutes. Durable sessions, multi-device sync, and cancellation out of the box."
-meta_keywords: "AI Transport, Vercel AI SDK, Next.js, streaming, realtime, Ably, chat, LLM, durable sessions"
-redirect_from:
-  - /docs/ai-transport/getting-started
-  - /docs/ai-transport/getting-started/javascript
-  - /docs/ai-transport/getting-started/anthropic
-  - /docs/ai-transport/getting-started/openai
-  - /docs/ai-transport/getting-started/langgraph
-  - /docs/ai-transport/framework-guides/vercel-ai-sdk
+title: "Get started with the Core SDK"
+meta_description: "Build a streaming AI chat app using AI Transport's generic React hooks without a framework wrapper. Full access to the conversation tree, branching, and pagination."
+meta_keywords: "AI Transport, Core SDK, React hooks, streaming, realtime, Ably, chat, LLM, conversation tree"
 ---
 
-Build a streaming AI chat application using Vercel AI SDK and Ably AI Transport. By the end, you'll have a chat app with durable sessions that survive disconnections and work across multiple tabs.
+Build a streaming AI chat application using AI Transport's generic React hooks. This approach gives you direct access to the conversation tree, branching, and pagination without a framework wrapper like Vercel's `useChat`.
+
+If you want the simplest path with Vercel AI SDK, see [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk) instead.
 
 ## Prerequisites <a id="prerequisites"/>
 
 - Node.js 20+
 - An [Ably account](https://ably.com/sign-up) with an API key
-- An Anthropic API key (or OpenAI - adapt the model config)
+- An Anthropic API key (or OpenAI, adapt the model config)
 
 ## Install dependencies <a id="install"/>
 
 <Code>
 ```shell
-npm install @ably/ai-transport ably ai @ai-sdk/react @ai-sdk/anthropic next react react-dom jsonwebtoken
+npm install @ably/ai-transport ably ai @ai-sdk/anthropic next react react-dom jsonwebtoken
 ```
 </Code>
 
@@ -40,7 +35,7 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 
 ## Step 1: Create an Ably token endpoint <a id="token-endpoint"/>
 
-Create the file `app/api/auth/ably-token/route.ts`. This endpoint issues JWT tokens for client authentication. The token contains the client's identity and channel permissions.
+Create the file `app/api/auth/ably-token/route.ts`. This endpoint issues JWT tokens for client authentication:
 
 <Code>
 ```javascript
@@ -72,7 +67,7 @@ export async function GET(req) {
 
 ## Step 2: Create an Ably provider <a id="ably-provider"/>
 
-Create the file `app/providers.tsx`. Wrap your app with the Ably provider. It creates an authenticated Ably client using the token endpoint.
+Create the file `app/providers.tsx`:
 
 <Code>
 ```javascript
@@ -109,7 +104,7 @@ export function Providers({ clientId, children }) {
 
 ## Step 3: Create the server API route <a id="server"/>
 
-Create the file `app/api/chat/route.ts`. The server handles user messages, invokes the LLM, and streams the response through an Ably channel. The HTTP response returns immediately - tokens flow through the durable session.
+Create the file `app/api/chat/route.ts`. The server creates a turn, publishes the user message, streams the LLM response through the Ably channel, and returns immediately:
 
 <Code>
 ```javascript
@@ -154,22 +149,16 @@ export async function POST(req) {
 ```
 </Code>
 
-<Aside data-type='note'>
-`after()` is a Next.js function that extends the serverless function's lifetime beyond the HTTP response. This is what decouples the response stream from the HTTP request.
-</Aside>
-
 ## Step 4: Create the chat component <a id="client"/>
 
-Create the file `app/chat.tsx`. The client uses Vercel's `useChat` hook with an AI Transport adapter. The transport subscribes to the Ably channel and syncs messages across all connected clients.
+Create the file `app/chat.tsx`. This uses AI Transport's generic hooks directly rather than Vercel's `useChat`. The `useView` hook provides the visible messages, a `send` function, and pagination:
 
 <Code>
 ```javascript
 'use client'
 
-import { useChat } from '@ai-sdk/react'
 import { useChannel } from 'ably/react'
 import { useClientTransport, useActiveTurns, useView } from '@ably/ai-transport/react'
-import { useChatTransport, useMessageSync } from '@ably/ai-transport/vercel/react'
 import { UIMessageCodec } from '@ably/ai-transport/vercel'
 import { useState } from 'react'
 
@@ -178,20 +167,27 @@ export function Chat({ chatId, clientId }) {
   const [input, setInput] = useState('')
 
   const transport = useClientTransport({ channel, codec: UIMessageCodec, clientId })
-  const chatTransport = useChatTransport(transport)
-  const { messages, setMessages, sendMessage, stop } = useChat({
-    id: chatId,
-    transport: chatTransport,
-  })
-
-  useMessageSync(transport, setMessages)
-  useView(transport, { limit: 30 })
-
+  const { messages, send, hasOlder, loadOlder } = useView(transport, { limit: 30 })
   const activeTurns = useActiveTurns(transport)
   const isStreaming = activeTurns.size > 0
 
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!input.trim()) return
+    const text = input
+    setInput('')
+    await send({
+      id: crypto.randomUUID(),
+      role: 'user',
+      parts: [{ type: 'text', text }],
+    })
+  }
+
   return (
     <div>
+      {hasOlder && (
+        <button type="button" onClick={loadOlder}>Load older messages</button>
+      )}
       {messages.map((msg) => (
         <div key={msg.id}>
           <strong>{msg.role}:</strong>{' '}
@@ -200,14 +196,10 @@ export function Chat({ chatId, clientId }) {
           )}
         </div>
       ))}
-      <form onSubmit={(e) => {
-        e.preventDefault()
-        sendMessage({ text: input })
-        setInput('')
-      }}>
+      <form onSubmit={handleSubmit}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." />
         {isStreaming ? (
-          <button type="button" onClick={stop}>Stop</button>
+          <button type="button" onClick={() => transport.view.cancelAll()}>Stop</button>
         ) : (
           <button type="submit">Send</button>
         )}
@@ -238,7 +230,7 @@ export default function Page() {
 ```
 </Code>
 
-Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the same URL - both tabs share the same durable session.
+Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the same URL to see both tabs share the same durable session.
 
 ## What's happening <a id="whats-happening"/>
 
@@ -247,46 +239,12 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 3. Every client subscribed to the channel receives tokens in realtime.
 4. If a client disconnects, it automatically reconnects and resumes from where it left off.
 
-This is a [durable session](/docs/ai-transport/why#durable-sessions). The HTTP request triggers the agent, but all communication flows through the Ably channel.
-
-## Understand the architecture <a id="architecture"/>
-
-Vercel AI SDK handles intelligence and UI. AI Transport handles what happens between the model and every device.
-
-| Vercel AI SDK | Ably AI Transport |
-| --- | --- |
-| Model orchestration (`streamText`, providers) | Durable sessions (Ably channels) |
-| UI state (`useChat`, message management) | Multi-device fan-out |
-| Tool calls and structured output | Reconnection and recovery |
-| Streaming via HTTP/SSE | Active turn tracking |
-| `ChatTransport` interface | Bidirectional control |
-| | Ordering and persistence |
-
-Vercel built the `ChatTransport` interface as the extension point for custom transports. AI Transport implements `ChatTransport`, so you swap the transport layer without changing your application code:
-
-<Code>
-```javascript
-// Before: default HTTP transport
-const { messages } = useChat()
-
-// After: Ably transport (everything else stays the same)
-const transport = useChatTransport({ channel })
-const { messages } = useChat({ transport })
-```
-</Code>
-
-### Choose an integration path <a id="integration-paths"/>
-
-Both paths use the same server code. The difference is client-side only.
-
-The `useChat` path is the simplest. `useChatTransport` wraps the core transport for direct use with Vercel's `useChat` hook. `useMessageSync` pushes other clients' messages into `useChat` state. You get Vercel's message management with AI Transport's durable delivery. Use this path when you want the standard Vercel `useChat` developer experience with durable sessions added. This is the path the tutorial above follows.
-
-The generic hooks path uses AI Transport's React hooks (`useView`, `useSend`, `useRegenerate`, `useEdit`) directly. This gives you full access to the conversation tree, branch navigation, split-pane views, and custom message construction. Use this path when you need branching UI, custom message rendering, or direct control over the conversation tree.
+The `useView` hook subscribes to the conversation tree and returns the visible messages along the currently selected branch. Unlike `useChat`, you have direct access to the tree structure: branching, pagination, and sibling navigation.
 
 ## Explore next <a id="next"/>
 
-- [Cancellation](/docs/ai-transport/features/cancellation): the Stop button already works because `useChat`'s `stop()` calls `transport.cancel()`.
-- [Multi-device sessions](/docs/ai-transport/features/multi-device): open another tab to see real-time sync.
-- [History and replay](/docs/ai-transport/features/history): `useView` already loads history on mount.
+- [Conversation branching](/docs/ai-transport/features/branching): use `useView`'s `getSiblings` and `select` to navigate branches.
+- [Edit and regenerate](/docs/ai-transport/features/edit-and-regenerate): use `useView`'s `edit` and `regenerate` to fork conversations.
+- [History and replay](/docs/ai-transport/features/history): `useView` loads history on mount with the `limit` option.
 - [Sessions](/docs/ai-transport/concepts/sessions): understand durable sessions and how the conversation persists.
-- [Why AI Transport](/docs/ai-transport/why): understand the problems AI Transport solves.
+- [React hooks API reference](/docs/ai-transport/api-reference/react-hooks): the full generic hooks API.

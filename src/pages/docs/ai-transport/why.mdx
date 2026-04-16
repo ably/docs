@@ -3,10 +3,6 @@ title: "Why AI Transport"
 meta_description: "Learn why AI Transport is the best way to connect your AI agents to users in realtime, with built-in support for streaming, recovery, and multi-device sessions."
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
-
 AI Transport exists because the default pattern for interactive AI experiences limits the quality and richness of the interactions you can build, when using direct, streamed HTTP requests from clients and agents.
 
 Most AI frameworks support simple client-driven interactions, with streamed responses from the agent via server-sent events (SSE) or similar HTTP streaming. The client's request is handled by an agent instance which pipes tokens in response to the client request. This approach is simple, surprisingly effective for simple interactions, and every framework supports it. However, the simplicity of the pattern is also the source of its limitations.
@@ -21,7 +17,7 @@ The operation of a response stream is tied to the health of the underlying conne
 
 This happens all the time in practice. For example, when a phone switches from Wi-Fi to cellular, a user refreshes the page, a laptop lid closes mid-response. The LLM continues to generate tokens, but there's no way to deliver them to the client, so there's nowhere for them to go.
 
-The SSE protocol does support a mechanism at the protocol level, for a reconnecting client to specify a position in the stream to resume from. However, this is usually not supported in practice because it would require a significant increase in complexity in the backend. To support resumable streams with SSE, you would need to assign sequence numbers to token events for ordering, buffer those events in an external store, and build a resume handler. This is a big departure from a simple, stateless request handler. Even having done that, you have only addressed a part of the problem; the solution would not support continuity of streams after a page refresh because that's not supported by SSE.
+SSE is the default streaming transport for most AI frameworks. The SSE protocol does support a mechanism at the protocol level, for a reconnecting client to specify a position in the stream to resume from. However, this is usually not supported in practice because it would require a significant increase in complexity in the backend. To support resumable streams with SSE, you would need to assign sequence numbers to token events for ordering, buffer those events in an external store, and build a resume handler. This is a big departure from a simple, stateless request handler. Even having done that, you have only addressed a part of the problem; the solution would not support continuity of streams after a page refresh because that's not supported by SSE.
 
 ### Sessions don't span devices <a id="across-device"/>
 
@@ -47,12 +43,11 @@ These problems all stem from the coupling between client-to-agent interaction an
 
 The pattern that engineering teams are adopting to solve these problems is to break that coupling, through the idea of a durable session: a shared, persistent medium through which clients and agents interact, instead of an exclusive pipe between one client and one agent.
 
-Using a durable session:
+A durable session provides three capabilities that direct HTTP streaming does not:
 
-- The agent writes events to the session.
-- Clients independently connect to the session.
-- The session persists across connection drops, device switches, and can be resumed at a later time.
-- Any participant can publish to the session, enabling bidirectional control.
+1. Resilient delivery. Streams survive connection drops, device switches, page refreshes, and process restarts. The client resumes from a known position. The agent continues publishing regardless of client connectivity. No events are lost and no events are duplicated.
+2. Continuity across surfaces. The session follows the user, not the connection. Open a second tab, switch to a phone, come back hours later. Every surface sees the same session state. Any client with the session identifier can attach and hydrate.
+3. Live control. Any participant can communicate with any other participant through the session while work is in progress. Cancel a generation from a different device. Steer an agent mid-response. Send a follow-up before the current response finishes. This requires bidirectional communication that is not coupled to the original request.
 
 This changes what's possible:
 
@@ -75,10 +70,12 @@ Ably AI Transport implements durable sessions on top of [Ably channels](/docs/ch
 - Any participant can publish to the channel. Cancel, steer, interrupt can all happen through the same session.
 - Multiple participants subscribe to the same channel, and every participant sees every event.
 
-In addition to these channel properties, the AI Transport SDK adds:
+The core idea is that no participant is special. A client that drops and reconnects, a serverless agent that spins up for one turn and terminates, a second client joining from another device, an orchestrator agent delegating to sub-agents: all interact with the same session on equal terms. The session persists independently of any participant's connection lifecycle.
 
-- Turns that structure prompt-response cycles with clear boundaries, concurrent lifecycles, and scoped cancellation.
-- A codec layer that maps between your AI framework's event types and Ably messages.
-- A conversation tree that supports branching, edit, regenerate, and history navigation.
+The AI Transport SDK provides the abstractions that make this model practical:
+
+- A [codec layer](/docs/ai-transport/concepts/transport#codec) that bridges domain-specific message models (Vercel AI SDK's UIMessage, or any other) and Ably's native message primitives, including support for streamed token-by-token delivery.
+- A [session layer](/docs/ai-transport/concepts/sessions) that materialises conversation state from the channel (or from an external store) into a branching [conversation tree](/docs/ai-transport/concepts/messages-and-conversation-tree) with views for pagination and branch navigation.
+- A [transport layer](/docs/ai-transport/concepts/transport) that handles communication mechanics: publishing messages, routing streams, managing [turn lifecycle](/docs/ai-transport/concepts/turns), and delivering cancel signals.
 - React hooks for building UIs with streaming, pagination, and branch navigation.
 - Adapters that drop into various frameworks; for example AI Transport can be used with Vercel AI SDK's `useChat` with one line of code.
