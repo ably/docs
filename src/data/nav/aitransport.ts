@@ -56,6 +56,15 @@ export default {
       ],
     },
     {
+      name: 'Framework guides',
+      pages: [
+        {
+          name: 'Vercel AI SDK',
+          link: '/docs/ai-transport/framework-guides/vercel-ai-sdk',
+        },
+      ],
+    },
+    {
       name: 'Features',
       pages: [
         {
