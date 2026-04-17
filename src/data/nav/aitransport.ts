@@ -46,12 +46,12 @@ export default {
       name: 'Getting started',
       pages: [
         {
-          name: 'Vercel AI SDK',
-          link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
-        },
-        {
           name: 'Core SDK',
           link: '/docs/ai-transport/getting-started/core-sdk',
+        },
+        {
+          name: 'Vercel AI SDK',
+          link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
         },
       ],
     },

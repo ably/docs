@@ -1,12 +1,12 @@
 ---
 title: "Get started with the Core SDK"
-meta_description: "Build a streaming AI chat app using AI Transport's generic React hooks without a framework wrapper. Full access to the conversation tree, branching, and pagination."
+meta_description: "Build a streaming AI chat app using AI Transport's core React hooks. Full access to the conversation tree, branching, and pagination."
 meta_keywords: "AI Transport, Core SDK, React hooks, streaming, realtime, Ably, chat, LLM, conversation tree"
 ---
 
-Build a streaming AI chat application using AI Transport's generic React hooks. This approach gives you direct access to the conversation tree, branching, and pagination without a framework wrapper like Vercel's `useChat`.
+Build a streaming AI chat application using Ably AI Transport's core React hooks. This approach gives you direct access to the conversation tree, branching, and pagination through hooks like `useView`, `useSend`, `useRegenerate`, and `useEdit`.
 
-If you want the simplest path with Vercel AI SDK, see [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk) instead.
+To use directly with Vercel's `useChat` for message management, see [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk).
 
 ## Prerequisites <a id="prerequisites"/>
 
@@ -67,7 +67,7 @@ export async function GET(req) {
 
 ## Step 2: Create an Ably provider <a id="ably-provider"/>
 
-Create the file `app/providers.tsx`:
+Create the file `app/providers.tsx`. The Ably provider creates an authenticated realtime client using the token endpoint and makes it available to all child components. AI Transport uses this client to connect to channels for durable sessions.
 
 <Code>
 ```javascript
@@ -104,7 +104,9 @@ export function Providers({ clientId, children }) {
 
 ## Step 3: Create the server API route <a id="server"/>
 
-Create the file `app/api/chat/route.ts`. The server creates a turn, publishes the user message, streams the LLM response through the Ably channel, and returns immediately:
+Create the file `app/api/chat/route.ts`. The server creates a turn, publishes the user message, streams the LLM response through the Ably channel, and returns immediately.
+
+This example uses Vercel AI SDK's `streamText` for model orchestration and `UIMessageCodec` to encode the response for Ably. You can swap `streamText` for any model inference approach. You need a codec that converts your model's output into Ably messages; `UIMessageCodec` handles this for Vercel AI SDK's message types.
 
 <Code>
 ```javascript
@@ -112,7 +114,8 @@ import { after } from 'next/server'
 import { streamText, convertToModelMessages } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import Ably from 'ably'
-import { createServerTransport } from '@ably/ai-transport/vercel'
+import { createServerTransport } from '@ably/ai-transport'
+import { UIMessageCodec } from '@ably/ai-transport/vercel'
 
 const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY })
 
@@ -120,7 +123,7 @@ export async function POST(req) {
   const { messages, history, id, turnId, clientId, forkOf, parent } = await req.json()
   const channel = ably.channels.get(id)
 
-  const transport = createServerTransport({ channel })
+  const transport = createServerTransport({ channel, codec: UIMessageCodec })
   const turn = transport.newTurn({ turnId, clientId, parent, forkOf })
 
   await turn.start()
@@ -151,7 +154,7 @@ export async function POST(req) {
 
 ## Step 4: Create the chat component <a id="client"/>
 
-Create the file `app/chat.tsx`. This uses AI Transport's generic hooks directly rather than Vercel's `useChat`. The `useView` hook provides the visible messages, a `send` function, and pagination:
+Create the file `app/chat.tsx`. This uses AI Transport's core hooks directly. The `useView` hook provides the visible messages, a `send` function, and pagination:
 
 <Code>
 ```javascript
@@ -209,7 +212,7 @@ export function Chat({ chatId }) {
 
 ## Step 5: Wire it together <a id="wire"/>
 
-Create the file `app/page.tsx`:
+Create the file `app/page.tsx`. `UIMessageCodec` is the codec for Vercel AI SDK's message types, matching the server's output format. If you use a different model inference layer, provide a different codec to `TransportProvider`.
 
 <Code>
 ```javascript
@@ -240,7 +243,7 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 3. Every client subscribed to the channel receives tokens in realtime.
 4. If a client disconnects, it automatically reconnects and resumes from where it left off.
 
-The `useView` hook subscribes to the conversation tree and returns the visible messages along the currently selected branch. Unlike `useChat`, you have direct access to the tree structure: branching, pagination, and sibling navigation.
+The `useView` hook subscribes to the conversation tree and returns the visible messages along the currently selected branch. You have direct access to the tree structure: branching, pagination, and sibling navigation.
 
 ## Explore next <a id="next"/>
 
