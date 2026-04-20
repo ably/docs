@@ -215,6 +215,31 @@ operation = MessageOperation(description="reason for update")
 result = await channel.update_message(message, operation)
 print("Message updated")
 ```
+
+```go
+realtime, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+// This assumes there is an 'updates' namespace with a rule enabling updates and deletes
+channel := realtime.Channels.Get("updates:example")
+
+// Publish the original message and get its serial from the result
+result, err := channel.PublishWithResult(context.Background(), "message-name", "original-data")
+if err != nil {
+    panic(err)
+}
+
+// Publish an update using the serial
+msg := &ably.Message{
+    Serial: *result.Serial,
+    Data:   "updated-data",
+}
+_, err = channel.UpdateMessage(context.Background(), msg, ably.UpdateWithDescription("reason for update"))
+if err != nil {
+    panic(err)
+}
+```
 </Code>
 
 #### Returns
@@ -398,6 +423,31 @@ message = Message(data="", serial=serial)  # clear the previous data
 operation = MessageOperation(description="reason for delete")
 result = await channel.delete_message(message, operation)
 print("Message deleted")
+```
+
+```go
+realtime, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+// This assumes there is an 'updates' namespace with a rule enabling updates and deletes
+channel := realtime.Channels.Get("updates:example")
+
+// Publish the original message and get its serial from the result
+result, err := channel.PublishWithResult(context.Background(), "message-name", "original-data")
+if err != nil {
+    panic(err)
+}
+
+// Delete the message using the serial
+msg := &ably.Message{
+    Serial: *result.Serial,
+    Data:   "", // clear the previous data
+}
+_, err = channel.DeleteMessage(context.Background(), msg, ably.UpdateWithDescription("reason for delete"))
+if err != nil {
+    panic(err)
+}
 ```
 </Code>
 
@@ -608,6 +658,35 @@ channel.publish([.init(name: "message-name", data: "Hello")]) { result, error in
     }
 }
 ```
+
+```go
+realtime, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+// This assumes there is an 'updates' namespace with a rule enabling updates and deletes
+channel := realtime.Channels.Get("updates:example")
+
+// Publish the original message and get its serial from the result
+result, err := channel.PublishWithResult(context.Background(), "message-name", "Hello")
+if err != nil {
+    panic(err)
+}
+
+// Append to the message a few times (without needing to await each to finish
+// before doing the next); the data will be concatenated
+for _, fragment := range []string{", ", "World", "!"} {
+    err := channel.AppendMessageAsync(&ably.Message{
+        Serial: *result.Serial,
+        Data:   fragment,
+    }, nil)
+    if err != nil {
+        panic(err)
+    }
+}
+
+// the message in history now has data: "Hello, World!"
+```
 </Code>
 
 #### Returns
@@ -734,6 +813,23 @@ serial = "0123456789-001@abcdefghij:001"
 
 message = await channel.get_message(serial)
 ```
+
+```go
+rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+channel := rest.Channels.Get("updates:example")
+
+// Example serial; for example from the `serial` property of a `Message` you previously received
+serial := "0123456789-001@abcdefghij:001"
+
+message, err := channel.GetMessage(context.Background(), serial)
+if err != nil {
+    panic(err)
+}
+_ = message
+```
 </Code>
 
 ## Get message versions <a id="versions"/>
@@ -799,6 +895,32 @@ serial = "0123456789-001@abcdefghij:001"
 
 page = await channel.getMessageVersions(serial)
 print("Found " + len(page.items) + " versions");
+```
+
+```go
+rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+channel := rest.Channels.Get("updates:example")
+
+// Example serial; for example from the `serial` property of a `Message` you previously received
+serial := "0123456789-001@abcdefghij:001"
+
+pages, err := channel.GetMessageVersions(serial, nil).Pages(context.Background())
+if err != nil {
+    panic(err)
+}
+for pages.Next(context.Background()) {
+    versions := pages.Items()
+    fmt.Printf("Found %d versions on this page\n", len(versions))
+    for _, msg := range versions {
+        fmt.Printf("  %s: %v\n", msg.Serial, msg.Data)
+    }
+}
+if err := pages.Err(); err != nil {
+    panic(err)
+}
 ```
 </Code>
 
