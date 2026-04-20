@@ -352,6 +352,14 @@ function convertMethodSignatureToCode(content: string): string {
 }
 
 /**
+ * Convert RequiredBadge components to bold text for markdown output
+ * <RequiredBadge /> → **(Required)**
+ */
+function convertRequiredBadgeToText(content: string): string {
+  return transformNonCodeBlocks(content, (text) => text.replace(/<RequiredBadge\s*\/>/g, '**(Required)**'));
+}
+
+/**
  * Convert image paths to GitHub raw URLs
  * Handles relative (../), absolute (/images/), and direct (images/) paths
  * Only converts paths with valid image extensions
@@ -581,34 +589,37 @@ function transformMdxToMarkdown(
   // Stage 6: Convert MethodSignature components to inline code
   content = convertMethodSignatureToCode(content);
 
-  // Stage 7: Strip hidden attribute from tables (makes them visible in markdown)
+  // Stage 7: Convert RequiredBadge components to bold text
+  content = convertRequiredBadgeToText(content);
+
+  // Stage 8: Strip hidden attribute from tables (makes them visible in markdown)
   content = stripHiddenFromTables(content);
 
-  // Stage 8: Convert image paths to GitHub URLs
+  // Stage 9: Convert image paths to GitHub URLs
   content = convertImagePathsToGitHub(content);
 
-  // Stage 9: Convert relative URLs to absolute URLs
+  // Stage 10: Convert relative URLs to absolute URLs
   content = convertRelativeUrls(content, siteUrl);
 
-  // Stage 10: Convert quoted /docs/ URLs to markdown links (for JSX props like link: '/docs/...')
+  // Stage 11: Convert quoted /docs/ URLs to markdown links (for JSX props like link: '/docs/...')
   content = convertJsxLinkProps(content, siteUrl);
 
-  // Stage 11: Convert /docs/ links to .md extension and remove ?lang= params
+  // Stage 12: Convert /docs/ links to .md extension and remove ?lang= params
   content = convertDocsLinksToMarkdown(content);
 
-  // Stage 12: Replace template variables
+  // Stage 13: Replace template variables
   content = replaceTemplateVariables(content);
 
-  // Stage 13: Strip code fence meta strings (e.g. highlight="2,8") to keep markdown clean for LLMs
+  // Stage 14: Strip code fence meta strings (e.g. highlight="2,8") to keep markdown clean for LLMs
   content = stripCodeFenceMeta(content);
 
-  // Stage 14: Add language subheadings to code blocks within <Code> tags
+  // Stage 15: Add language subheadings to code blocks within <Code> tags
   content = addLanguageSubheadingsToCodeBlocks(content);
 
-  // Stage 15: Prepend title as markdown heading
+  // Stage 16: Prepend title as markdown heading
   let finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
-  // Stage 16: Append navigation footer (after all transformations to avoid double-processing)
+  // Stage 17: Append navigation footer (after all transformations to avoid double-processing)
   if (navContext) {
     finalContent += generateNavigationFooter(navContext, siteUrl);
   }
@@ -744,6 +755,7 @@ export {
   removeAnchorTags,
   removeJsxComments,
   convertMethodSignatureToCode,
+  convertRequiredBadgeToText,
   stripHiddenFromTables,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
