@@ -1,0 +1,77 @@
+---
+title: "Sessions"
+meta_description: "Understand sessions in AI Transport: persistent, shared conversation state that exists independently of any participant's connection."
+meta_keywords: "AI Transport, sessions, durable sessions, channels, conversation state, persistence, multi-device"
+redirect_from:
+  - /docs/ai-transport/how-it-works/sessions-and-turns
+  - /docs/ai-transport/sessions-identity
+---
+
+A session is the complete, persistent state of a conversation. It exists independently of any participant. Clients connect and disconnect, agents spin up and terminate, but the session endures. It is what all participants share, and it is what makes the conversation a first-class resource rather than a side effect of a connection.
+
+The session contains the full branching [tree of messages](/docs/ai-transport/concepts/messages-and-conversation-tree), the [turn lifecycle](/docs/ai-transport/concepts/turns), and any in-progress streaming state. Two participants that materialise the same session from the same data arrive at the same state.
+
+## Understand the session and channel relationship <a id="session-and-channel"/>
+
+A session is built on top of an Ably channel, but a session is not the same thing as a channel.
+
+The channel is an Ably realtime channel: a durable, ordered, append-only log of messages. Every event in the session passes through the channel in real time, and every connected participant receives it. Messages on the channel have a total order defined by their serial, assigned by the Ably service on publish. This ordering is deterministic: two participants reading the same log produce the same sequence.
+
+The session is the structured, navigable conversation that those events produce. The channel is the ordered log of events; the session is the result of interpreting that log. The relationship is analogous to a database transaction log and the tables it produces: the log is the authoritative sequence of operations, but the useful state is the result of applying them.
+
+## Materialise a session <a id="materialisation"/>
+
+A session can be materialised from two sources.
+
+By default, it is materialised from the Ably channel, which serves as both the live delivery layer and the historical record. When the channel retains the full history, the channel alone is sufficient and no external infrastructure is required.
+
+Alternatively, you can supply historical messages from your own database, with the channel providing only live and in-progress activity. In both cases, the session merges historical and live data into a single consistent state.
+
+Materialisation is not a simple replay of the log. Certain events on the channel affect how prior events are interpreted. A clear event discards all messages that preceded it from the materialised result, even though those messages still exist on the channel. A compaction event replaces a sequence of messages with a summary. The channel retains the full, unedited log, but the materialisation process applies these events as instructions that reshape what the session contains. The session is the result of interpreting the log, not transcribing it.
+
+## Understand durable session properties <a id="durable-properties"/>
+
+In direct HTTP streaming (SSE or WebSocket), the stream is the connection. If the connection dies, the stream dies with it. A session inverts this: the session is an independently addressable resource that agents write to and clients subscribe to. Connections come and go; the session persists.
+
+Sessions have the following properties:
+
+- Independently addressable. Any participant (client, agent, observer) connects to the session by name without knowledge of the other participants. There is no requirement that the client that initiated a request is the one that receives the response.
+- Persistent. Messages on the session outlive any single connection. An agent that crashes and restarts can resume publishing. A client that drops and reconnects can resume consuming. The session state is not held in memory on either end.
+- Ordered and resumable. Messages have a total order. A client that disconnects mid-stream can reconnect and resume from the exact point of disconnection without replaying the entire conversation or re-invoking the agent.
+- Bidirectional. Any participant can publish to the session at any time. This is what makes cancel, steer, interrupt, and multi-client interaction possible.
+- Fan-out. Multiple clients subscribe to the same session simultaneously. A second tab, a phone, or a new client joining later all receive the same ordered stream of activity.
+- Multiplexed. Multiple concurrent interactions (turns, agents, tool calls) coexist on the same session. An orchestrator agent and its subagents can all publish independently without routing updates through a single bottleneck.
+
+These properties enable three capabilities that direct HTTP streaming does not provide:
+
+1. Resilient delivery. Streams survive connection drops, device switches, page refreshes, and process restarts. The client resumes from a known position. The agent continues publishing regardless of client connectivity. No events are lost and no events are duplicated.
+2. Continuity across surfaces. The session follows the user, not the connection. Open a second tab, switch to a phone, come back hours later. Every surface sees the same session state.
+3. Live control. Any participant can communicate with any other participant through the session while work is in progress. Cancel a generation from a different device. Steer an agent mid-response. Send a follow-up before the current response finishes.
+
+## Share a session across participants <a id="sharing"/>
+
+The session is the unit of sharing. When a second client joins, it joins the session. When an agent hydrates context for an LLM call, it hydrates the session. When a message is published, it is published to the session via the channel. Every participant's interaction with the conversation is mediated by the session.
+
+No participant needs to be present for any other participant to function, and no participant's arrival or departure corrupts session state.
+
+Agent lifecycle does not affect the session. An agent hydrates the session, processes a turn, and may terminate. The session survives because it lives on the channel (or in an external store), not in the agent's memory. A different agent instance can handle the next turn with the same session state.
+
+Clients are resilient to disconnection. A client that drops its connection loses nothing. On reconnect, the client's Ably connection resumes from the last received serial, and any messages published during the disconnection are delivered.
+
+New participants can join at any time. A second client attaching to the channel hydrates the full session from history and receives live updates going forward. There is no handshake or coordination required between participants.
+
+## Support different persistence models <a id="persistence"/>
+
+The channel serves two distinct roles: live delivery and historical persistence. It always serves as the live delivery layer. Whether it also serves as the historical persistence layer depends on the configuration.
+
+When channel history retention covers the session's lifetime, the channel is sufficient to hydrate the full session. No external infrastructure is required. This is the zero-configuration path.
+
+When you store completed messages in your own database, the external store provides historical session data and the channel provides live and in-progress activity. The session is hydrated from the external store for past messages and from the channel subscription for current activity. This is appropriate when channel retention is limited, the conversation is long-lived, or you need to enrich or index conversation data in your own systems.
+
+In both cases, the channel carries all live activity: in-progress streams, turn lifecycle events, cancel signals, and newly published messages.
+
+## Read next <a id="next"/>
+
+- [Messages and conversation tree](/docs/ai-transport/concepts/messages-and-conversation-tree): understand how messages form a branching conversation history.
+- [Turns](/docs/ai-transport/concepts/turns): understand the unit of agent work within a session.
+- [Transport](/docs/ai-transport/concepts/transport): understand how clients and agents connect to a session.

@@ -1,0 +1,44 @@
+---
+title: "Turns"
+meta_description: "Understand turns in AI Transport: the logical unit of agent work that structures prompt-response cycles with lifecycle states, cancellation, and execution resilience."
+meta_keywords: "AI Transport, turns, turn lifecycle, cancellation, poke, agent invocation, serverless"
+---
+
+A turn is a logical unit of agent work, initiated in response to user intent. It encompasses everything that happens in service of that intent: the user's input, the agent's response, any tool calls the agent makes, any intermediate messages required to resolve those tool calls (approvals, tool outputs), the agent's continued work after resolution, and the final completion. A turn may involve multiple participants and multiple exchanges before it finishes.
+
+## Understand turn lifecycle <a id="lifecycle"/>
+
+A turn has a unique identifier and is bracketed by lifecycle events on the channel. The client initiates a turn and passes the prompt for that turn to the server to query the AI model. The user's input messages are part of the turn, and the turn is visible on the [session](/docs/ai-transport/concepts/sessions) from the moment the user expresses intent, not from the moment the agent begins processing. The agent publishes turn-end when the task completes, is cancelled, or fails. The turn ID correlates all activity that belongs to the same task.
+
+A turn progresses through a defined set of states:
+
+- Pending. The turn has been opened but no agent has begun working. The user's input is on the session; the agent has not yet started.
+- Active. The agent is working.
+- Suspended. The most recent execution has intentionally paused. The agent is waiting for external input (human-in-the-loop approval, tool output) or a durable step handoff. The turn is still open.
+- Completed. The task finished successfully.
+- Cancelled. The user (or another participant) stopped the turn. This can happen from any state: a pending turn can be cancelled before any agent picks it up, an active turn can be cancelled mid-stream, and a suspended turn can be cancelled while awaiting input.
+- Failed. The task could not be completed after exhausting recovery options.
+
+Multiple turns can be active simultaneously on the same session. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for details.
+
+## Cancel a turn <a id="cancellation"/>
+
+The turn is the unit of cancellation. When a user hits stop, they are cancelling the turn: all work associated with the current task, across all execution attempts. There is no user-facing cancel operation below the turn.
+
+Internal execution failures (a stream dying, a model call erroring, a serverless timeout) fail the execution attempt, not the turn. The turn remains active and can be retried. See [cancellation](/docs/ai-transport/features/cancellation) for details on cancel filters and authorization.
+
+## Trigger a turn <a id="poke"/>
+
+When the client sends a message, the client transport sends an HTTP POST to your server endpoint. This request carries the user's messages, the conversation history, the turn ID, the channel name, and branching context (parent and fork-of pointers). The server uses this to create a turn, publish the user's messages to the channel, invoke the AI model, and stream the response back through the channel.
+
+The HTTP response returns immediately. The response stream is decoupled from the HTTP request: tokens flow through the Ably channel, not through the HTTP response. This is what allows the stream to survive independently of the client's connection.
+
+Because the server receives the turn ID and channel name from the client, any server process that can reach the channel can handle the request. The agent does not need to maintain state between turns. It creates a server transport, processes the turn, and tears down.
+
+## Read next <a id="next"/>
+
+- [Sessions](/docs/ai-transport/concepts/sessions): understand the persistent, shared conversation state that turns operate within.
+- [Transport](/docs/ai-transport/concepts/transport): understand how clients and agents connect to sessions and publish turns.
+- [Cancellation](/docs/ai-transport/features/cancellation): control who can cancel turns and how cancel signals are routed.
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): handle multiple active turns on the same session.
+- [Human-in-the-loop](/docs/ai-transport/features/human-in-the-loop): use approval gates that suspend and resume turns.
