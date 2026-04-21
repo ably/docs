@@ -9,9 +9,14 @@ export default {
   },
   content: [
     {
-      name: 'About Ably',
-      link: '/docs/platform',
-      index: true,
+      name: 'Getting started',
+      pages: [
+        {
+          name: 'About Ably',
+          link: '/docs/platform',
+          index: true,
+        },
+      ],
     },
     {
       name: 'Architecture',

@@ -77,10 +77,10 @@ describe('generateMarkdownFooter', () => {
       expect(setupPage?.sectionKey).toBe('Ably Chat::Concepts');
     });
 
-    it('should use __root__ section key for top-level pages', () => {
+    it('should use section key for pages nested in a section', () => {
       const pages = flattenNavPages();
       const aboutChat = pages.find((p) => p.link === '/docs/chat');
-      expect(aboutChat?.sectionKey).toBe('Ably Chat::__root__');
+      expect(aboutChat?.sectionKey).toBe('Ably Chat::Getting started');
     });
 
     it('should handle nested sections correctly', () => {
