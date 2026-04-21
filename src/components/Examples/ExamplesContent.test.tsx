@@ -58,7 +58,7 @@ describe('ExamplesContent', () => {
 
   it('filters examples based on search input (no results)', () => {
     render(<ExamplesContent exampleImages={exampleImages} />);
-    const searchInput = screen.getByPlaceholderText('Find an example');
+    const searchInput = screen.getByPlaceholderText('Find an example...');
     fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
     expect(screen.getByText('No results found')).toBeInTheDocument();
     expect(screen.queryByText('Member location')).not.toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('ExamplesContent', () => {
 
   it('filters examples based on search input (with results)', () => {
     render(<ExamplesContent exampleImages={exampleImages} />);
-    const searchInput = screen.getByPlaceholderText('Find an example');
+    const searchInput = screen.getByPlaceholderText('Find an example...');
     fireEvent.change(searchInput, { target: { value: 'avatar' } });
     expect(screen.queryByText('No results found')).not.toBeInTheDocument();
     expect(screen.queryByText('Member location')).not.toBeInTheDocument();
