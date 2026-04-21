@@ -464,19 +464,6 @@ export default {
               ],
             },
             {
-              name: 'Bench',
-              pages: [
-                { name: 'Overview', link: '/docs/cli/bench', index: true },
-                {
-                  name: 'Commands',
-                  pages: [
-                    { name: 'publisher', link: '/docs/cli/bench/publisher' },
-                    { name: 'subscriber', link: '/docs/cli/bench/subscriber' },
-                  ],
-                },
-              ],
-            },
-            {
               name: 'Channels',
               pages: [
                 { name: 'Overview', link: '/docs/cli/channels', index: true },
@@ -516,133 +503,6 @@ export default {
                     },
                     { name: 'list', link: '/docs/cli/channels/list' },
                     { name: 'inspect', link: '/docs/cli/channels/inspect' },
-                  ],
-                },
-              ],
-            },
-            {
-              name: 'Config',
-              pages: [
-                { name: 'Overview', link: '/docs/cli/config', index: true },
-                {
-                  name: 'Commands',
-                  pages: [
-                    { name: 'path', link: '/docs/cli/config/path' },
-                    { name: 'show', link: '/docs/cli/config/show' },
-                  ],
-                },
-              ],
-            },
-            {
-              name: 'Connections',
-              pages: [
-                { name: 'Overview', link: '/docs/cli/connections', index: true },
-                {
-                  name: 'Commands',
-                  pages: [{ name: 'test', link: '/docs/cli/connections/test' }],
-                },
-              ],
-            },
-            {
-              name: 'Integrations',
-              pages: [
-                { name: 'Overview', link: '/docs/cli/integrations', index: true },
-                {
-                  name: 'Commands',
-                  pages: [
-                    { name: 'create', link: '/docs/cli/integrations/create' },
-                    { name: 'delete', link: '/docs/cli/integrations/delete' },
-                    { name: 'get', link: '/docs/cli/integrations/get' },
-                    { name: 'list', link: '/docs/cli/integrations/list' },
-                    { name: 'update', link: '/docs/cli/integrations/update' },
-                  ],
-                },
-              ],
-            },
-            {
-              name: 'Logs',
-              pages: [
-                { name: 'Overview', link: '/docs/cli/logs', index: true },
-                {
-                  name: 'Commands',
-                  pages: [
-                    { name: 'subscribe', link: '/docs/cli/logs/subscribe' },
-                    { name: 'history', link: '/docs/cli/logs/history' },
-                    {
-                      name: 'channel-lifecycle',
-                      pages: [{ name: 'subscribe', link: '/docs/cli/logs/channel-lifecycle/subscribe' }],
-                    },
-                    {
-                      name: 'connection-lifecycle',
-                      pages: [
-                        { name: 'subscribe', link: '/docs/cli/logs/connection-lifecycle/subscribe' },
-                        { name: 'history', link: '/docs/cli/logs/connection-lifecycle/history' },
-                      ],
-                    },
-                    {
-                      name: 'push',
-                      pages: [
-                        { name: 'subscribe', link: '/docs/cli/logs/push/subscribe' },
-                        { name: 'history', link: '/docs/cli/logs/push/history' },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              name: 'Push',
-              pages: [
-                { name: 'Overview', link: '/docs/cli/push', index: true },
-                {
-                  name: 'Commands',
-                  pages: [
-                    { name: 'publish', link: '/docs/cli/push/publish' },
-                    { name: 'batch-publish', link: '/docs/cli/push/batch-publish' },
-                    {
-                      name: 'channels',
-                      pages: [
-                        { name: 'list', link: '/docs/cli/push/channels/list' },
-                        { name: 'list-channels', link: '/docs/cli/push/channels/list-channels' },
-                        { name: 'save', link: '/docs/cli/push/channels/save' },
-                        { name: 'remove', link: '/docs/cli/push/channels/remove' },
-                        { name: 'remove-where', link: '/docs/cli/push/channels/remove-where' },
-                      ],
-                    },
-                    {
-                      name: 'config',
-                      pages: [
-                        { name: 'show', link: '/docs/cli/push/config/show' },
-                        { name: 'set-apns', link: '/docs/cli/push/config/set-apns' },
-                        { name: 'set-fcm', link: '/docs/cli/push/config/set-fcm' },
-                        { name: 'clear-apns', link: '/docs/cli/push/config/clear-apns' },
-                        { name: 'clear-fcm', link: '/docs/cli/push/config/clear-fcm' },
-                      ],
-                    },
-                    {
-                      name: 'devices',
-                      pages: [
-                        { name: 'list', link: '/docs/cli/push/devices/list' },
-                        { name: 'get', link: '/docs/cli/push/devices/get' },
-                        { name: 'save', link: '/docs/cli/push/devices/save' },
-                        { name: 'remove', link: '/docs/cli/push/devices/remove' },
-                        { name: 'remove-where', link: '/docs/cli/push/devices/remove-where' },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              name: 'Queues',
-              pages: [
-                { name: 'Overview', link: '/docs/cli/queues', index: true },
-                {
-                  name: 'Commands',
-                  pages: [
-                    { name: 'create', link: '/docs/cli/queues/create' },
-                    { name: 'delete', link: '/docs/cli/queues/delete' },
-                    { name: 'list', link: '/docs/cli/queues/list' },
                   ],
                 },
               ],
@@ -761,6 +621,110 @@ export default {
               ],
             },
             {
+              name: 'Queues',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/queues', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'create', link: '/docs/cli/queues/create' },
+                    { name: 'delete', link: '/docs/cli/queues/delete' },
+                    { name: 'list', link: '/docs/cli/queues/list' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Integrations',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/integrations', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'create', link: '/docs/cli/integrations/create' },
+                    { name: 'delete', link: '/docs/cli/integrations/delete' },
+                    { name: 'get', link: '/docs/cli/integrations/get' },
+                    { name: 'list', link: '/docs/cli/integrations/list' },
+                    { name: 'update', link: '/docs/cli/integrations/update' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Push',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/push', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'publish', link: '/docs/cli/push/publish' },
+                    { name: 'batch-publish', link: '/docs/cli/push/batch-publish' },
+                    {
+                      name: 'channels',
+                      pages: [
+                        { name: 'list', link: '/docs/cli/push/channels/list' },
+                        { name: 'list-channels', link: '/docs/cli/push/channels/list-channels' },
+                        { name: 'save', link: '/docs/cli/push/channels/save' },
+                        { name: 'remove', link: '/docs/cli/push/channels/remove' },
+                        { name: 'remove-where', link: '/docs/cli/push/channels/remove-where' },
+                      ],
+                    },
+                    {
+                      name: 'config',
+                      pages: [
+                        { name: 'show', link: '/docs/cli/push/config/show' },
+                        { name: 'set-apns', link: '/docs/cli/push/config/set-apns' },
+                        { name: 'set-fcm', link: '/docs/cli/push/config/set-fcm' },
+                        { name: 'clear-apns', link: '/docs/cli/push/config/clear-apns' },
+                        { name: 'clear-fcm', link: '/docs/cli/push/config/clear-fcm' },
+                      ],
+                    },
+                    {
+                      name: 'devices',
+                      pages: [
+                        { name: 'list', link: '/docs/cli/push/devices/list' },
+                        { name: 'get', link: '/docs/cli/push/devices/get' },
+                        { name: 'save', link: '/docs/cli/push/devices/save' },
+                        { name: 'remove', link: '/docs/cli/push/devices/remove' },
+                        { name: 'remove-where', link: '/docs/cli/push/devices/remove-where' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Logs',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/logs', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'subscribe', link: '/docs/cli/logs/subscribe' },
+                    { name: 'history', link: '/docs/cli/logs/history' },
+                    {
+                      name: 'channel-lifecycle',
+                      pages: [{ name: 'subscribe', link: '/docs/cli/logs/channel-lifecycle/subscribe' }],
+                    },
+                    {
+                      name: 'connection-lifecycle',
+                      pages: [
+                        { name: 'subscribe', link: '/docs/cli/logs/connection-lifecycle/subscribe' },
+                        { name: 'history', link: '/docs/cli/logs/connection-lifecycle/history' },
+                      ],
+                    },
+                    {
+                      name: 'push',
+                      pages: [
+                        { name: 'subscribe', link: '/docs/cli/logs/push/subscribe' },
+                        { name: 'history', link: '/docs/cli/logs/push/history' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
               name: 'Stats',
               pages: [
                 { name: 'Overview', link: '/docs/cli/stats', index: true },
@@ -770,6 +734,42 @@ export default {
                     { name: 'account', link: '/docs/cli/stats/account' },
                     { name: 'app', link: '/docs/cli/stats/app' },
                   ],
+                },
+              ],
+            },
+            {
+              name: 'Config',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/config', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'path', link: '/docs/cli/config/path' },
+                    { name: 'show', link: '/docs/cli/config/show' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Bench',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/bench', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'publisher', link: '/docs/cli/bench/publisher' },
+                    { name: 'subscriber', link: '/docs/cli/bench/subscriber' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Connections',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/connections', index: true },
+                {
+                  name: 'Commands',
+                  pages: [{ name: 'test', link: '/docs/cli/connections/test' }],
                 },
               ],
             },
