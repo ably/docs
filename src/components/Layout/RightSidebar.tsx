@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
-import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { PRODUCT_BAR_HEIGHT } from './utils/heights';
+import { useLayoutContext } from 'src/contexts/layout-context';
+import { languageData } from 'src/data/languages';
+import { ProductKey } from 'src/data/types';
+import { LanguageSelector } from './LanguageSelector';
 
 type SidebarHeader = {
   id: string;
@@ -49,6 +53,19 @@ const getElementIndent = (type: string, isStepped: boolean) => {
 
 const RightSidebar = () => {
   const location = useLocation();
+  const { activePage } = useLayoutContext();
+  const stickyTopPx = HEADER_HEIGHT + (activePage.hasProductBar ? PRODUCT_BAR_HEIGHT : 0);
+
+  const showLanguageSelector = useMemo(
+    () =>
+      activePage.isDualLanguage ||
+      (activePage.languages.length > 0 &&
+        activePage.languages.some((language) =>
+          Object.keys(languageData[activePage.product as ProductKey] ?? {}).includes(language),
+        )),
+    [activePage.languages, activePage.product, activePage.isDualLanguage],
+  );
+
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({
     id: location.hash ? location.hash.slice(1) : '#',
@@ -257,26 +274,27 @@ const RightSidebar = () => {
 
   return (
     <div
-      className="absolute md:sticky w-60 top-24 right-6"
+      className="hidden md:block sticky w-60 shrink-0"
       style={{
+        top: `${stickyTopPx}px`,
         height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, 32),
       }}
     >
-      <div className="hidden md:flex flex-col h-full overflow-y-auto">
+      <div className="flex flex-col h-full overflow-y-auto pt-10">
+        {showLanguageSelector && (
+          <div className="mb-6">
+            <LanguageSelector />
+          </div>
+        )}
         {headers.length > 0 ? (
           <>
             <p className="ui-text-label4 font-semibold text-neutral-1300 dark:text-neutral-000 mb-3">On this page</p>
-            <div
-              className={cn(
-                'flex shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset]',
-                isStepped && 'ml-2',
-              )}
-            >
+            <div className={cn('flex border-l border-neutral-300 dark:border-neutral-1000', isStepped && 'ml-2')}>
               {isStepped ? (
                 <div className="-ml-[7px]">{headers.map((header, index) => steppedHeader(header, index))}</div>
               ) : (
                 <div
-                  className="h-7 w-px bg-orange-600 rounded-full transition-[transform,height,colors] z-0 ml-[0.5px]"
+                  className="h-7 w-px bg-orange-600 rounded-full transition-[transform,height,colors] z-0 -ml-px"
                   style={{
                     transform: `translateY(${indicatorPosition.yOffset}px)`,
                     height: `${indicatorPosition.height}px`,
