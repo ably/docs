@@ -77,9 +77,14 @@ const RightSidebar = () => {
           hasSteps = true;
         }
 
+        // Clone the header and strip elements marked with data-toc-exclude
+        // (e.g. RequiredBadge) so their text doesn't leak into the sidebar label.
+        const clone = header.cloneNode(true) as Element;
+        clone.querySelectorAll('[data-toc-exclude]').forEach((el) => el.remove());
+
         return {
           type: header.tagName,
-          label: header.textContent ?? '',
+          label: clone.textContent?.trim() ?? '',
           id: getHeaderId(header),
           stepNumber: stepNumber || undefined,
         };
