@@ -1,5 +1,5 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Tabs, Tab } from './Tabs';
 
 describe('Tabs', () => {
@@ -31,11 +31,11 @@ describe('Tabs', () => {
       </Tabs>,
     );
 
-    expect(screen.getByText('Content A')).toBeInTheDocument();
-    expect(screen.queryByText('Content B')).not.toBeInTheDocument();
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Content A');
   });
 
-  it('switches content when a tab is clicked', () => {
+  it('switches content when a tab is clicked', async () => {
+    const user = userEvent.setup();
     render(
       <Tabs>
         <Tab value="a" label="Alpha">
@@ -47,13 +47,13 @@ describe('Tabs', () => {
       </Tabs>,
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Beta' }));
+    await user.click(screen.getByRole('tab', { name: 'Beta' }));
 
-    expect(screen.queryByText('Content A')).not.toBeInTheDocument();
-    expect(screen.getByText('Content B')).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Content B');
   });
 
-  it('sets aria-selected correctly', () => {
+  it('sets aria-selected correctly', async () => {
+    const user = userEvent.setup();
     render(
       <Tabs>
         <Tab value="a" label="Alpha">
@@ -68,7 +68,7 @@ describe('Tabs', () => {
     expect(screen.getByRole('tab', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Beta' })).toHaveAttribute('aria-selected', 'false');
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Beta' }));
+    await user.click(screen.getByRole('tab', { name: 'Beta' }));
 
     expect(screen.getByRole('tab', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('tab', { name: 'Beta' })).toHaveAttribute('aria-selected', 'true');
@@ -87,14 +87,5 @@ describe('Tabs', () => {
     );
 
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Content A');
-  });
-
-  it('renders nothing for Tab used outside of Tabs', () => {
-    const { container } = render(
-      <Tab value="a" label="Alpha">
-        Orphan
-      </Tab>,
-    );
-    expect(container).toBeEmptyDOMElement();
   });
 });

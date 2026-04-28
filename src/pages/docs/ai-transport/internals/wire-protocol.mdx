@@ -1,0 +1,136 @@
+---
+title: "Wire protocol"
+meta_description: "The Ably channel wire format used by AI Transport. Headers, lifecycle events, content messages, and message identity."
+meta_keywords: "wire protocol, AI Transport, transport headers, lifecycle events, message identity, Ably"
+---
+
+<Aside data-type='new'>
+The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
+</Aside>
+
+AI Transport communicates through Ably channel messages. Every message carries headers that describe its role in the conversation: which turn it belongs to, who sent it, what kind of content it carries, and where it fits in the conversation tree. This page describes the wire format at a moderate level of detail.
+
+## Transport headers <a id="transport-headers"/>
+
+Transport headers use the `x-ably-` prefix. They are managed by the SDK and carry the metadata that the transport layer needs to route, order, and reconcile messages.
+
+| Header | Description |
+| --- | --- |
+| `x-ably-turn-id` | Identifies the turn this message belongs to. All messages in a turn share the same turn ID. |
+| `x-ably-turn-client-id` | The client ID of the user who initiated the turn. |
+| `x-ably-turn-reason` | The reason a turn ended: `complete`, `cancelled`, or `error`. Present on `x-ably-turn-end` events. |
+| `x-ably-msg-id` | A unique identifier for the message. Used for optimistic update reconciliation and message identity. |
+| `x-ably-role` | The role of the message author: `user`, `assistant`, `system`, or `tool`. |
+| `x-ably-parent` | The message ID of this message's parent in the conversation tree. Establishes the tree structure. |
+| `x-ably-fork-of` | The message ID this message forks from. Present when an edit or regenerate creates a new branch. |
+| `x-ably-stream` | Whether the message is streamed (`true`) or discrete (`false`). |
+| `x-ably-stream-id` | Identifies the stream this message belongs to. All appends for the same streamed message share a stream ID. |
+| `x-ably-status` | The status of a streamed message: `streaming`, `finished`, or `aborted`. |
+| `x-ably-discrete` | Marks a message as a discrete (non-streamed) publish. Present on single-shot messages such as user prompts and tool results. |
+| `x-ably-amend` | Indicates this message amends (replaces) a previous message. Used for edits and regenerations. |
+
+## Domain headers <a id="domain-headers"/>
+
+Domain headers use the `x-domain-` prefix. They carry framework-specific metadata that the transport layer passes through without interpreting. A Vercel AI SDK codec might use domain headers to carry tool call IDs, content part indices, or other framework-specific identifiers.
+
+Domain headers are defined by the codec, not the transport. The transport merges them into the outbound message alongside transport headers.
+
+## Lifecycle events <a id="lifecycle-events"/>
+
+Lifecycle events signal the start and end of turns. They are published as Ably messages with specific names.
+
+| Event | Description |
+| --- | --- |
+| `x-ably-turn-start` | A new turn has begun. Published before any content messages for the turn. |
+| `x-ably-turn-end` | The turn is complete. Includes `x-ably-turn-reason` to indicate how it ended. |
+| `x-ably-cancel` | A cancel request from a client. Includes a filter specifying which turns to cancel. |
+| `x-ably-abort` | The turn was forcefully terminated. May include partial content from an `onAbort` hook. |
+| `x-ably-error` | An error occurred during the turn. The turn ends with reason `error`. |
+
+A normal turn follows the sequence: `x-ably-turn-start`, content messages, `x-ably-turn-end` with reason `complete`. A cancelled turn follows: `x-ably-turn-start`, content messages, `x-ably-turn-end` with reason `cancelled`.
+
+## Content messages <a id="content-messages"/>
+
+Content messages carry the actual conversation data: user prompts, assistant responses, tool calls, and tool results. They come in two forms.
+
+### Discrete messages <a id="discrete"/>
+
+A discrete message is published as a single Ably message. The entire content is in one publish operation. User messages are typically discrete - the full text is known at publish time.
+
+<Code>
+```javascript
+// A discrete user message
+channel.publish('message.create', {
+  data: { role: 'user', content: 'What is the weather?' },
+  extras: {
+    headers: {
+      'x-ably-msg-id': 'msg_001',
+      'x-ably-role': 'user',
+      'x-ably-turn-id': 'turn_001',
+      'x-ably-stream': 'false',
+    }
+  }
+})
+```
+</Code>
+
+### Streamed messages <a id="streamed"/>
+
+A streamed message is published incrementally as tokens arrive from the LLM. It uses three operations over its lifecycle:
+
+1. **Create** (`message.create`): starts the streamed message. Sets `x-ably-stream` to `true` and `x-ably-status` to `streaming`.
+2. **Append** (`message.append`): appends a token or chunk to the message. Published for each token in the stream.
+3. **Close** (`message.update`): finalizes the message with a terminal status (`finished` or `aborted`).
+
+<Code>
+```javascript
+// 1. Create the streamed message
+channel.publish('message.create', {
+  data: { role: 'assistant', content: '' },
+  extras: {
+    headers: {
+      'x-ably-msg-id': 'msg_002',
+      'x-ably-stream': 'true',
+      'x-ably-stream-id': 'stream_001',
+      'x-ably-status': 'streaming',
+    }
+  }
+})
+
+// 2. Append tokens
+channel.appendMessage({ name: 'msg_002', data: 'The weather' })
+channel.appendMessage({ name: 'msg_002', data: ' is sunny.' })
+
+// 3. Close the stream
+channel.updateMessage({
+  name: 'msg_002',
+  extras: {
+    headers: { 'x-ably-status': 'finished' }
+  }
+})
+```
+</Code>
+
+Subscribers accumulate appends locally to build the complete message. If a subscriber joins mid-stream, the Ably message on the channel already contains all previous appends - only future appends arrive as live events.
+
+## Message identity <a id="message-identity"/>
+
+The `x-ably-msg-id` header is the primary identifier for a message in the conversation tree. It is distinct from the Ably message serial, which is assigned by the channel.
+
+### Generation <a id="id-generation"/>
+
+Message IDs are generated by the sender. When the client sends a user message optimistically, the client generates the ID. When the server publishes messages from the LLM, the server generates the ID. The codec may generate IDs for streamed messages when the stream starts.
+
+### Stamping <a id="stamping"/>
+
+The server transport stamps the `x-ably-msg-id` header onto outbound messages. If the codec does not provide an ID, the transport generates one. This ensures every message on the channel has a consistent, unique identifier.
+
+### Reconciliation <a id="reconciliation"/>
+
+When a client inserts a message optimistically, it assigns an `x-ably-msg-id`. The server publishes the same message with the same ID. When the client receives the published message through its subscription, it matches IDs and promotes the optimistic message to a confirmed one. The message keeps its position in the tree, but gains a real Ably serial for ordering.
+
+## Related pages <a id="related"/>
+
+- [Codec architecture](/docs/ai-transport/internals/codec-architecture) - how the codec uses the wire protocol to encode and decode messages.
+- [Conversation tree](/docs/ai-transport/internals/conversation-tree) - how `x-ably-parent` and `x-ably-fork-of` build the tree structure.
+- [Optimistic updates](/docs/ai-transport/features/optimistic-updates) - reconciliation from the user's perspective.
