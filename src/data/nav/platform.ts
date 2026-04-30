@@ -787,6 +787,7 @@ export default {
               ],
             },
             { name: 'Autocomplete', link: '/docs/cli/autocomplete' },
+            { name: 'Env', link: '/docs/cli/env' },
             { name: 'Status', link: '/docs/cli/status' },
             { name: 'Version', link: '/docs/cli/version' },
             { name: 'Help', link: '/docs/cli/help' },
