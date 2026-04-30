@@ -10,10 +10,6 @@ redirect_from:
   - /docs/ai-transport/getting-started/langgraph
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
-
 Build a streaming AI chat application using Vercel AI SDK and Ably AI Transport. By the end, you'll have a chat app with durable sessions that survive disconnections and work across multiple tabs.
 
 ## Prerequisites <a id="prerequisites"/>
@@ -170,17 +166,14 @@ Create the file `app/chat.tsx`. The client uses Vercel's `useChat` hook with an 
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { useChannel } from 'ably/react'
 import { useClientTransport, useActiveTurns, useView } from '@ably/ai-transport/react'
 import { useChatTransport, useMessageSync } from '@ably/ai-transport/vercel/react'
-import { UIMessageCodec } from '@ably/ai-transport/vercel'
 import { useState } from 'react'
 
-export function Chat({ chatId, clientId }) {
-  const { channel } = useChannel({ channelName: chatId })
+export function Chat({ chatId }) {
   const [input, setInput] = useState('')
 
-  const transport = useClientTransport({ channel, codec: UIMessageCodec, clientId })
+  const transport = useClientTransport({ channelName: chatId })
   const chatTransport = useChatTransport(transport)
   const { messages, setMessages, sendMessage, stop } = useChat({
     id: chatId,
@@ -188,9 +181,9 @@ export function Chat({ chatId, clientId }) {
   })
 
   useMessageSync(transport, setMessages)
-  useView(transport, { limit: 30 })
+  useView({ transport, limit: 30 })
 
-  const activeTurns = useActiveTurns(transport)
+  const activeTurns = useActiveTurns({ transport })
   const isStreaming = activeTurns.size > 0
 
   return (
@@ -228,13 +221,17 @@ Create the file `app/page.tsx`:
 <Code>
 ```javascript
 import { Providers } from './providers'
+import { TransportProvider } from '@ably/ai-transport/react'
+import { UIMessageCodec } from '@ably/ai-transport/vercel'
 import { Chat } from './chat'
 
 export default function Page() {
   const chatId = 'my-chat-session'
   return (
     <Providers>
-      <Chat chatId={chatId} />
+      <TransportProvider channelName={chatId} codec={UIMessageCodec}>
+        <Chat chatId={chatId} />
+      </TransportProvider>
     </Providers>
   )
 }
@@ -252,9 +249,36 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 
 This is a [durable session](/docs/ai-transport/why#durable-sessions). The HTTP request triggers the agent, but all communication flows through the Ably channel.
 
-## What to explore next <a id="next"/>
+## Understand the architecture <a id="architecture"/>
 
-- [Cancellation](/docs/ai-transport/features/cancellation) - the Stop button already works because `useChat`'s `stop()` calls `transport.cancel()`.
-- [Multi-device sessions](/docs/ai-transport/features/multi-device) - open another tab to see realtime sync.
-- [History and replay](/docs/ai-transport/features/history) - `useView` already loads history on mount.
-- [Vercel AI SDK framework guide](/docs/ai-transport/framework-guides/vercel-ai-sdk) - understand the full integration architecture.
+Vercel AI SDK handles intelligence and UI. AI Transport handles what happens between the model and every device. See the [Vercel AI SDK framework guide](/docs/ai-transport/framework-guides/vercel-ai-sdk) for a deeper explanation of how the two SDKs fit together.
+
+Vercel built the `ChatTransport` interface as the extension point for custom transports. AI Transport implements `ChatTransport`, so you swap the transport layer without changing your application code:
+
+<Code>
+```javascript
+// Before: default HTTP transport
+const { messages } = useChat()
+
+// After: Ably transport (everything else stays the same)
+const transport = useClientTransport({ channelName: chatId })
+const chatTransport = useChatTransport(transport)
+const { messages } = useChat({ transport: chatTransport })
+```
+</Code>
+
+### Choose an integration path <a id="integration-paths"/>
+
+Both paths use the same server code. The difference is client-side only.
+
+The `useChat` path is the simplest. `useChatTransport` wraps the core transport for direct use with Vercel's `useChat` hook. `useMessageSync` pushes other clients' messages into `useChat` state. You get Vercel's message management with AI Transport's durable delivery. Use this path when you want the standard Vercel `useChat` developer experience with durable sessions added. This is the path the tutorial above follows.
+
+The [Core SDK](/docs/ai-transport/getting-started/core-sdk) path uses AI Transport's React hooks (`useView`, `useSend`, `useRegenerate`, `useEdit`) directly instead of `useChat`. This gives you full access to the conversation tree, branch navigation, split-pane views, and custom message construction. Use this path when you need branching UI, custom message rendering, or direct control over the conversation tree.
+
+## Explore next <a id="next"/>
+
+- [Vercel AI SDK framework guide](/docs/ai-transport/framework-guides/vercel-ai-sdk): understand how Vercel AI SDK and AI Transport fit together and what capabilities the integration unlocks.
+- [Cancellation](/docs/ai-transport/features/cancellation): the Stop button already works because `useChat`'s `stop()` calls `transport.cancel()`.
+- [Multi-device sessions](/docs/ai-transport/features/multi-device): open another tab to see realtime sync.
+- [History and replay](/docs/ai-transport/features/history): `useView` already loads history on mount.
+- [Sessions](/docs/ai-transport/concepts/sessions): understand durable sessions and how the conversation persists.

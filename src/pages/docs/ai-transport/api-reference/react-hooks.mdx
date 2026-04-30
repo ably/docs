@@ -32,36 +32,45 @@ import {
 
 ### useClientTransport <a id="use-client-transport"/>
 
-Create and memoize a `ClientTransport` instance. The transport is created on the first render and the same instance is returned on subsequent renders. The hook does not auto-close the transport on unmount; channel lifecycle is managed by the Ably provider. Call `transport.close()` explicitly if you need to tear down the transport independently of the channel lifecycle.
+Access a `ClientTransport` from the nearest `TransportProvider`. The transport is created by the provider, not by this hook. When `channelName` is omitted, the innermost `TransportProvider` in the tree is used.
 
 <Code>
 ```javascript
-function useClientTransport(options: ClientTransportOptions): ClientTransport
+function useClientTransport(options?: {
+  channelName?: string,
+  skip?: boolean
+}): ClientTransport
 ```
 </Code>
-
-See [ClientTransportOptions](/docs/ai-transport/api-reference/client-transport#client-transport-options) for available options.
-
-### useView <a id="use-view"/>
-
-Subscribe to a view and return the visible node list with pagination, navigation, and write operations. Accepts either a `ClientTransport` (uses its default view), a `View` directly, or `null`/`undefined`. Returns a `ViewHandle` that re-renders the component when the view updates.
-
-<Code>
-```javascript
-function useView(
-  source: ClientTransport | View | null | undefined,
-  options?: UseViewOptions
-): ViewHandle
-```
-</Code>
-
-#### UseViewOptions <a id="use-view-options"/>
 
 | Property | Type | Description |
 | --- | --- | --- |
-| limit | `number` | Maximum number of older messages to load per page. Defaults to 100. |
+| channelName | `string` | The channel name passed to the enclosing `TransportProvider`. Omit to use the nearest provider. |
+| skip | `boolean` | When `true`, return a stub transport that throws on any access. Useful when auth is not yet resolved. |
 
-When `options` are provided, the hook auto-loads the first page on mount.
+See [TransportProvider](/docs/ai-transport/api-reference/react-hooks#transport-provider) for setting up the provider.
+
+### useView <a id="use-view"/>
+
+Subscribe to a view and return the visible node list with pagination, navigation, and write operations. Pass `transport` to use a transport's default view, or `view` to subscribe to a specific view directly. When both are omitted, defaults to the nearest `TransportProvider`'s transport. Returns a `ViewHandle` that re-renders the component when the view updates.
+
+<Code>
+```javascript
+function useView(options?: {
+  transport?: ClientTransport | null,
+  view?: View | null,
+  limit?: number,
+  skip?: boolean
+}): ViewHandle
+```
+</Code>
+
+| Property | Type | Description |
+| --- | --- | --- |
+| transport | `ClientTransport \| null` | Client transport whose default view to subscribe to. Defaults to the nearest provider when omitted. |
+| view | `View \| null` | A specific view to subscribe to directly. Takes priority over `transport`. |
+| limit | `number` | Maximum number of older messages to load per page. When provided, auto-loads the first page on mount. |
+| skip | `boolean` | When `true`, skip all subscriptions and return an empty handle. |
 
 #### ViewHandle <a id="view-handle"/>
 
@@ -88,7 +97,11 @@ Create an additional view of the conversation tree. Returns a `ViewHandle` with 
 
 <Code>
 ```javascript
-function useCreateView(transport: ClientTransport): ViewHandle
+function useCreateView(options?: {
+  transport?: ClientTransport | null,
+  limit?: number,
+  skip?: boolean
+}): ViewHandle
 ```
 </Code>
 
@@ -124,11 +137,13 @@ function useRegenerate(view: View): (messageId: string, options?: SendOptions) =
 
 ### useTree <a id="use-tree"/>
 
-Provide stable structural query callbacks backed by the transport's conversation tree. These are thin `useCallback` wrappers around the tree -- no local state or subscriptions. The hook does not re-render on tree changes; use `useView` for reactive updates.
+Provide stable structural query callbacks backed by the transport's conversation tree. These are thin `useCallback` wrappers around the tree. The hook does not re-render on tree changes; use `useView` for reactive updates.
 
 <Code>
 ```javascript
-function useTree(transport: ClientTransport): TreeHandle
+function useTree(options?: {
+  transport?: ClientTransport
+}): TreeHandle
 ```
 </Code>
 
@@ -146,7 +161,9 @@ Subscribe to active turns on the channel. Returns a reactive `Map` keyed by clie
 
 <Code>
 ```javascript
-function useActiveTurns(transport: ClientTransport): Map<string, Set<string>>
+function useActiveTurns(options?: {
+  transport?: ClientTransport | null
+}): Map<string, Set<string>>
 ```
 </Code>
 
@@ -158,7 +175,10 @@ Subscribe to raw Ably messages on the transport's channel. Useful for building c
 
 <Code>
 ```javascript
-function useAblyMessages(transport: ClientTransport): Ably.Message[]
+function useAblyMessages(options?: {
+  transport?: ClientTransport,
+  skip?: boolean
+}): Ably.InboundMessage[]
 ```
 </Code>
 
@@ -185,26 +205,17 @@ function useChatTransport(transport: ClientTransport, chatOptions?: ChatTranspor
 
 When you pass `VercelClientTransportOptions`, the hook creates a new `ClientTransport` internally with the codec pre-bound to `UIMessageCodec`. When you pass an existing `ClientTransport`, it wraps that instance as a `ChatTransport` without creating a new transport.
 
-**Using options (creates transport internally):**
+**Using an existing ClientTransport (recommended when you also need `useView`, `useActiveTurns`, or `useMessageSync`):**
 
 <Code>
 ```javascript
-const transport = useChatTransport({ channel })
-const { messages } = useChat({ transport })
-```
-</Code>
-
-**Using an existing ClientTransport:**
-
-<Code>
-```javascript
-const transport = useClientTransport({ channel, codec: UIMessageCodec, clientId })
+const transport = useClientTransport({ channelName: chatId })
 const chatTransport = useChatTransport(transport)
 const { messages } = useChat({ transport: chatTransport })
 ```
 </Code>
 
-Use the second form when you need direct access to the `ClientTransport` for features like active turn tracking or cancellation. See [ChatTransportOptions](/docs/ai-transport/api-reference/vercel#chat-transport-options) for available options.
+See [ChatTransportOptions](/docs/ai-transport/api-reference/vercel#chat-transport-options) for available options.
 
 ### useMessageSync <a id="use-message-sync"/>
 
@@ -221,7 +232,7 @@ function useMessageSync(
 
 <Code>
 ```javascript
-const transport = useClientTransport({ channel, codec: UIMessageCodec, clientId })
+const transport = useClientTransport({ channelName: chatId })
 const chatTransport = useChatTransport(transport)
 const { messages, setMessages } = useChat({ transport: chatTransport })
 useMessageSync(transport, setMessages)

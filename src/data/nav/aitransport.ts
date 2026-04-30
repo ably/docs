@@ -18,25 +18,37 @@ export default {
       link: '/docs/ai-transport/why',
     },
     {
-      name: 'How it works',
+      name: 'Concepts',
       pages: [
         {
-          name: 'Sessions and turns',
-          link: '/docs/ai-transport/how-it-works/sessions-and-turns',
+          name: 'Sessions',
+          link: '/docs/ai-transport/concepts/sessions',
+        },
+        {
+          name: 'Messages and conversation tree',
+          link: '/docs/ai-transport/concepts/messages-and-conversation-tree',
+        },
+        {
+          name: 'Turns',
+          link: '/docs/ai-transport/concepts/turns',
         },
         {
           name: 'Transport',
-          link: '/docs/ai-transport/how-it-works/transport',
+          link: '/docs/ai-transport/concepts/transport',
         },
         {
           name: 'Authentication',
-          link: '/docs/ai-transport/how-it-works/authentication',
+          link: '/docs/ai-transport/concepts/authentication',
         },
       ],
     },
     {
       name: 'Getting started',
       pages: [
+        {
+          name: 'Core SDK',
+          link: '/docs/ai-transport/getting-started/core-sdk',
+        },
         {
           name: 'Vercel AI SDK',
           link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
