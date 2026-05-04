@@ -55,11 +55,12 @@ function flattenNavPages(): FlatNavPage[] {
 
   const result: FlatNavPage[] = [];
 
-  const walkPages = (pages: NavProductPages[], sectionName: string, productName: string) => {
+  const walkPages = (pages: NavProductPages[], sectionPath: string, productName: string) => {
     for (const item of pages) {
       if ('pages' in item) {
-        // Section with nested pages
-        walkPages(item.pages, item.name, productName);
+        // Section with nested pages — build hierarchical path
+        const newPath = sectionPath === '__root__' ? item.name : `${sectionPath}::${item.name}`;
+        walkPages(item.pages, newPath, productName);
       } else if ('link' in item) {
         // Leaf page
         if (item.external) {
@@ -69,7 +70,7 @@ function flattenNavPages(): FlatNavPage[] {
           name: item.name,
           link: item.link,
           product: productName,
-          sectionKey: `${productName}::${sectionName}`,
+          sectionKey: `${productName}::${sectionPath}`,
         });
       }
     }
