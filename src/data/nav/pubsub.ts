@@ -30,6 +30,10 @@ export default {
           link: '/docs/getting-started/node',
         },
         {
+          name: 'Next.js',
+          link: '/docs/getting-started/nextjs',
+        },
+        {
           name: 'React',
           link: '/docs/getting-started/react',
         },
