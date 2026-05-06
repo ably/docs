@@ -88,7 +88,7 @@ describe('generateMarkdownFooter', () => {
       // Chat > Moderation > Direct integrations > Hive (Model Only)
       const hivePage = pages.find((p) => p.link === '/docs/chat/moderation/direct/hive-model-only');
       expect(hivePage).toBeDefined();
-      expect(hivePage?.sectionKey).toBe('Ably Chat::Direct integrations');
+      expect(hivePage?.sectionKey).toBe('Ably Chat::Moderation::Direct integrations');
     });
 
     it('should handle mixed sections with both direct pages and nested subsections', () => {
@@ -98,7 +98,80 @@ describe('generateMarkdownFooter', () => {
       const hivePage = pages.find((p) => p.link === '/docs/chat/moderation/direct/hive-model-only');
 
       expect(introPage?.sectionKey).toBe('Ably Chat::Moderation');
-      expect(hivePage?.sectionKey).toBe('Ably Chat::Direct integrations');
+      expect(hivePage?.sectionKey).toBe('Ably Chat::Moderation::Direct integrations');
+    });
+
+    it('should assign different sectionKeys to CLI command groups with the same "Commands" section name', () => {
+      const pages = flattenNavPages();
+      const accountsCurrent = pages.find((p) => p.link === '/docs/cli/accounts/current');
+      const channelsSubscribe = pages.find((p) => p.link === '/docs/cli/channels/subscribe');
+      const appsCreate = pages.find((p) => p.link === '/docs/cli/apps/create');
+
+      expect(accountsCurrent).toBeDefined();
+      expect(channelsSubscribe).toBeDefined();
+      expect(appsCreate).toBeDefined();
+
+      // Each should have a unique sectionKey despite all being under a "Commands" section
+      expect(accountsCurrent?.sectionKey).not.toBe(channelsSubscribe?.sectionKey);
+      expect(accountsCurrent?.sectionKey).not.toBe(appsCreate?.sectionKey);
+      expect(channelsSubscribe?.sectionKey).not.toBe(appsCreate?.sectionKey);
+    });
+
+    it('should assign different sectionKeys to repeated sub-group names under different parents', () => {
+      const pages = flattenNavPages();
+      const channelsPresenceEnter = pages.find((p) => p.link === '/docs/cli/channels/presence/enter');
+      const roomsPresenceEnter = pages.find((p) => p.link === '/docs/cli/rooms/presence/enter');
+      const roomsMsgReactionsSend = pages.find((p) => p.link === '/docs/cli/rooms/messages/reactions/send');
+      const roomsReactionsSend = pages.find((p) => p.link === '/docs/cli/rooms/reactions/send');
+
+      // "presence" under channels vs rooms should be different
+      expect(channelsPresenceEnter?.sectionKey).not.toBe(roomsPresenceEnter?.sectionKey);
+
+      // "reactions" under rooms/messages vs rooms should be different
+      expect(roomsMsgReactionsSend?.sectionKey).not.toBe(roomsReactionsSend?.sectionKey);
+    });
+
+    it('should produce correct siblings for CLI accounts commands', () => {
+      const pages = flattenNavPages();
+      const accountsPages = pages.filter(
+        (p) => p.sectionKey === pages.find((q) => q.link === '/docs/cli/accounts/current')?.sectionKey,
+      );
+      const accountsLinks = accountsPages.map((p) => p.link).sort();
+
+      expect(accountsLinks).toEqual([
+        '/docs/cli/accounts/current',
+        '/docs/cli/accounts/list',
+        '/docs/cli/accounts/login',
+        '/docs/cli/accounts/logout',
+        '/docs/cli/accounts/switch',
+      ]);
+    });
+
+    it('should isolate push/publish siblings to only direct leaf commands under Push Commands', () => {
+      const pages = flattenNavPages();
+      const pushPublish = pages.find((p) => p.link === '/docs/cli/push/publish');
+      const pushSiblings = pages.filter(
+        (p) => p.sectionKey === pushPublish?.sectionKey && p.link !== pushPublish?.link,
+      );
+
+      // Only batch-publish is a sibling leaf; channels/config/devices are subsections
+      expect(pushSiblings).toHaveLength(1);
+      expect(pushSiblings[0].link).toBe('/docs/cli/push/batch-publish');
+    });
+
+    it('should give zero siblings to sole leaf commands in their section', () => {
+      const pages = flattenNavPages();
+      const connectionsTest = pages.find((p) => p.link === '/docs/cli/connections/test');
+      const connectionsTestSiblings = pages.filter(
+        (p) => p.sectionKey === connectionsTest?.sectionKey && p.link !== connectionsTest?.link,
+      );
+      expect(connectionsTestSiblings).toHaveLength(0);
+
+      const roomsList = pages.find((p) => p.link === '/docs/cli/rooms/list');
+      const roomsListSiblings = pages.filter(
+        (p) => p.sectionKey === roomsList?.sectionKey && p.link !== roomsList?.link,
+      );
+      expect(roomsListSiblings).toHaveLength(0);
     });
   });
 

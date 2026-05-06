@@ -386,6 +386,413 @@ export default {
           link: '/docs/api/control-api',
           name: 'Control API',
         },
+        {
+          name: 'Ably CLI Reference',
+          pages: [
+            {
+              name: 'Overview',
+              link: '/docs/cli',
+              index: true,
+            },
+            { name: 'Login', link: '/docs/cli/login' },
+            {
+              name: 'Accounts',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/accounts', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'current', link: '/docs/cli/accounts/current' },
+                    { name: 'list', link: '/docs/cli/accounts/list' },
+                    { name: 'login', link: '/docs/cli/accounts/login' },
+                    { name: 'logout', link: '/docs/cli/accounts/logout' },
+                    { name: 'switch', link: '/docs/cli/accounts/switch' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Apps',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/apps', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'create', link: '/docs/cli/apps/create' },
+                    { name: 'current', link: '/docs/cli/apps/current' },
+                    { name: 'delete', link: '/docs/cli/apps/delete' },
+                    { name: 'list', link: '/docs/cli/apps/list' },
+                    { name: 'switch', link: '/docs/cli/apps/switch' },
+                    { name: 'update', link: '/docs/cli/apps/update' },
+                    {
+                      name: 'rules',
+                      pages: [
+                        { name: 'create', link: '/docs/cli/apps/rules/create' },
+                        { name: 'delete', link: '/docs/cli/apps/rules/delete' },
+                        { name: 'list', link: '/docs/cli/apps/rules/list' },
+                        { name: 'update', link: '/docs/cli/apps/rules/update' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Auth',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/auth', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'issue-ably-token', link: '/docs/cli/auth/issue-ably-token' },
+                    { name: 'issue-jwt-token', link: '/docs/cli/auth/issue-jwt-token' },
+                    { name: 'revoke-token', link: '/docs/cli/auth/revoke-token' },
+                    {
+                      name: 'keys',
+                      pages: [
+                        { name: 'create', link: '/docs/cli/auth/keys/create' },
+                        { name: 'current', link: '/docs/cli/auth/keys/current' },
+                        { name: 'get', link: '/docs/cli/auth/keys/get' },
+                        { name: 'list', link: '/docs/cli/auth/keys/list' },
+                        { name: 'revoke', link: '/docs/cli/auth/keys/revoke' },
+                        { name: 'switch', link: '/docs/cli/auth/keys/switch' },
+                        { name: 'update', link: '/docs/cli/auth/keys/update' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Channels',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/channels', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'subscribe', link: '/docs/cli/channels/subscribe' },
+                    { name: 'publish', link: '/docs/cli/channels/publish' },
+                    { name: 'batch-publish', link: '/docs/cli/channels/batch-publish' },
+                    { name: 'history', link: '/docs/cli/channels/history' },
+                    { name: 'append', link: '/docs/cli/channels/append' },
+                    { name: 'update', link: '/docs/cli/channels/update' },
+                    { name: 'delete', link: '/docs/cli/channels/delete' },
+                    {
+                      name: 'annotations',
+                      pages: [
+                        { name: 'publish', link: '/docs/cli/channels/annotations/publish' },
+                        { name: 'subscribe', link: '/docs/cli/channels/annotations/subscribe' },
+                        { name: 'get', link: '/docs/cli/channels/annotations/get' },
+                        { name: 'delete', link: '/docs/cli/channels/annotations/delete' },
+                      ],
+                    },
+                    {
+                      name: 'presence',
+                      pages: [
+                        { name: 'enter', link: '/docs/cli/channels/presence/enter' },
+                        { name: 'get', link: '/docs/cli/channels/presence/get' },
+                        { name: 'subscribe', link: '/docs/cli/channels/presence/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'occupancy',
+                      pages: [
+                        { name: 'get', link: '/docs/cli/channels/occupancy/get' },
+                        { name: 'subscribe', link: '/docs/cli/channels/occupancy/subscribe' },
+                      ],
+                    },
+                    { name: 'list', link: '/docs/cli/channels/list' },
+                    { name: 'inspect', link: '/docs/cli/channels/inspect' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Rooms',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/rooms', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'list', link: '/docs/cli/rooms/list' },
+                    {
+                      name: 'messages',
+                      pages: [
+                        { name: 'send', link: '/docs/cli/rooms/messages/send' },
+                        { name: 'subscribe', link: '/docs/cli/rooms/messages/subscribe' },
+                        { name: 'history', link: '/docs/cli/rooms/messages/history' },
+                        { name: 'update', link: '/docs/cli/rooms/messages/update' },
+                        { name: 'delete', link: '/docs/cli/rooms/messages/delete' },
+                        {
+                          name: 'reactions',
+                          pages: [
+                            { name: 'send', link: '/docs/cli/rooms/messages/reactions/send' },
+                            { name: 'subscribe', link: '/docs/cli/rooms/messages/reactions/subscribe' },
+                            { name: 'remove', link: '/docs/cli/rooms/messages/reactions/remove' },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      name: 'presence',
+                      pages: [
+                        { name: 'enter', link: '/docs/cli/rooms/presence/enter' },
+                        { name: 'get', link: '/docs/cli/rooms/presence/get' },
+                        { name: 'subscribe', link: '/docs/cli/rooms/presence/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'reactions',
+                      pages: [
+                        { name: 'send', link: '/docs/cli/rooms/reactions/send' },
+                        { name: 'subscribe', link: '/docs/cli/rooms/reactions/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'typing',
+                      pages: [
+                        { name: 'keystroke', link: '/docs/cli/rooms/typing/keystroke' },
+                        { name: 'subscribe', link: '/docs/cli/rooms/typing/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'occupancy',
+                      pages: [
+                        { name: 'get', link: '/docs/cli/rooms/occupancy/get' },
+                        { name: 'subscribe', link: '/docs/cli/rooms/occupancy/subscribe' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Spaces',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/spaces', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'create', link: '/docs/cli/spaces/create' },
+                    { name: 'get', link: '/docs/cli/spaces/get' },
+                    { name: 'list', link: '/docs/cli/spaces/list' },
+                    { name: 'subscribe', link: '/docs/cli/spaces/subscribe' },
+                    {
+                      name: 'members',
+                      pages: [
+                        { name: 'enter', link: '/docs/cli/spaces/members/enter' },
+                        { name: 'get', link: '/docs/cli/spaces/members/get' },
+                        { name: 'subscribe', link: '/docs/cli/spaces/members/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'locations',
+                      pages: [
+                        { name: 'get', link: '/docs/cli/spaces/locations/get' },
+                        { name: 'set', link: '/docs/cli/spaces/locations/set' },
+                        { name: 'subscribe', link: '/docs/cli/spaces/locations/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'cursors',
+                      pages: [
+                        { name: 'get', link: '/docs/cli/spaces/cursors/get' },
+                        { name: 'set', link: '/docs/cli/spaces/cursors/set' },
+                        { name: 'subscribe', link: '/docs/cli/spaces/cursors/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'locks',
+                      pages: [
+                        { name: 'acquire', link: '/docs/cli/spaces/locks/acquire' },
+                        { name: 'get', link: '/docs/cli/spaces/locks/get' },
+                        { name: 'subscribe', link: '/docs/cli/spaces/locks/subscribe' },
+                      ],
+                    },
+                    {
+                      name: 'occupancy',
+                      pages: [
+                        { name: 'get', link: '/docs/cli/spaces/occupancy/get' },
+                        { name: 'subscribe', link: '/docs/cli/spaces/occupancy/subscribe' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Queues',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/queues', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'create', link: '/docs/cli/queues/create' },
+                    { name: 'delete', link: '/docs/cli/queues/delete' },
+                    { name: 'list', link: '/docs/cli/queues/list' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Integrations',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/integrations', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'create', link: '/docs/cli/integrations/create' },
+                    { name: 'delete', link: '/docs/cli/integrations/delete' },
+                    { name: 'get', link: '/docs/cli/integrations/get' },
+                    { name: 'list', link: '/docs/cli/integrations/list' },
+                    { name: 'update', link: '/docs/cli/integrations/update' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Push',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/push', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'publish', link: '/docs/cli/push/publish' },
+                    { name: 'batch-publish', link: '/docs/cli/push/batch-publish' },
+                    {
+                      name: 'channels',
+                      pages: [
+                        { name: 'list', link: '/docs/cli/push/channels/list' },
+                        { name: 'list-channels', link: '/docs/cli/push/channels/list-channels' },
+                        { name: 'save', link: '/docs/cli/push/channels/save' },
+                        { name: 'remove', link: '/docs/cli/push/channels/remove' },
+                        { name: 'remove-where', link: '/docs/cli/push/channels/remove-where' },
+                      ],
+                    },
+                    {
+                      name: 'config',
+                      pages: [
+                        { name: 'show', link: '/docs/cli/push/config/show' },
+                        { name: 'set-apns', link: '/docs/cli/push/config/set-apns' },
+                        { name: 'set-fcm', link: '/docs/cli/push/config/set-fcm' },
+                        { name: 'clear-apns', link: '/docs/cli/push/config/clear-apns' },
+                        { name: 'clear-fcm', link: '/docs/cli/push/config/clear-fcm' },
+                      ],
+                    },
+                    {
+                      name: 'devices',
+                      pages: [
+                        { name: 'list', link: '/docs/cli/push/devices/list' },
+                        { name: 'get', link: '/docs/cli/push/devices/get' },
+                        { name: 'save', link: '/docs/cli/push/devices/save' },
+                        { name: 'remove', link: '/docs/cli/push/devices/remove' },
+                        { name: 'remove-where', link: '/docs/cli/push/devices/remove-where' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Logs',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/logs', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'subscribe', link: '/docs/cli/logs/subscribe' },
+                    { name: 'history', link: '/docs/cli/logs/history' },
+                    {
+                      name: 'channel-lifecycle',
+                      pages: [{ name: 'subscribe', link: '/docs/cli/logs/channel-lifecycle/subscribe' }],
+                    },
+                    {
+                      name: 'connection-lifecycle',
+                      pages: [
+                        { name: 'subscribe', link: '/docs/cli/logs/connection-lifecycle/subscribe' },
+                        { name: 'history', link: '/docs/cli/logs/connection-lifecycle/history' },
+                      ],
+                    },
+                    {
+                      name: 'push',
+                      pages: [
+                        { name: 'subscribe', link: '/docs/cli/logs/push/subscribe' },
+                        { name: 'history', link: '/docs/cli/logs/push/history' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Stats',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/stats', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'account', link: '/docs/cli/stats/account' },
+                    { name: 'app', link: '/docs/cli/stats/app' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Config',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/config', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'path', link: '/docs/cli/config/path' },
+                    { name: 'show', link: '/docs/cli/config/show' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Bench',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/bench', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'publisher', link: '/docs/cli/bench/publisher' },
+                    { name: 'subscriber', link: '/docs/cli/bench/subscriber' },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'Connections',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/connections', index: true },
+                {
+                  name: 'Commands',
+                  pages: [{ name: 'test', link: '/docs/cli/connections/test' }],
+                },
+              ],
+            },
+            {
+              name: 'Support',
+              pages: [
+                { name: 'Overview', link: '/docs/cli/support', index: true },
+                {
+                  name: 'Commands',
+                  pages: [
+                    { name: 'ask', link: '/docs/cli/support/ask' },
+                    { name: 'contact', link: '/docs/cli/support/contact' },
+                  ],
+                },
+              ],
+            },
+            { name: 'Autocomplete', link: '/docs/cli/autocomplete' },
+            { name: 'Env', link: '/docs/cli/env' },
+            { name: 'Status', link: '/docs/cli/status' },
+            { name: 'Version', link: '/docs/cli/version' },
+            { name: 'Help', link: '/docs/cli/help' },
+          ],
+        },
       ],
     },
   ],

@@ -23,6 +23,7 @@ import { PageHeader } from './mdx/PageHeader';
 import Admonition from './mdx/Admonition';
 import { MethodSignature } from './mdx/MethodSignature';
 import { Tabs, Tab } from './mdx/Tabs';
+import RequiredBadge from './mdx/RequiredBadge';
 
 import { Frontmatter, PageContextType } from './Layout';
 import { ActivePage } from './utils/nav';
@@ -342,6 +343,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
               MethodSignature,
               Tabs,
               Tab,
+              RequiredBadge,
             }}
           >
             <PageHeader title={title} intro={intro} />

@@ -5,6 +5,7 @@ import {
   removeAnchorTags,
   removeJsxComments,
   convertMethodSignatureToCode,
+  convertRequiredBadgeToText,
   convertImagePathsToGitHub,
   convertDocsLinksToMarkdown,
   convertJsxLinkProps,
@@ -407,6 +408,27 @@ import Baz from 'qux';
       const input = 'Before\n\n<MethodSignature>method()</MethodSignature>\n\nAfter';
       const output = convertMethodSignatureToCode(input);
       expect(output).toBe('Before\n\n`method()`\n\nAfter');
+    });
+  });
+
+  describe('convertRequiredBadgeToText', () => {
+    it('should convert RequiredBadge to bold text', () => {
+      const input = '### `channel` <RequiredBadge />';
+      const output = convertRequiredBadgeToText(input);
+      expect(output).toBe('### `channel` **(Required)**');
+    });
+
+    it('should handle multiple RequiredBadge instances', () => {
+      const input = '### `channel` <RequiredBadge />\n\nDescription\n\n### `message` <RequiredBadge />';
+      const output = convertRequiredBadgeToText(input);
+      expect(output).toContain('### `channel` **(Required)**');
+      expect(output).toContain('### `message` **(Required)**');
+    });
+
+    it('should preserve RequiredBadge in code blocks', () => {
+      const input = '```jsx\n<RequiredBadge />\n```';
+      const output = convertRequiredBadgeToText(input);
+      expect(output).toContain('<RequiredBadge />');
     });
   });
 
