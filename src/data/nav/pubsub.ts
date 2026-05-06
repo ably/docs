@@ -280,6 +280,10 @@ export default {
               name: 'React Native',
               link: '/docs/push/getting-started/react-native',
             },
+            {
+              name: 'Flutter',
+              link: '/docs/push/getting-started/flutter',
+            },
           ],
         },
         {
