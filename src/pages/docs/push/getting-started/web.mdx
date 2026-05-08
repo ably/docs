@@ -6,7 +6,7 @@ meta_keywords: "Push Notifications JavaScript, Ably Push, Web Push, Service Work
 
 This guide will get you started with Ably Push Notifications in a web application using vanilla JavaScript and a service worker.
 
-You'll learn how to set up an Ably Realtime client with push notification support, register a service worker, activate push notifications, subscribe to channel-based push, send push notifications, and handle incoming notifications in both the service worker and main page.
+You'll learn how to set up an Ably Realtime client with push notification support, register a service worker, activate push notifications, subscribe to channel-based push, publish push notifications, and handle incoming notifications in both the service worker and main page.
 
 <Aside data-type='note'>
 Using an AI coding assistant? [Teach it Ably](/docs/platform/ai-llms#agent-skills) with Agent Skills for all popular AI coding agents. Run `claude plugin add ably/agent-skills` or `npx skills add ably/agent-skills` to get started.
@@ -16,11 +16,11 @@ Using an AI coding assistant? [Teach it Ably](/docs/platform/ai-llms#agent-skill
 
 1. [Sign up](https://ably.com/signup) for an Ably account.
 2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
-3. Your API key will need the `publish` and `subscribe` capabilities. For sending push notifications from your app, you'll also need the `push-admin` capability.
-4. For channel-based push, add a rule for the channel with **Push notifications enabled** checked. In the dashboard left sidebar: **Configuration** → **Rules** → **Add** or **Edit** a rule,
-then enable the Push notifications option. See [rules](/docs/channels#rules) for details.
-5. A modern browser that supports the [Push API](https://developer.mozilla.org/en-US/docs/Web/API/Push_API) (Chrome, Firefox, or Edge recommended). Safari has limited Web Push support.
-6. A local web server to serve your files over `http://localhost` (service workers require a secure context or localhost).
+  * Your API key needs the `publish`, `subscribe` capabilities.
+  * Also add the `push-admin` capability if you're using the same API key to publish a push notification. In production this would more likely be a server using a different API key.
+3. Add a rule to a channel so you can test sending push notification via a channel. Select [**Rules**](https://ably.com/accounts/any/apps/any/app_namespaces) in the Ably dashboard, add a new rule and enable the **Push notifications** option.
+4. A modern browser that supports the [Push API](https://developer.mozilla.org/en-US/docs/Web/API/Push_API) (Chrome, Firefox, or Edge recommended). Safari has limited Web Push support.
+5. A local web server to serve your files over `http://localhost` (service workers require a secure context or localhost).
 
 ### (Optional) Install Ably CLI <a id="install-cli"/>
 
@@ -41,7 +41,7 @@ Navigate to your project directory and use one of the following methods to start
 
 **Python (built-in on macOS):**
 
-<Code>
+<Code fixed="true">
 ```shell
 # Python 3
 python3 -m http.server 8000
@@ -50,7 +50,7 @@ python3 -m http.server 8000
 
 **Node.js:**
 
-<Code>
+<Code fixed="true">
 ```shell
 # Install a simple HTTP server globally
 npm install -g http-server
@@ -62,7 +62,7 @@ http-server -p 8000
 
 **PHP:**
 
-<Code>
+<Code fixed="true">
 ```shell
 php -S localhost:8000
 ```
@@ -118,7 +118,7 @@ Now add this code inside the empty `<script>` tag to initialize the Ably client 
 
 <Code>
 ```javascript
-const channelName = 'exampleChannel1';
+const channelName = 'my-first-push-channel';
 
 let realtimeClient;
 let channel;
@@ -233,22 +233,16 @@ async function deactivatePush() {
 
 When `realtimeClient.push.activate()` is called, the Ably SDK will:
 
-1. Register the service worker specified in `pushServiceWorkerUrl` (more on this in the next section).
+1. Register the service worker specified in `pushServiceWorkerUrl`.
 2. Request notification permission from the user (the browser will show a permission prompt).
 3. Obtain a push subscription from the browser's Push API.
 4. Register the device with Ably's push notification service.
 
 After successful activation, `realtimeClient.device().id` contains the unique device ID assigned by Ably.
 
-## Step 3: Receive push notifications <a id="step-3"/>
+A service worker is a key part of the push notifications workflow for web browsers. It's a JavaScript file that runs in the background and can receive push notifications even when the page is not open. Create a `service-worker.js` file in the root of your project.
 
-Service worker is a key part of the push notifications workflow for web browsers. It's a JavaScript file that runs in the background and can receive push notifications even when the page is not open.
-
-### Create the service worker <a id="step-3-service-worker"/>
-
-Create a `service-worker.js` file in the root of your project.
-
-The service worker listens for `push` events and displays a notification using `self.registration.showNotification()`. It can also forward the notification data to any open pages of your application via `client.postMessage()` (optional, for demonstration purposes, since you have a realtime subscription to the channel):
+The service worker listens for `push` events and displays a notification using `self.registration.showNotification()`. It can also forward the notification data to any open pages via `client.postMessage()`:
 
 <Code>
 ```javascript
@@ -280,15 +274,6 @@ self.addEventListener("push", (event) => {
 });
 ```
 </Code>
-
-Key points about the service worker:
-
-- `event.data.json()` — parses the push message payload sent by the server.
-- `self.registration.showNotification()` — displays a native browser notification.
-- `client.postMessage()` — sends data to open pages of your application.
-- `push` events can only be handled in a service worker, not in the main page.
-
-### Handle notification clicks <a id="step-3-notification-clicks"/>
 
 Add a `notificationclick` listener in the same `service-worker.js` to handle what happens when the user clicks the notification:
 
@@ -331,18 +316,11 @@ self.addEventListener('notificationclick', function(event) {
 ```
 </Code>
 
-When a notification is clicked, the service worker handler does the following:
+When a notification is clicked, the handler closes the notification, looks for an existing window, sends it the notification data via `postMessage`, and focuses it. If no window exists, it opens a new one.
 
-1. Closes the notification.
-2. Looks for an existing window/tab for the app.
-3. If found, sends the notification data via `postMessage` and focuses the window.
-4. If no window exists, opens a new one.
+### Handle push notifications <a id="step-2-handle"/>
 
-Note that `event.notification` (a `Notification` object) is not serializable, so you must extract individual properties before sending via `postMessage`.
-
-### Handle notifications from the service worker <a id="step-3-handle-notifications"/>
-
-Back in your `index.html`, add a listener to receive messages from the service worker. This lets you update the page UI when a push notification is received or clicked. You can add it anywhere in the `<script>` section (for example, before the `getStarted()` call):
+Back in your `index.html`, add a listener to receive messages from the service worker. This lets you update the page UI when a push notification is received or clicked. Add it anywhere in the `<script>` section (for example, before the `getStarted()` call):
 
 <Code>
 ```javascript
@@ -365,9 +343,9 @@ navigator.serviceWorker.addEventListener('message', event => {
 ```
 </Code>
 
-### Channel push notifications <a id="step-3-subscribe-channel"/>
+## Step 3: Subscribe to channel push notifications <a id="step-3"/>
 
-Push notifications can be sent either directly to your `deviceId` (or `clientId`), or posted to a channel, in which case you first need to subscribe your device to that channel:
+To subscribe your device to a channel so it can receive channel-based push notifications, add the following functions to your `<script>` tag:
 
 <Code>
 ```javascript
@@ -395,26 +373,9 @@ async function unsubscribeFromChannel() {
 ```
 </Code>
 
-Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability for your API key. Use this method for testing purposes. In a production environment, you would typically send push notifications from your backend server (by posting messages with `push` `extras` field to a channel).
-
-To test push notifications in your app, you can use [Ably dashboard](https://ably.com/dashboard) or [Ably CLI](/docs/platform/tools/cli).
-
-To publish to your client using the [Ably CLI](/docs/platform/tools/cli) paste the following command into your terminal:
-
-<Code>
-```shell
-ably push publish --client-id push-tutorial-client \
-  --title "Test push" \
-  --body "Hello from CLI!" \
-  --data '{"foo":"bar","baz":"qux"}'
-```
-</Code>
-
-For sending pushes via a channel, we need some actual UI to be able to subscribe to this channel. So, let's build one.
-
 ## Step 4: Build the UI <a id="step-4"/>
 
-Add the following HTML structure to the `index.html` file before `output-container` div:
+Add the following HTML structure to the `index.html` file before the `output-container` div:
 
 <Code>
 ```html
@@ -555,18 +516,32 @@ button:disabled {
 ```
 </Code>
 
-Save all the files and open `http://localhost:8000` in your browser (you might want to clear the browser's cache if it's not your first time running the project).
-You will see the UI with buttons to activate push notifications and subscribe to the channel.
-Click the "Activate Push" button and wait until the log message with the `deviceId` is displayed.
-Try sending push using this `deviceId` or `clientId` as shown earlier.
+Save all the files and open `http://localhost:8000` in your browser (you might want to clear the browser's cache if it's not your first time running the project). You will see the UI with buttons to activate push notifications and subscribe to the channel.
 
-### Send push via channel <a id="step-4-send-channel"/>
+## Step 5: Publish a push notification <a id="step-5"/>
 
-To test pushes via channel, subscribe to the channel in the UI and publish a push notification to the channel using the [Ably CLI](/docs/platform/tools/cli):
+In the app click **Activate Push** and wait until the log message with the device ID is displayed.
 
-<Code>
+### Publish directly to your device <a id="step-5-direct"/>
+
+Publish a push notification directly to your client ID (or device ID using `--device-id` instead of `--client-id`) via the [Ably CLI](/docs/platform/tools/cli):
+
+<Code fixed="true">
 ```shell
-ably push publish --channel exampleChannel1 \
+ably push publish --client-id push-tutorial-client \
+  --title "Hello" \
+  --body "World!" \
+  --data '{"foo":"bar"}'
+```
+</Code>
+
+### Publish via a channel <a id="step-5-channel"/>
+
+Click **Subscribe** in the app, then publish a push notification to the channel using the [Ably CLI](/docs/platform/tools/cli):
+
+<Code fixed="true">
+```shell
+ably push publish --channel my-first-push-channel \
   --title "Hello" \
   --body "World!" \
   --message '{"name":"greeting","data":"Hello World!"}'
@@ -577,128 +552,9 @@ Here you can see the first push sent to the `deviceId`. And the second one publi
 
 ![Screenshot of the web push tutorial application showing push notifications received](../../../../images/content/screenshots/getting-started/web-push-getting-started-guide.png)
 
-If you unsubscribe from this channel in the app's UI, you will no longer receive push notifications for that channel.
-Send the same command again and verify that no notification is received.
+If you click **Unsubscribe**, you will no longer receive push notifications for that channel. Run the same command again and verify that no notification is received.
 
-You can also send push notifications right from your app. The next step will show you how.
-
-## Step 5: Send push with code <a id="step-5"/>
-
-Just as you can send push notifications through the Ably CLI or dashboard, you can also send them directly from your app using device ID (or client ID), or channel publishing methods. For channel publishing, you don't need the admin capabilities for your API key.
-
-Add the following methods to your `<script>` section:
-
-<Code>
-```javascript
-// Send push notification to a specific device ID
-async function sendPushToDevice() {
-    try {
-        const deviceId = realtimeClient.device().id;
-        await realtimeClient.push.admin.publish(
-            { deviceId: deviceId },
-            {
-                notification: {
-                    title: 'Push Tutorial',
-                    body: 'Hello from device ID!'
-                },
-                data: {
-                    foo: 'bar',
-                    baz: 'qux'
-                }
-            }
-        );
-        showStatus('Sent push to device ID: ' + deviceId, 'success');
-    } catch (error) {
-        showStatus('Error sending push to device: ' + error.message, 'error');
-    }
-}
-
-// Send push notification to a specific client ID
-async function sendPushToClient() {
-    try {
-        const clientId = realtimeClient.auth.clientId;
-        await realtimeClient.push.admin.publish(
-            { clientId: clientId },
-            {
-                notification: {
-                    title: 'Push Tutorial',
-                    body: 'Hello from client ID!'
-                },
-                data: {
-                    foo: 'bar',
-                    baz: 'qux'
-                }
-            }
-        );
-        showStatus('Sent push to client ID: ' + clientId, 'success');
-    } catch (error) {
-        showStatus('Error sending push to client: ' + error.message, 'error');
-    }
-}
-```
-</Code>
-
-Sending to a channel is just publishing a message on a channel with a `push` `extras` field:
-
-<Code>
-```javascript
-async function sendPushToChannel() {
-    try {
-        const message = {
-            "name": 'example',
-            "data": "Tutorial message with push extras",
-            "extras": {
-                "push": {
-                    "notification": {
-                        "title": "Tutorial Push",
-                        "body": "This is the tutorial push in channel: " + channelName,
-                    },
-                    "data": {
-                        "customKey": "customValue"
-                    }
-                }
-            }
-        };
-
-        await channel.publish(message);
-        showStatus('Sent push to ' + channelName, 'success');
-    } catch (error) {
-        showStatus('Error sending push to ' + channelName + ' with error: ' + error.message, 'error');
-    }
-}
-```
-</Code>
-
-The `extras.push` object has two parts:
-
-- `notification`: Contains `title` and `body` that are displayed in the browser notification.
-- `data`: Custom key-value pairs that are delivered to your service worker but not displayed directly.
-
-Add the new buttons to your HTML, then add the following to the `<script>` section. Place the button references after the channel name declaration, and the event listeners before the `getStarted()` call:
-
-<Code>
-```html
-<button id="sendPushToDeviceBtn">Send Push to Device</button>
-<button id="sendPushToClientBtn">Send Push to Client</button>
-<button id="sendPushToChannelBtn">Send Push to Channel</button>
-```
-</Code>
-
-<Code>
-```javascript
-const sendPushToDeviceBtn = document.getElementById('sendPushToDeviceBtn');
-const sendPushToClientBtn = document.getElementById('sendPushToClientBtn');
-const sendPushToChannelBtn = document.getElementById('sendPushToChannelBtn');
-
-sendPushToDeviceBtn.addEventListener('click', sendPushToDevice);
-sendPushToClientBtn.addEventListener('click', sendPushToClient);
-sendPushToChannelBtn.addEventListener('click', sendPushToChannel);
-```
-</Code>
-
-Now you can send push notifications to your device, client, or channel using the buttons in the UI:
-
-![Screenshot of the web push tutorial application showing push controls for sending notifications](../../../../images/content/screenshots/getting-started/web-push-getting-started-guide-2.png)
+To see the full list of options for publishing push notifications with the Ably CLI, run `ably push publish --help` or see the [Ably CLI push documentation](/docs/cli/push). To publish push notifications from your own server code instead of the CLI, see [Push notification publishing](https://ably.com/docs/push/publish).
 
 ## Browser compatibility <a id="browser-compatibility"/>
 
