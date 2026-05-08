@@ -284,6 +284,10 @@ export default {
               name: 'Flutter',
               link: '/docs/push/getting-started/flutter',
             },
+            {
+              name: 'Next.js',
+              link: '/docs/push/getting-started/nextjs',
+            },
           ],
         },
         {
