@@ -1,0 +1,70 @@
+---
+import { getCollection } from 'astro:content';
+
+interface Props {
+  currentId: string;
+}
+
+const { currentId } = Astro.props;
+
+// Build-time sidebar from the content collection. Groups entries by their
+// first path segment (the product area) and sorts index entries first.
+// The real Gatsby sidebar is pulled from config/sidebar.yaml — porting that
+// shape is a follow-up; this is enough to navigate the PoC slice.
+const entries = await getCollection('docs');
+
+type Group = { key: string; title: string; items: { id: string; title: string }[] };
+
+const groupsMap = new Map<string, Group>();
+for (const entry of entries) {
+  const [segment] = entry.id.split('/');
+  if (!groupsMap.has(segment)) {
+    groupsMap.set(segment, {
+      key: segment,
+      title: segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      items: [],
+    });
+  }
+  groupsMap.get(segment)!.items.push({ id: entry.id, title: entry.data.title });
+}
+
+const groups = Array.from(groupsMap.values())
+  .sort((a, b) => a.title.localeCompare(b.title))
+  .map((g) => ({
+    ...g,
+    items: g.items.sort((a, b) => {
+      // Index entries (id === group key) first.
+      if (a.id === g.key) return -1;
+      if (b.id === g.key) return 1;
+      return a.title.localeCompare(b.title);
+    }),
+  }));
+---
+
+<aside class="w-64 shrink-0 border-r border-neutral-200 text-sm">
+  <nav class="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto py-6 pr-4">
+    {groups.map((group) => (
+      <details class="mb-4" open={group.items.some((i) => i.id === currentId)}>
+        <summary class="font-semibold text-neutral-1300 cursor-pointer py-1">
+          {group.title}
+        </summary>
+        <ul class="mt-1 ml-1 border-l border-neutral-200">
+          {group.items.map((item) => (
+            <li>
+              <a
+                href={`/docs/${item.id}`}
+                class={`block py-1 pl-3 border-l-2 -ml-px ${
+                  item.id === currentId
+                    ? 'border-orange-500 text-neutral-1300 font-medium'
+                    : 'border-transparent text-neutral-700 hover:text-neutral-1300'
+                }`}
+              >
+                {item.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    ))}
+  </nav>
+</aside>

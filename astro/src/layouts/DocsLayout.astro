@@ -1,0 +1,128 @@
+---
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import {
+  ChromeHeader,
+  ChromeFooter,
+  ChromeLeftSidebar,
+  ChromeRightSidebar,
+  ChromePageHeader,
+} from '../components/islands/Chrome';
+import UserProvider from '../components/islands/UserProvider';
+
+interface Props {
+  title: string;
+  description?: string;
+  keywords?: string;
+  intro?: string;
+  currentId?: string;
+  languages?: string[];
+}
+
+const { title, description, keywords, intro, currentId, languages } = Astro.props;
+
+// Endpoints are config; PoC leaves them undefined so UserProvider no-ops
+// and the session stays anonymous. Wire these in Phase 4/5 once we decide
+// how env config is plumbed.
+const sessionEndpoint = import.meta.env.PUBLIC_SESSION_ENDPOINT;
+const apiKeysEndpoint = import.meta.env.PUBLIC_API_KEYS_ENDPOINT;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — Ably Docs (Astro PoC)</title>
+    {description && <meta name="description" content={description} />}
+    {keywords && <meta name="keywords" content={keywords} />}
+    <!-- Match the Gatsby site's font loading (src/components/Head.tsx): -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Manrope:wght@200..800&family=Source+Code+Pro:wght@600&family=IBM+Plex+Serif:ital,wght@1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
+    <script is:inline>
+      // Pre-paint: set <html data-lang> before the first frame so gate.css
+      // hides non-matching language variants without a FOUC. Mirrors the
+      // logic in src/stores/language.ts, duplicated here because an inline
+      // script can't import ES modules.
+      (function () {
+        try {
+          var q = new URL(location.href).searchParams.get('lang');
+          var saved = null;
+          try { saved = localStorage.getItem('ably-docs-language'); } catch (_) {}
+          document.documentElement.dataset.lang = q || saved || 'javascript';
+        } catch (_) {
+          document.documentElement.dataset.lang = 'javascript';
+        }
+      })();
+    </script>
+    <!--
+      ClientRouter enables View Transitions API navigation: link clicks swap
+      the <body> content instead of doing a full document reload, so islands
+      marked `transition:persist` keep their DOM + JS state alive across
+      routes. Chrome feels SPA-like; deep-linking, back/forward, external
+      links are unchanged.
+    -->
+    <ClientRouter />
+  </head>
+  <body class="font-sans antialiased text-neutral-1200 bg-white">
+    <UserProvider
+      client:load
+      transition:persist="user-provider"
+      sessionEndpoint={sessionEndpoint}
+      apiKeysEndpoint={apiKeysEndpoint}
+    />
+    <ChromeHeader
+      client:load
+      transition:persist="chrome-header"
+      title={title}
+      slug={currentId ?? ''}
+      languages={languages}
+    />
+    <div class="flex pt-[var(--top-nav-height)] justify-center md:gap-12 lg:gap-16 xl:gap-20">
+      {currentId && (
+        <ChromeLeftSidebar
+          client:load
+          transition:persist="chrome-left-sidebar"
+          title={title}
+          slug={currentId}
+          languages={languages}
+        />
+      )}
+      <div class="flex-1 min-w-0 flex justify-center">
+        <div class="max-w-screen-lg w-full flex md:gap-12 lg:gap-16 xl:gap-20">
+          <main class="flex-1 min-w-0 px-4 py-10">
+            <ChromePageHeader
+              client:load
+              title={title}
+              slug={currentId ?? ''}
+              languages={languages}
+              intro={intro}
+            />
+            <article class="prose prose-neutral max-w-none">
+              <slot />
+            </article>
+            <ChromeFooter
+              client:load
+              transition:persist="chrome-footer"
+              title={title}
+              slug={currentId ?? ''}
+              languages={languages}
+            />
+          </main>
+          {currentId && (
+            <ChromeRightSidebar
+              client:load
+              title={title}
+              slug={currentId}
+              languages={languages}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
