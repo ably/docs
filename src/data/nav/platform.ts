@@ -360,6 +360,7 @@ export default {
               link: '/docs/cli',
               index: true,
             },
+            { name: 'Init', link: '/docs/cli/init' },
             { name: 'Login', link: '/docs/cli/login' },
             {
               name: 'Accounts',
