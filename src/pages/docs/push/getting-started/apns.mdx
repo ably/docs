@@ -108,6 +108,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, ARTPushRegistererDelegate, U
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
 
+        // Subscribe to realtime messages on the channel
+        subscribeToRealtime("my-first-push-channel")
+
         return true
     }
 }
@@ -174,19 +177,12 @@ func deactivatePush() {
     print("Deactivating push notifications...")
 }
 
-/// Get current device registration details
-func getDeviceDetails(_ callback: @escaping (ARTDeviceDetails?, ARTErrorInfo?) -> ()) {
-    realtime.push.admin.deviceRegistrations.get(realtime.device.id, callback: callback)
-}
-
 // MARK: - ARTPushRegistererDelegate Methods
 
 func didActivateAblyPush(_ error: ARTErrorInfo?) {
     print("Push activation: \(error?.localizedDescription ?? "Success")")
-    if let defaultDeviceToken {
-        // Notify UI about activation result
-        activatePushCallback?(defaultDeviceToken, error)
-    }
+    // Notify UI about activation result
+    activatePushCallback?(realtime.device.id, error)
 }
 
 func didDeactivateAblyPush(_ error: ARTErrorInfo?) {
@@ -238,6 +234,14 @@ To subscribe your device to a channel so it can receive channel-based push notif
 <Code>
 ```swift
 // MARK: - Subscribe to Channels
+
+/// Subscribe to realtime messages on a channel
+func subscribeToRealtime(_ channelName: String) {
+    let channel = realtime.channels.get(channelName)
+    channel.subscribe { message in
+        print("Received message: \(message.name ?? "") - \(String(describing: message.data))")
+    }
+}
 
 /// Subscribe to a channel for push notifications
 func subscribeToChannel(_ channelName: String) {
@@ -300,7 +304,6 @@ struct ContentView: View {
     let appDelegate: AppDelegate
 
     @State private var statusMessage = "Ready to start"
-    @State private var selectedChannel = "my-first-push-channel"
 
     var body: some View {
         NavigationStack {
@@ -316,7 +319,7 @@ struct ContentView: View {
                         SetupPushSection(appDelegate: appDelegate, statusMessage: $statusMessage)
 
                         // Subscribe to Channel Section
-                        ChannelSection(appDelegate: appDelegate, statusMessage: $statusMessage, selectedChannel: $selectedChannel)
+                        ChannelSection(appDelegate: appDelegate, statusMessage: $statusMessage)
                     }
                     .padding()
                 }
@@ -370,11 +373,11 @@ struct SetupPushSection: View {
 
             VStack(spacing: 10) {
                 Button(action: {
-                    appDelegate.activatePushNotifications { deviceToken, error in
+                    appDelegate.activatePushNotifications { deviceId, error in
                         if let error = error {
                             statusMessage = "Push activation failed: \(error.localizedDescription)"
                         } else {
-                            statusMessage = "Push notifications activated with device token: \(deviceToken)"
+                            statusMessage = "Push activated. Device ID: \(deviceId)"
                         }
                     }
                     statusMessage = "Activating push notifications..."
@@ -404,32 +407,6 @@ struct SetupPushSection: View {
                     .foregroundStyle(.white)
                     .cornerRadius(8)
                 }
-
-                Button(action: {
-                    appDelegate.getDeviceDetails { details, error in
-                        if let details = details {
-                            print("Device details: \(details)")
-                            statusMessage = """
-                            Device ID: \(details.id)
-                            Client ID: \(details.clientId ?? "n/a")
-                            Platform: \(details.platform)
-                            Form Factor: \(details.formFactor)
-                            """
-                        } else {
-                            statusMessage = "Failed to retrieve device details: \(error?.localizedDescription ?? "Unknown error")"
-                        }
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "info.circle.fill")
-                        Text("Get Device Details")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundStyle(.white)
-                    .cornerRadius(8)
-                }
             }
         }
         .padding()
@@ -441,19 +418,10 @@ struct SetupPushSection: View {
 
 // MARK: - Channel Section
 
-// Helper to get a user-friendly title for a channel
-func titleForChannel(_ name: String) -> String {
-    let titles = [
-        "my-first-push-channel": "Channel 1",
-        "my-first-push-channel-2": "Channel 2"
-    ]
-    return titles[name] ?? name
-}
-
 struct ChannelSection: View {
     let appDelegate: AppDelegate
     @Binding var statusMessage: String
-    @Binding var selectedChannel: String
+    private let channelName = "my-first-push-channel"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -461,52 +429,32 @@ struct ChannelSection: View {
                 .font(.headline)
 
             VStack(spacing: 10) {
-                HStack(spacing: 8) {
-                    Menu {
-                        Button(titleForChannel("my-first-push-channel")) {
-                            selectedChannel = "my-first-push-channel"
-                        }
-                        Button(titleForChannel("my-first-push-channel-2")) {
-                            selectedChannel = "my-first-push-channel-2"
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "line.3.horizontal.decrease.circle")
-                            Text(titleForChannel(selectedChannel))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(8)
-                    }
-
-                    Button(action: {
-                        appDelegate.subscribeToChannel(selectedChannel)
-                        statusMessage = "Subscribed to: \(titleForChannel(selectedChannel))"
-                    }) {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                            Text("Subscribe")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.indigo)
-                        .foregroundStyle(.white)
-                        .cornerRadius(8)
-                    }
-                }
-
                 Button(action: {
-                    appDelegate.unsubscribeFromChannel(selectedChannel)
-                    statusMessage = "Unsubscribed from: \(titleForChannel(selectedChannel))"
+                    appDelegate.subscribeToChannel(channelName)
+                    statusMessage = "Subscribed to: \(channelName)"
                 }) {
                     HStack {
-                        Image(systemName: "xmark.circle.fill")
-                        Text("Unsubscribe from \(titleForChannel(selectedChannel))")
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Subscribe to Channel")
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.gray)
+                    .background(Color.purple)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                }
+
+                Button(action: {
+                    appDelegate.unsubscribeFromChannel(channelName)
+                    statusMessage = "Unsubscribed from: \(channelName)"
+                }) {
+                    HStack {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Unsubscribe from Channel")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.orange)
                     .foregroundStyle(.white)
                     .cornerRadius(8)
                 }
@@ -526,7 +474,7 @@ push notifications and subscribe to channels.
 
 ## Step 5: Publish a push notification <a id="step-5"/>
 
-Tap **Activate Push** and wait until the status message displays the received device token. You can get your device ID from the **Get Device Details** button (don't confuse it with the device token).
+Tap **Activate Push** and wait until the status message displays your device ID.
 
 ### Publish directly to your device <a id="step-5-direct"/>
 
@@ -543,7 +491,7 @@ ably push publish --client-id push-tutorial-client \
 
 ### Publish via a channel <a id="step-5-channel"/>
 
-Subscribe to "Channel 1" in the UI, then publish a push notification to the channel using the [Ably CLI](/docs/platform/tools/cli):
+Tap **Subscribe to Channel** in the UI, then publish a push notification to the channel using the [Ably CLI](/docs/platform/tools/cli):
 
 <Code fixed="true">
 ```shell
@@ -784,6 +732,8 @@ and `${DEVICE_TOKEN}` with the location device token you received in the console
 Read how to obtain the `AUTHENTICATION_TOKEN` on [Apple Developer Portal](https://developer.apple.com/documentation/usernotifications/establishing-a-token-based-connection-to-apns).
 
 Verify that your app receives and handles location push notifications correctly in the `LocationPushService` class.
+
+![Screenshot of the Swift push tutorial application with location pushes](../../../../images/content/screenshots/getting-started/apns-swift-getting-started-guide-2.png)
 
 ## Next steps <a id="next-steps"/>
 
