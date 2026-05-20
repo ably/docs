@@ -6,7 +6,7 @@ meta_keywords: "Push Notifications Kotlin, Ably Push, FCM, Android Push, Kotlin 
 
 This guide will get you started with Ably Push Notifications in a new Android application using Kotlin.
 
-You'll learn how to set up your application with Firebase Cloud Messaging (FCM), register devices with Ably, send push notifications, subscribe to channel-based push, and handle incoming notifications.
+You'll learn how to set up your application with Firebase Cloud Messaging (FCM), register devices with Ably, publish push notifications, subscribe to channel-based push, and handle incoming notifications.
 
 <Aside data-type='note'>
 Using an AI coding assistant? [Teach it Ably](/docs/platform/ai-llms#agent-skills) with Agent Skills for all popular AI coding agents. Run `claude plugin add ably/agent-skills` or `npx skills add ably/agent-skills` to get started.
@@ -16,10 +16,11 @@ Using an AI coding assistant? [Teach it Ably](/docs/platform/ai-llms#agent-skill
 
 1. [Sign up](https://ably.com/signup) for an Ably account.
 2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
-3. Your API key needs the `publish` and `subscribe` capabilities. For sending push notifications from your app, you'll also need the `push-admin` capability.
-4. For channel-based push, add a rule for the channel with **Push notifications enabled** checked. In the dashboard left sidebar: **Configuration** → **Rules** → **Add** or **Edit** a rule, then enable the Push notifications option. See [rules](/docs/channels#rules) for details.
-5. Install [Android Studio](https://developer.android.com/studio).
-6. Use a real Android device or an emulator with Google Play Services installed (required for FCM).
+  * Your API key needs the `publish` and `subscribe` capabilities.
+  * Also add the `push-admin` capability if you're using the same API key to publish a push notification. In production this would more likely be a server using a different API key.
+3. Add a rule to a channel so you can test sending push notifications via a channel. Select [**Rules**](https://ably.com/accounts/any/apps/any/app_namespaces) in the Ably dashboard, add a new rule and enable the **Push notifications** option.
+4. Install [Android Studio](https://developer.android.com/studio).
+5. Use a real Android device or an emulator with Google Play Services installed (required for FCM).
 
 ### (Optional) Install Ably CLI <a id="install-cli"/>
 
@@ -154,7 +155,105 @@ Register your `Application` class in `AndroidManifest.xml` inside the `<applicat
 
 ## Step 2: Set up push notifications <a id="step-2"/>
 
-To receive push notifications on Android, you need to integrate with FCM. Create a `PushNotificationService.kt` file that extends `FirebaseMessagingService`. This service handles new FCM tokens and incoming push messages:
+Add push activation and deactivation to your `MainActivity.kt`. The Ably Android SDK activates push asynchronously and the result arrives via Android's broadcast system, so register a `BroadcastReceiver` to handle it (the following imports cover all steps in this guide):
+
+<Code>
+```kotlin
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import android.widget.Button
+import android.widget.ScrollView
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import io.ably.lib.types.AblyException
+import io.ably.lib.types.ErrorInfo
+import io.ably.lib.realtime.CompletionListener
+import io.ably.lib.util.IntentUtils
+import com.google.gson.JsonObject
+import io.ably.lib.types.Message
+import io.ably.lib.types.MessageExtras
+import io.ably.lib.types.Param
+
+class MainActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val CHANNEL_NAME = "my-first-push-channel"
+    }
+
+    private val realtime by lazy { AblyHelper.getInstance() }
+
+    private val pushActivationReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                "io.ably.broadcast.PUSH_ACTIVATE" -> {
+                    val error = IntentUtils.getErrorInfo(intent)
+                    if (error != null) {
+                        Log.e(TAG, "Push activation failed: ${error.message}")
+                        updateStatus("Push activation failed: ${error.message}")
+                    } else {
+                        try {
+                            val deviceId = realtime.device().id
+                            Log.d(TAG, "Push activated. Device ID: $deviceId")
+                            updateStatus("Push activated. Device ID: $deviceId")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Push activated but failed to get device ID: ${e.message}")
+                            updateStatus("Push activated")
+                        }
+                    }
+                }
+                "io.ably.broadcast.PUSH_DEACTIVATE" -> {
+                    val error = IntentUtils.getErrorInfo(intent)
+                    if (error != null) {
+                        Log.e(TAG, "Push deactivation failed: ${error.message}")
+                    } else {
+                        Log.d(TAG, "Push deactivated")
+                        updateStatus("Push notifications deactivated")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateStatus(message: String) {
+        runOnUiThread {
+            Log.d(TAG, message)
+            // Wire this to your status TextView in Step 4
+        }
+    }
+
+    fun activatePushNotifications() {
+        updateStatus("Activating push notifications...")
+        try {
+            realtime.push.activate()
+        } catch (e: AblyException) {
+            updateStatus("Activation error: ${e.message}")
+        }
+    }
+
+    fun deactivatePushNotifications() {
+        updateStatus("Deactivating push notifications...")
+        try {
+            realtime.push.deactivate()
+        } catch (e: AblyException) {
+            updateStatus("Deactivation error: ${e.message}")
+        }
+    }
+}
+```
+</Code>
+
+Your app is now configured to receive push notifications once activated.
+
+### Handle push notifications <a id="step-2-handle"/>
+
+Create a `PushNotificationService.kt` file that extends `FirebaseMessagingService`. This service handles new FCM tokens and incoming push messages:
 
 <Code>
 ```kotlin
@@ -238,105 +337,9 @@ Register the service in `AndroidManifest.xml` inside the `<application>` element
 ```
 </Code>
 
-Now add push activation and deactivation to your `MainActivity.kt`. The Ably Android SDK activates push asynchronously and the result arrives via Android's broadcast system, so register a `BroadcastReceiver` to handle it (the following imports cover all steps in this guide):
+Push notifications delivered while your app is in the background are handled automatically by the FCM SDK and displayed as system notifications. The `onMessageReceived()` method handles foreground notifications via `NotificationManager`.
 
-<Code>
-```kotlin
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
-import android.os.Bundle
-import android.util.Log
-import android.widget.Button
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import io.ably.lib.types.AblyException
-import io.ably.lib.types.ErrorInfo
-import io.ably.lib.realtime.CompletionListener
-import io.ably.lib.util.IntentUtils
-import com.google.gson.JsonObject
-import io.ably.lib.types.Message
-import io.ably.lib.types.MessageExtras
-import io.ably.lib.types.Param
-
-class MainActivity : AppCompatActivity() {
-
-    companion object {
-        private const val TAG = "MainActivity"
-        private const val CHANNEL_NAME = "exampleChannel1"
-    }
-
-    private val realtime by lazy { AblyHelper.getInstance() }
-
-    private val pushActivationReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                "io.ably.broadcast.PUSH_ACTIVATE" -> {
-                    val error = IntentUtils.getErrorInfo(intent)
-                    if (error != null) {
-                        Log.e(TAG, "Push activation failed: ${error.message}")
-                        updateStatus("Push activation failed: ${error.message}")
-                    } else {
-                        try {
-                            val deviceId = realtime.device().id
-                            Log.d(TAG, "Push activated. Device ID: $deviceId")
-                            updateStatus("Push activated. Device ID: $deviceId")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Push activated but failed to get device ID: ${e.message}")
-                            updateStatus("Push activated")
-                        }
-                    }
-                }
-                "io.ably.broadcast.PUSH_DEACTIVATE" -> {
-                    val error = IntentUtils.getErrorInfo(intent)
-                    if (error != null) {
-                        Log.e(TAG, "Push deactivation failed: ${error.message}")
-                    } else {
-                        Log.d(TAG, "Push deactivated")
-                        updateStatus("Push notifications deactivated")
-                    }
-                }
-            }
-        }
-    }
-
-    private fun updateStatus(message: String) {
-        runOnUiThread {
-            Log.d(TAG, message)
-            // Wire this to your status TextView in Step 4
-        }
-    }
-
-    fun activatePushNotifications() {
-        updateStatus("Activating push notifications...")
-        try {
-            realtime.push.activate()
-        } catch (e: AblyException) {
-            updateStatus("Activation error: ${e.message}")
-        }
-    }
-
-    fun deactivatePushNotifications() {
-        updateStatus("Deactivating push notifications...")
-        try {
-            realtime.push.deactivate()
-        } catch (e: AblyException) {
-            updateStatus("Deactivation error: ${e.message}")
-        }
-    }
-}
-```
-</Code>
-
-Your app is now configured to receive push notifications once activated.
-
-## Step 3: Subscribe and test push notifications <a id="step-3"/>
-
-Push notifications delivered while your app is in the background are handled automatically by the FCM SDK and displayed as system notifications. For foreground handling, your `PushNotificationService.onMessageReceived()` method (from Step 2) displays a notification via `NotificationManager`.
+## Step 3: Subscribe to channel push notifications <a id="step-3"/>
 
 To subscribe your device to a channel so it can receive channel-based push notifications, add the following methods to `MainActivity`:
 
@@ -386,33 +389,6 @@ fun subscribeToRealtime(channelName: String) {
 }
 ```
 </Code>
-
-<Aside>
-Sending push notifications using `deviceId` or `clientId` requires the `push-admin` capability for your API key. Use this method for testing purposes. In a production environment, you would typically send push notifications from your backend server (by posting messages with `push` `extras` field to a channel).
-</Aside>
-
-Now use the [Ably CLI](/docs/platform/tools/cli) to test publishing a push notification to your client ID:
-
-<Code>
-```shell
-ably push publish --client-id push-tutorial-client \
-  --title "Test push" \
-  --body "Hello from CLI!" \
-  --data '{"foo":"bar","baz":"qux"}'
-```
-</Code>
-
-Or send directly to a device ID:
-
-<Code>
-```shell
-ably push publish --device-id <your-device-id> \
-  --title "Test push" \
-  --body "Hello from device ID!"
-```
-</Code>
-
-To send push notifications via a channel, you first need a UI to subscribe to the channel.
 
 ## Step 4: Build the UI <a id="step-4"/>
 
@@ -509,7 +485,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val CHANNEL_NAME = "exampleChannel1"
+        private const val CHANNEL_NAME = "my-first-push-channel"
     }
 
     private val realtime by lazy { AblyHelper.getInstance() }
@@ -648,15 +624,32 @@ class MainActivity : AppCompatActivity() {
 ```
 </Code>
 
-Build and run your app on an Android device or emulator. Tap **Activate Push** and wait until the status message displays your device ID. Try sending a push using the Ably CLI commands shown in Step 3.
+Build and run your app on an Android device or emulator.
 
-### Send push via channel <a id="step-4-send-channel"/>
+## Step 5: Publish a push notification <a id="step-5"/>
 
-To test push notifications via channel, tap **Subscribe to Channel** in the app and then publish a push notification to the channel using the [Ably CLI](/docs/platform/tools/cli):
+In the app, tap **Activate Push** and wait until the status message displays your device ID.
 
-<Code>
+### Publish directly to your device <a id="step-5-direct"/>
+
+Publish a push notification directly to your client ID (or device ID using `--device-id` instead of `--client-id`) via the [Ably CLI](/docs/platform/tools/cli):
+
+<Code fixed="true">
 ```shell
-ably push publish --channel exampleChannel1 \
+ably push publish --client-id push-tutorial-client \
+  --title "Test push" \
+  --body "Hello from CLI!" \
+  --data '{"foo":"bar","baz":"qux"}'
+```
+</Code>
+
+### Publish via a channel <a id="step-5-channel"/>
+
+Tap **Subscribe to Channel** in the app, then publish a push notification to the channel using the [Ably CLI](/docs/platform/tools/cli):
+
+<Code fixed="true">
+```shell
+ably push publish --channel my-first-push-channel \
   --title "Hello" \
   --body "World!" \
   --message '{"name":"greeting","data":"Hello World!"}'
@@ -665,153 +658,9 @@ ably push publish --channel exampleChannel1 \
 
 ![Screenshot of the Kotlin push tutorial application](../../../../images/content/screenshots/getting-started/fcm-push-getting-started-guide.png)
 
-If you tap **Unsubscribe from Channel**, you will no longer receive push notifications for that channel. Send the same command again and verify that no notification is received.
+If you tap **Unsubscribe from Channel**, you will no longer receive push notifications for that channel. Run the same command again and verify that no notification is received.
 
-You can also send push notifications right from your app. The next step will show you how.
-
-## Step 5: Send push with code <a id="step-5"/>
-
-Just as you can send push notifications through the Ably CLI or dashboard, you can also send them directly from your app using `deviceId` (or `clientId`), or channel publishing methods. For channel publishing, you don't need the admin capabilities for your API key.
-
-Add the following methods to `MainActivity`:
-
-<Code>
-```kotlin
-fun sendPushToDevice() {
-    val deviceId = realtime.device().id
-    val recipient = arrayOf(Param("deviceId", deviceId))
-    val payload = JsonObject().apply {
-        add("notification", JsonObject().apply {
-            addProperty("title", "Push Tutorial")
-            addProperty("body", "Hello from device ID!")
-        })
-        add("data", JsonObject().apply {
-            addProperty("foo", "bar")
-            addProperty("baz", "qux")
-        })
-    }
-
-    realtime.push.admin.publishAsync(recipient, payload, object : CompletionListener {
-        override fun onSuccess() {
-            updateStatus("Push sent to device ID: $deviceId")
-        }
-        override fun onError(reason: ErrorInfo?) {
-            updateStatus("Failed to send push to device: ${reason?.message}")
-        }
-    })
-}
-
-fun sendPushToClient() {
-    val clientId = realtime.auth.clientId
-    val recipient = arrayOf(Param("clientId", clientId))
-    val payload = JsonObject().apply {
-        add("notification", JsonObject().apply {
-            addProperty("title", "Push Tutorial")
-            addProperty("body", "Hello from client ID!")
-        })
-        add("data", JsonObject().apply {
-            addProperty("foo", "bar")
-            addProperty("baz", "qux")
-        })
-    }
-
-    realtime.push.admin.publishAsync(recipient, payload, object : CompletionListener {
-        override fun onSuccess() {
-            updateStatus("Push sent to client ID: $clientId")
-        }
-        override fun onError(reason: ErrorInfo?) {
-            updateStatus("Failed to send push to client: ${reason?.message}")
-        }
-    })
-}
-```
-</Code>
-
-Sending to a channel is just publishing a message on a channel with a `push` `extras` field:
-
-<Code>
-```kotlin
-fun sendPushToChannel(channelName: String) {
-    val extras = JsonObject().apply {
-        add("push", JsonObject().apply {
-            add("notification", JsonObject().apply {
-                addProperty("title", "Channel Push")
-                addProperty("body", "Sent push to $channelName")
-            })
-            add("data", JsonObject().apply {
-                addProperty("foo", "bar")
-                addProperty("baz", "qux")
-            })
-        })
-    }
-
-    val message = Message("example", "Hello from channel!")
-    message.extras = MessageExtras(extras)
-
-    realtime.channels.get(channelName).publish(message, object : CompletionListener {
-        override fun onSuccess() {
-            updateStatus("Push sent to channel: $channelName")
-        }
-        override fun onError(reason: ErrorInfo?) {
-            updateStatus("Failed to send push to channel: ${reason?.message}")
-        }
-    })
-}
-```
-</Code>
-
-Add three more buttons to `activity_main.xml` (before the `ScrollView`):
-
-<Code>
-```xml
-<Button
-    android:id="@+id/sendToDeviceBtn"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:text="Send Push to Device"
-    android:textColor="#FFFFFF"
-    android:backgroundTint="#6610F2"
-    android:layout_marginBottom="8dp" />
-
-<Button
-    android:id="@+id/sendToClientBtn"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:text="Send Push to Client"
-    android:textColor="#FFFFFF"
-    android:backgroundTint="#20C997"
-    android:layout_marginBottom="8dp" />
-
-<Button
-    android:id="@+id/sendToChannelBtn"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:text="Send Push to Channel"
-    android:textColor="#FFFFFF"
-    android:backgroundTint="#17A2B8"
-    android:layout_marginBottom="16dp" />
-```
-</Code>
-
-Wire up the new buttons in `MainActivity.onCreate()`:
-
-<Code>
-```kotlin
-findViewById<Button>(R.id.sendToDeviceBtn).setOnClickListener {
-    sendPushToDevice()
-}
-findViewById<Button>(R.id.sendToClientBtn).setOnClickListener {
-    sendPushToClient()
-}
-findViewById<Button>(R.id.sendToChannelBtn).setOnClickListener {
-    sendPushToChannel(CHANNEL_NAME)
-}
-```
-</Code>
-
-Build and run your app again. Use the new buttons to send push notifications directly to your device ID, client ID, or the subscribed channel:
-
-![Screenshot of the Kotlin push tutorial application](../../../../images/content/screenshots/getting-started/fcm-push-getting-started-guide-2.png)
+To see the full list of options for publishing push notifications with the Ably CLI, run `ably push publish --help` or see the [Ably CLI push documentation](/docs/cli/push). To publish push notifications from your own server code instead of the CLI, see [Push notification publishing](https://ably.com/docs/push/publish).
 
 ## Next steps <a id="next-steps"/>
 
