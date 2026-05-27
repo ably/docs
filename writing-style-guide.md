@@ -287,6 +287,53 @@ Technical documentation should maintain a natural, human writing style and avoid
 
 These guidelines help ensure documentation feels authentic and professionally written while maintaining readability and clarity.
 
+The additional patterns below have been seen repeatedly in AI-assisted drafts and should be cut from final copy:
+
+* Corrective antithesis: "Not X. But Y." constructions that set up something the reader never assumed and correct it for drama. Say what you mean instead. Example to cut: "Cancellation isn't a connection-level operation. It's a turn-level signal" becomes "Cancellation is a turn-level operation".
+* Dramatic pivot phrases. Cut "But here's the thing", "Here's the catch", "Here's what most people miss", "Here's the bind". Fold the point into the sentence.
+* Soft hedging. Cut "It's worth noting that", "Something we've observed", "This is where X really shines", "It's important to remember". State the thing directly.
+* Throat-clearing intros. No "Let's explore", "Let's dive in", "Let's break it down", "In this article we'll", "First, let's understand". The page header is the title, and the first paragraph should land the reader in the middle of the topic.
+* Gift-wrapped endings. Cut "In summary", "In conclusion", "Ultimately", "Moving forward", "At the end of the day". Pages end with related links or the last substantive paragraph; they do not restate themselves.
+* Generic examples. "Imagine an e-commerce app" or "consider a chat application" with no specific behaviour is filler. Use concrete examples that name a real behaviour (for example, "a user closes their laptop and picks up their phone", "a tool that takes longer than the agent's runtime budget").
+* Overexplaining the obvious. Developers know what an HTTP request, a WebSocket, a React hook, a JWT, and the `await` keyword are. Do not define them. State the specific behaviour the reader needs to know about this surface.
+* Audience-aware cuts. Once the audience is established (developers and senior engineers), cut explanations of things they already understand. Restating known concepts to fill space makes the writer look unsure of the reader.
+* Copy-paste metaphors. If the same metaphor or framing phrase appears more than twice, vary it. "Drop-in", "the session as the anchor", and "the layer that fills the gap" each get used once and stay specific.
+* Staccato runs. Avoid stacks of short sentences with no variation (for example, "Sessions are durable. They persist. They survive disconnects. They span devices"). Combine some, let others stretch. Rhythm should follow thinking, not a drumbeat.
+
+## Patterns to keep
+
+A few patterns are worth keeping when they earn their place. These are counter-rules to the patterns above:
+
+* Fragments are fine when the rhythm asks for one. "No application code needed." is a complete-enough thought.
+* Starting a sentence with "And" or "But" is fine sparingly.
+* A comma splice that reads well is acceptable.
+* Use judgment. If a sentence reads better with a "rule break", leave it. The goal is prose that sounds like a person wrote it.
+
+## Layer-0 hook for opening prose
+
+Every page should open with a hook that answers "what is this, why should I care?". The `intro:` frontmatter feeds the auto-generated page header, and the body's first paragraph reinforces it.
+
+Concept pages: an outcome-claim sentence, then mechanism. Example: "A session is the durable, shared state of a conversation. It outlives any single connection so a user can close their laptop, switch to a phone, or refresh the page without losing the stream."
+
+Feature pages: an outcome sentence followed by a mechanism sentence. Example: "Your users can change direction mid-response. AI Transport's session layer lets a client cancel the in-progress turn and start a new one without breaking the stream."
+
+Both patterns survive review when they sound like a person writing, not a Mad Libs template ("Your users can [X]. The [Y] layer lets [Z].").
+
+## Asides
+
+Asides (`<Aside data-type='...'/>`) carry callouts in MDX pages. Use them sparingly:
+
+* `important` only for production-blocking issues.
+* `note` for genuine context the reader would otherwise miss.
+* `new` for newly-added features.
+* `experimental` for features still in preview.
+
+Default to no aside; let prose carry the emphasis. Decorative asides get purged on review.
+
+## API keys in client code
+
+Never include real API keys in client-side code samples. Use `authUrl: '/auth'` as the placeholder and link out to the relevant authentication setup page once per document. This applies to every code sample on every page, with no exceptions.
+
 ## Other considerations
 
 Some additional points to bear in mind:

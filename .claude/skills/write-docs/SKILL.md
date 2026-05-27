@@ -59,7 +59,7 @@ Pick the template that matches the page you are writing.
 
 ### Feature page
 
-A feature page maps to one developer JTBD. Use the canonical wireframe as the structural reference. The section order:
+A feature page maps to one developer JTBD. The section order below distils the structural pattern feature pages follow.
 
 1. **Layer-0 hook.** Two sentences, outcome → mechanism.
 2. **UX sketch + JTBD one-liner.** Include the sketch where there is a discernible UX pattern; prose-only is acceptable when there is not (an architectural feature like concurrent-turns may not have a UX sketch).
@@ -88,7 +88,7 @@ Concept pages convey the mental model. The pattern is *problem → model → wha
 A page that explains how Ably composes with a third-party framework (Vercel AI SDK, Temporal, Inngest, and so on).
 
 1. **What the framework brings.** A capability table — what the framework owns by design.
-2. **What Ably adds.** A capability table — what Ably layers on. Use verbatim-aligned bullets across sibling framework pages.
+2. **What Ably adds.** A capability table for what Ably layers on. **Sibling framework pages** are pages in the same `frameworks/` sub-tree that compete for the same developer JTBD (for example, Vercel AI SDK UI alongside a future Temporal page). Align bullets across siblings where the capability genuinely overlaps so a reader can compare like for like. Introduce framework-specific rows where the integration shape differs. Do not force parity when one framework simply does not own that capability. Comparability is the goal, not forced parity.
 3. **Where they connect.** The minimal integration code. The plug-in point (`ChatTransport`, codec, adapter).
 4. **Scope and trade-offs.** Frame the framework's scope as intentional design. Never "the framework can't…".
 5. **Read next.** Getting-started, sibling framework page, API reference for the integration.
@@ -106,7 +106,7 @@ A page that explains how Ably composes with a third-party framework (Vercel AI S
 
 ### Getting started page
 
-A walkthrough that ends with a working app. Walkthrough only — prompts-as-docs is a future enhancement, not in scope yet.
+A walkthrough that ends with a working app.
 
 1. **What you build.** Bulleted outcomes — "tokens stream over a durable session", "second tab joins the same session", "stop button cancels the turn". The reader knows what they will have at the end.
 2. **Prerequisites.** Versions, accounts, API keys required.
@@ -320,11 +320,20 @@ Prior docs drift. The SDK is the source of truth.
 
 ### Workflow before writing any code snippet
 
-1. Find the latest published version of the SDK you are documenting: `npm view <package>` for `latest` and the repo URL.
-2. Pull the package: `npm pack <package>@<version>` into a temp dir, extract, read the `.d.ts` files.
+1. Find the SDK version this docs page targets in `src/data/languages/languageData.ts`. That file is the canonical version registry, keyed by product and language. Use that exact version, not whatever npm currently labels `latest`. The page header reads from the same registry, so the code samples and the version badge stay aligned.
+2. Pull the package at that version: `npm pack <package>@<version>` into a temp dir, extract, read the `.d.ts` files.
 3. Cross-check the signatures, option shapes, and return types your snippet uses.
 4. Where the SDK exposes both a core and a framework-bound entry point (for example `@ably/ai-transport` and `@ably/ai-transport/vercel`), pick the entry point your snippet's audience uses and follow its option shape.
 5. After drafting, re-grep your file for any old patterns the SDK no longer supports.
+
+### Documenting a pre-release SDK
+
+If the docs page targets an SDK version that is not yet on npm:
+
+1. Bump the version in `src/data/languages/languageData.ts` to the upcoming release.
+2. Read the `.d.ts` files straight from the SDK repo. Check out the matching git tag or release branch (or use a local checkout if one is on disk), then read `dist/` or `src/`.
+3. Write the docs against that source.
+4. Flag the PR as gated on the SDK release. Merge only once the SDK version exists on npm and `languageData.ts` matches.
 
 ### Common drift patterns to check
 
@@ -337,75 +346,18 @@ Whenever an SDK has had a major refactor, sweep the docs for these patterns:
 - Renamed option keys (for example `id` → `chatId`).
 - Renamed enum/literal values (for example `TurnEndReason` going from `'completed' | 'failed' | 'cancelled'` to `'complete' | 'error' | 'cancelled'`).
 
-## Writing standards (the parts that catch people out)
+## Writing standards
 
-`writing-style-guide.md` is the source of truth. The standards below are the ones most commonly violated in AI-assisted drafts.
+The canonical source is [`writing-style-guide.md`](../../../writing-style-guide.md). **You must read it before making any changes to the docs.** It covers International English, present tense, active voice, second person, imperative headings, sentence case, banned patterns (em dashes, bold-prefix bullets, Latin abbreviations, subjective phrases, vague modals, slang, "we" as subject, pricing detail, API keys in client code), the Layer-0 hook pattern, MDX asides, AI-fingerprint patterns to strip from drafts, and the counter-rules to keep.
 
-### Banned outright
-
-- **Em dashes.** Use commas, full stops, or restructure. Em dashes are an AI fingerprint and the style guide forbids them.
-- **Bold-prefix bullets.** No `**Feature:** description` shape. Another AI fingerprint.
-- **Latin abbreviations.** Use "for example", "that is", "and so on" instead of `e.g.`, `i.e.`, `etc.`.
-- **Subjective phrases.** No "easily", "simply", "it's as easy as that". Show the steps; let the reader judge.
-- **Vague modals where definite language fits.** No "might", "would", "should" when stating a fact.
-- **Slang and idiomatic phrases.** No "you're good to go", "fire up the server", "hit the button".
-- **"We" as the subject.** Use "you" for the reader, "Ably" for the company. Never "we".
-- **Pricing detail.** Link to `/docs/platform/pricing`; do not restate numbers in technical docs.
-- **API keys in client code.** Always.
-
-### Required
-
-- International English (US spelling, Americanisms removed). Merriam-Webster as the dictionary.
-- Present tense, active voice. "The client creates the connection", not "the connection is created".
-- Imperative headings. "Configure the client", not "Configuring the client". FAQ entries phrased as questions are the only exception.
-- Sentence case headings, except for product names and titled works.
-- Numbers under ten generally spelled as words ("two minutes", not "2 minutes"). Larger numbers stay as numerals.
-- Each sentence in a bulleted list ends with a full stop. Single-word bullets do not.
-- Code fences are preceded by a colon with a blank line between the colon and the fence. Headings never sit directly above a code block; introductory text always follows the heading.
-- JavaScript and TypeScript code uses single quotes for strings (excluding JSON).
-
-### Asides (`<Aside data-type='...'/>`)
-
-Sparingly. `important` only for production-blocking issues. `note` for genuine context. `new` for newly-added features. Default to no aside — prose carries the emphasis. Decorative asides get purged on review.
-
-### Layer-0 hook patterns
-
-Concept page: outcome-claim sentence, then mechanism. Example: "A session is the durable, shared state of a conversation. It outlives any single connection so a user can close their laptop, switch to a phone, or refresh the page without losing the stream."
-
-Feature page: outcome sentence + mechanism sentence. Example: "Your users can change direction mid-response. AI Transport's session layer lets a client cancel the in-progress turn and start a new one without breaking the stream."
-
-Both patterns survive review when they sound like a person writing — not Mad Libs ("Your users can [X]. AI Transport's [Y] layer lets [Z].").
-
-### Patterns to strip after the first draft
-
-These are the AI-writing patterns that surfaced repeatedly during the AI Transport refresh and that have to be cut. They overlap with the `/deslop` skill (`~/.claude/skills/deslop/SKILL.md`) — run it if you have it installed, but the rules below are the load-bearing ones for this repo. Re-read your draft against each.
-
-- **Corrective antithesis.** "Not X. But Y." constructions that set up something the reader never assumed and correct it for drama. Just say what you mean. Example to cut: "Cancellation isn't a connection-level operation. It's a turn-level signal." → "Cancellation is a turn-level operation."
-- **Dramatic pivot phrases.** Cut "But here's the thing", "Here's the catch", "Here's what most people miss", "Here's the bind". Fold the point into the sentence.
-- **Soft hedging.** Cut "It's worth noting that", "Something we've observed", "This is where X really shines", "It's important to remember". Say the thing.
-- **Throat-clearing intros.** No "Let's explore", "Let's dive in", "Let's break it down", "In this article we'll", "First, let's understand". The page header is the title; the first paragraph lands the reader in the middle of the topic. The Layer-0 hook is incompatible with throat-clearing.
-- **Gift-wrapped endings.** Cut "In summary", "In conclusion", "Ultimately", "Moving forward", "At the end of the day". Pages end with the Related features list, the Read next links, or the last substantive paragraph. They do not restate themselves.
-- **Generic examples.** "Imagine an e-commerce app" or "consider a chat application" with no specific behaviour is filler. Use concrete, specific examples that name a real behaviour ("a user closes their laptop and picks up their phone", "a tool that takes longer than the agent's runtime budget", "two devices submitting the same approval at the same time").
-- **Overexplaining the obvious.** Developers know what an HTTP request, a WebSocket, a React hook, a JWT, and the `await` keyword are. Don't define them. State the specific behaviour the reader needs to know about this surface.
-- **Audience-aware cuts.** Once you have established the audience (developers and senior engineers, per principle 5), cut explanations of things they already understand. Restating known concepts to fill space makes the writer look unsure of their reader.
-- **Copy-paste metaphors.** If the same metaphor or framing phrase appears more than twice, vary it. "Drop-in", "the session as the anchor", "the layer that fills the gap" each get used once and stay specific.
-- **Staccato runs.** Avoid stacks of short sentences with no variation. ("Sessions are durable. They persist. They survive disconnects. They span devices.") Combine some; let others stretch. Rhythm should follow thinking, not a drumbeat.
-
-### Patterns the SDK source taught us to keep
-
-A few patterns are worth keeping when they earn their place:
-
-- Fragments are fine when the rhythm asks for one. "No application code needed." is a complete-enough thought.
-- Starting a sentence with "And" or "But" is fine sparingly.
-- A comma splice that reads well is acceptable.
-- Use judgment. If a sentence reads better with a "rule break", leave it. The goal is prose that sounds like a person wrote it.
+The style guide takes precedence over anything else in this skill. If a rule here ever conflicts with the style guide, the style guide wins.
 
 ## Per-page workflow
 
 1. **Identify the page type.** Pick the matching template above.
 2. **Draft the prose against the template.** Keep it tight.
 3. **Verify every code snippet against the actual SDK.** See the code-accuracy section.
-4. **Strip AI-writing patterns.** Re-read against the "Patterns to strip after the first draft" list.
+4. **Strip AI-writing patterns.** Re-read against the "Avoid AI-generated content fingerprints" section of [`writing-style-guide.md`](../../../writing-style-guide.md).
 5. **Self-check against the verification greps below.**
 6. **Open the PR.** Reviewer (not the writer) reviews against this skill and the writing-style guide.
 
@@ -510,40 +462,33 @@ When reviewing someone else's docs PR (or your own at PR time), walk this list. 
 
 **Writing standards**
 
-9. No em dashes.
-10. No bold-prefix bullets.
-11. Second person ("you"), Ably (not "we").
-12. No Latin abbreviations.
-13. No subjective phrases or vague modals where definite language fits.
-14. Imperative headings, sentence case.
-15. Bulleted-list sentences end with full stops.
-16. Pricing detail absent — only the link to `/docs/platform/pricing`.
-17. Author ran `/deslop`.
+9. Page complies with the rules in [`writing-style-guide.md`](../../../writing-style-guide.md). Use the verification greps above to spot the common violations (em dashes, bold-prefix bullets, Latin abbreviations, subjective phrases, vague modals, "we" as the subject, AI-fingerprint patterns).
+10. Author ran `/deslop` (or equivalent AI-pattern check).
 
 **Code accuracy**
 
-18. Every code snippet matches the actual SDK at the latest tagged release (factory names, option shapes, return shapes, method locations, enum values).
-19. No API keys in client code.
-20. `authUrl: '/auth'` used for the placeholder where auth is referenced.
+11. Every code snippet matches the actual SDK at the latest tagged release (factory names, option shapes, return shapes, method locations, enum values).
+12. No API keys in client code.
+13. `authUrl: '/auth'` used for the placeholder where auth is referenced.
 
 **Mechanics**
 
-21. Frontmatter complete: `title`, `meta_description`, `meta_keywords`, `intro`, `redirect_from` where the page moved or merged. (Per-interface API reference pages omit `intro`.)
-22. New page added to the relevant nav file under `src/data/nav/`.
-23. `<Aside>` used sparingly and load-bearing — no decorative asides.
-24. Internal links resolve. No references to URLs that only exist in `redirect_from` frontmatter.
+14. Frontmatter complete: `title`, `meta_description`, `meta_keywords`, `intro`, `redirect_from` where the page moved or merged. (Per-interface API reference pages omit `intro`.)
+15. New page added to the relevant nav file under `src/data/nav/`.
+16. `<Aside>` used sparingly and load-bearing. No decorative asides.
+17. Internal links resolve. No references to URLs that only exist in `redirect_from` frontmatter.
 
 **API reference pages only** (additional checks)
 
-25. Method H2s use descriptive verb phrases (`## Create a client transport`), not bare method names. Anchor is JS-canonical kebab-case.
-26. Every method H2 is followed by `<MethodSignature>{` … `}</MethodSignature>` (template-literal form for signatures with `<` or `>`).
-27. Every method with parameters has `### Parameters <a id="{slug}-params"/>` with a 4-column `Parameter | Required | Description | Type` table.
-28. Every method has `### Returns <a id="{slug}-returns"/>` unless it returns `void`/`Unit`.
-29. Type tables default to hidden (`<Table id='X' hidden>`) referenced via `<Table id='X'/>`. Visible types only when they meet one of the four promotion criteria.
-30. Hidden table audit passes — every hidden has at least one inline reference; every reference has a definition.
-31. Error type referenced via cross-page link to its canonical home (lowercase `#errorinfo` anchor).
-32. Page ends with `## Example` showing end-to-end usage.
-33. No same-page markdown anchor links to type anchors (`[X](#X)`). Type names in prose are backticked; cross-page references go to the type's own page.
+18. Method H2s use descriptive verb phrases (`## Create a client transport`), not bare method names. Anchor is JS-canonical kebab-case.
+19. Every method H2 is followed by `<MethodSignature>{` … `}</MethodSignature>` (template-literal form for signatures with `<` or `>`).
+20. Every method with parameters has `### Parameters <a id="{slug}-params"/>` with a 4-column `Parameter | Required | Description | Type` table.
+21. Every method has `### Returns <a id="{slug}-returns"/>` unless it returns `void`/`Unit`.
+22. Type tables default to hidden (`<Table id='X' hidden>`) referenced via `<Table id='X'/>`. Visible types only when they meet one of the four promotion criteria.
+23. Hidden table audit passes. Every hidden has at least one inline reference; every reference has a definition.
+24. Error type referenced via cross-page link to its canonical home (lowercase `#errorinfo` anchor).
+25. Page ends with `## Example` showing end-to-end usage.
+26. No same-page markdown anchor links to type anchors (`[X](#X)`). Type names in prose are backticked; cross-page references go to the type's own page.
 
 ## When the SDK or product changes shape
 

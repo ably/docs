@@ -115,8 +115,8 @@ export default {
           link: '/docs/ai-transport/features/branching',
         },
         {
-          name: 'Barge-in',
-          link: '/docs/ai-transport/features/barge-in',
+          name: 'Interruption',
+          link: '/docs/ai-transport/features/interruption',
         },
         {
           name: 'Concurrent turns',
