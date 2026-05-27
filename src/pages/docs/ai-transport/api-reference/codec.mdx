@@ -2,11 +2,8 @@
 title: "Codec API"
 meta_description: "API reference for the AI Transport codec interface. Build custom codecs to integrate any AI framework."
 meta_keywords: "codec, AI Transport, custom codec, StreamEncoder, StreamDecoder, MessageAccumulator, Ably"
+intro: "The codec interface bridges your AI framework and Ably messages. Implement it to integrate any framework with AI Transport."
 ---
-
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
 
 The codec is the bridge between your AI framework and Ably messages. It defines how domain events (such as LLM tokens) are encoded into Ably publish operations and decoded back into events on the client. Implement the `Codec` interface to integrate any AI framework with AI Transport.
 
@@ -167,13 +164,10 @@ function createDecoderCore<TEvent, TMessage>(hooks: DecoderCoreHooks<TEvent, TMe
 
 To integrate a framework that is not Vercel AI SDK, implement the four parts of the `Codec` interface:
 
-1. **Encoder.** Map your framework's stream events to Ably publish operations. Use `appendMessage` for token-by-token streaming, `publish` for discrete events, and `updateMessage` for in-place updates.
-
-2. **Decoder.** Parse inbound Ably messages back into your event type. Handle the message name conventions used by your encoder.
-
-3. **Accumulator.** Maintain a list of messages, appending tokens to the current message as events arrive and finalizing when a terminal event is processed.
-
-4. **Terminal detection.** Return `true` from `isTerminal` for events that signal the end of a stream, such as a finish reason, an error, or an abort.
+1. Encoder. Map your framework's stream events to Ably publish operations. Use `appendMessage` for token-by-token streaming, `publish` for discrete events, and `updateMessage` for in-place updates.
+2. Decoder. Parse inbound Ably messages back into your event type. Handle the message name conventions used by your encoder. `decode` returns `DecoderOutput<TEvent, TMessage>[]`; wrap your event in an array.
+3. Accumulator. Maintain a list of messages, appending tokens to the current message as events arrive and finalising when a terminal event is processed. `createAccumulator()` must return an accumulator object.
+4. Terminal detection. Return `true` from `isTerminal` for events that signal the end of a stream, such as a finish reason, an error, or an abort.
 
 <Code>
 ```javascript
@@ -181,39 +175,58 @@ const myCodec: Codec<MyEvent, MyMessage> = {
   createEncoder(channel) {
     return {
       async appendEvent(event) {
-        await channel.appendMessage({ name: event.messageId, data: event.token })
+        await channel.appendMessage({ name: event.messageId, data: event.token });
       },
       async writeMessages(messages) {
         for (const msg of messages) {
-          await channel.publish({ name: 'message', data: msg })
+          await channel.publish({ name: 'message', data: msg });
         }
       },
       async writeEvent(event) {
-        await channel.publish({ name: 'event', data: event })
+        await channel.publish({ name: 'event', data: event });
       },
       async abort() {
-        await channel.publish({ name: 'abort', data: {} })
+        await channel.publish({ name: 'abort', data: {} });
       },
       async close() {
-        await channel.publish({ name: 'close', data: {} })
+        await channel.publish({ name: 'close', data: {} });
       },
-    }
+    };
   },
   createDecoder() {
     return {
       decode(message) {
-        // Parse Ably message into your event type
-        return message.data as MyEvent
+        // Return an array; wrap a single event.
+        return [{ event: message.data, messageId: message.id }];
       },
-    }
+    };
   },
   createAccumulator() {
-    // Return an accumulator that builds messages from events
+    const messages = [];
+    return {
+      processOutputs(outputs) {
+        for (const output of outputs) {
+          messages.push(output.event);
+        }
+      },
+      updateMessage(message) {
+        // Apply an in-place update.
+      },
+      seedMessages(seeded) {
+        for (const { message } of seeded) messages.push(message);
+      },
+      completeSeeded(messageId) {
+        // Mark a seeded message complete.
+      },
+      get messages() { return messages; },
+      get completedMessages() { return messages; },
+      get hasActiveStream() { return false; },
+    };
   },
   isTerminal(event) {
-    return event.type === 'finish' || event.type === 'error'
+    return event.type === 'finish' || event.type === 'error';
   },
-}
+};
 ```
 </Code>
 

@@ -2,13 +2,12 @@
 title: "React hooks"
 meta_description: "API reference for AI Transport React hooks. Generic hooks and Vercel-specific hooks for building chat UIs."
 meta_keywords: "React hooks, AI Transport, useClientTransport, useView, useChatTransport, useMessageSync, Ably"
+intro: "React hooks reference: generic hooks for any codec from @ably/ai-transport/react, plus Vercel-specific hooks from @ably/ai-transport/vercel/react."
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
-
 AI Transport provides React hooks for building chat UIs. Generic hooks are available from `@ably/ai-transport/react` and work with any codec. Vercel-specific hooks are available from `@ably/ai-transport/vercel/react`.
+
+Hooks are context readers. The transport is created inside a `TransportProvider` (generic) or `ChatTransportProvider` (Vercel) higher in the tree; the hooks resolve it through context. Pass `channelName` to disambiguate when multiple providers are nested.
 
 ## Generic hooks <a id="generic"/>
 
@@ -17,42 +16,67 @@ Import from the React entry point:
 <Code>
 ```javascript
 import {
+  TransportProvider,
   useClientTransport,
   useView,
   useCreateView,
-  useSend,
-  useEdit,
-  useRegenerate,
   useTree,
   useActiveTurns,
   useAblyMessages,
-} from '@ably/ai-transport/react'
+} from '@ably/ai-transport/react';
 ```
 </Code>
 
+### TransportProvider <a id="transport-provider"/>
+
+Creates a `ClientTransport` and makes it available to descendants. Wraps children with Ably's `ChannelProvider` using `channelName`. Descendants resolve the transport with `useClientTransport`.
+
+<Code>
+```javascript
+<TransportProvider channelName="ai:demo" codec={UIMessageCodec}>
+  <Chat />
+</TransportProvider>
+```
+</Code>
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| channelName | `string` | The Ably channel name to subscribe to. Also the context registry key. |
+| codec | `Codec<TEvent, TMessage>` | Codec for encoding and decoding messages on this channel. |
+| clientId, headers, body, credentials, fetch, messages, logger, api | — | All other `ClientTransportOptions` except `channel` (managed internally). `api` is required on the generic entry point; the Vercel entry defaults it to `/api/chat`. |
+
 ### useClientTransport <a id="use-client-transport"/>
 
-Access a `ClientTransport` from the nearest `TransportProvider`. The transport is created by the provider, not by this hook. When `channelName` is omitted, the innermost `TransportProvider` in the tree is used.
+Read a `ClientTransport` from the nearest `TransportProvider`. The hook does not create or own the transport.
 
 <Code>
 ```javascript
 function useClientTransport(options?: {
   channelName?: string,
-  skip?: boolean
-}): ClientTransport
+  skip?: boolean,
+  onError?: (error: Ably.ErrorInfo) => void
+}): ClientTransportHandle
 ```
 </Code>
 
 | Property | Type | Description |
 | --- | --- | --- |
 | channelName | `string` | The channel name passed to the enclosing `TransportProvider`. Omit to use the nearest provider. |
-| skip | `boolean` | When `true`, return a stub transport that throws on any access. Useful when auth is not yet resolved. |
+| skip | `boolean` | When `true`, return a stub transport that throws on any access. Useful when auth or another condition is not yet resolved. |
+| onError | `(error) => void` | Called whenever the resolved transport emits an error event. The subscription is established once the transport resolves and removed on unmount. |
 
-See [TransportProvider](/docs/ai-transport/api-reference/react-hooks#transport-provider) for setting up the provider.
+#### ClientTransportHandle <a id="client-transport-handle"/>
+
+| Property | Type | Description |
+| --- | --- | --- |
+| transport | `ClientTransport` | The resolved transport. A throwing stub when `skip` is `true`, when no matching provider is found, or when transport construction failed. |
+| transportError | `Ably.ErrorInfo \| undefined` | Set when no matching provider is found or transport construction failed and `skip` is `false`. `undefined` on success. |
+
+Check `transportError` before using `transport` to avoid throws from the stub.
 
 ### useView <a id="use-view"/>
 
-Subscribe to a view and return the visible node list with pagination, navigation, and write operations. Pass `transport` to use a transport's default view, or `view` to subscribe to a specific view directly. When both are omitted, defaults to the nearest `TransportProvider`'s transport. Returns a `ViewHandle` that re-renders the component when the view updates.
+Subscribe to a view and return the visible node list with pagination, navigation, and write operations. When neither `transport` nor `view` is provided, the nearest `TransportProvider`'s transport is used.
 
 <Code>
 ```javascript
@@ -78,22 +102,25 @@ function useView(options?: {
 | --- | --- | --- |
 | messages | `TMessage[]` | The visible domain messages along the selected branch. |
 | nodes | `MessageNode<TMessage>[]` | Visible conversation nodes along the selected branch. |
-| send | `(messages: TMessage \| TMessage[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>` | Send a user message or array of messages. |
-| regenerate | `(messageId: string, options?: SendOptions) => Promise<ActiveTurn<TEvent>>` | Regenerate an assistant message, using this view's branch for history. |
-| edit | `(messageId: string, newMessages: TMessage \| TMessage[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>` | Edit a user message, forking from this view's branch. |
-| update | `(msgId: string, events: TEvent[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>` | Amend an existing message and start a continuation turn. |
-| hasOlder | `boolean` | Whether older messages are available. |
-| loadOlder | `() => Promise<void>` | Load older messages from history. |
+| send | `(messages, options?) => Promise<ActiveTurn>` | Send one or more user messages on this view's selected branch. |
+| regenerate | `(messageId, options?) => Promise<ActiveTurn>` | Regenerate an assistant message, using this view's branch for history. |
+| edit | `(messageId, newMessages, options?) => Promise<ActiveTurn>` | Edit a user message, forking from this view's branch. |
+| update | `(msgId, events, options?) => Promise<ActiveTurn>` | Amend an existing message and start a continuation turn (for example, tool results). |
+| hasOlder | `boolean` | Whether older messages can be revealed via `loadOlder`. |
+| loadOlder | `() => Promise<void>` | Load older messages from history. No-op if already loading. |
 | loading | `boolean` | Whether a page load is currently in progress. |
-| getSiblings | `(msgId: string) => TMessage[]` | Get all sibling messages at a fork point. |
-| hasSiblings | `(msgId: string) => boolean` | Whether a message has sibling alternatives. |
-| getSelectedIndex | `(msgId: string) => number` | Index of the currently selected sibling at a fork point. |
-| select | `(msgId: string, index: number) => void` | Select a sibling at a fork point by index. Triggers a view update with the new branch. |
-| getNode | `(msgId: string) => MessageNode<TMessage> \| undefined` | Get a node by message ID, or undefined if not found. |
+| loadError | `Ably.ErrorInfo \| undefined` | Set when the most recent `loadOlder` failed; cleared on the next successful load. |
+| getSiblings | `(msgId) => TMessage[]` | Get all sibling messages at a fork point. |
+| hasSiblings | `(msgId) => boolean` | Whether a message has sibling alternatives. |
+| getSelectedIndex | `(msgId) => number` | Index of the currently selected sibling at a fork point. |
+| select | `(msgId, index) => void` | Select a sibling at a fork point by index. Triggers a view update. |
+| getNode | `(msgId) => MessageNode \| undefined` | Get a node by message ID, or undefined if not found. |
+
+The write operations (`send`, `regenerate`, `edit`, `update`) used to be standalone hooks (`useSend`, `useEdit`, `useRegenerate`). They are now methods on the `ViewHandle` returned by `useView`. Destructure them out as needed.
 
 ### useCreateView <a id="use-create-view"/>
 
-Create an additional view of the conversation tree. Returns a `ViewHandle` with the same interface as `useView`.
+Create an independent view over the same conversation tree and subscribe to it. Each created view has its own branch selection and pagination state. Returns the same `ViewHandle` as `useView`.
 
 <Code>
 ```javascript
@@ -105,39 +132,11 @@ function useCreateView(options?: {
 ```
 </Code>
 
-### useSend <a id="use-send"/>
-
-Return a stable `send` callback bound to the given view. Useful when you only need to send messages without subscribing to the full view.
-
-<Code>
-```javascript
-function useSend(view: View): (messages: TMessage[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>
-```
-</Code>
-
-### useEdit <a id="use-edit"/>
-
-Return a stable `edit` callback bound to the given view.
-
-<Code>
-```javascript
-function useEdit(view: View): (messageId: string, newMessages: TMessage | TMessage[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>
-```
-</Code>
-
-### useRegenerate <a id="use-regenerate"/>
-
-Return a stable `regenerate` callback bound to the given view.
-
-<Code>
-```javascript
-function useRegenerate(view: View): (messageId: string, options?: SendOptions) => Promise<ActiveTurn<TEvent>>
-```
-</Code>
+The created view is closed on unmount or when the transport changes.
 
 ### useTree <a id="use-tree"/>
 
-Provide stable structural query callbacks backed by the transport's conversation tree. These are thin `useCallback` wrappers around the tree. The hook does not re-render on tree changes; use `useView` for reactive updates.
+Provide stable structural query callbacks backed by the transport's conversation tree. The hook does not re-render on tree changes; use `useView` for reactive updates.
 
 <Code>
 ```javascript
@@ -151,9 +150,10 @@ function useTree(options?: {
 
 | Property | Type | Description |
 | --- | --- | --- |
-| getSiblings | `(msgId: string) => TMessage[]` | Get all sibling messages at a fork point. |
-| hasSiblings | `(msgId: string) => boolean` | Whether a message has sibling alternatives. |
-| getNode | `(msgId: string) => MessageNode<TMessage> \| undefined` | Get a node by message ID, or undefined if not found. |
+| getSiblings | `(msgId) => TMessage[]` | Get all sibling messages at a fork point. |
+| hasSiblings | `(msgId) => boolean` | Whether a message has sibling alternatives. |
+| getNode | `(msgId) => MessageNode \| undefined` | Get a node by message ID. |
+| getHeaders | `(msgId) => Record<string, string> \| undefined` | Get the stored transport headers for a message. |
 
 ### useActiveTurns <a id="use-active-turns"/>
 
@@ -167,7 +167,7 @@ function useActiveTurns(options?: {
 ```
 </Code>
 
-Use `.size` to check if any turns are active, `.has(clientId)` to check a specific client, and `.get(clientId)` to retrieve the set of turn IDs for a client. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for usage examples.
+Use `.size` to check if any turns are active, `.has(clientId)` to check a specific client, and `.get(clientId)` to retrieve the set of turn IDs. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for usage examples.
 
 ### useAblyMessages <a id="use-ably-messages"/>
 
@@ -188,34 +188,70 @@ Import from the Vercel React entry point:
 
 <Code>
 ```javascript
-import { useChatTransport, useMessageSync } from '@ably/ai-transport/vercel/react'
+import {
+  ChatTransportProvider,
+  useChatTransport,
+  useMessageSync,
+} from '@ably/ai-transport/vercel/react';
 ```
 </Code>
+
+The Vercel React entry also re-exports `TransportProvider`, `useClientTransport`, `useView`, `useCreateView`, `useTree`, `useActiveTurns`, and `useAblyMessages` with `UIMessageChunk`/`UIMessage` type parameters pre-bound, so call sites do not need explicit type arguments.
+
+### ChatTransportProvider <a id="chat-transport-provider"/>
+
+Creates a `ChatTransport` adapter for Vercel's `useChat`, alongside the underlying `ClientTransport`. Wraps children with `TransportProvider` (using `UIMessageCodec`), so the Ably channel lifecycle is managed in one place.
+
+<Code>
+```javascript
+<ChatTransportProvider channelName="ai:demo">
+  <Chat />
+</ChatTransportProvider>
+```
+</Code>
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| channelName | `string` | The Ably channel name to subscribe to. Also the context registry key. |
+| api, clientId, headers, body, credentials, fetch, messages, logger | — | All other `VercelClientTransportOptions`. `api` defaults to `/api/chat`. |
 
 ### useChatTransport <a id="use-chat-transport"/>
 
-Create a `ChatTransport` for use with Vercel's `useChat` hook. Accepts either a `VercelClientTransportOptions` object or an existing `ClientTransport` instance. Both forms accept an optional second argument for `ChatTransportOptions`.
+Read a `ChatTransport` and its underlying `ClientTransport` from the nearest `ChatTransportProvider`. The hook is a context reader; it does not create transport state.
 
 <Code>
 ```javascript
-function useChatTransport(options: VercelClientTransportOptions, chatOptions?: ChatTransportOptions): ChatTransport
-function useChatTransport(transport: ClientTransport, chatOptions?: ChatTransportOptions): ChatTransport
+function useChatTransport(options?: {
+  channelName?: string,
+  skip?: boolean
+}): ChatTransportHandle
 ```
 </Code>
 
-When you pass `VercelClientTransportOptions`, the hook creates a new `ClientTransport` internally with the codec pre-bound to `UIMessageCodec`. When you pass an existing `ClientTransport`, it wraps that instance as a `ChatTransport` without creating a new transport.
+| Property | Type | Description |
+| --- | --- | --- |
+| channelName | `string` | The channel name passed to the enclosing `ChatTransportProvider`. Omit to use the nearest provider. |
+| skip | `boolean` | When `true`, return stub transports that throw on any access. |
 
-**Using an existing ClientTransport (recommended when you also need `useView`, `useActiveTurns`, or `useMessageSync`):**
+#### ChatTransportHandle <a id="chat-transport-handle"/>
+
+| Property | Type | Description |
+| --- | --- | --- |
+| transport | `ClientTransport<UIMessageChunk, UIMessage>` | The underlying client transport, also available via `useClientTransport`. |
+| chatTransport | `ChatTransport` | The Vercel-compatible adapter for use with `useChat`. |
+| transportError | `Ably.ErrorInfo \| undefined` | Set when no matching `TransportProvider` was found or transport construction failed. |
+| chatTransportError | `Ably.ErrorInfo \| undefined` | Set when no matching `ChatTransportProvider` was found or transport construction failed. |
+
+Typical usage:
 
 <Code>
 ```javascript
-const transport = useClientTransport({ channelName: chatId })
-const chatTransport = useChatTransport(transport)
-const { messages } = useChat({ transport: chatTransport })
+const { chatTransport } = useChatTransport();
+const { messages } = useChat({ transport: chatTransport });
 ```
 </Code>
 
-See [ChatTransportOptions](/docs/ai-transport/api-reference/vercel#chat-transport-options) for available options.
+See [ChatTransportOptions](/docs/ai-transport/api-reference/vercel#chat-transport-options) for the available configuration when constructing the provider.
 
 ### useMessageSync <a id="use-message-sync"/>
 
@@ -223,19 +259,25 @@ Wire transport message updates into Vercel's `useChat` message state. Subscribes
 
 <Code>
 ```javascript
-function useMessageSync(
-  transport: ClientTransport | null | undefined,
-  setMessages: (updater: (prev: UIMessage[]) => UIMessage[]) => void
-): void
+function useMessageSync(options: {
+  setMessages: (updater: (prev: UIMessage[]) => UIMessage[]) => void,
+  channelName?: string,
+  skip?: boolean
+}): void
 ```
 </Code>
 
+| Property | Type | Description |
+| --- | --- | --- |
+| setMessages | `(updater) => void` | The `setMessages` updater from `useChat()`. Required. |
+| channelName | `string` | Channel name of the `ChatTransportProvider` to observe. Omit to use the nearest provider. |
+| skip | `boolean` | When `true`, skip all subscriptions. |
+
 <Code>
 ```javascript
-const transport = useClientTransport({ channelName: chatId })
-const chatTransport = useChatTransport(transport)
-const { messages, setMessages } = useChat({ transport: chatTransport })
-useMessageSync(transport, setMessages)
-// messages now includes messages from all devices
+const { chatTransport } = useChatTransport();
+const { messages, setMessages } = useChat({ transport: chatTransport });
+useMessageSync({ setMessages });
+// messages now includes messages from all devices on this channel
 ```
 </Code>

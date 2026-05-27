@@ -15,18 +15,33 @@ export default {
     },
     {
       name: 'Why AI Transport',
-      link: '/docs/ai-transport/why',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/why',
+          index: true,
+        },
+        {
+          name: 'HTTP streaming and AI',
+          link: '/docs/ai-transport/why/http-streaming-and-ai',
+        },
+      ],
     },
     {
       name: 'Concepts',
       pages: [
         {
+          name: 'Overview',
+          link: '/docs/ai-transport/concepts',
+          index: true,
+        },
+        {
           name: 'Sessions',
           link: '/docs/ai-transport/concepts/sessions',
         },
         {
-          name: 'Messages and conversation tree',
-          link: '/docs/ai-transport/concepts/messages-and-conversation-tree',
+          name: 'Conversation tree',
+          link: '/docs/ai-transport/concepts/conversation-tree',
         },
         {
           name: 'Turns',
@@ -39,6 +54,10 @@ export default {
         {
           name: 'Authentication',
           link: '/docs/ai-transport/concepts/authentication',
+        },
+        {
+          name: 'Infrastructure',
+          link: '/docs/ai-transport/concepts/infrastructure',
         },
       ],
     },
@@ -56,11 +75,15 @@ export default {
       ],
     },
     {
-      name: 'Framework guides',
+      name: 'Frameworks',
       pages: [
         {
-          name: 'Vercel AI SDK',
-          link: '/docs/ai-transport/framework-guides/vercel-ai-sdk',
+          name: 'Vercel AI SDK UI',
+          link: '/docs/ai-transport/frameworks/vercel-ai-sdk-ui',
+        },
+        {
+          name: 'Vercel AI SDK Core',
+          link: '/docs/ai-transport/frameworks/vercel-ai-sdk-core',
         },
       ],
     },
@@ -92,16 +115,12 @@ export default {
           link: '/docs/ai-transport/features/branching',
         },
         {
-          name: 'Interruption and barge-in',
-          link: '/docs/ai-transport/features/interruption',
+          name: 'Barge-in',
+          link: '/docs/ai-transport/features/barge-in',
         },
         {
           name: 'Concurrent turns',
           link: '/docs/ai-transport/features/concurrent-turns',
-        },
-        {
-          name: 'Edit and regenerate',
-          link: '/docs/ai-transport/features/edit-and-regenerate',
         },
         {
           name: 'Tool calling',
@@ -130,6 +149,54 @@ export default {
         {
           name: 'Double texting',
           link: '/docs/ai-transport/features/double-texting',
+        },
+      ],
+    },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/guides',
+          index: true,
+        },
+        {
+          name: 'Building support chat',
+          link: '/docs/ai-transport/guides/building-support-chat',
+        },
+        {
+          name: 'Building a copilot',
+          link: '/docs/ai-transport/guides/building-a-copilot',
+        },
+      ],
+    },
+    {
+      name: 'Going to production',
+      link: '/docs/ai-transport/going-to-production',
+    },
+    {
+      name: 'Troubleshooting',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/troubleshooting',
+          index: true,
+        },
+        {
+          name: 'Connection issues',
+          link: '/docs/ai-transport/troubleshooting/connection',
+        },
+        {
+          name: 'Authentication errors',
+          link: '/docs/ai-transport/troubleshooting/auth',
+        },
+        {
+          name: 'Codec problems',
+          link: '/docs/ai-transport/troubleshooting/codec',
+        },
+        {
+          name: 'Turn lifecycle',
+          link: '/docs/ai-transport/troubleshooting/turns',
         },
       ],
     },

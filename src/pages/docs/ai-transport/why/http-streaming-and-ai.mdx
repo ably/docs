@@ -1,0 +1,41 @@
+---
+title: "HTTP streaming and AI"
+meta_description: "The four production problems with direct HTTP streaming for AI: streams fail on disconnect, sessions do not span devices, clients cannot reach the agent, multi-agent is complex."
+meta_keywords: "HTTP streaming, SSE limitations, AI agents, durable sessions, server-sent events, AI production"
+intro: "Direct HTTP streaming is fine for one-off interactions and breaks down everywhere else. These are the four limitations that show up once an AI app is in production."
+---
+
+Most AI frameworks support a simple client-driven interaction: the client makes an HTTP request, an agent handles it, and the response streams back to the client over Server-Sent Events or a similar HTTP stream. The pattern is simple, surprisingly effective for one-shot interactions, and every framework supports it. The simplicity of the pattern is also the source of its limitations.
+
+The limitations below arise from coupling the client-to-agent interaction to the transport that carries it. The connection, the request, and the streamed response are all the same lifetime: they exist for one interaction, between one client and one agent. Anything that requires the interaction to outlive the connection (or be visible to anything other than that one client) requires building new infrastructure on top.
+
+## Streams fail on disconnection <a id="handle-disconnection"/>
+
+The operation of a response stream is tied to the health of the underlying connection. When the connection drops, the response stream fails.
+
+This happens routinely. A phone switches from Wi-Fi to cellular. A user refreshes the page. A laptop lid closes mid-response. The LLM continues to generate tokens, and there is nowhere to deliver them.
+
+SSE is the default streaming transport for most AI frameworks. The SSE protocol does include a mechanism for a reconnecting client to specify a position in the stream to resume from. In practice it is rarely supported, because supporting it adds significant backend complexity. To resume an SSE stream you assign sequence numbers to token events for ordering, buffer those events in an external store, and add a new HTTP endpoint to handle resume requests. That is a substantial departure from a stateless request handler. Even with the work done, resume only covers reconnection of an existing client; it does not cover continuity after a page refresh, because SSE has no built-in concept of session identity. Building that is yet another layer on top.
+
+## Sessions do not span devices <a id="across-device"/>
+
+With HTTP streaming, the connection is exclusive to the requesting client and the agent that handled it. A second tab or a phone has no way into that stream. It only exists for the client that initiated the request.
+
+In reality, users move between surfaces constantly. A second browser tab. The mobile app. Picking the conversation up later from a different device. Without shared access to the session, each surface is isolated. There is no way for a new client to see the in-progress stream. And sharing the conversation history, or its current state.
+
+## Clients cannot reach the agent <a id="clients-cant-reach"/>
+
+An SSE request initiated by the client is one-way: server to client. The client has no way to send a signal to the agent through the same connection once the initial request has been made. The only options the client has are to read the stream to completion or to cancel it by closing the connection.
+
+Using cancellation as the sole upstream signal creates a fundamental conflict. Consider a stop button that cancels an in-progress stream. The implementation has to choose between two interpretations of a closed connection: either it is a cancel (in which case the LLM should stop), or it is a disconnect (in which case the LLM should keep going so the stream can resume). There is no way to disambiguate.
+
+Even with a bidirectional transport like WebSocket, the connection is still an exclusive pipe between one client and one agent. Other devices have no upstream channel, so they cannot interrupt or steer from a second device.
+
+## Multi-agent architectures are complex <a id="multi-agent"/>
+
+In multi-agent systems, an orchestrator handles the client's connection and delegates work to specialised sub-agents. When the connection between the client and the orchestrator is exclusive and point-to-point, every interaction with a sub-agent has to be proxied by the orchestrator. If users need to see intermediate progress or responses from sub-agents, every update is mediated by the orchestrator, adding complexity and coupling.
+
+## Read next <a id="next"/>
+
+- [Why AI Transport](/docs/ai-transport/why): how a durable session layer solves each of these problems.
+- [Sessions](/docs/ai-transport/concepts/sessions): the persistent, shared conversation state that replaces the ephemeral connection.

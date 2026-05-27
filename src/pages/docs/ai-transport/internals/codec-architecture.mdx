@@ -2,13 +2,34 @@
 title: "Codec architecture"
 meta_description: "How the AI Transport codec bridges domain events to Ably messages. Encoder, decoder, accumulator, and lifecycle tracker internals."
 meta_keywords: "codec architecture, AI Transport, encoder, decoder, accumulator, lifecycle tracker, custom codec, Ably"
+intro: "Internal architecture of the codec: encoder, decoder, accumulator, and lifecycle tracker. How each piece fits into the publish-side and subscribe-side pipelines."
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
-
 The codec is the layer that translates between your AI framework's event types and Ably channel messages. This page describes how each part of the codec works internally and how the pieces fit together.
+
+The two pipelines mirror each other:
+
+```
+Publish side (server):
+  framework events
+       v
+  StreamEncoder.appendEvent / writeMessages
+       v
+  ChannelWriter.publish / appendMessage / updateMessage
+       v
+  Ably channel
+
+Subscribe side (client):
+  Ably channel
+       v
+  StreamDecoder.decode  -> DecoderOutput[]
+       v
+  MessageAccumulator.processOutputs
+       v
+  framework messages
+       v
+  View
+```
 
 ## Two-layer split <a id="two-layer-split"/>
 
@@ -29,25 +50,17 @@ Discrete mode publishes a complete message in a single operation. The encoder ca
 
 ### Streamed mode <a id="streamed-mode"/>
 
-Streamed mode publishes a message incrementally. The encoder creates a message, appends tokens to it, and then closes it. This is the mode used for LLM response streaming.
+Streamed mode publishes a message incrementally. `startStream` creates the message with `channel.publish()` and captures the returned serial. Each subsequent `appendStream` call calls `channel.appendMessage()` with that serial. `closeStream` (or `cancelStream`) sends a terminal append with `x-ably-status: finished` or `x-ably-status: cancelled`. This is the mode used for LLM response streaming.
 
-The append pipeline is fire-and-forget: each `appendMessage` call is dispatched without waiting for acknowledgment. This keeps the stream flowing at the rate the LLM produces tokens, without back-pressure from the network.
+### Awaiting append promises <a id="awaiting-appends"/>
 
-### Flush and recovery <a id="flush-and-recovery"/>
+Per-token append calls do not block the encoder. Awaiting each one would couple the stream rate to the network round-trip. Instead the encoder collects every append promise and awaits them as a batch when the stream closes or cancels.
 
-If an append fails (for example, due to a transient network error), the encoder falls back to an `updateMessage` call that sends the full accumulated content. This is the recovery path. The encoder maintains a buffer of all appended content so it can always reconstruct the complete message.
+This batched await is what catches failed appends. If any are rejected, the encoder replaces the message in place with the full accumulated content, so subscribers see the intended final state even when intermediate appends were lost. Concurrent closes serialise through a single flush, so closing several streams at once does not race.
 
-After recovery, the encoder continues appending from the recovered state. Subscribers see a seamless stream regardless of whether individual appends succeeded.
+### Header composition <a id="header-merging"/>
 
-### Header merging <a id="header-merging"/>
-
-Every outbound message carries both transport and domain headers. The encoder merges them with this priority order:
-
-1. Transport headers set by the transport layer (turn ID, role, stream status).
-2. Domain headers set by the codec (framework-specific metadata).
-3. Per-message headers set by the caller (overrides for specific messages).
-
-Higher-priority headers overwrite lower-priority ones. This ensures transport-critical headers like `x-ably-turn-id` cannot be accidentally overridden by the codec.
+Every outbound message carries both transport and domain headers. Append operations overwrite all the headers from previous operations on the same message, preferring the latest write.
 
 ## Decoder core <a id="decoder-core"/>
 
@@ -68,12 +81,9 @@ The decoder handles four Ably message actions:
 
 The decoder maintains a stream tracker that maps stream IDs to their current state. When a `create` action arrives with `x-ably-stream: true`, the tracker opens a new stream. Subsequent `append` actions for the same stream ID are routed to that stream. An `update` action with a terminal status closes the stream.
 
-### First-contact vs prefix-match <a id="first-contact"/>
+### Joining a stream mid-flight <a id="mid-stream-join"/>
 
-When a client joins a channel, the first message it receives for a given stream may not be the `create` action - the stream may already be in progress. The decoder handles this with two strategies:
-
-- **First-contact**: if the first action for a stream is `create`, the decoder processes it normally.
-- **Prefix-match**: if the first action for a stream is `append` or `update`, the decoder recognizes this as a mid-stream join. It initializes the stream from the accumulated message state on the channel rather than waiting for a `create` that already happened.
+A client that joins a channel while a streamed message is already in progress sees an `append` or `update` for a stream it has never seen the original `create` for. The decoder treats the incoming content as the current full state of that stream and starts tracking it from there. Later appends are accumulated on top in the usual way. The client ends up in the same state as one that received every operation from the start.
 
 ## Accumulator <a id="accumulator"/>
 
