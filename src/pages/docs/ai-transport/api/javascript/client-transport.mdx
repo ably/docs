@@ -1,0 +1,562 @@
+---
+title: "ClientTransport"
+meta_description: "API reference for the AI Transport client transport: options, properties, methods, the View interface, and the ActiveTurn type."
+meta_keywords: "AI Transport, ClientTransport, View, createClientTransport, ActiveTurn, cancel, waitForTurn, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/client-transport
+---
+
+The `ClientTransport` subscribes to an Ably channel, decodes incoming messages through a codec, and builds a conversation tree. It exposes a default branch-aware `View` for rendering, plus methods for cancellation, turn tracking, and lifecycle management.
+
+Construct one with `createClientTransport` from the core entry point, or use the Vercel-pre-bound factory from `@ably/ai-transport/vercel` when the channel carries Vercel `UIMessage` content.
+
+<Code>
+```javascript
+import { createClientTransport } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const transport = createClientTransport({
+  channel,
+  codec: UIMessageCodec,
+  api: '/api/chat',
+});
+```
+</Code>
+
+## Properties
+
+The `ClientTransport` instance has the following properties:
+
+<Table id='ClientTransportProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| tree | The complete conversation tree. Holds every known node, emits events on any change. Use the view in most cases; reach for the tree for low-level inspection. | <Table id='Tree'/> |
+| view | The default paginated, branch-aware view for rendering. Events are scoped to the visible messages. | `View` |
+
+</Table>
+
+<Table id='Tree' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| getNode | `(msgId: string) => MessageNode \| undefined`. Get a node by message ID. | Function |
+| getHeaders | `(msgId: string) => Record<string, string> \| undefined`. Get the stored transport headers for a node. | Function |
+| getSiblings | `(msgId: string) => TMessage[]`. Get all sibling messages at a fork point. | Function |
+| hasSiblings | `(msgId: string) => boolean`. Whether a message has sibling alternatives. | Function |
+| upsert | `(msgId: string, message: TMessage, headers: Record<string, string>, serial?: string) => void`. Insert or update a message in the tree. | Function |
+| delete | `(msgId: string) => void`. Remove a message from the tree. | Function |
+| getActiveTurnIds | `() => Map<string, Set<string>>`. Active turn IDs grouped by `clientId` across the whole tree. | Function |
+| on | `(event: 'update' \| 'ably-message' \| 'turn', handler) => () => void`. Subscribe to tree structure changes, raw Ably messages, or turn lifecycle events. Returns an unsubscribe function. | Function |
+
+</Table>
+
+## Create a client transport <a id="constructor"/>
+
+<MethodSignature>{`function createClientTransport<TEvent, TMessage>(options: ClientTransportOptions<TEvent, TMessage>): ClientTransport<TEvent, TMessage>`}</MethodSignature>
+
+Construct a `ClientTransport` bound to an Ably channel. The transport attaches to the channel lazily on first use.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createClientTransport } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+const channel = ably.channels.get('conversation-42');
+
+const transport = createClientTransport({
+  channel,
+  codec: UIMessageCodec,
+  api: '/api/chat',
+});
+```
+</Code>
+
+### Parameters <a id="constructor-params"/>
+
+<Table id='CreateClientTransportParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| options | Required | Configuration for the client transport. | <Table id='ClientTransportOptions'/> |
+
+</Table>
+
+<Table id='ClientTransportOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| channel | The Ably channel to receive responses on and publish cancel signals to. | `Ably.RealtimeChannel` |
+| codec | The codec to use for encoding and decoding messages. See [Codec](/docs/ai-transport/api/javascript/codec). | `Codec<TEvent, TMessage>` |
+| api | Server endpoint URL for the HTTP POST that triggers a new turn. The Vercel-pre-bound factory defaults this to `/api/chat`; the core factory requires it. | String |
+| clientId | The client's identity. Sent to the server in the POST body. | String or Undefined |
+| headers | Headers for the HTTP POST. Function form for dynamic values such as auth tokens. | `Record<string, string>` or `() => Record<string, string>` or Undefined |
+| body | Additional body fields merged into the HTTP POST. Function form for dynamic values. | `Record<string, unknown>` or `() => Record<string, unknown>` or Undefined |
+| credentials | Fetch credentials mode for the HTTP POST. | `RequestCredentials` or Undefined |
+| fetch | Custom fetch implementation. Defaults to `globalThis.fetch`. | `typeof fetch` or Undefined |
+| messages | Initial messages to seed the conversation tree with. Forms a linear chain. | `TMessage[]` or Undefined |
+| logger | Logger instance for diagnostic output. | `Logger` or Undefined |
+
+</Table>
+
+### Returns <a id="constructor-returns"/>
+
+`ClientTransport<TEvent, TMessage>`
+
+A new client transport. Lifecycle is managed by the caller; call `close()` to release resources.
+
+## Create an additional view <a id="create-view"/>
+
+<MethodSignature>{`createView(): View<TEvent, TMessage>`}</MethodSignature>
+
+Create an additional `View` over the same conversation tree. Each view has independent branch selections and pagination state. The caller is responsible for closing the returned view when it is no longer needed, or it will be closed when the transport closes.
+
+<Code>
+```javascript
+const sideView = transport.createView();
+```
+</Code>
+
+### Returns <a id="create-view-returns"/>
+
+`View<TEvent, TMessage>`
+
+A new view bound to the same tree as `transport.view`.
+
+## Cancel turns <a id="cancel"/>
+
+<MethodSignature>{`cancel(filter?: CancelFilter): Promise<void>`}</MethodSignature>
+
+Publish a cancel signal on the channel for every turn that matches `filter`. Defaults to `{ own: true }` (every turn started by this client).
+
+<Code>
+```javascript
+await transport.cancel();                          // cancel own turns
+await transport.cancel({ turnId: 'abc' });         // cancel one specific turn
+await transport.cancel({ all: true });             // cancel every turn on the channel
+```
+</Code>
+
+### Parameters <a id="cancel-params"/>
+
+<Table id='CancelParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| filter | Optional | Scope of the cancellation. Defaults to `{ own: true }`. | <Table id='CancelFilter'/> |
+
+</Table>
+
+<Table id='CancelFilter' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| turnId | Cancel a specific turn by ID. | String or Undefined |
+| own | Cancel every turn belonging to the sender's `clientId`. | Boolean or Undefined |
+| clientId | Cancel every turn belonging to a specific `clientId`. | String or Undefined |
+| all | Cancel every turn on the channel. | Boolean or Undefined |
+
+</Table>
+
+### Returns <a id="cancel-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the cancel signal has been published, or rejected with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) object.
+
+## Wait for turns to complete <a id="wait-for-turn"/>
+
+<MethodSignature>{`waitForTurn(filter?: CancelFilter): Promise<void>`}</MethodSignature>
+
+Wait for every active turn matching `filter` to complete. Resolves immediately if no matching turns are active. Defaults to `{ own: true }`.
+
+<Code>
+```javascript
+await transport.waitForTurn();                         // own turns
+await transport.waitForTurn({ turnId: 'abc' });        // one specific turn
+await transport.waitForTurn({ all: true });            // every turn on the channel
+```
+</Code>
+
+### Parameters <a id="wait-for-turn-params"/>
+
+<Table id='WaitForTurnParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| filter | Optional | Scope of the wait. Defaults to `{ own: true }`. | <Table id='CancelFilter'/> |
+
+</Table>
+
+### Returns <a id="wait-for-turn-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when every matching turn has ended, or rejected with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) object.
+
+## Stage events on a message <a id="stage-events"/>
+
+<MethodSignature>{`stageEvents(msgId: string, events: TEvent[]): void`}</MethodSignature>
+
+Apply events to an existing tree message locally and queue them for delivery on the next send. The events are applied via the codec's accumulator (the tree's `update` fires once with the merged message) and are flushed into the next send operation's POST body for the server to republish.
+
+Use for cross-turn updates where the event value is produced on the client (for example, after `addToolResult` resolves a client-executed tool) and must appear in the tree immediately.
+
+If `msgId` is not present in the tree, the call is a no-op and a warning is logged.
+
+### Parameters <a id="stage-events-params"/>
+
+<Table id='StageEventsParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| msgId | Required | The `x-ably-msg-id` of the existing message to amend. | String |
+| events | Required | Events to apply locally and ship on the next send. | `TEvent[]` |
+
+</Table>
+
+## Stage a replacement message <a id="stage-message"/>
+
+<MethodSignature>{`stageMessage(msgId: string, message: TMessage): void`}</MethodSignature>
+
+Replace the tree's copy of an existing message with a caller-provided version, preserving headers and serial. Runs synchronously.
+
+Use for `useChat`-style state transitions the codec cannot express as chunks. The canonical example is `addToolApprovalResponse`, which sets `state: 'approval-responded'` on a `dynamic-tool` part directly on the `UIMessage` and has no corresponding chunk variant.
+
+Staged messages are not queued for the next send. The tree is authoritative for the POST body's history, so updating it is sufficient.
+
+If `msgId` is not present in the tree, the call is a no-op and a warning is logged.
+
+### Parameters <a id="stage-message-params"/>
+
+<Table id='StageMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| msgId | Required | The `x-ably-msg-id` of the existing message to replace. | String |
+| message | Required | The patched message to store. | `TMessage` |
+
+</Table>
+
+## Subscribe to errors <a id="on"/>
+
+<MethodSignature>{`on(event: 'error', handler: (error: Ably.ErrorInfo) => void): () => void`}</MethodSignature>
+
+Subscribe to non-fatal transport errors. These indicate something went wrong but the transport is still operational. Returns an unsubscribe function.
+
+<Code>
+```javascript
+const off = transport.on('error', (error) => {
+  console.error(`Transport error ${error.code}: ${error.message}`);
+});
+
+// Later, to stop listening:
+off();
+```
+</Code>
+
+### Parameters <a id="on-params"/>
+
+<Table id='OnParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | Required | The event name. Currently only `'error'` is supported. | `'error'` |
+| handler | Required | Called with each emitted [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo). | `(error: Ably.ErrorInfo) => void` |
+
+</Table>
+
+### Returns <a id="on-returns"/>
+
+`() => void`
+
+A function that unsubscribes the handler.
+
+## Close the transport <a id="close"/>
+
+<MethodSignature>{`close(options?: CloseOptions): Promise<void>`}</MethodSignature>
+
+Tear down the transport: unsubscribe from the channel, close active streams, clear handlers, and prevent further operations. Pass `cancel` to publish a cancel message before closing; without it, only local state is torn down (the server keeps streaming).
+
+<Code>
+```javascript
+await transport.close();                                 // local teardown only
+await transport.close({ cancel: { own: true } });        // cancel own turns first
+```
+</Code>
+
+### Parameters <a id="close-params"/>
+
+<Table id='CloseParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| options | Optional | Close options. | <Table id='CloseOptions'/> |
+
+</Table>
+
+<Table id='CloseOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| cancel | Cancel in-progress turns before closing. Publishes a cancel message to the channel. | <Table id='CancelFilter'/> or Undefined |
+
+</Table>
+
+### Returns <a id="close-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when teardown completes, or rejected with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) object.
+
+## View <a id="View"/>
+
+A `View` is a paginated, branch-aware projection of the conversation tree. It tracks which branch is selected at each fork point and supports lazy loading of older messages. The transport exposes a default view as `transport.view`; create additional views with `transport.createView()`.
+
+### Get visible messages <a id="View-getMessages"/>
+
+<MethodSignature>getMessages(): TMessage[]</MethodSignature>
+
+The visible domain messages along the selected branch. Shorthand for `flattenNodes().map(n => n.message)`.
+
+### Get visible nodes <a id="View-flattenNodes"/>
+
+<MethodSignature>{`flattenNodes(): MessageNode<TMessage>[]`}</MethodSignature>
+
+Visible nodes along the selected branch, filtered by the pagination window. Each node wraps the domain message with tree metadata: <Table id='MessageNode'/>
+
+### Check for older messages <a id="View-hasOlder"/>
+
+<MethodSignature>hasOlder(): boolean</MethodSignature>
+
+Whether there are older messages that can be loaded or revealed.
+
+### Load older messages <a id="View-loadOlder"/>
+
+<MethodSignature>{`loadOlder(limit?: number): Promise<void>`}</MethodSignature>
+
+Reveal older messages. Loads from channel history if the tree does not have enough, then advances the window to show up to `limit` more messages. Emits `'update'` when the visible list changes. Returns a promise; rejection surfaces an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo).
+
+### Select a sibling at a fork point <a id="View-select"/>
+
+<MethodSignature>{`select(msgId: string, index: number): void`}</MethodSignature>
+
+Select a sibling at a fork point by index. Updates this view's branch selection. Index is clamped to `[0, siblings.length - 1]`. Emits `'update'` when the visible output changes.
+
+### Get the selected sibling index <a id="View-getSelectedIndex"/>
+
+<MethodSignature>{`getSelectedIndex(msgId: string): number`}</MethodSignature>
+
+The index of the currently selected sibling at a fork point.
+
+### Get sibling messages <a id="View-getSiblings"/>
+
+<MethodSignature>{`getSiblings(msgId: string): TMessage[]`}</MethodSignature>
+
+Every sibling message at a fork point, ordered chronologically by serial.
+
+### Check for siblings <a id="View-hasSiblings"/>
+
+<MethodSignature>{`hasSiblings(msgId: string): boolean`}</MethodSignature>
+
+Whether a message has sibling alternatives. Use this to decide whether to render branch-navigation arrows.
+
+### Get a node by ID <a id="View-getNode"/>
+
+<MethodSignature>{`getNode(msgId: string): MessageNode<TMessage> | undefined`}</MethodSignature>
+
+The node for a given message ID, or `undefined` if the tree has no such node.
+
+### Send one or more messages <a id="View-send"/>
+
+<MethodSignature>{`send(messages: TMessage | TMessage[], options?: SendOptions): Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Send one or more user messages and start a new turn. The parent is auto-computed from this view's selected branch unless overridden in `options`. Messages are inserted optimistically into the tree. The HTTP POST is fire-and-forget; the returned stream is available immediately.
+
+<Code>
+```javascript
+const turn = await transport.view.send([
+  { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Hello' }] },
+]);
+
+for await (const chunk of turn.stream) {
+  // chunk is one decoded event from the agent.
+}
+```
+</Code>
+
+#### Parameters <a id="View-send-params"/>
+
+<Table id='ViewSendParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| messages | Required | One message or an array of messages to send. | `TMessage` or `TMessage[]` |
+| options | Optional | Per-send overrides for headers, body, and branching metadata. | <Table id='SendOptions'/> |
+
+</Table>
+
+<Table id='SendOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| body | Additional fields merged into the HTTP POST body for this send. | `Record<string, unknown>` or Undefined |
+| headers | Additional headers for the HTTP POST for this send. | `Record<string, string>` or Undefined |
+| forkOf | The msg-id of the message this send replaces. Set for regeneration (forkOf an assistant message) or edit (forkOf a user message). | String or Undefined |
+| parent | Override the auto-computed parent msg-id for this send. | String or Undefined |
+
+</Table>
+
+#### Returns <a id="View-send-returns"/>
+
+`Promise<ActiveTurn<TEvent>>`
+
+Returns a promise. The promise is fulfilled with an [`ActiveTurn`](#ActiveTurn) carrying the decoded event `stream`, `turnId`, and a `cancel()` method.
+
+### Regenerate an assistant message <a id="View-regenerate"/>
+
+<MethodSignature>{`regenerate(messageId: string, options?: SendOptions): Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Regenerate an assistant message. Creates a new turn that forks the target message with no new user messages. `forkOf`, `parent`, and the truncated history are computed automatically from this view's branch.
+
+#### Parameters <a id="View-regenerate-params"/>
+
+<Table id='ViewRegenerateParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| messageId | Required | The msg-id of the assistant message to regenerate. | String |
+| options | Optional | Per-send overrides. | <Table id='SendOptions'/> |
+
+</Table>
+
+#### Returns <a id="View-regenerate-returns"/>
+
+`Promise<ActiveTurn<TEvent>>`
+
+Returns a promise. The promise is fulfilled with an [`ActiveTurn`](#ActiveTurn), or rejected with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) object.
+
+### Edit a user message <a id="View-edit"/>
+
+<MethodSignature>{`edit(messageId: string, newMessages: TMessage | TMessage[], options?: SendOptions): Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Edit a user message and start a new turn from that point. The original message and its descendants remain in the tree as a separate branch. `forkOf`, `parent`, and history are computed automatically.
+
+#### Parameters <a id="View-edit-params"/>
+
+<Table id='ViewEditParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| messageId | Required | The msg-id of the user message to fork. | String |
+| newMessages | Required | The replacement message or messages. | `TMessage` or `TMessage[]` |
+| options | Optional | Per-send overrides. | <Table id='SendOptions'/> |
+
+</Table>
+
+#### Returns <a id="View-edit-returns"/>
+
+`Promise<ActiveTurn<TEvent>>`
+
+Returns a promise. The promise is fulfilled with an [`ActiveTurn`](#ActiveTurn), or rejected with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) object.
+
+### Update an existing message <a id="View-update"/>
+
+<MethodSignature>{`update(msgId: string, events: TEvent[], options?: SendOptions): Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Update an existing message in place and start a continuation turn. The local tree is updated optimistically, then the events are sent to the server in the POST body. The server publishes them to the channel and streams a continuation response. Commonly used for delivering client-executed tool results.
+
+#### Parameters <a id="View-update-params"/>
+
+<Table id='ViewUpdateParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| msgId | Required | The `x-ably-msg-id` of the existing message to amend. | String |
+| events | Required | Events to apply to the target message (for example, tool output). | `TEvent[]` |
+| options | Optional | Per-send overrides. | <Table id='SendOptions'/> |
+
+</Table>
+
+#### Returns <a id="View-update-returns"/>
+
+`Promise<ActiveTurn<TEvent>>`
+
+Returns a promise. The promise is fulfilled with an [`ActiveTurn`](#ActiveTurn) carrying the continuation response stream, or rejected with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) object.
+
+## ActiveTurn <a id="ActiveTurn"/>
+
+An `ActiveTurn` is the handle returned by `view.send()`, `view.regenerate()`, `view.edit()`, and `view.update()`. It exposes the decoded event stream, the turn's identity, and a cancel handle.
+
+<Table id='ActiveTurnProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| stream | The decoded event stream for this turn. May error if the delivery guarantee is broken (POST failure, channel continuity loss). | `ReadableStream<TEvent>` |
+| turnId | The turn's unique identifier. | String |
+| cancel | `() => Promise<void>`. Cancel this specific turn. Publishes a cancel message and closes the local stream. | Function |
+| optimisticMsgIds | The msg-ids of optimistically inserted user messages, in order. Present when the send included user messages (`send`, `edit`); empty for `regenerate`. | `string[]` |
+
+</Table>
+
+<Table id='MessageNode' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | `'message'`. Distinguishes a message node from an events node. | String |
+| msgId | The Ably message ID. Primary key in the tree. | String |
+| message | The decoded domain message. | `TMessage` |
+| parentId | The parent node's `msgId`, or `undefined` for root messages. | String or Undefined |
+| forkOf | The `msgId` this node forks from (for example, regeneration or edit), or `undefined` if it is the first version. | String or Undefined |
+| headers | Transport headers for tree identity, ordering, and branching. | `Record<string, string>` |
+| serial | The Ably serial for tree ordering. Absent on optimistically-inserted nodes until the server relay arrives. | String or Undefined |
+
+</Table>
+
+## Example
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createClientTransport } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+const channel = ably.channels.get('conversation-42');
+
+const transport = createClientTransport({
+  channel,
+  codec: UIMessageCodec,
+  api: '/api/chat',
+});
+
+transport.on('error', (error) => {
+  console.error(`Transport error ${error.code}: ${error.message}`);
+});
+
+// Send a message and consume the response stream.
+const turn = await transport.view.send([
+  { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Summarise this contract.' }] },
+]);
+
+for await (const chunk of turn.stream) {
+  // chunk is one decoded event for this turn.
+}
+
+// Browse history and regenerate the last response.
+await transport.view.loadOlder(50);
+const last = transport.view.getMessages().at(-1);
+if (last?.role === 'assistant') {
+  await transport.view.regenerate(last.id);
+}
+
+// Cancel an in-flight turn from anywhere.
+await transport.cancel({ own: true });
+
+// Wait for the current set of own turns to finish before tearing down.
+await transport.waitForTurn();
+await transport.close();
+```
+</Code>

@@ -1,0 +1,167 @@
+---
+title: "useView"
+meta_description: "Subscribe to a paginated, branch-aware view of the AI Transport conversation tree from React."
+meta_keywords: "AI Transport, React, useView, ViewHandle, send, regenerate, edit, conversation, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/react/use-view
+---
+
+Subscribe to a `View` and return the visible node list with pagination, branch navigation, and write operations. The hook re-renders the component on every view update.
+
+This hook must be used within a [`TransportProvider`](/docs/ai-transport/api/react/providers#TransportProvider) or a [`ChatTransportProvider`](/docs/ai-transport/api/react/providers#ChatTransportProvider).
+
+<Code>
+```react
+import { useView } from '@ably/ai-transport/react';
+
+function Chat() {
+  const { messages, send, loadOlder, hasOlder } = useView({ limit: 30 });
+
+  return (
+    <div>
+      {hasOlder && <button onClick={() => loadOlder()}>Load older</button>}
+      {messages.map((m) => <Message key={m.id} message={m} />)}
+    </div>
+  );
+}
+```
+</Code>
+
+## Parameters
+
+<Table id='UseViewProps'>
+
+| Prop | Required | Description | Type |
+| --- | --- | --- | --- |
+| transport | Optional | Client transport whose default view to subscribe to. Defaults to the nearest provider when omitted. | `ClientTransport<TEvent, TMessage>` or Null |
+| view | Optional | A specific `View` to subscribe to directly. Takes priority over `transport`. | `View<TEvent, TMessage>` or Null |
+| limit | Optional | Maximum number of older messages to load per page. When provided, auto-loads the first page on mount (SWR-style). | Number |
+| skip | Optional | When `true`, skip all subscriptions and return an empty handle. | Boolean |
+
+</Table>
+
+## Returns
+
+`ViewHandle<TEvent, TMessage>`
+
+<Table id='ViewHandle'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| messages | The visible domain messages along the selected branch. | `TMessage[]` |
+| nodes | Visible conversation nodes along the selected branch. | `MessageNode<TMessage>[]` |
+| hasOlder | Whether older messages can be revealed via `loadOlder`. | Boolean |
+| loading | Whether a page load is currently in progress. | Boolean |
+| loadError | Set when the most recent `loadOlder` failed; cleared on the next successful load. | `Ably.ErrorInfo` or Undefined |
+| loadOlder | See [Load older messages](#loadOlder) below. | Function |
+| select | See [Select a sibling](#select). | Function |
+| getSelectedIndex | See [Get the selected sibling index](#getSelectedIndex). | Function |
+| getSiblings | See [Get sibling messages](#getSiblings). | Function |
+| hasSiblings | See [Check for siblings](#hasSiblings). | Function |
+| getNode | See [Get a node by ID](#getNode). | Function |
+| send | See [Send messages](#send). | Function |
+| regenerate | See [Regenerate a response](#regenerate). | Function |
+| edit | See [Edit a user message](#edit). | Function |
+| update | See [Update an existing message](#update). | Function |
+
+</Table>
+
+## Load older messages <a id="loadOlder"/>
+
+<MethodSignature>{`loadOlder: () => Promise<void>`}</MethodSignature>
+
+Load older messages into the view. No-op if already loading. On failure, `loadError` is set; on success, `loadError` is cleared.
+
+## Select a sibling <a id="select"/>
+
+<MethodSignature>{`select: (msgId: string, index: number) => void`}</MethodSignature>
+
+Select a sibling at a fork point by index. Updates this view's branch selection and triggers a re-render with the new branch visible.
+
+## Get the selected sibling index <a id="getSelectedIndex"/>
+
+<MethodSignature>{`getSelectedIndex: (msgId: string) => number`}</MethodSignature>
+
+The index of the currently selected sibling at a fork point.
+
+## Get sibling messages <a id="getSiblings"/>
+
+<MethodSignature>{`getSiblings: (msgId: string) => TMessage[]`}</MethodSignature>
+
+Every sibling message at a fork point, ordered chronologically by serial.
+
+## Check for siblings <a id="hasSiblings"/>
+
+<MethodSignature>{`hasSiblings: (msgId: string) => boolean`}</MethodSignature>
+
+Whether a message has sibling alternatives. Use this to decide whether to render branch-navigation arrows.
+
+## Get a node by ID <a id="getNode"/>
+
+<MethodSignature>{`getNode: (msgId: string) => MessageNode<TMessage> | undefined`}</MethodSignature>
+
+The node for a given message ID, or `undefined` if the tree has no such node.
+
+## Send messages <a id="send"/>
+
+<MethodSignature>{`send: (messages: TMessage | TMessage[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Send one or more user messages and start a new turn. The parent is auto-computed from this view's selected branch unless overridden in `options`.
+
+## Regenerate a response <a id="regenerate"/>
+
+<MethodSignature>{`regenerate: (messageId: string, options?: SendOptions) => Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Regenerate an assistant message. Creates a new turn that forks the target message with no new user messages.
+
+## Edit a user message <a id="edit"/>
+
+<MethodSignature>{`edit: (messageId: string, newMessages: TMessage | TMessage[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Edit a user message and start a new turn from that point. The original message and its descendants remain in the tree as a separate branch.
+
+## Update an existing message <a id="update"/>
+
+<MethodSignature>{`update: (msgId: string, events: TEvent[], options?: SendOptions) => Promise<ActiveTurn<TEvent>>`}</MethodSignature>
+
+Update an existing message in place and start a continuation turn. Commonly used for delivering client-executed tool results.
+
+See [`View`](/docs/ai-transport/api/javascript/client-transport#View) for the full method semantics and the [`ActiveTurn`](/docs/ai-transport/api/javascript/client-transport#ActiveTurn) shape returned by the write operations. Each returned promise rejects with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) on failure.
+
+## Example
+
+<Code>
+```react
+import { useView } from '@ably/ai-transport/react';
+import { useState } from 'react';
+
+function Chat() {
+  const { messages, hasOlder, loadOlder, send, regenerate } = useView({ limit: 30 });
+  const [input, setInput] = useState('');
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const text = input;
+    setInput('');
+    await send({ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] });
+  };
+
+  return (
+    <div>
+      {hasOlder && <button onClick={() => loadOlder()}>Load older</button>}
+      {messages.map((m) => (
+        <div key={m.id}>
+          <strong>{m.role}:</strong> <Parts parts={m.parts} />
+          {m.role === 'assistant' && <button onClick={() => regenerate(m.id)}>Regenerate</button>}
+        </div>
+      ))}
+      <form onSubmit={onSubmit}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  );
+}
+```
+</Code>

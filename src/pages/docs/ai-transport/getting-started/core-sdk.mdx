@@ -2,186 +2,121 @@
 title: "Get started with the Core SDK"
 meta_description: "Build a streaming AI chat app using AI Transport's core React hooks. Full access to the conversation tree, branching, and pagination."
 meta_keywords: "AI Transport, Core SDK, React hooks, streaming, realtime, Ably, chat, LLM, conversation tree"
+intro: "Build a chat app using AI Transport's core React hooks directly. You get the conversation tree, branch navigation, and pagination without going through a framework wrapper."
 ---
 
-Build a streaming AI chat application using Ably AI Transport's core React hooks. This approach gives you direct access to the conversation tree, branching, and pagination through hooks like `useView`, `useSend`, `useRegenerate`, and `useEdit`.
+## What you build <a id="what-you-build"/>
 
-To use directly with Vercel's `useChat` for message management, see [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk).
+A Next.js chat app where:
+
+- Tokens stream from the model into a durable [session](/docs/ai-transport/concepts/sessions).
+- The client reads the conversation through AI Transport's `useView` hook, with direct access to the [conversation tree](/docs/ai-transport/concepts/conversation-tree).
+- Branching, edit, regenerate, and pagination are first-class.
+- A stop button cancels the in-progress [turn](/docs/ai-transport/concepts/turns).
+
+To use AI Transport with Vercel's `useChat` for message management, see [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk).
 
 ## Prerequisites <a id="prerequisites"/>
 
-- Node.js 20+
-- An [Ably account](https://ably.com/sign-up) with an API key
-- An Anthropic API key (or OpenAI, adapt the model config)
+- Node.js 20 or later.
+- An [Ably account](https://ably.com/sign-up) with an API key.
+- An Anthropic API key, or any other model provider you prefer.
 
 ## Install dependencies <a id="install"/>
 
 <Code>
 ```shell
-npm install @ably/ai-transport ably ai @ai-sdk/anthropic next react react-dom jsonwebtoken
+npm install @ably/ai-transport ably ai @ai-sdk/anthropic next react react-dom
 ```
 </Code>
 
-## Set up environment variables <a id="env"/>
+## Set up authentication <a id="auth"/>
 
-Create `.env.local`:
+Create an auth endpoint at `/api/auth` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [authentication](/docs/ai-transport/concepts/authentication) for the full setup.
 
-<Code>
-```shell
-ABLY_API_KEY=your-ably-api-key
-ANTHROPIC_API_KEY=your-anthropic-api-key
-```
-</Code>
+The client below uses `authUrl: '/auth'` to fetch tokens from this endpoint.
 
-## Step 1: Create an Ably token endpoint <a id="token-endpoint"/>
+## Create the server route <a id="server"/>
 
-Create the file `app/api/auth/ably-token/route.ts`. This endpoint issues JWT tokens for client authentication:
+Create `app/api/chat/route.ts`. The server creates a turn, publishes the user message, streams the LLM response through the Ably channel, and returns immediately. `streamText` orchestrates the model, and `UIMessageCodec` encodes its output for Ably. Swap either component if your stack is different.
 
 <Code>
 ```javascript
-import jwt from 'jsonwebtoken'
-import { NextResponse } from 'next/server'
+import { after } from 'next/server';
+import { streamText, convertToModelMessages } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
+import Ably from 'ably';
+import { createServerTransport } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
 
-export async function GET(req) {
-  const apiKey = process.env.ABLY_API_KEY
-  const [keyName, keySecret] = apiKey.split(':')
-
-  const url = new URL(req.url)
-  const clientId = url.searchParams.get('clientId') ?? `user-${crypto.randomUUID().slice(0, 8)}`
-
-  const token = jwt.sign(
-    {
-      'x-ably-clientId': clientId,
-      'x-ably-capability': JSON.stringify({ '*': ['publish', 'subscribe', 'history'] }),
-    },
-    keySecret,
-    { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' },
-  )
-
-  return new NextResponse(token, {
-    headers: { 'Content-Type': 'application/jwt' },
-  })
-}
-```
-</Code>
-
-## Step 2: Create an Ably provider <a id="ably-provider"/>
-
-Create the file `app/providers.tsx`. The Ably provider creates an authenticated realtime client using the token endpoint and makes it available to all child components. AI Transport uses this client to connect to channels for durable sessions.
-
-<Code>
-```javascript
-'use client'
-
-import { useEffect, useState } from 'react'
-import * as Ably from 'ably'
-import { AblyProvider } from 'ably/react'
-
-export function Providers({ clientId, children }) {
-  const [client, setClient] = useState(null)
-
-  useEffect(() => {
-    const ably = new Ably.Realtime({
-      authCallback: async (_tokenParams, callback) => {
-        try {
-          const response = await fetch(`/api/auth/ably-token?clientId=${encodeURIComponent(clientId ?? '')}`)
-          const jwt = await response.text()
-          callback(null, jwt)
-        } catch (err) {
-          callback(err instanceof Error ? err.message : String(err), null)
-        }
-      },
-    })
-    setClient(ably)
-    return () => ably.close()
-  }, [clientId])
-
-  if (!client) return null
-  return <AblyProvider client={client}>{children}</AblyProvider>
-}
-```
-</Code>
-
-## Step 3: Create the server API route <a id="server"/>
-
-Create the file `app/api/chat/route.ts`. The server creates a turn, publishes the user message, streams the LLM response through the Ably channel, and returns immediately.
-
-This example uses Vercel AI SDK's `streamText` for model orchestration and `UIMessageCodec` to encode the response for Ably. You can swap `streamText` for any model inference approach. You need a codec that converts your model's output into Ably messages; `UIMessageCodec` handles this for Vercel AI SDK's message types.
-
-<Code>
-```javascript
-import { after } from 'next/server'
-import { streamText, convertToModelMessages } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
-import Ably from 'ably'
-import { createServerTransport } from '@ably/ai-transport'
-import { UIMessageCodec } from '@ably/ai-transport/vercel'
-
-const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY })
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
 
 export async function POST(req) {
-  const { messages, history, id, turnId, clientId, forkOf, parent } = await req.json()
-  const channel = ably.channels.get(id)
+  const { messages, history, id, turnId, clientId, forkOf, parent } = await req.json();
+  const channel = ably.channels.get(id);
 
-  const transport = createServerTransport({ channel, codec: UIMessageCodec })
-  const turn = transport.newTurn({ turnId, clientId, parent, forkOf })
+  const transport = createServerTransport({ channel, codec: UIMessageCodec });
+  const turn = transport.newTurn({ turnId, clientId, parent, forkOf });
 
-  await turn.start()
+  await turn.start();
 
   if (messages.length > 0) {
-    await turn.addMessages(messages, { clientId })
+    await turn.addMessages(messages, { clientId });
   }
 
-  const allMessages = [...(history ?? []).map((h) => h.message), ...messages.map((m) => m.message)]
+  const allMessages = [
+    ...(history ?? []).map((h) => h.message),
+    ...messages.map((m) => m.message),
+  ];
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
     system: 'You are a helpful assistant.',
     messages: await convertToModelMessages(allMessages),
     abortSignal: turn.abortSignal,
-  })
+  });
 
   after(async () => {
-    const { reason } = await turn.streamResponse(result.toUIMessageStream())
-    await turn.end(reason)
-    transport.close()
-  })
+    const { reason } = await turn.streamResponse(result.toUIMessageStream());
+    await turn.end(reason);
+    transport.close();
+  });
 
-  return new Response(null, { status: 200 })
+  return new Response(null, { status: 200 });
 }
 ```
 </Code>
 
-## Step 4: Create the chat component <a id="client"/>
+## Create the chat component <a id="client"/>
 
-Create the file `app/chat.tsx`. This uses AI Transport's core hooks directly. The `useView` hook provides the visible messages, a `send` function, and pagination:
+Create `app/chat.tsx`. The component uses AI Transport's core hooks directly. `useView` returns the visible messages, a `send` function, and pagination:
 
 <Code>
 ```javascript
-'use client'
+'use client';
 
-import { useClientTransport, useActiveTurns, useView } from '@ably/ai-transport/react'
-import { useState } from 'react'
+import { useClientTransport, useActiveTurns, useView } from '@ably/ai-transport/react';
+import { useState } from 'react';
 
 export function Chat({ chatId }) {
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState('');
 
-  const transport = useClientTransport({ channelName: chatId })
-  const { messages, send, hasOlder, loadOlder } = useView({ transport, limit: 30 })
-  const activeTurns = useActiveTurns({ transport })
-  const isStreaming = activeTurns.size > 0
+  const { transport } = useClientTransport();
+  const { messages, send, hasOlder, loadOlder } = useView({ limit: 30 });
+  const activeTurns = useActiveTurns();
+  const isStreaming = activeTurns.size > 0;
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!input.trim()) return
-    const text = input
-    setInput('')
+    e.preventDefault();
+    if (!input.trim()) return;
+    const text = input;
+    setInput('');
     await send({
       id: crypto.randomUUID(),
       role: 'user',
       parts: [{ type: 'text', text }],
-    })
-  }
+    });
+  };
 
   return (
     <div>
@@ -192,7 +127,7 @@ export function Chat({ chatId }) {
         <div key={msg.id}>
           <strong>{msg.role}:</strong>{' '}
           {msg.parts.map((part, i) =>
-            part.type === 'text' ? <span key={i}>{part.text}</span> : null
+            part.type === 'text' ? <span key={i}>{part.text}</span> : null,
           )}
         </div>
       ))}
@@ -205,50 +140,67 @@ export function Chat({ chatId }) {
         )}
       </form>
     </div>
-  )
+  );
 }
 ```
 </Code>
 
-## Step 5: Wire it together <a id="wire"/>
+## Wire it together <a id="wire"/>
 
-Create the file `app/page.tsx`. `UIMessageCodec` is the codec for Vercel AI SDK's message types, matching the server's output format. If you use a different model inference layer, provide a different codec to `TransportProvider`.
+Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. `TransportProvider` wires the channel and codec into AI Transport. `UIMessageCodec` matches the server's output format; supply a different codec if your model layer produces different events.
 
 <Code>
 ```javascript
-import { Providers } from './providers'
-import { TransportProvider } from '@ably/ai-transport/react'
-import { UIMessageCodec } from '@ably/ai-transport/vercel'
-import { Chat } from './chat'
+'use client';
+
+import { useEffect, useState } from 'react';
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { TransportProvider } from '@ably/ai-transport/react';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { Chat } from './chat';
+
+function Providers({ children }) {
+  const [client, setClient] = useState(null);
+
+  useEffect(() => {
+    const ably = new Ably.Realtime({ authUrl: '/auth', clientId: 'user' });
+    setClient(ably);
+    return () => ably.close();
+  }, []);
+
+  if (!client) return null;
+  return <AblyProvider client={client}>{children}</AblyProvider>;
+}
 
 export default function Page() {
-  const chatId = 'my-chat-session'
+  const chatId = 'my-chat-session';
   return (
     <Providers>
       <TransportProvider channelName={chatId} codec={UIMessageCodec}>
         <Chat chatId={chatId} />
       </TransportProvider>
     </Providers>
-  )
+  );
 }
 ```
 </Code>
 
 Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the same URL to see both tabs share the same durable session.
 
-## What's happening <a id="whats-happening"/>
+## What is happening <a id="whats-happening"/>
 
 1. The client sends the user message via HTTP POST to your API route.
 2. The server publishes the message to the Ably channel, invokes the LLM, and streams tokens to the channel.
-3. Every client subscribed to the channel receives tokens in realtime.
-4. If a client disconnects, it automatically reconnects and resumes from where it left off.
+3. Every client subscribed to the channel receives tokens in real time.
+4. If a client disconnects, it reconnects automatically and resumes from where it left off.
 
-The `useView` hook subscribes to the conversation tree and returns the visible messages along the currently selected branch. You have direct access to the tree structure: branching, pagination, and sibling navigation.
+`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. You have direct access to the tree: branching, pagination, and sibling navigation.
 
 ## Explore next <a id="next"/>
 
 - [Conversation branching](/docs/ai-transport/features/branching): use `useView`'s `getSiblings` and `select` to navigate branches.
-- [Edit and regenerate](/docs/ai-transport/features/edit-and-regenerate): use `useView`'s `edit` and `regenerate` to fork conversations.
-- [History and replay](/docs/ai-transport/features/history): `useView` loads history on mount with the `limit` option.
-- [Sessions](/docs/ai-transport/concepts/sessions): understand durable sessions and how the conversation persists.
-- [React hooks API reference](/docs/ai-transport/api-reference/react-hooks): the full generic hooks API.
+- [Conversation branching](/docs/ai-transport/features/branching): use `useView`'s `edit`, `regenerate`, and `select` to fork and navigate conversations.
+- [History and replay](/docs/ai-transport/features/history): `useView` loads history on mount via the `limit` option.
+- [Sessions](/docs/ai-transport/concepts/sessions): durable sessions and how the conversation persists.
+- [React API reference](/docs/ai-transport/api/react/providers): providers and the per-hook pages.
