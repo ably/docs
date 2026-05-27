@@ -1,0 +1,155 @@
+---
+title: "Providers"
+meta_description: "TransportProvider and ChatTransportProvider for the AI Transport React integration."
+meta_keywords: "AI Transport, React, TransportProvider, ChatTransportProvider, provider, context, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/react/providers
+---
+
+The React integration is context-based. A provider higher in the tree creates the underlying `ClientTransport` (and, for the Vercel layer, the `ChatTransport` adapter) and exposes them through React context. Every hook in this section reads from the nearest provider.
+
+There are two providers. Use `TransportProvider` from the generic entry point when you build a UI directly against AI Transport's hooks. Use `ChatTransportProvider` from the Vercel entry point when you wire AI Transport into Vercel's `useChat`. `ChatTransportProvider` internally wraps its children with a `TransportProvider`, so both layers' hooks resolve from a single provider.
+
+<Code>
+```react
+import { TransportProvider } from '@ably/ai-transport/react';
+import { ChatTransportProvider } from '@ably/ai-transport/vercel/react';
+```
+</Code>
+
+## TransportProvider <a id="TransportProvider"/>
+
+Creates a `ClientTransport` and makes it available to descendant components. Wraps children with Ably's `ChannelProvider` using the supplied `channelName`. Descendants read the transport with [`useClientTransport`](/docs/ai-transport/api/react/use-client-transport).
+
+<Code>
+```react
+import { TransportProvider } from '@ably/ai-transport/react';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+<TransportProvider channelName="conversation-42" codec={UIMessageCodec} api="/api/chat">
+  <Chat />
+</TransportProvider>
+```
+</Code>
+
+### Parameters <a id="TransportProvider-params"/>
+
+The provider accepts every `ClientTransportOptions` field except `channel` (managed internally), plus a `channelName`.
+
+<Table id='TransportProviderProps'>
+
+| Prop | Required | Description | Type |
+| --- | --- | --- | --- |
+| channelName | Required | The Ably channel name to subscribe to. Also the context registry key. | String |
+| codec | Required | The codec to use for encoding and decoding messages. | `Codec<TEvent, TMessage>` |
+| api | Required | Server endpoint URL for the HTTP POST that triggers a new turn. | String |
+| clientId | Optional | The client's identity. Sent to the server in the POST body. | String |
+| headers | Optional | Headers for the HTTP POST. Function form for dynamic values. | `Record<string, string>` or `() => Record<string, string>` |
+| body | Optional | Additional body fields merged into the HTTP POST. Function form for dynamic values. | `Record<string, unknown>` or `() => Record<string, unknown>` |
+| credentials | Optional | Fetch credentials mode for the HTTP POST. | `RequestCredentials` |
+| fetch | Optional | Custom fetch implementation. | `typeof fetch` |
+| messages | Optional | Initial messages to seed the conversation tree with. | `TMessage[]` |
+| logger | Optional | Logger instance for diagnostic output. | `Logger` |
+
+</Table>
+
+If `createClientTransport` throws during construction, the error is surfaced through `useClientTransport` as `transportError` — the component tree does not crash and children are still rendered.
+
+For multiple transports, nest providers with distinct `channelName` values. Descendants call `useClientTransport({ channelName })` to disambiguate.
+
+## ChatTransportProvider <a id="ChatTransportProvider"/>
+
+Creates a `ChatTransport` adapter for Vercel's `useChat`, alongside the underlying `ClientTransport`. Wraps children with a `TransportProvider` using `UIMessageCodec`, so the Ably channel lifecycle is managed in one place.
+
+<Code>
+```react
+import { ChatTransportProvider } from '@ably/ai-transport/vercel/react';
+
+<ChatTransportProvider channelName="conversation-42">
+  <Chat />
+</ChatTransportProvider>
+```
+</Code>
+
+### Parameters <a id="ChatTransportProvider-params"/>
+
+The provider accepts every `VercelClientTransportOptions` field (defaulting `api` to `/api/chat`), plus a `channelName`.
+
+<Table id='ChatTransportProviderProps'>
+
+| Prop | Required | Description | Type |
+| --- | --- | --- | --- |
+| channelName | Required | The Ably channel name to subscribe to. Also the context registry key. | String |
+| api | Optional | Server endpoint URL for the HTTP POST. Defaults to `/api/chat`. | String |
+| clientId | Optional | The client's identity. | String |
+| headers | Optional | Headers for the HTTP POST. | `Record<string, string>` or `() => Record<string, string>` |
+| body | Optional | Additional body fields merged into the HTTP POST. | `Record<string, unknown>` or `() => Record<string, unknown>` |
+| credentials | Optional | Fetch credentials mode. | `RequestCredentials` |
+| fetch | Optional | Custom fetch implementation. | `typeof fetch` |
+| messages | Optional | Initial messages to seed the conversation tree with. | `UIMessage[]` |
+| logger | Optional | Logger instance. | `Logger` |
+| chatOptions | Optional | `ChatTransportOptions` for customising the adapter (for example, `prepareSendMessagesRequest`). | <Table id='ChatTransportOptions'/> |
+
+</Table>
+
+<Table id='ChatTransportOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| prepareSendMessagesRequest | Hook to customise the HTTP POST body and headers before each send. Called with the conversation context (see <Table id='SendMessagesRequestContext'/>); returns the body and headers to use. Default sends all previous messages as `history`. | `(context: SendMessagesRequestContext) => { body?: Record<string, unknown>; headers?: Record<string, string> }` or Undefined |
+
+</Table>
+
+<Table id='SendMessagesRequestContext' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| chatId | Chat session ID (from `useChat`'s `id`). | String or Undefined |
+| trigger | What triggered the request. | `'submit-message'` or `'regenerate-message'` |
+| messageId | The message ID for edit or regeneration. Undefined when submitting a new message. | String or Undefined |
+| history | Previous messages in the conversation. | `UIMessage[]` |
+| messages | The new messages being sent. Empty for regeneration. | `UIMessage[]` |
+| forkOf | The msg-id of the message being forked. | String or Undefined |
+| parent | The msg-id of the predecessor. | String or Undefined |
+
+</Table>
+
+`ChatTransport` itself is not closed on unmount. The underlying `ClientTransport`'s lifecycle is managed by the wrapping `TransportProvider`. Multiple `ChatTransportProvider`s can be nested using distinct `channelName` values; each merges its transport into the parent registry, so descendants can access multiple transports via `useChatTransport({ channelName })`.
+
+## Example
+
+<Code>
+```react
+'use client';
+
+import { useEffect, useState } from 'react';
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { ChatTransportProvider } from '@ably/ai-transport/vercel/react';
+import { Chat } from './chat';
+
+function Providers({ children }) {
+  const [client, setClient] = useState(null);
+
+  useEffect(() => {
+    const ably = new Ably.Realtime({ authUrl: '/auth' });
+    setClient(ably);
+    return () => ably.close();
+  }, []);
+
+  if (!client) return null;
+  return <AblyProvider client={client}>{children}</AblyProvider>;
+}
+
+export default function Page() {
+  const chatId = 'conversation-42';
+  return (
+    <Providers>
+      <ChatTransportProvider channelName={chatId}>
+        <Chat chatId={chatId} />
+      </ChatTransportProvider>
+    </Providers>
+  );
+}
+```
+</Code>

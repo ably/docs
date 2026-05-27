@@ -2,57 +2,58 @@
 title: "Cancellation"
 meta_description: "Cancel AI responses mid-stream with Ably AI Transport. Scoped cancel signals, server-side authorization, and graceful abort handling."
 meta_keywords: "AI cancellation, cancel streaming, abort signal, AI Transport, cancel filter, Ably"
+intro: "Your users can stop an agent mid-response without breaking the session. AI Transport sends cancel as a signal on the channel, so other turns continue and the session stays open."
 redirect_from:
   - /docs/ai-transport/messaging/completion-and-cancellation
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
+Cancellation is a turn-level operation. The client publishes a cancel signal on the Ably channel; the server matches it against active turns and fires their abort signals. Unlike closing an HTTP connection, cancellation is an explicit signal: the session remains intact, other turns continue, and both sides handle cleanup gracefully.
 
-Cancellation of an agent invocation is supported in AI Transport. Cancellation is a turn-level operation. The client publishes a cancel signal on the Ably channel, the server receives it and aborts the matching turns, but the session remains intact, other turns continue, and both sides handle cleanup gracefully. Unlike closing an HTTP connection, cancellation is an explicit signal.
+A minimal cancel:
+
+<Code>
+```javascript
+await transport.cancel();
+```
+</Code>
 
 ## How it works <a id="how-it-works"/>
 
-Since sessions are bidirectional, cancel is just a signal on the channel. The client publishes a cancel message with a filter specifying which turns to cancel. The server's transport matches the filter against active turns and fires their abort signals. The LLM stream stops, the turn ends with reason `'cancelled'`, and all subscribers are notified.
+Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message with a filter specifying which turns to cancel. The server's transport matches the filter against active turns and fires their abort signals. The LLM stream stops, the turn ends with reason `'cancelled'`, and every subscriber receives the lifecycle update.
 
 <Code>
 ```javascript
 // Client: cancel the current turn
-await turn.cancel()
+await turn.cancel();
 
 // Server: abort signal fires automatically
 const result = streamText({
-  abortSignal: turn.abortSignal,  // wired to cancel
-})
+  abortSignal: turn.abortSignal,
+});
 ```
 </Code>
 
-<Aside data-type='note'>
-With HTTP streaming, cancellation typically means closing the connection - which also kills the session. With AI Transport, cancel and resume are independent operations. You can cancel a turn and immediately send a new message without reconnecting.
-</Aside>
-
 ## Cancel filters <a id="cancel-filters"/>
 
-Cancel signals are scoped. You control exactly what gets cancelled:
+Cancel signals are scoped. You control which turns are cancelled:
 
 | Filter | Effect | Use case |
 | --- | --- | --- |
-| `{ own: true }` (default) | Cancel all turns started by this client | Stop button |
-| `{ turnId: 'abc' }` | Cancel one specific turn | Cancel a specific generation |
-| `{ clientId: 'user-1' }` | Cancel all turns by a specific client | Admin cancellation |
-| `{ all: true }` | Cancel all turns on the channel | Emergency stop |
+| `{ own: true }` (default) | Cancel all turns started by this client. | Stop button. |
+| `{ turnId: 'abc' }` | Cancel one specific turn. | Cancel a specific generation. |
+| `{ clientId: 'user-1' }` | Cancel all turns by a specific client. | Admin cancellation. |
+| `{ all: true }` | Cancel all turns on the channel. | Emergency stop. |
 
 <Code>
 ```javascript
 // Cancel your own turns (default)
-await transport.cancel()
+await transport.cancel();
 
 // Cancel a specific turn
-await transport.cancel({ turnId: activeTurn.turnId })
+await transport.cancel({ turnId: activeTurn.turnId });
 
 // Cancel all turns on the channel
-await transport.cancel({ all: true })
+await transport.cancel({ all: true });
 ```
 </Code>
 
@@ -60,27 +61,29 @@ await transport.cancel({ all: true })
 
 ### Abort signal <a id="abort-signal"/>
 
-Every turn has an `abortSignal` that fires when the turn is cancelled. Pass it to your LLM call:
+Every turn exposes an `abortSignal` that fires when the turn is cancelled. Pass it to your LLM call:
 
 <Code>
 ```javascript
-const turn = transport.newTurn({ turnId, clientId })
-await turn.start()
+const turn = transport.newTurn({ turnId, clientId });
+await turn.start();
 
 const result = streamText({
   model: anthropic('claude-sonnet-4-20250514'),
   messages: history,
   abortSignal: turn.abortSignal,
-})
+});
 
-const { reason } = await turn.streamResponse(result.toUIMessageStream())
-await turn.end(reason)  // reason is 'cancelled' if abort fired
+const { reason } = await turn.streamResponse(result.toUIMessageStream());
+await turn.end(reason);
 ```
 </Code>
 
-### Cancel authorization <a id="authorization"/>
+`reason` is `'cancelled'` when the abort fires.
 
-The `onCancel` hook lets you authorize or reject cancel requests:
+### Authorise the cancel <a id="authorization"/>
+
+The `onCancel` hook authorises or rejects cancel requests:
 
 <Code>
 ```javascript
@@ -88,17 +91,16 @@ const turn = transport.newTurn({
   turnId,
   clientId,
   onCancel: async (request) => {
-    // Only allow the turn owner to cancel
-    const owner = request.turnOwners.get(request.filter.turnId)
-    return owner === request.message.clientId
+    const owner = request.turnOwners.get(request.filter.turnId);
+    return owner === request.message.clientId;
   },
-})
+});
 ```
 </Code>
 
-The `CancelRequest` includes `message` (the raw cancel message with `clientId`), `filter` (parsed scope), `matchedTurnIds`, and `turnOwners` (map of turn ID to owner client ID). Return `false` to reject.
+The `CancelRequest` includes `message` (the raw cancel message with `clientId`), `filter` (parsed scope), `matchedTurnIds`, and `turnOwners` (map of turn ID to owner client ID). Return `false` to reject. If `onCancel` is not provided, all cancel requests are accepted.
 
-### Abort hook <a id="abort-hook"/>
+### Hook into the abort <a id="abort-hook"/>
 
 The `onAbort` hook runs after the abort signal fires, giving you a chance to publish final events before the stream closes:
 
@@ -108,27 +110,54 @@ const turn = transport.newTurn({
   turnId,
   clientId,
   onAbort: async (write) => {
-    await write({ type: 'text-delta', textDelta: '\n[Response cancelled]' })
+    await write({ type: 'text-delta', textDelta: '\n[Response cancelled]' });
   },
-})
+});
 ```
 </Code>
 
 ## Cancel on close <a id="cancel-on-close"/>
 
-When a client transport closes, it can optionally cancel its own turns:
+When a client transport closes, it optionally cancels its own turns:
 
 <Code>
 ```javascript
-await transport.close({ cancel: { own: true } })
+await transport.close({ cancel: { own: true } });
 ```
 </Code>
 
+## Edge cases and unhappy paths <a id="edge-cases"/>
+
+- Cancellation is asynchronous. A few more tokens arrive after `cancel()` returns and before the server's `abortSignal` fires. Render them on the cancelled turn.
+- The server is responsible for honouring the abort signal. A tool invocation that does not check the signal continues to run until it completes.
+- Cancel signals from a client without the channel [publish capability](/docs/auth/capabilities#capability-operations) will silently fail. Verify capabilities on the [authentication](/docs/ai-transport/concepts/authentication) endpoint.
+- An `onCancel` that returns `false` does not notify the requesting client. Surface the rejection through your own application protocol if the user needs to know.
+- A cancel sent before the turn starts is delivered to the channel and accumulated; the server applies it as soon as the turn is created.
+
+## FAQ <a id="faq"/>
+
+### Why use cancel signals instead of closing the connection? <a id="faq-vs-close"/>
+
+Closing the connection disconnects a client from the session. The session and connection are distinct and not coupled. A cancel signal notifies the agent to stop the stream but leaves the session intact, so the next message starts a new turn immediately, on every connected device. See [reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery) for how clients that disconnect mid-stream can reconnect and resume.
+
+### Can a user on another device cancel my turn? <a id="faq-cross-device"/>
+
+Yes, if your `onCancel` hook authorises it. The default accepts all cancel requests. See the authorisation pattern above to scope it to the turn owner.
+
+### What happens if multiple cancel signals match the same turn? <a id="faq-multiple"/>
+
+The turn cancels once. Subsequent matching signals are no-ops; the abort signal does not refire.
+
+### How do I tell a cancelled turn apart from one that finished normally? <a id="faq-detect"/>
+
+`turn.end(reason)` reports the reason on the channel. Clients receive it through the view's turn-end event. The reason is `'cancelled'` for a cancel and `'complete'` for a normal finish.
+
+### Does cancel cost a message? <a id="faq-pricing"/>
+
+The cancel signal is a published message on the channel. See [pricing](/docs/platform/pricing) for current rates.
+
 ## Related features <a id="related"/>
 
-- [Interruption and barge-in](/docs/ai-transport/features/interruption) - cancel and immediately send a new message
-- [Concurrent turns](/docs/ai-transport/features/concurrent-turns) - multiple turns with independent cancel handles
-- [Token streaming](/docs/ai-transport/features/token-streaming) - what gets cancelled
-- [Client transport API](/docs/ai-transport/api-reference/client-transport) - reference for `cancel` and other client methods.
-- [Turns](/docs/ai-transport/concepts/turns) - how turns and cancel signals interact within a session.
-- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.
+- [Barge-in](/docs/ai-transport/features/barge-in): cancel and immediately send a new message.
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): multiple turns with independent cancel handles.
+- [Token streaming](/docs/ai-transport/features/token-streaming): what gets cancelled when the abort fires.

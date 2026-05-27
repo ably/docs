@@ -2,40 +2,35 @@
 title: "Chain of thought"
 meta_description: "Stream reasoning and thinking content alongside responses with Ably AI Transport. Display chain-of-thought in real time."
 meta_keywords: "chain of thought, reasoning, thinking, AI Transport, Ably, streaming reasoning"
+intro: "Your users see the agent's reasoning as it streams, side by side with the response. AI Transport multiplexes reasoning and text streams within the same turn."
 redirect_from:
   - /docs/ai-transport/messaging/chain-of-thought
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
-
-Chain of thought in AI Transport streams reasoning content alongside the main response text. The codec supports multiple stream types within a single turn - text and reasoning are delivered as separate streams that render independently in the UI.
+Chain of thought streams reasoning content alongside the main response text. The codec supports multiple stream types within a single turn. Text and reasoning are delivered as separate streams that render independently in the UI.
 
 ## How it works <a id="how-it-works"/>
 
-When an LLM produces reasoning or thinking tokens, the codec multiplexes them alongside text tokens on the same Ably channel. Each stream type is tagged so the client can route reasoning content to one part of the UI and response text to another.
+When an LLM produces reasoning or thinking tokens, the codec multiplexes them alongside text tokens on the same Ably channel. Each stream type is tagged so the client routes reasoning content to one part of the UI and response text to another.
 
 With the Vercel AI SDK integration, reasoning arrives as a separate `reasoning` stream type within the UI message stream:
 
 <Code>
 ```javascript
-// Server: stream a response that includes reasoning
 app.post('/api/chat', async (req, res) => {
-  const { turnId, clientId, messages } = req.body
-  const turn = transport.newTurn({ turnId, clientId })
+  const { turnId, clientId, messages } = req.body;
+  const turn = transport.newTurn({ turnId, clientId });
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
     messages,
     abortSignal: turn.abortSignal,
-  })
+  });
 
-  // The codec handles multiplexing text and reasoning streams
-  await turn.streamResponse(result.toUIMessageStream())
-  await turn.end('complete')
-  res.json({ ok: true })
-})
+  await turn.streamResponse(result.toUIMessageStream());
+  await turn.end('complete');
+  res.json({ ok: true });
+});
 ```
 </Code>
 
@@ -43,35 +38,62 @@ No additional server configuration is needed. If the model produces reasoning to
 
 ## Display reasoning in the UI <a id="displaying-reasoning"/>
 
-On the client, message nodes include both text and reasoning content. Render them separately to show the agent's thinking process:
+On the client, message nodes contain both text and reasoning content. Render them separately to show the agent's thinking process:
 
 <Code>
 ```javascript
-const { nodes } = useView({ transport })
+const { nodes } = useView({ transport });
 
-// Each node may contain text parts, reasoning parts, or both
 for (const node of nodes) {
   for (const part of node.message.parts) {
     if (part.type === 'reasoning') {
-      renderThinkingPanel(part.reasoning)
+      renderThinkingPanel(part.reasoning);
     } else if (part.type === 'text') {
-      renderResponsePanel(part.text)
+      renderResponsePanel(part.text);
     }
   }
 }
 ```
 </Code>
 
-Both streams update in real time. Users see the reasoning content appear as the model thinks, followed by (or alongside) the response text.
+Both streams update in real time. Users see the reasoning appear as the model thinks, followed by (or alongside) the response text.
 
 <Aside data-type='note'>
-Chain of thought support depends on the model and framework. Not all models produce reasoning tokens, and not all codec integrations surface them as separate stream types. Check your framework guide for details on reasoning support.
+Chain of thought support depends on the model and the codec. Not all models produce reasoning tokens, and not all codec integrations surface them as separate stream types. Check your framework guide.
 </Aside>
+
+## Edge cases and unhappy paths <a id="edge-cases"/>
+
+- A model that produces reasoning but the codec does not surface it folds reasoning into the text stream. Update the codec or the framework integration if you need it separated.
+- Reasoning tokens are often longer than the final response. They count toward the channel's message rate and storage like any other tokens. See [token streaming](/docs/ai-transport/features/token-streaming#rollup) for rollup tuning.
+- A cancelled turn aborts both streams. Partial reasoning content stays with status `aborted`.
+- Two reasoning streams in the same turn are exposed in the same order they were emitted by the model. Multiple distinct reasoning episodes are common with tool-augmented agents.
+- A client that does not render reasoning parts still receives them on the channel. Filter at the render layer if you want to hide them by default.
+
+## FAQ <a id="faq"/>
+
+### Which models support chain of thought? <a id="faq-models"/>
+
+Anthropic's thinking-enabled models and OpenAI's o-series surface reasoning tokens. Other models do not. Check the model provider documentation.
+
+### Can I hide reasoning from the user? <a id="faq-hide"/>
+
+Yes. Reasoning is a separate part type. Filter it out at the render layer. The content is still on the channel for any client that wants it.
+
+### Does cancelling cut off reasoning too? <a id="faq-cancel"/>
+
+Yes. Both the reasoning and text streams share the turn's abort signal.
+
+### Are reasoning tokens charged the same as text? <a id="faq-pricing"/>
+
+Yes. The channel does not distinguish between part types for billing. The cost depends on the published message count after rollup.
+
+### How do I render reasoning differently after the turn finishes? <a id="faq-post-render"/>
+
+The `node.message.parts` array stays available after the turn ends. Hide or collapse reasoning when the streaming flag flips to false.
 
 ## Related features <a id="related"/>
 
-- [Token streaming](/docs/ai-transport/features/token-streaming) - how text tokens are streamed and accumulated
-- [Tool calling](/docs/ai-transport/features/tool-calling) - another multi-part stream type within a turn
-- [Codec API](/docs/ai-transport/api-reference/codec) - reference for the codec that multiplexes reasoning and text streams.
-- [Transport](/docs/ai-transport/concepts/transport) - how the codec encodes multiple stream types.
-- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.
+- [Token streaming](/docs/ai-transport/features/token-streaming): how text tokens are streamed and accumulated.
+- [Tool calling](/docs/ai-transport/features/tool-calling): another multi-part stream type within a turn.
+- [Codec API](/docs/ai-transport/api/javascript/codec): reference for the codec that multiplexes reasoning and text streams.

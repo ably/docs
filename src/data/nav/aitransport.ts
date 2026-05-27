@@ -15,18 +15,33 @@ export default {
     },
     {
       name: 'Why AI Transport',
-      link: '/docs/ai-transport/why',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/why',
+          index: true,
+        },
+        {
+          name: 'HTTP streaming and AI',
+          link: '/docs/ai-transport/why/http-streaming-and-ai',
+        },
+      ],
     },
     {
       name: 'Concepts',
       pages: [
         {
+          name: 'Overview',
+          link: '/docs/ai-transport/concepts',
+          index: true,
+        },
+        {
           name: 'Sessions',
           link: '/docs/ai-transport/concepts/sessions',
         },
         {
-          name: 'Messages and conversation tree',
-          link: '/docs/ai-transport/concepts/messages-and-conversation-tree',
+          name: 'Conversation tree',
+          link: '/docs/ai-transport/concepts/conversation-tree',
         },
         {
           name: 'Turns',
@@ -39,6 +54,10 @@ export default {
         {
           name: 'Authentication',
           link: '/docs/ai-transport/concepts/authentication',
+        },
+        {
+          name: 'Infrastructure',
+          link: '/docs/ai-transport/concepts/infrastructure',
         },
       ],
     },
@@ -56,11 +75,15 @@ export default {
       ],
     },
     {
-      name: 'Framework guides',
+      name: 'Frameworks',
       pages: [
         {
-          name: 'Vercel AI SDK',
-          link: '/docs/ai-transport/framework-guides/vercel-ai-sdk',
+          name: 'Vercel AI SDK UI',
+          link: '/docs/ai-transport/frameworks/vercel-ai-sdk-ui',
+        },
+        {
+          name: 'Vercel AI SDK Core',
+          link: '/docs/ai-transport/frameworks/vercel-ai-sdk-core',
         },
       ],
     },
@@ -92,16 +115,12 @@ export default {
           link: '/docs/ai-transport/features/branching',
         },
         {
-          name: 'Interruption and barge-in',
-          link: '/docs/ai-transport/features/interruption',
+          name: 'Barge-in',
+          link: '/docs/ai-transport/features/barge-in',
         },
         {
           name: 'Concurrent turns',
           link: '/docs/ai-transport/features/concurrent-turns',
-        },
-        {
-          name: 'Edit and regenerate',
-          link: '/docs/ai-transport/features/edit-and-regenerate',
         },
         {
           name: 'Tool calling',
@@ -134,36 +153,82 @@ export default {
       ],
     },
     {
+      name: 'Going to production',
+      link: '/docs/ai-transport/going-to-production',
+    },
+    {
       name: 'API reference',
       pages: [
         {
           name: 'Overview',
-          link: '/docs/ai-transport/api-reference',
+          link: '/docs/ai-transport/api',
           index: true,
         },
         {
-          name: 'Client transport',
-          link: '/docs/ai-transport/api-reference/client-transport',
+          name: 'JavaScript',
+          pages: [
+            {
+              name: 'Client transport',
+              link: '/docs/ai-transport/api/javascript/client-transport',
+            },
+            {
+              name: 'Server transport',
+              link: '/docs/ai-transport/api/javascript/server-transport',
+            },
+            {
+              name: 'Vercel integration',
+              link: '/docs/ai-transport/api/javascript/vercel',
+            },
+            {
+              name: 'Codec',
+              link: '/docs/ai-transport/api/javascript/codec',
+            },
+          ],
         },
         {
-          name: 'Server transport',
-          link: '/docs/ai-transport/api-reference/server-transport',
+          name: 'React',
+          pages: [
+            {
+              name: 'Providers',
+              link: '/docs/ai-transport/api/react/providers',
+            },
+            {
+              name: 'useClientTransport',
+              link: '/docs/ai-transport/api/react/use-client-transport',
+            },
+            {
+              name: 'useView',
+              link: '/docs/ai-transport/api/react/use-view',
+            },
+            {
+              name: 'useCreateView',
+              link: '/docs/ai-transport/api/react/use-create-view',
+            },
+            {
+              name: 'useTree',
+              link: '/docs/ai-transport/api/react/use-tree',
+            },
+            {
+              name: 'useActiveTurns',
+              link: '/docs/ai-transport/api/react/use-active-turns',
+            },
+            {
+              name: 'useAblyMessages',
+              link: '/docs/ai-transport/api/react/use-ably-messages',
+            },
+            {
+              name: 'useChatTransport',
+              link: '/docs/ai-transport/api/react/use-chat-transport',
+            },
+            {
+              name: 'useMessageSync',
+              link: '/docs/ai-transport/api/react/use-message-sync',
+            },
+          ],
         },
         {
-          name: 'React hooks',
-          link: '/docs/ai-transport/api-reference/react-hooks',
-        },
-        {
-          name: 'Vercel integration',
-          link: '/docs/ai-transport/api-reference/vercel',
-        },
-        {
-          name: 'Codec',
-          link: '/docs/ai-transport/api-reference/codec',
-        },
-        {
-          name: 'Error codes',
-          link: '/docs/ai-transport/api-reference/error-codes',
+          name: 'Errors',
+          link: '/docs/ai-transport/api/errors',
         },
       ],
     },
