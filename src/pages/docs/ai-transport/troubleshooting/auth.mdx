@@ -1,0 +1,89 @@
+---
+title: "Troubleshoot authentication errors"
+meta_description: "Debug authentication errors in Ably AI Transport: token rejected, capability missing, clientId mismatch."
+meta_keywords: "AI Transport, authentication errors, token rejected, capability, clientId, JWT, Ably auth"
+intro: "Auth errors fall into three buckets: the token itself is invalid, the token is valid but missing the right capability, or the clientId is set wrong."
+---
+
+Auth errors usually surface as a channel that will not attach, a publish that fails with a capability error, or a cancel that is silently rejected. Each of the three buckets below has a different fix.
+
+## Symptom: token rejected by Ably <a id="token-rejected"/>
+
+The Ably SDK reports `Token error: ...` or `40142`/`40140`. The client cannot establish a connection.
+
+**Confirm:**
+
+- Inspect the response from your `authUrl` endpoint. The token must be a valid Ably JWT signed with the right key.
+- Decode the JWT and confirm the `keyid` matches your Ably API key prefix.
+- Check `exp` (expiry). A clock skew between your auth server and Ably (more than 60 seconds) causes immediate expiry.
+
+**Fix:**
+
+- Re-verify the key and key secret in your auth endpoint. Common mistake: signing with the wrong half of the split-key string.
+- Set token expiry to at least 30 minutes. The SDK refreshes ahead of expiry; very short lifetimes fight the refresh.
+- Run NTP on your auth server. Clock drift is a frequent cause.
+
+## Symptom: capability missing on a specific operation <a id="capability-missing"/>
+
+The connection works, but a specific operation (publish, subscribe, history, presence) fails with a capability error.
+
+**Confirm:**
+
+- Decode the JWT and look at `x-ably-capability`. It is a JSON-encoded map of channel patterns to permitted operations.
+- Identify the channel and the operation that failed. Match against the capability.
+
+**Fix:**
+
+- Add the missing operation to the capability for the relevant channel. For example, history loading requires `history` capability on the channel.
+- Match the channel name exactly. Wildcards work (`'conversations:*'` covers `conversations:abc`), but capability is case-sensitive.
+- If you have many users, scope capability per user. A capability that grants `*` on all channels is convenient in development and a security hole in production.
+
+## Symptom: `clientId` mismatch <a id="clientid-mismatch"/>
+
+Operations succeed, but ownership-scoped behaviour (cancel filters, turn ownership) does not work as expected. Cancels do not match turns the user thinks they own.
+
+**Confirm:**
+
+- Inspect the JWT's `x-ably-clientId` claim and compare to the `clientId` your client thinks it has.
+- Check whether your server passes the correct `clientId` to `newTurn()`. Turn ownership is set at `newTurn` time; if the server hard-codes the wrong value, every turn appears to belong to the wrong client.
+
+**Fix:**
+
+- Always set `x-ably-clientId` in the token. The Ably service trusts the token; a client-set `clientId` is unverified.
+- On the server, read `clientId` from the inbound request body (which the client populates from the token-derived identity) and pass it through to `newTurn()`.
+- Watch for `'*'` as a `clientId` in development. It allows any client to act as anyone; never use it in production.
+
+## Symptom: cancel rejected by `onCancel` <a id="cancel-rejected"/>
+
+A cancel publishes successfully but the agent does not stop. Other clients see the cancel signal, but the turn keeps streaming.
+
+**Confirm:**
+
+- Add a log inside your `onCancel` hook to verify it is being called and what it returns.
+- Inspect the `CancelRequest`: `message.clientId`, `filter`, `turnOwners`.
+
+**Fix:**
+
+- Match the authorisation rule against the `CancelRequest` shape. A common bug is comparing against `request.clientId` instead of `request.message.clientId`.
+- If `onCancel` is not provided, all cancels are accepted by default. If your application requires authorisation, set the hook.
+
+## Symptom: `authUrl` not being called <a id="authurl-not-called"/>
+
+The client uses `authUrl` but the auth endpoint never receives a request. The SDK fails with a token error.
+
+**Confirm:**
+
+- Check the network tab in your browser. There should be a request to the auth endpoint when the Ably client initialises.
+- Confirm the `authUrl` value matches a real route in your application. A typo in the path silently fails.
+
+**Fix:**
+
+- Use a relative path for same-origin endpoints: `authUrl: '/auth'`.
+- For cross-origin endpoints, pass `authMethod: 'POST'` and CORS headers on your auth route.
+- If your auth route requires cookies, set the relevant cookie attributes (`SameSite=None; Secure` for cross-site).
+
+## Related <a id="related"/>
+
+- [Authentication](/docs/ai-transport/concepts/authentication): the full auth setup.
+- [Connection troubleshooting](/docs/ai-transport/troubleshooting/connection): when an auth problem manifests as a connection problem.
+- [Cancellation](/docs/ai-transport/features/cancellation): the cancel authorisation flow.

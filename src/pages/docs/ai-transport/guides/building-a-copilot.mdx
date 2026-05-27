@@ -1,0 +1,145 @@
+---
+title: "Building a copilot"
+meta_description: "Build an in-app AI copilot with Ably AI Transport. Presence, shared live state, and approval gates for sensitive actions."
+meta_keywords: "AI copilot, AI Transport, agent presence, shared state, approval gates, multi-device, durable sessions"
+intro: "Build an in-app copilot that watches what the user is doing, asks before taking sensitive actions, and stays in sync across every device the user opens."
+---
+
+This guide builds a copilot inside an application. The user is editing a document; the copilot sees what they are doing, suggests changes, asks before executing them, and stays available on a second device when the user switches to a phone. The conversation is durable; the copilot's awareness is real-time.
+
+The guide assumes you have completed [getting started with the Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk). Build the base chat experience from there, then layer the copilot behaviour below.
+
+## What you build <a id="what-you-build"/>
+
+- A copilot UI that opens alongside the user's main work surface.
+- Real-time presence so the user sees what the copilot is doing (thinking, working, idle).
+- Shared live state: the user's cursor or selection is visible to the copilot; the copilot's progress is visible to the user.
+- Approval gates that pause the copilot before sensitive actions and reach the user on any device.
+- Multi-device continuity, so the copilot session follows the user.
+
+## Step 1: Establish the session <a id="session"/>
+
+Use a stable channel name for the user's working session. A document ID is a natural choice:
+
+<Code>
+```javascript
+<TransportProvider channelName={`copilot:${documentId}`} codec={UIMessageCodec}>
+  <Copilot />
+</TransportProvider>
+
+// Inside Copilot:
+const { transport } = useClientTransport();
+```
+</Code>
+
+Any device the user opens for the same document joins the same session. See [multi-device sessions](/docs/ai-transport/features/multi-device).
+
+## Step 2: Show agent presence <a id="presence"/>
+
+The copilot self-reports its state through Ably Presence. On the server, the agent updates its status as it works:
+
+<Code>
+```javascript
+const channel = ably.channels.get(`copilot:${documentId}`);
+await channel.presence.enter({ status: 'idle' });
+
+app.post('/api/chat', async (req, res) => {
+  await channel.presence.update({ status: 'thinking' });
+  // model call here
+  await channel.presence.update({ status: 'working' });
+  // tool execution here
+  await channel.presence.update({ status: 'idle' });
+  res.json({ ok: true });
+});
+```
+</Code>
+
+On the client, render the status badge:
+
+<Code>
+```javascript
+const channel = ably.channels.get(`copilot:${documentId}`);
+
+channel.presence.subscribe((member) => {
+  if (member.clientId === 'copilot') {
+    setStatus(member.data.status);
+  }
+});
+```
+</Code>
+
+See [agent presence](/docs/ai-transport/features/agent-presence) for the full pattern.
+
+## Step 3: Share live state <a id="shared-state"/>
+
+User cursor position, current selection, and other in-the-moment context are published as presence updates on the same channel. The copilot reads them when invoked:
+
+<Code>
+```javascript
+// Client publishes its cursor as a presence update.
+useEffect(() => {
+  channel.presence.update({ cursor: cursorPosition, selection });
+}, [cursorPosition, selection]);
+
+// Server reads the latest user presence to enrich the prompt.
+const members = await channel.presence.get();
+const user = members.find((m) => m.clientId.startsWith('user:'));
+const context = user?.data;
+```
+</Code>
+
+Now the copilot's prompt includes "the user is on line 12, with `revenue grew by` selected", not just the chat history.
+
+## Step 4: Add approval gates <a id="approvals"/>
+
+Sensitive actions go through tool-calling with an approval gate. Define a tool the copilot invokes when it wants to take an action:
+
+<Code>
+```javascript
+const result = streamText({
+  model: anthropic('claude-sonnet-4-20250514'),
+  messages: conversationHistory,
+  tools: {
+    applyEdit: {
+      description: 'Apply an edit to the document',
+      inputSchema: z.object({
+        location: z.string(),
+        replacement: z.string(),
+      }),
+      // No execute function; the user approves and the client applies.
+    },
+  },
+  abortSignal: turn.abortSignal,
+});
+```
+</Code>
+
+When the LLM invokes `applyEdit`, the turn ends with a pending tool call. The client renders an approval prompt. When the user approves, the client applies the edit locally and submits the approval result, which starts a continuation turn so the agent confirms and moves on. See [human-in-the-loop](/docs/ai-transport/features/human-in-the-loop) for the full mechanism.
+
+## Step 5: Cross-device continuity <a id="cross-device"/>
+
+A pending approval persists on the session. If the user switches to a phone while a pending approval is on screen, the phone sees the same pending request through `useView`. The first device to submit wins; the other devices update to reflect the resolved approval.
+
+If the user closes both devices and comes back the next day, the pending approval is still there as long as it is within the channel's history retention. Walk the user through it on reconnect.
+
+## Step 6: Production hardening <a id="production"/>
+
+Before shipping:
+
+- Scope channel capabilities to `copilot:${documentId}` for the specific user. Do not grant wildcard access.
+- Set `onCancel` so user cancels are honoured and the copilot itself does not get cancelled by something else.
+- For approval-gated actions, log the approval result with a server-side identifier so you have an audit trail.
+- Walk through [going to production](/docs/ai-transport/going-to-production) for the full checklist.
+
+## Edge cases <a id="edge-cases"/>
+
+- A user that races a pending approval against an explicit edit creates two competing branches. Decide whether the copilot should reconcile or whether the user's edit wins.
+- A copilot that crashes mid-action leaves the tool call pending. Re-issuing the turn does not duplicate the action; the same `turnId` is idempotent on the channel.
+- A long-running tool that exceeds the agent's runtime budget needs to deliver its result later via `addEvents` on the same message ID. See [tool calling](/docs/ai-transport/features/tool-calling#events-node).
+- Two users on the same document need clear `clientId` semantics. Use `clientId` like `user:alice` and `user:bob` so the copilot can address each separately.
+
+## Read next <a id="next"/>
+
+- [Building support chat](/docs/ai-transport/guides/building-support-chat): a different scenario (multi-device support chat).
+- [Agent presence](/docs/ai-transport/features/agent-presence): the presence patterns this guide uses.
+- [Going to production](/docs/ai-transport/going-to-production): the production checklist.

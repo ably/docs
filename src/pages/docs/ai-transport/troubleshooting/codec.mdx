@@ -1,0 +1,88 @@
+---
+title: "Troubleshoot codec problems"
+meta_description: "Debug codec issues in Ably AI Transport: events dropped, stream parts missing, accumulator mismatches."
+meta_keywords: "AI Transport, codec problems, encoder, decoder, accumulator, UIMessageCodec, framework integration"
+intro: "Codec problems usually look like missing events, wrong message shape, or a stream that never closes. The cause is usually a mismatch between server encoding and client decoding."
+---
+
+The codec is the boundary between your domain events and Ably messages. When it breaks, events go missing, messages render in the wrong shape, or streams never close. Each symptom points to a specific layer of the codec.
+
+## Symptom: text streams but tool calls do not render <a id="missing-tool-calls"/>
+
+The model produces tool calls, but the client view does not display them. Text parts render correctly.
+
+**Confirm:**
+
+- Inspect the channel messages directly (Ably Dashboard or CLI). Look for messages with the tool-call event types.
+- If the messages are on the channel, the encoder worked; the decoder is dropping them.
+- If the messages are not on the channel, the encoder dropped them on the way out.
+
+**Fix:**
+
+- If the server pipeline is wrong, confirm you call `turn.streamResponse(result.toUIMessageStream())`, not `result.toAIStream()` or the older Vercel formats. The codec expects the UI message stream shape.
+- If the decoder is dropping them, check whether your codec supports the chunk type. `UIMessageCodec` supports the chunk types Vercel publishes; a custom codec needs explicit support for each type.
+
+## Symptom: messages render but never reach `finished` state <a id="stream-never-closes"/>
+
+A streamed message keeps the `streaming` status forever, even after the model has finished.
+
+**Confirm:**
+
+- Inspect the channel for the lifecycle close event. A streamed message ends with an Ably update that sets the status header to `finished` or `aborted`.
+- If the close event is missing, the encoder did not publish it. This usually means `turn.end()` was not called.
+
+**Fix:**
+
+- Always call `turn.end(reason)` after the model stream completes. The reason is one of `'complete'`, `'cancelled'`, or `'error'`.
+- If you use `after()` (Next.js) or another deferred handler, confirm it runs to completion. A handler that throws before `turn.end()` leaves the stream open.
+- If the close event is on the channel but the client still shows streaming, the issue is on the decoder side. Update to the latest SDK; the lifecycle tracker has been improved over time.
+
+## Symptom: accumulator builds the wrong message <a id="accumulator-mismatch"/>
+
+The streamed parts arrive, but the assembled `UIMessage` has the wrong shape. Text appears in the wrong part, tool inputs are split across messages, or parts are duplicated.
+
+**Confirm:**
+
+- Inspect the raw chunks on the channel against the resulting `node.message.parts`. Compare what the encoder published against what the accumulator produced.
+- This is usually a codec version mismatch between server and client, or a custom codec that does not implement the accumulator correctly.
+
+**Fix:**
+
+- Run the same version of `@ably/ai-transport/vercel` on both ends. The codec contract evolves; mismatched versions misassemble.
+- For a custom codec, walk through the accumulator function against the actual chunk sequence. The most common bug is appending to the wrong part type or initialising a new part too early.
+- Add temporary logging in the accumulator to print the chunk type and the part state at each step.
+
+## Symptom: events delivered but in the wrong order <a id="ordering"/>
+
+Tool results arrive before the corresponding tool input, or text parts appear out of order.
+
+**Confirm:**
+
+- Ably guarantees ordering per channel. If channel messages are out of order, that is a serious bug; capture the channel history and escalate.
+- If channel messages are in order but the client view is not, the issue is in the decoder or the application's render layer.
+
+**Fix:**
+
+- Confirm you read from `node.message.parts` in array order. The parts array preserves the order of arrival.
+- If you re-sort or filter parts in your UI, check the sort is stable and includes all part types.
+- A common bug is using `Promise.all` on parallel decode operations and then rendering in whatever order they resolve. Decode is synchronous in the standard codecs.
+
+## Symptom: custom codec example fails <a id="custom-codec-broken"/>
+
+A custom codec implementation throws or returns wrong types.
+
+**Confirm:**
+
+- The codec interface requires specific return shapes. `decode()` returns `DecoderOutput<TEvent, TMessage>[]` (an array), not a single event. Returning a single value is a common bug.
+- `createAccumulator()` must return an accumulator object. Returning `undefined` (no return) breaks the pipeline.
+
+**Fix:**
+
+- Match the interface in the [codec API reference](/docs/ai-transport/api-reference/codec). Pay attention to return types and array vs single-value shapes.
+- Start from `UIMessageCodec` as a reference implementation. Most custom codecs follow the same shape with different event types.
+
+## Related <a id="related"/>
+
+- [Codec API reference](/docs/ai-transport/api-reference/codec): the interface custom codecs implement.
+- [Token streaming](/docs/ai-transport/features/token-streaming#under-the-hood): how the encoder publishes appends.
+- [Transport](/docs/ai-transport/concepts/transport#codec): the conceptual role of the codec.

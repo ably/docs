@@ -1,0 +1,113 @@
+---
+title: "Building support chat"
+meta_description: "Build a multi-device AI support chat with Ably AI Transport. Branching, history, and handoff to a human agent."
+meta_keywords: "AI support chat, AI Transport, branching, history, human handoff, multi-device"
+intro: "Build a support chat where a user can pick up the conversation on any device, branch into alternatives, and escalate to a human without losing the thread."
+---
+
+This guide builds a support chat application with AI Transport. The user opens the chat on a laptop, asks a question, switches to a phone, branches into an alternative phrasing, and eventually hands off to a human agent. The conversation continues seamlessly across all of these.
+
+The guide assumes you have completed [getting started with the Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk). Build the base app from that guide first, then layer the support-chat behaviour described here.
+
+## What you build <a id="what-you-build"/>
+
+- A chat UI that loads conversation history on mount.
+- Multi-device sync, so the same chat is open on a laptop and a phone in real time.
+- Branching with edit and regenerate, so the user explores alternative responses.
+- A human handoff signal that pauses the AI and brings a human agent into the same channel.
+
+## Step 1: Load history on mount <a id="history"/>
+
+Use `useView` with a `limit` to load the recent conversation when the page opens:
+
+<Code>
+```javascript
+const { nodes, hasOlder, loadOlder } = useView({ transport, limit: 50 });
+```
+</Code>
+
+`hasOlder` flips false when the user reaches the start of the conversation. Wire `loadOlder()` to a "Load older messages" affordance at the top of the chat. See [history and replay](/docs/ai-transport/features/history) for the full pagination patterns.
+
+## Step 2: Sync across devices <a id="multi-device"/>
+
+The channel name determines what counts as "the same session". Use a stable identifier (the user's support ticket ID, for example) so both devices subscribe to the same channel:
+
+<Code>
+```javascript
+<TransportProvider channelName={`support:${ticketId}`} codec={UIMessageCodec}>
+  <Chat />
+</TransportProvider>
+
+// Inside Chat:
+const { transport } = useClientTransport();
+```
+</Code>
+
+That is the entire change. Multi-device sync works because the channel is the session. See [multi-device sessions](/docs/ai-transport/features/multi-device) for the underlying model.
+
+## Step 3: Add branching <a id="branching"/>
+
+Expose edit and regenerate so the user can revise their question or request a different answer. Use the React hooks to wire these:
+
+<Code>
+```javascript
+const { edit, regenerate } = useView();
+
+function MessageActions({ message }) {
+  if (message.role === 'user') {
+    return <button onClick={() => edit(message.id, [{ role: 'user', content: newText }])}>Edit</button>;
+  }
+  return <button onClick={() => regenerate(message.id)}>Regenerate</button>;
+}
+```
+</Code>
+
+For sibling navigation (the "1 of 3" UI), use `view.getSiblings()` and `view.select()`. See [conversation branching](/docs/ai-transport/features/branching) for the full UI pattern.
+
+## Step 4: Hand off to a human agent <a id="handoff"/>
+
+A human handoff is a session-level signal: the AI stops responding, a human joins, and both are visible to the user. The pattern uses tool calling.
+
+Define a `requestHumanHandoff` tool on the server without an `execute` function:
+
+<Code>
+```javascript
+const result = streamText({
+  model: anthropic('claude-sonnet-4-20250514'),
+  messages: conversationHistory,
+  tools: {
+    requestHumanHandoff: {
+      description: 'Hand off the conversation to a human agent when the user explicitly asks, or when the agent cannot help',
+      inputSchema: z.object({ reason: z.string() }),
+      // No execute function; the human agent fulfils this.
+    },
+  },
+  abortSignal: turn.abortSignal,
+});
+```
+</Code>
+
+When the LLM invokes the tool, the turn ends with a pending tool call on the channel. Your support backend subscribes to a dashboard channel scoped to pending handoffs. A human agent picks up the request, opens the same session channel, and submits the result. See [human-in-the-loop](/docs/ai-transport/features/human-in-the-loop) for the full mechanism.
+
+While the handoff is pending, render a "Connecting you to a human" indicator on the user's chat. When the human submits the tool result, the conversation continues with the human as the next participant on the same channel.
+
+## Step 5: Production hardening <a id="production"/>
+
+Before shipping:
+
+- Scope channel capabilities to `support:${ticketId}` for the specific user. Do not grant wildcard channel access.
+- Set the `onCancel` hook on every turn so only the ticket owner can cancel (the human agent should not be cancelled by the user).
+- Set up monitoring on turn outcomes. A high `failed` rate on support tickets is a red flag.
+- Walk through the [going to production](/docs/ai-transport/going-to-production) checklist for the rest.
+
+## Edge cases <a id="edge-cases"/>
+
+- A user that branches mid-stream produces two parallel turns until the original cancels. Decide whether to cancel the in-flight turn before applying an edit; the support pattern usually cancels first.
+- A human agent connecting from outside the regular client app uses the same `clientId` scheme. Verify in your auth endpoint that human agents are authorised on the relevant ticket channel.
+- Multiple support agents joining the same ticket all see each other through presence. Use [agent presence](/docs/ai-transport/features/agent-presence) to track who is active.
+
+## Read next <a id="next"/>
+
+- [Building a copilot](/docs/ai-transport/guides/building-a-copilot): a different scenario (in-app copilot with shared state).
+- [Authentication](/docs/ai-transport/concepts/authentication): the auth model for ticket-scoped capabilities.
+- [Going to production](/docs/ai-transport/going-to-production): the production checklist.

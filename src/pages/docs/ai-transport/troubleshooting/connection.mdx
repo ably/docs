@@ -1,0 +1,74 @@
+---
+title: "Troubleshoot connection issues"
+meta_description: "Debug connection problems in Ably AI Transport: channel attach failures, reconnect loops, delivery gaps after reconnect."
+meta_keywords: "AI Transport, connection issues, channel attach, reconnect, untilAttach, delivery gaps"
+intro: "Connection problems usually surface as a channel that will not attach, a client that keeps reconnecting, or a gap in delivered messages after a reconnect. Each has a different root cause."
+---
+
+Connection problems show up in three forms: channel attach failures, repeated reconnect cycles, and delivery gaps after a reconnect. Work the symptom that matches.
+
+## Symptom: channel will not attach <a id="attach-failure"/>
+
+The client subscribes to the channel but never reaches `attached`. No messages are delivered and `useView` returns an empty `nodes` array.
+
+**Confirm:**
+
+- Open the browser console. Look for `Ably channel state: failed` or `Channel error: ...` logs.
+- If the channel state is `failed`, the error message contains the reason. The most common cause is missing capability on the auth token.
+
+**Fix:**
+
+- Check the token returned by your `authUrl` endpoint. Decode the JWT and confirm `x-ably-capability` includes the channel name (or a wildcard that covers it) with at least `subscribe`.
+- If the capability is correct, confirm the channel namespace allows the operations you are using. Some features require `mutable-messages` enabled on the namespace. See [authentication](/docs/ai-transport/concepts/authentication#enable-updates-deletes).
+- If the channel state is `suspended`, the connection itself has not come up. Move to the next symptom.
+
+## Symptom: client keeps reconnecting <a id="reconnect-loop"/>
+
+The client connects, drops, reconnects, drops, and the cycle repeats every few seconds. `useView` returns intermittent state.
+
+**Confirm:**
+
+- Inspect the connection state. The Ably SDK exposes it through `realtimeClient.connection.state`. A reconnect loop usually cycles `connecting` → `connected` → `disconnected`.
+- If the `disconnected` event carries a token error, the issue is auth (see [auth troubleshooting](/docs/ai-transport/troubleshooting/auth)).
+- If the disconnect is network-only, look at the underlying WebSocket. Browser dev tools show the WebSocket lifecycle.
+
+**Fix:**
+
+- If your auth endpoint returns tokens that expire fast or are rejected by Ably, the SDK reconnects but is then rejected again. Lengthen token lifetime to at least 30 minutes and verify your JWT signing.
+- Check for an HTTP proxy or middleware that drops idle connections. Ably handles connection lifecycle internally; do not impose your own reconnection logic on top.
+- Confirm the client environment supports WebSocket. If it does not, Ably falls back to long polling, which is fine but slower; the loop should still resolve.
+
+## Symptom: delivery gap after reconnect <a id="delivery-gap"/>
+
+A client reconnects but does not receive messages published during the disconnect. Tokens that arrived while offline are missing from the view.
+
+**Confirm:**
+
+- Reproduce with a deliberate disconnect (toggle airplane mode briefly). After reconnect, check the view's nodes. If older messages are missing, the recovery path did not run.
+- Check the channel's history retention. The live recovery window is shorter than full history retention; messages older than the live window only come back through history pagination.
+
+**Fix:**
+
+- Use `useView` with a sensible `limit`. On reconnect, the hook loads history up to `untilAttach`, then merges with live activity.
+- If the gap is larger than what `untilAttach` covers, call `loadOlder()` explicitly to walk further back.
+- For very long disconnects, hydrate from your own external store on application start. AI Transport supports this; see [sessions](/docs/ai-transport/concepts/sessions#persistence).
+
+## Symptom: protocol negotiation fails <a id="protocol-failure"/>
+
+The client cannot connect at all from a restrictive network (corporate firewall, hotel Wi-Fi).
+
+**Confirm:**
+
+- Check whether WebSocket connections to `realtime.ably.io` are blocked. Many corporate firewalls allow HTTPS but block WebSocket.
+- The Ably SDK falls back to long polling automatically. If neither protocol works, the network is blocking outbound connections to Ably entirely.
+
+**Fix:**
+
+- Enable Ably's [TLS-only mode](/docs/connect/connect#tls) if the network requires HTTPS on port 443. WebSocket over TLS uses the same port and usually passes.
+- For air-gapped or strict environments, configure the SDK to use the [REST fallback](/docs/connect/connect#fallback-hosts).
+
+## Related <a id="related"/>
+
+- [Authentication troubleshooting](/docs/ai-transport/troubleshooting/auth): when the connection problem is actually an auth problem.
+- [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery): how the recovery path is supposed to work.
+- [Sessions](/docs/ai-transport/concepts/sessions): the model the channel sits underneath.

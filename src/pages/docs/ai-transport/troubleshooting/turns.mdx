@@ -1,0 +1,102 @@
+---
+title: "Troubleshoot turn lifecycle"
+meta_description: "Debug turn lifecycle issues in Ably AI Transport: turns that never start, never end, or end with the wrong reason."
+meta_keywords: "AI Transport, turn lifecycle, turn never starts, turn never ends, abort signal, turn reason"
+intro: "Turn lifecycle problems show up as a turn that never starts, never ends, or ends with the wrong reason. Each maps to a specific point in the server or client flow."
+---
+
+Turn lifecycle has three states the client cares about: pending, active, and ended. When something goes wrong, the symptom is usually that a turn sits in one state forever, or ends in a state you did not expect.
+
+## Symptom: turn never starts <a id="never-starts"/>
+
+The client calls `view.send()` but no turn appears in `useActiveTurns` and no response streams. The user sees their message in the optimistic position, with nothing happening.
+
+**Confirm:**
+
+- Check the network tab. The client should be POSTing to your `/api/chat` route (or equivalent). If there is no request, the optimistic insert is firing but the poke is not.
+- If the request is firing but failing, the server is rejecting it before `turn.start()`.
+
+**Fix:**
+
+- Verify the server route handler reads the inbound JSON shape correctly. The client sends `{ messages, history, id, turnId, clientId, forkOf, parent }`.
+- Confirm `turn.start()` is called before any publish. If you do not call it, the channel does not see the turn-start event and no client tracks the turn as active.
+- Check whether your route is returning before the turn starts. With Next.js `after()`, the response returns immediately but `after()` callbacks must still fire. A `process.exit()` or container shutdown between response and `after()` kills the turn.
+
+## Symptom: turn never ends <a id="never-ends"/>
+
+The agent finishes generating but the turn shows as active forever in `useActiveTurns`. The streamed message renders as still streaming.
+
+**Confirm:**
+
+- Look at the server logs. Did `turn.end(reason)` execute? If the route handler throws between `streamResponse` and `end`, the turn does not close.
+- Inspect the channel. The turn-end lifecycle message should appear after the streamed message's close.
+
+**Fix:**
+
+- Wrap the streaming work in try/finally. Always call `turn.end()` in the finally block, even on error. A turn that errors should end with reason `'error'`.
+- If you use Next.js `after()`, confirm the callback runs to completion. An unhandled promise rejection in `after()` aborts the rest of the handler.
+- Add explicit logs around `turn.start()` and `turn.end()` to confirm the lifecycle is invoked.
+
+## Symptom: turn ends with `'cancelled'` unexpectedly <a id="unexpected-cancel"/>
+
+Turns end with `reason: 'cancelled'` even though no user clicked stop. The client receives partial responses.
+
+**Confirm:**
+
+- Cancel signals are channel messages. Look at the channel for cancel publishes that happened during the affected turn.
+- Common cause: a stale `useEffect` cleanup, or `transport.close({ cancel: { own: true } })` firing on component unmount.
+
+**Fix:**
+
+- Audit every call to `transport.cancel()` and `transport.close()`. The default `close()` does not cancel turns; opting in with `cancel: { own: true }` is what produces unexpected cancels on unmount.
+- If a React component remounts (Strict Mode, Suspense), check that the transport hook does not run cleanup that cancels the active turn.
+
+## Symptom: turn ends with `'error'` <a id="turn-failed"/>
+
+The turn ends but with reason `'error'`. The streamed message has status `aborted`.
+
+**Confirm:**
+
+- Look at the server logs around `turn.end()`. The reason is set by your handler; check what value was passed.
+- Common causes: an exception in `streamResponse` (the model errored, the agent timed out), or a manual `turn.end('error')` call.
+
+**Fix:**
+
+- Inspect the underlying error. Model provider errors (rate limits, auth, content policy) are the most common cause.
+- Add structured error logging to your route handler so the cause of `'error'` is visible.
+- For transient errors (rate limits, network blips), consider a retry policy at the application layer. AI Transport does not retry the LLM call automatically.
+
+## Symptom: cancel signal arrives but `abortSignal` does not fire <a id="abort-not-firing"/>
+
+A cancel is published, but the LLM call does not stop. The turn continues to stream.
+
+**Confirm:**
+
+- Confirm the cancel filter matches the active turn. A `{ turnId: 'x' }` filter against a turn with a different ID is a no-op.
+- Inspect the server: is `turn.abortSignal` passed to the LLM call?
+
+**Fix:**
+
+- Pass `turn.abortSignal` to every LLM call: `streamText({ abortSignal: turn.abortSignal, ... })`.
+- For custom tool execute functions, also check `turn.abortSignal.aborted` inside long-running tools.
+- If `onCancel` is set and rejects the cancel, the signal does not fire. Check the hook's return value.
+
+## Symptom: multiple turns appear for one send <a id="duplicate-turns"/>
+
+A single user message produces two or more turns in the conversation. Streams duplicate.
+
+**Confirm:**
+
+- Check whether your client is calling `send()` twice (React Strict Mode in development calls effects twice).
+- Inspect the channel for two turn-start events with different `turnId` values for the same user message.
+
+**Fix:**
+
+- Wrap send calls in a guard so they fire once per user action.
+- In React, avoid putting `send()` in a `useEffect` without a dependency that prevents re-firing. Imperative event handlers (`onClick`, `onSubmit`) are safer.
+
+## Related <a id="related"/>
+
+- [Turns](/docs/ai-transport/concepts/turns): the lifecycle model.
+- [Cancellation](/docs/ai-transport/features/cancellation): the cancel signal mechanics.
+- [Connection troubleshooting](/docs/ai-transport/troubleshooting/connection): if the turn never starts because the connection is failing.
