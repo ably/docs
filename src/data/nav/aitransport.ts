@@ -153,52 +153,8 @@ export default {
       ],
     },
     {
-      name: 'Guides',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/docs/ai-transport/guides',
-          index: true,
-        },
-        {
-          name: 'Building support chat',
-          link: '/docs/ai-transport/guides/building-support-chat',
-        },
-        {
-          name: 'Building a copilot',
-          link: '/docs/ai-transport/guides/building-a-copilot',
-        },
-      ],
-    },
-    {
       name: 'Going to production',
       link: '/docs/ai-transport/going-to-production',
-    },
-    {
-      name: 'Troubleshooting',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/docs/ai-transport/troubleshooting',
-          index: true,
-        },
-        {
-          name: 'Connection issues',
-          link: '/docs/ai-transport/troubleshooting/connection',
-        },
-        {
-          name: 'Authentication errors',
-          link: '/docs/ai-transport/troubleshooting/auth',
-        },
-        {
-          name: 'Codec problems',
-          link: '/docs/ai-transport/troubleshooting/codec',
-        },
-        {
-          name: 'Turn lifecycle',
-          link: '/docs/ai-transport/troubleshooting/turns',
-        },
-      ],
     },
     {
       name: 'API reference',
