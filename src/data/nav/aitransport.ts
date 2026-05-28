@@ -157,6 +157,10 @@ export default {
       link: '/docs/ai-transport/going-to-production',
     },
     {
+      name: 'Troubleshooting',
+      link: '/docs/ai-transport/troubleshooting',
+    },
+    {
       name: 'API reference',
       pages: [
         {
