@@ -9,9 +9,14 @@ export default {
   },
   content: [
     {
-      name: 'About LiveSync',
-      link: '/docs/livesync',
-      index: true,
+      name: 'Getting started',
+      pages: [
+        {
+          name: 'About LiveSync',
+          link: '/docs/livesync',
+          index: true,
+        },
+      ],
     },
     {
       name: 'MongoDB',

@@ -40,6 +40,7 @@ const LayoutContext = createContext<{
     clientLanguages: [],
     agentLanguages: [],
     isDualLanguage: false,
+    hasProductBar: false,
   },
 });
 
@@ -117,18 +118,21 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
     const clientLanguage = isDualLanguage ? determineClientLanguage(location.search, clientLanguages) : undefined;
     const agentLanguage = isDualLanguage ? determineAgentLanguage(location.search, agentLanguages) : undefined;
 
+    const product = activePageData?.product ?? null;
+
     return {
       tree: activePageData?.tree ?? [],
       page: activePageData?.page ?? { name: '', link: '' },
       languages,
       language: languages.includes(language) ? language : null,
-      product: activePageData?.product ?? null,
+      product,
       template: 'mdx' as PageTemplate,
       clientLanguage,
       agentLanguage,
       clientLanguages,
       agentLanguages,
       isDualLanguage,
+      hasProductBar: product !== null && product !== 'platform',
     };
   }, [location.pathname, location.search, pageContext?.languages]);
 

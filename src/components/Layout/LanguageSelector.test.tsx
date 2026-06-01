@@ -72,7 +72,7 @@ describe('LanguageSelector', () => {
 
   it('renders the LanguageSelector component with default language (JS)', () => {
     render(<LanguageSelector />);
-    expect(screen.getByText('icon-gui-chevron-down-micro')).toBeInTheDocument();
+    expect(screen.getByText('icon-gui-chevron-down-solid')).toBeInTheDocument();
     expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
   });
@@ -83,7 +83,7 @@ describe('LanguageSelector', () => {
     fireEvent.click(trigger);
 
     await waitFor(() => {
-      expect(screen.getByText('Code Language')).toBeInTheDocument();
+      expect(screen.getByText('Python')).toBeInTheDocument();
     });
   });
 
@@ -106,13 +106,13 @@ describe('LanguageSelector', () => {
     fireEvent.click(trigger);
 
     await waitFor(() => {
-      expect(screen.getByText('Code Language')).toBeInTheDocument();
+      expect(screen.getByText('Python')).toBeInTheDocument();
     });
 
     fireEvent.keyDown(trigger, { key: 'Escape', code: 'Escape' });
 
     await waitFor(() => {
-      expect(screen.queryByText('Code Language')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     });
   });
 

@@ -9,12 +9,30 @@ export default {
   },
   content: [
     {
-      name: 'Overview',
-      link: '/docs/ai-transport',
-      index: true,
+      name: 'Getting started',
+      pages: [
+        {
+          name: 'About AI Transport',
+          link: '/docs/ai-transport',
+          index: true,
+        },
+        {
+          name: 'By SDK',
+          pages: [
+            {
+              name: 'Core SDK',
+              link: '/docs/ai-transport/getting-started/core-sdk',
+            },
+            {
+              name: 'Vercel AI SDK',
+              link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
+            },
+          ],
+        },
+      ],
     },
     {
-      name: 'Why AI Transport',
+      name: 'Why AI Transport?',
       pages: [
         {
           name: 'Overview',
@@ -58,19 +76,6 @@ export default {
         {
           name: 'Infrastructure',
           link: '/docs/ai-transport/concepts/infrastructure',
-        },
-      ],
-    },
-    {
-      name: 'Getting started',
-      pages: [
-        {
-          name: 'Core SDK',
-          link: '/docs/ai-transport/getting-started/core-sdk',
-        },
-        {
-          name: 'Vercel AI SDK',
-          link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
         },
       ],
     },
@@ -153,12 +158,17 @@ export default {
       ],
     },
     {
-      name: 'Going to production',
-      link: '/docs/ai-transport/going-to-production',
-    },
-    {
-      name: 'Troubleshooting',
-      link: '/docs/ai-transport/troubleshooting',
+      name: 'Production',
+      pages: [
+        {
+          name: 'Going to production',
+          link: '/docs/ai-transport/going-to-production',
+        },
+        {
+          name: 'Troubleshooting',
+          link: '/docs/ai-transport/troubleshooting',
+        },
+      ],
     },
     {
       name: 'API reference',

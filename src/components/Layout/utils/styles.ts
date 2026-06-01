@@ -7,7 +7,7 @@ export const tooltipContentClassName = cn(
 );
 
 export const secondaryButtonClassName =
-  'focus-base flex items-center justify-center gap-2 px-4 py-[7px] h-9 ui-text-label4 text-neutral-1300 dark:text-neutral-000 rounded border border-neutral-400 dark:border-neutral-900 hover:border-neutral-600 dark:hover:border-neutral-700';
+  'focus-base flex items-center justify-center gap-2 px-4 py-[7px] h-9 ui-text-label4 text-neutral-1300 dark:text-neutral-000 rounded border border-neutral-400 dark:border-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-1200';
 
 export const iconButtonClassName = cn(secondaryButtonClassName, 'w-9 p-0');
 

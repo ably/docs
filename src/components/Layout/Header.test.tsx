@@ -79,7 +79,8 @@ describe('Header', () => {
     expect(screen.getByAltText('Ably')).toBeInTheDocument();
 
     expect(screen.getByText('Docs')).toBeInTheDocument();
-    expect(screen.getByText('Documentation')).toBeInTheDocument();
+    expect(screen.getByText('Platform')).toBeInTheDocument();
+    expect(screen.getByText('Products')).toBeInTheDocument();
     expect(screen.getByText('Examples')).toBeInTheDocument();
   });
 
