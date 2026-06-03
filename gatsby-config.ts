@@ -150,6 +150,11 @@ export const plugins = [
     options: {
       name: `examples`,
       path: `${__dirname}/examples`,
+      // Examples can contain nested projects (e.g. a server) with their own
+      // installed deps and build output. Never source those — a node_modules
+      // under an `<id>/<language>/` dir would otherwise be picked up as example
+      // files for that language.
+      ignore: ['**/node_modules/**', '**/dist/**'],
     },
   },
   {
