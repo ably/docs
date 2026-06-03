@@ -69,6 +69,23 @@ const SingleLanguageSelector = () => {
 
   const selectedLang = languageInfo[selectedOption.label];
 
+  // With only one language available there is nothing to choose between, so render a
+  // static, non-interactive element. It keeps the same bordered styling as the dropdown
+  // trigger but drops the chevron and any dropdown behaviour.
+  if (options.length <= 1) {
+    return (
+      <div className="flex items-center md:relative w-full">
+        <div className={cn(secondaryButtonClassName, 'gap-1.5')} aria-label="Code language">
+          <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+          <span className="font-semibold">{selectedLang?.label}</span>
+          <Badge color="neutral" size="xs" className="my-px">
+            v{selectedOption.version}
+          </Badge>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center md:relative w-full">
       <Select.Root value={value} onValueChange={handleValueChange}>
@@ -211,6 +228,24 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
   }
 
   const selectedLang = languageInfo[selectedOption.label];
+
+  // With only one language available there is nothing to choose between, so render a
+  // static, non-interactive element. It keeps the same bordered styling as the dropdown
+  // trigger but drops the chevron and any dropdown behaviour.
+  if (options.length <= 1) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 whitespace-nowrap">{label}</span>
+        <div className={cn(secondaryButtonClassName, 'gap-1.5')} aria-label={`${label} language`}>
+          <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+          <span className="font-semibold">{selectedLang?.label}</span>
+          <Badge color="neutral" size="xs" className="my-px">
+            v{selectedOption.version}
+          </Badge>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2">
