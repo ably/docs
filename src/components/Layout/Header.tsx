@@ -19,6 +19,7 @@ import Link from '../Link';
 import { InkeepSearchBar } from '../SearchBar/InkeepSearchBar';
 import { secondaryButtonClassName, iconButtonClassName, tooltipContentClassName } from './utils/styles';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { ProductKey } from 'src/data/types';
 
 // Tailwind 'md' breakpoint from tailwind.config.js
 const MD_BREAKPOINT = 1040;
@@ -81,6 +82,8 @@ const Header: React.FC = () => {
     account: userContext.sessionState.account ?? { links: { dashboard: { href: '#' } } },
   };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Which product's TOC the mobile "Products" tab shows. null until the user picks one.
+  const [mobileProduct, setMobileProduct] = useState<ProductKey | null>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const burgerButtonRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
@@ -123,6 +126,8 @@ const Header: React.FC = () => {
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    // Reset the mobile product selection so reopening the menu reflects the current page.
+    setMobileProduct(null);
   }, [activePage]);
 
   const handleLogout = useCallback(async () => {
@@ -148,6 +153,16 @@ const Header: React.FC = () => {
       }
     }
   }, [sessionState.logOut]);
+
+  // The mobile "Products" tab shows the user's picked product, falling back to the current
+  // page's product (ignoring 'platform', which has its own tab). null renders the
+  // "select a product" placeholder.
+  const currentProduct = activePage.product && activePage.product !== 'platform' ? activePage.product : null;
+  const productsTabProduct = mobileProduct ?? currentProduct;
+
+  // Open the burger menu on the tab matching the current page: the Products tab (with this
+  // product's TOC) when viewing product docs, Examples on examples pages, else Platform.
+  const defaultMobileTabIndex = currentProduct ? 1 : location.pathname.includes('/examples') ? 2 : 0;
 
   return (
     <div className="fixed top-0 w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000">
@@ -202,22 +217,18 @@ const Header: React.FC = () => {
                 tabs={mobileTabs}
                 contents={[
                   <div key="nav-mobile-platform-tab">
-                    <LeftSidebar inHeader />
+                    <LeftSidebar inHeader product="platform" />
                   </div>,
-                  <div key="nav-mobile-products-tab" className="flex flex-col h-full overflow-hidden">
-                    <div className="shrink-0">
-                      <ProductBar />
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      <LeftSidebar inHeader />
-                    </div>
+                  <div key="nav-mobile-products-tab">
+                    <ProductBar onSelectProduct={setMobileProduct} selectedProduct={productsTabProduct} />
+                    <LeftSidebar inHeader product={productsTabProduct} />
                   </div>,
                   <ExamplesList key="nav-mobile-examples-tab" />,
                 ]}
                 rootClassName="h-full overflow-y-hidden min-h-[3.1875rem] flex flex-col"
-                contentClassName="h-full overflow-y-scroll"
+                contentClassName="flex-1 min-h-0 overflow-y-auto"
                 tabClassName="ui-text-menu2 !px-4"
-                options={{ flexibleTabWidth: true }}
+                options={{ flexibleTabWidth: true, defaultTabIndex: defaultMobileTabIndex }}
               />
             </div>
           )}

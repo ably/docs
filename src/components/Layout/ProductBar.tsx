@@ -63,20 +63,34 @@ const inactiveTabClassName = cn(
 
 type ProductBarProps = {
   className?: string;
+  // When provided, product items act as selectors (used by the mobile menu) instead of
+  // navigating: clicking calls onSelectProduct and the active highlight follows
+  // selectedProduct rather than the active page.
+  onSelectProduct?: (key: ProductKey) => void;
+  selectedProduct?: ProductKey | null;
 };
 
-const ProductBar = ({ className }: ProductBarProps) => {
+const ProductBar = ({ className, onSelectProduct, selectedProduct }: ProductBarProps) => {
   const { activePage } = useLayoutContext();
   const items = useMemo(buildNavBarItems, []);
+  // Selection mode == the mobile menu: products wrap onto multiple rows (no horizontal
+  // scroll) and the bar pins to the top of the menu's single scroll area.
+  const selectionMode = !!onSelectProduct;
 
   return (
     <nav
       className={cn(
-        'sticky top-16 z-30 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000',
+        'z-30 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000',
+        selectionMode ? 'sticky top-0' : 'sticky top-16',
         className,
       )}
     >
-      <div className="flex items-center gap-0.5 pl-2 pr-5 py-2 overflow-x-auto scrollbar-none max-w-[1600px] mx-auto">
+      <div
+        className={cn(
+          'gap-0.5 pl-2 pr-5 py-2 max-w-[1600px] mx-auto',
+          selectionMode ? 'flex flex-wrap' : 'flex items-center overflow-x-auto scrollbar-none',
+        )}
+      >
         {items.map((item, index) => {
           if (item.type === 'divider') {
             return (
@@ -88,7 +102,11 @@ const ProductBar = ({ className }: ProductBarProps) => {
           }
 
           const isProduct = item.type === 'product';
-          const isActive = isProduct ? activePage.product === item.key : activePage.page.link === item.link;
+          const isActive = isProduct
+            ? selectionMode
+              ? selectedProduct === item.key
+              : activePage.product === item.key
+            : activePage.page.link === item.link;
 
           const iconName = isProduct
             ? isActive
@@ -97,18 +115,9 @@ const ProductBar = ({ className }: ProductBarProps) => {
             : (item as CustomBarItem).icon;
 
           const itemKey = isProduct ? item.key : item.link;
-
-          return (
-            <Link
-              key={itemKey}
-              to={item.link}
-              className={cn(tabBaseClassName, isActive ? activeTabClassName : inactiveTabClassName)}
-              {...(!isProduct &&
-                (item as CustomBarItem).external && {
-                  target: '_blank',
-                  rel: 'noopener noreferrer',
-                })}
-            >
+          const tabClassName = cn(tabBaseClassName, isActive ? activeTabClassName : inactiveTabClassName);
+          const tabContent = (
+            <>
               {iconName && (
                 <Icon
                   name={iconName}
@@ -120,6 +129,30 @@ const ProductBar = ({ className }: ProductBarProps) => {
               {!isProduct && (item as CustomBarItem).external && (
                 <Icon name="icon-gui-arrow-top-right-on-square-outline" size="12px" />
               )}
+            </>
+          );
+
+          // Selection mode (mobile): pick a product to reveal its TOC instead of navigating.
+          if (selectionMode && isProduct) {
+            return (
+              <button key={itemKey} type="button" className={tabClassName} onClick={() => onSelectProduct(item.key)}>
+                {tabContent}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={itemKey}
+              to={item.link}
+              className={tabClassName}
+              {...(!isProduct &&
+                (item as CustomBarItem).external && {
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                })}
+            >
+              {tabContent}
             </Link>
           );
         })}

@@ -7,6 +7,7 @@ import { HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
 import Icon from '@ably/ui/core/Icon';
 
 import { productData } from 'src/data';
+import { ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage } from 'src/data/nav/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -38,6 +39,10 @@ const buildLinkWithParams = (targetLink: string, searchParams: URLSearchParams):
 type LeftSidebarProps = {
   className?: string;
   inHeader?: boolean;
+  // Override which product's nav to render. Omit to follow the active page (default,
+  // desktop). Pass a key to force that product (e.g. the mobile Platform/Products tabs),
+  // or null to show the "select a product" placeholder.
+  product?: ProductKey | null;
 };
 
 const accordionContentClassName =
@@ -206,7 +211,7 @@ const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductCo
   );
 };
 
-const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
+const LeftSidebar = ({ className, inHeader = false, product }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
 
   const {
@@ -225,8 +230,9 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
     }
   `);
 
-  // Resolve the active product's nav content
-  const activeProductKey = activePage.product;
+  // Resolve which product's nav content to render. An explicit `product` prop (including
+  // null) overrides the active page; omitting it follows the active page as before.
+  const activeProductKey = product === undefined ? activePage.product : product;
   const activeProduct = activeProductKey ? productData[activeProductKey] : null;
   const content = useMemo(
     () => (activeProduct ? [...activeProduct.nav.content, ...activeProduct.nav.api] : []),
@@ -238,11 +244,12 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
 
   const stickyTopPx = HEADER_HEIGHT + (activePage.hasProductBar ? PRODUCT_BAR_HEIGHT : 0);
   const stickyTopStyle = inHeader ? undefined : { top: `${stickyTopPx}px`, height: `calc(100dvh - ${stickyTopPx}px)` };
-  const stickyTopClass = inHeader ? 'top-16' : '';
 
   return (
     <div
-      className={cn('sticky', stickyTopClass, inHeader ? 'w-full' : 'w-[300px] hidden md:block', className)}
+      // In the mobile menu the sidebar flows at natural height inside the menu's single
+      // scroll area; on desktop it's a sticky, self-scrolling column.
+      className={cn(inHeader ? 'w-full' : 'sticky w-[300px] hidden md:block', className)}
       style={stickyTopStyle}
     >
       {inHeader && (
@@ -256,10 +263,10 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
       )}
       <div
         className={cn(
-          'bg-neutral-000 dark:bg-neutral-1300 overflow-x-hidden overflow-y-auto',
+          'bg-neutral-000 dark:bg-neutral-1300 overflow-x-hidden',
           inHeader
-            ? 'w-full h-[calc(100dvh-64px-128px)]'
-            : 'w-[300px] h-full border-r border-neutral-300 dark:border-neutral-1000 pt-2',
+            ? 'w-full'
+            : 'w-[300px] h-full overflow-y-auto border-r border-neutral-300 dark:border-neutral-1000 pt-2',
         )}
       >
         {content.length > 0 ? (
