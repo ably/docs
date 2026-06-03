@@ -76,7 +76,7 @@ const ProductBar = ({ className }: ProductBarProps) => {
         className,
       )}
     >
-      <div className="flex items-center gap-0.5 px-5 py-2 overflow-x-auto scrollbar-none max-w-[1600px] mx-auto">
+      <div className="flex items-center gap-0.5 pl-2 pr-5 py-2 overflow-x-auto scrollbar-none max-w-[1600px] mx-auto">
         {items.map((item, index) => {
           if (item.type === 'divider') {
             return (
