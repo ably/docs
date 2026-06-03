@@ -195,7 +195,7 @@ const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductCo
 
         return (
           <div key={page.name}>
-            <div className="ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 pb-1.5 pt-5 pl-3 pr-2">
+            <div className="ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 pb-2 pt-5 pl-3 pr-2">
               {page.name}
             </div>
             {hasDeeperLayer && <ChildAccordion content={page.pages} tree={[...tree, index]} />}
