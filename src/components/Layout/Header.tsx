@@ -25,7 +25,8 @@ const MD_BREAKPOINT = 1040;
 const CLI_ENABLED = false;
 const MAX_MOBILE_MENU_WIDTH = '560px';
 
-const headerLinkClassName = 'px-4 py-1.5 rounded-lg ui-text-label3 font-semibold transition-colors';
+const headerLinkClassName =
+  'inline-flex items-center h-9 px-4 rounded-lg ui-text-label3 font-semibold transition-colors';
 const activeHeaderLinkClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1000';
 const inactiveHeaderLinkClassName =
   'text-neutral-900 dark:text-neutral-500 hover:text-neutral-1300 dark:hover:text-neutral-000 hover:bg-neutral-100 dark:hover:bg-neutral-1200';

@@ -45,7 +45,7 @@ const buildNavBarItems = (): NavBarItem[] => {
 // --- Styles ---
 
 const tabBaseClassName = cn(
-  'flex items-center gap-1.5 px-3 py-2 whitespace-nowrap rounded-lg transition-colors',
+  'flex items-center gap-1.5 h-9 px-3 whitespace-nowrap rounded-lg transition-colors',
   'ui-text-label3 font-semibold',
   'focus-base',
 );
