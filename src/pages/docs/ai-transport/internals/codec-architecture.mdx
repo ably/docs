@@ -1,33 +1,55 @@
 ---
 title: "Codec architecture"
-meta_description: "How the AI Transport codec bridges domain events to Ably messages. Encoder, decoder, accumulator, and lifecycle tracker internals."
-meta_keywords: "codec architecture, AI Transport, encoder, decoder, accumulator, lifecycle tracker, custom codec, Ably"
-intro: "Internal architecture of the codec: encoder, decoder, accumulator, and lifecycle tracker. How each piece fits into the publish-side and subscribe-side pipelines."
+meta_description: "How the AI Transport codec bridges TInput and TOutput events to Ably messages. Encoder, decoder, and the input/output type split."
+meta_keywords: "codec architecture, AI Transport, encoder, decoder, TInput, TOutput, custom codec, Ably"
+intro: "Internal architecture of the codec: the input/output type split, encoder and decoder pipelines, and how the codec composes with the transport layer."
 ---
 
-The codec is the layer that translates between your AI framework's event types and Ably channel messages. This page describes how each part of the codec works internally and how the pieces fit together.
+The codec translates between your AI framework's event types and Ably channel messages. The interface is generic over four type parameters: `TInput` (client-published events), `TOutput` (agent-published events), `TProjection` (the per-Run reduced state), and `TMessage` (the rendered domain message). The two-direction split is type-system-enforced: an encoder can publish a `TInput` (`publishInput`) or a `TOutput` (`publishOutput`), and a decoder returns `{ inputs, outputs }` so the consumer can branch on direction without re-checking each event.
 
 The two pipelines mirror each other:
 
-```
-Publish side (server):
-  framework events
-       v
-  StreamEncoder.appendEvent / writeMessages
-       v
-  ChannelWriter.publish / appendMessage / updateMessage
-       v
-  Ably channel
+```text
+Publish side (agent):
 
-Subscribe side (client):
+  TOutput events from streamText / your model
+        │
+        ▼
+  Encoder.publishOutput
+        │
+        ▼
+  ChannelWriter ── channel.publish / appendMessage / updateMessage
+        │
+        ▼
+  Ably channel (ai-output)
+
+Publish side (client):
+
+  TInput events from view.sendMessage / sendInput / regenerate / edit
+        │
+        ▼
+  Encoder.publishInput
+        │
+        ▼
+  ChannelWriter ── channel.publish (discrete)
+        │
+        ▼
+  Ably channel (ai-input)
+
+Subscribe side (both):
+
   Ably channel
-       v
-  StreamDecoder.decode  -> DecoderOutput[]
-       v
-  MessageAccumulator.processOutputs
-       v
-  framework messages
-       v
+        │
+        ▼
+  Decoder.decode ── DecodedMessage<TInput, TOutput>
+        │
+        ▼
+  Tree ── Codec.fold per Run (TProjection)
+        │
+        ▼
+  Codec.getMessages(projection) ── TMessage[]
+        │
+        ▼
   View
 ```
 
@@ -35,145 +57,118 @@ Subscribe side (client):
 
 AI Transport separates concerns into two layers:
 
-- **Transport layer** (generic): manages turns, lifecycle events, cancellation, history, and multi-client sync. It works with any message type.
-- **Domain layer** (codec): maps framework-specific events to Ably publish operations and back. It knows the shape of your events and messages.
+- Transport layer (generic): manages Run identity, lifecycle events, cancellation, input-event lookup, history pagination, and multi-client sync. It works with any `TInput` and `TOutput`.
+- Codec layer (domain): maps framework-specific events to Ably publish operations and back. It knows the shape of your events; it does not manage Run lifecycle.
 
-The transport layer calls into the codec but never inspects the domain data. The codec calls into the channel writer but never manages turns or lifecycle. This separation is what makes AI Transport framework-agnostic.
+The transport layer calls into the codec but never inspects the domain payload. The codec calls into the channel writer but never manages Runs or lifecycle. This separation is what makes AI Transport framework-agnostic; the Vercel `UIMessageCodec` is one implementation, but any framework's event shape can be implemented against the same `Codec` interface.
 
-## Encoder core <a id="encoder-core"/>
+## TInput and TOutput <a id="tinput-and-toutput"/>
 
-The encoder converts outbound domain events into Ably publish operations. It supports two modes.
+The codec is bidirectional with separate type bases:
 
-### Discrete mode <a id="discrete-mode"/>
+- `CodecInputEvent` is the base for everything a client publishes. The Vercel codec defines `UserMessage`, `Regenerate`, `Edit`, `ToolResult`, `ToolResultError`, and `ToolApprovalResponse` as well-known input variants on top of this base.
+- `CodecOutputEvent` is the base for everything an agent publishes: text deltas, tool calls, reasoning, file or source parts, data chunks.
 
-Discrete mode publishes a complete message in a single operation. The encoder calls `channel.publish()` once with the full message content. User messages and tool results typically use discrete mode.
+Both bases carry a `kind` discriminator the codec reads to dispatch. Inputs additionally carry routing fields (`codecMessageId`, `parent`, `target`) that the encoder stamps onto the wire as transport headers.
 
-### Streamed mode <a id="streamed-mode"/>
+`Decoder.decode(message)` returns a `DecodedMessage<TInput, TOutput>` tagged with which direction the message rode on. Consumers branch on the tag rather than re-classifying.
 
-Streamed mode publishes a message incrementally. `startStream` creates the message with `channel.publish()` and captures the returned serial. Each subsequent `appendStream` call calls `channel.appendMessage()` with that serial. `closeStream` (or `cancelStream`) sends a terminal append with `x-ably-status: finished` or `x-ably-status: cancelled`. This is the mode used for LLM response streaming.
+## Encoder <a id="encoder"/>
 
-### Awaiting append promises <a id="awaiting-appends"/>
+The encoder converts outbound events into Ably publish operations. It exposes four methods on the `Encoder` interface:
 
-Per-token append calls do not block the encoder. Awaiting each one would couple the stream rate to the network round-trip. Instead the encoder collects every append promise and awaits them as a batch when the stream closes or cancels.
+| Method | Purpose |
+| --- | --- |
+| `publishInput(events, options)` | Publish one or more `TInput` events on `ai-input`. Discrete publishes; one Ably message per event. Stamps `event-id`, `codec-message-id`, and routing headers under `extras.ai.transport`. |
+| `publishOutput(events, options)` | Publish one or more `TOutput` events on `ai-output`. Streams when the codec's reducer marks events as appendable; otherwise publishes discretely. |
+| `cancel(reason)` | Close any in-flight streams with `status: 'cancelled'`. |
+| `close()` | Flush pending appends, close active streams, release resources. |
 
-This batched await is what catches failed appends. If any are rejected, the encoder replaces the message in place with the full accumulated content, so subscribers see the intended final state even when intermediate appends were lost. Concurrent closes serialise through a single flush, so closing several streams at once does not race.
+### Streamed mode
 
-### Header composition <a id="header-merging"/>
+For events the codec's reducer marks as appendable (text deltas, reasoning deltas), the encoder runs a three-step pipeline per stream:
 
-Every outbound message carries both transport and domain headers. Append operations overwrite all the headers from previous operations on the same message, preferring the latest write.
+1. `publishOutput` of the first event in the stream calls `channel.publish` with `stream: 'true'`, `status: 'streaming'`, and a fresh `stream-id`. The publish returns a serial; the encoder retains it for subsequent appends.
+2. Each subsequent appendable event calls `channel.appendMessage` with the captured serial and the codec payload.
+3. When the reducer marks an event as terminal, the encoder calls `channel.updateMessage` with `status: 'complete'` (or `'cancelled'` on cancel).
 
-## Decoder core <a id="decoder-core"/>
+Per-token append calls do not block the encoder. The encoder collects every append promise and awaits them as a batch when the stream closes. If any append rejected, the encoder writes a final `updateMessage` containing the full accumulated payload, so subscribers see the intended final state even when intermediate appends were lost.
 
-The decoder converts inbound Ably messages back into domain events. It dispatches on the message action to determine how to process each message.
+### Discrete mode
 
-### Action dispatch <a id="action-dispatch"/>
+Client publishes (`publishInput`) and lifecycle events use discrete mode: one `channel.publish` per event, no appends. Discrete events still carry the codec payload and any per-event headers.
 
-The decoder handles four Ably message actions:
+## Decoder <a id="decoder"/>
 
-| Action | Meaning | Decoder behavior |
+The decoder converts inbound Ably messages back into `TInput` or `TOutput` events. It dispatches on the message's Ably action.
+
+| Action | Meaning | Decoder behaviour |
 | --- | --- | --- |
-| `create` | A new message arrived | Start a new message or stream. Emit the initial event. |
-| `append` | A token was appended to a message | Emit a delta event for the matching stream. |
-| `update` | A message was updated in place | Update the message state. If the status is terminal, close the stream. |
+| `create` | A new message arrived | Begin a new stream (or emit a discrete event). |
+| `append` | A token was appended | Emit an appended chunk for the matching `stream-id`. |
+| `update` | A message was updated | Update the stream state. If `status` is terminal, close the stream. |
 | `delete` | A message was removed | Remove the message from state. |
 
-### Stream tracker <a id="stream-tracker"/>
+The decoder maintains a stream tracker that maps `stream-id` to its current state. A subscriber that joins mid-stream sees an `update` or `append` for a `stream-id` it has never seen the `create` for; the decoder treats the incoming state as the current full state and accumulates from there. The end state is the same as a subscriber that received every operation.
 
-The decoder maintains a stream tracker that maps stream IDs to their current state. When a `create` action arrives with `x-ably-stream: true`, the tracker opens a new stream. Subsequent `append` actions for the same stream ID are routed to that stream. An `update` action with a terminal status closes the stream.
+`decode()` returns a `DecodedMessage<TInput, TOutput>`. The Tree feeds each decoded event through `Codec.fold(projection, event)` to update the owning Run's `TProjection`. `Codec.getMessages(projection)` materialises the projection into the `TMessage[]` the View renders.
 
-### Joining a stream mid-flight <a id="mid-stream-join"/>
+## Header tier story <a id="header-tier-story"/>
 
-A client that joins a channel while a streamed message is already in progress sees an `append` or `update` for a stream it has never seen the original `create` for. The decoder treats the incoming content as the current full state of that stream and starts tracking it from there. Later appends are accumulated on top in the usual way. The client ends up in the same state as one that received every operation from the start.
+Codec headers (`stream`, `stream-id`, `status`, `discrete`) live under `extras.ai.codec`. Transport headers (`run-id`, `codec-message-id`, `role`, `parent`, `fork-of`, and others) live under `extras.ai.transport`. The codec encoder reads and writes the codec tier; the transport layer reads and writes the transport tier. Neither layer reaches across the boundary, which keeps a custom codec from accidentally writing a `run-id` or a transport router from accidentally truncating a stream.
 
-## Accumulator <a id="accumulator"/>
+`mergeHeaders`, `getTransportHeaders`, and `getCodecHeaders` from `@ably/ai-transport` are utility helpers for working with the tier structure.
 
-The accumulator builds complete messages from a sequence of domain events. It is used in two contexts:
+## Write a custom codec <a id="write-a-custom-codec"/>
 
-### Live stream <a id="live-stream"/>
+To support a framework not covered by the SDK:
 
-During live streaming, the accumulator processes events as they arrive from the decoder. It maintains a running list of messages, appending tokens to the in-progress message. The `messages` property returns all messages including the one currently being streamed. The `completedMessages` property returns only messages where the stream has ended.
-
-### History <a id="history-context"/>
-
-When loading history, the accumulator replays stored events to reconstruct message state. The `processOutputs` method accepts a batch of events and updates the internal state. This is the same method used during live streaming - the accumulator does not distinguish between live and historical events.
+1. Define your `TInput` and `TOutput` event shapes as subtypes of `CodecInputEvent` and `CodecOutputEvent`.
+2. Implement the `Codec<TInput, TOutput, TProjection, TMessage>` interface. The required methods are `createEncoder`, `createDecoder`, `fold` (per-Run reducer), `getMessages` (projection to messages), and `createUserMessage` (wrap a `TMessage` as a `UserMessage` input).
+3. Use `createEncoderCore` and `createDecoderCore` from `@ably/ai-transport` for the base publish and dispatch machinery; provide hooks that map your framework's event types to the core operations (discrete, stream-start, stream-append, stream-close).
 
 <Code>
 ```javascript
-const accumulator = codec.createAccumulator()
+import {
+  createEncoderCore,
+  createDecoderCore,
+  createLifecycleTracker,
+} from '@ably/ai-transport';
 
-// Process events from history or live stream
-accumulator.processOutputs(events)
-
-// Read current state
-accumulator.messages          // all messages (including in-progress)
-accumulator.completedMessages // only completed messages
-accumulator.hasActiveStream   // true if a stream is in progress
-```
-</Code>
-
-## Lifecycle tracker <a id="lifecycle-tracker"/>
-
-The lifecycle tracker ensures clients receive a consistent sequence of lifecycle events, even when joining mid-stream. If a client subscribes to a channel where a turn is already in progress, the tracker synthesizes the missing lifecycle events (like `turn-start` and the stream create) so the client can process the in-progress turn correctly.
-
-The tracker maintains configurable phases. Each phase defines a set of events that must be observed before the next phase begins. If the tracker detects a gap (for example, the client received an append without seeing a stream create), it synthesizes the missing events and delivers them in order before the real event.
-
-## Write a custom codec <a id="custom-codec"/>
-
-To build a codec for a framework not covered by the SDK:
-
-1. Implement the `Codec` interface with your event and message types.
-2. Use `createEncoderCore` and `createDecoderCore` from `@ably/ai-transport` to get the base publish and dispatch logic.
-3. Provide hooks that map your framework's events to the core operations (create, append, update, close).
-4. Implement `isTerminal` to identify events that end a stream.
-
-<Code>
-```javascript
-import { createEncoderCore, createDecoderCore } from '@ably/ai-transport'
-
-const myCodec: Codec<MyEvent, MyMessage> = {
+const myCodec = {
   createEncoder(channel, options) {
-    const core = createEncoderCore(channel, options)
+    const core = createEncoderCore(channel, options);
     return {
-      async appendEvent(event) {
-        await core.appendStream(event.messageId, serialize(event))
+      publishInput: async (events, opts) => core.publishDiscreteBatch(events, opts),
+      publishOutput: async (events, opts) => {
+        for (const ev of events) {
+          if (isAppendable(ev)) await core.appendStream(ev.streamId, ev, opts);
+          else await core.publishDiscrete(ev, opts);
+        }
       },
-      async writeMessages(messages, opts) {
-        await core.publishDiscreteBatch(messages.map((msg) => serialize(msg)), opts)
-      },
-      async writeEvent(event) {
-        await core.publishDiscrete(serialize(event))
-      },
-      async abort() { await core.abortAllStreams() },
-      async close() { await core.close() },
-    }
+      cancel: () => core.cancelAllStreams(),
+      close: () => core.close(),
+    };
   },
   createDecoder() {
-    const core = createDecoderCore({
-      onCreate: (msg) => deserialize(msg.data),
-      onAppend: (msg) => deserialize(msg.data),
-      onUpdate: (msg) => deserialize(msg.data),
-    })
-    return {
-      decode(message) {
-        return core.decode(message)
-      },
-    }
+    return createDecoderCore({
+      onCreate: (msg) => parsePayload(msg.data),
+      onAppend: (msg) => parsePayload(msg.data),
+      onUpdate: (msg) => parsePayload(msg.data),
+    });
   },
-  createAccumulator() {
-    // Build and return a MessageAccumulator for your types
-  },
-  isTerminal(event) {
-    return event.type === 'finish' || event.type === 'error'
-  },
-}
+  fold(projection, event) { /* reduce one event into the per-Run projection */ },
+  getMessages(projection) { /* return TMessage[] for rendering */ },
+  createUserMessage(message) { /* return a UserMessage<TMessage> */ },
+};
 ```
 </Code>
 
-See the [Codec API reference](/docs/ai-transport/api/javascript/codec) for the full interface specification.
+See the [Codec API reference](/docs/ai-transport/api/javascript/core/codec) for the full interface.
 
 ## Related pages <a id="related"/>
 
-- [Wire protocol](/docs/ai-transport/internals/wire-protocol) - the message format the codec reads and writes.
-- [Conversation tree](/docs/ai-transport/internals/conversation-tree) - how decoded messages build the tree.
-- [Transport patterns](/docs/ai-transport/internals/transport-patterns) - how the transport layer drives the codec.
-- [Codec API reference](/docs/ai-transport/api/javascript/codec) - the public codec interface.
+- [Wire protocol](/docs/ai-transport/internals/wire-protocol): the channel format the codec reads and writes.
+- [Conversation tree](/docs/ai-transport/internals/conversation-tree): how decoded events fold into per-Run projections and build the tree.
+- [Transport patterns](/docs/ai-transport/internals/transport-patterns): how the transport layer drives the codec.
+- [Codec API reference](/docs/ai-transport/api/javascript/core/codec): the public codec interface.

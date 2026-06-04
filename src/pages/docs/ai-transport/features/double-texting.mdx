@@ -32,23 +32,25 @@ To prevent concurrent turns and queue messages instead, detect active turns and 
 
 <Code>
 ```javascript
-const activeTurns = useActiveTurns({ transport });
+const { session } = useClientSession();
+const view = useView();
+const isStreaming = session.view.runs().some((r) => r.status === 'active');
 
 const handleSend = async (text) => {
-  if (activeTurns.size > 0) {
+  if (isStreaming) {
     addToQueue(text);
     return;
   }
 
-  await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }]);
+  await view.sendMessage({ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] });
 };
 
 useEffect(() => {
-  if (activeTurns.size === 0 && queue.length > 0) {
+  if (!isStreaming && queue.length > 0) {
     const next = queue.shift();
-    send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: next }] }]);
+    view.sendMessage({ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: next }] });
   }
-}, [activeTurns.size]);
+}, [isStreaming]);
 ```
 </Code>
 
@@ -56,21 +58,23 @@ This gives users feedback that their message was received and will be processed 
 
 ## Cancel and re-prompt <a id="cancel-then-send"/>
 
-To cancel the current turn before sending the new message, use the [interruption](/docs/ai-transport/features/interruption) pattern:
+To cancel the current Run before sending the new message, use the [interruption](/docs/ai-transport/features/interruption) pattern:
 
 <Code>
 ```javascript
-const handleSend = async (text) => {
-  if (activeTurns.size > 0) {
-    await transport.cancel();
-  }
+const { session } = useClientSession();
+const view = useView();
 
-  await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }]);
+const handleSend = async (text) => {
+  const active = session.view.runs().filter((r) => r.status === 'active');
+  await Promise.all(active.map((r) => session.cancel(r.runId)));
+
+  await view.sendMessage({ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] });
 };
 ```
 </Code>
 
-The current response stops, and the new message starts a fresh turn. Use this when the new message supersedes the previous one.
+The current response stops, and the new message starts a fresh Run. Use this when the new message supersedes the previous one.
 
 ## Choose a pattern <a id="choosing-a-pattern"/>
 

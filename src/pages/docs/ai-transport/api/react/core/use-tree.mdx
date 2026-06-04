@@ -1,0 +1,126 @@
+---
+title: "useTree"
+meta_description: "Stable structural query callbacks for the AI Transport conversation tree from React."
+meta_keywords: "AI Transport, React, useTree, TreeHandle, getRunNode, getSiblingRuns, hasSiblingRuns, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/use-tree
+  - /docs/ai-transport/api/react/use-tree
+---
+
+`useTree` exposes stable structural query callbacks backed by a session's [`Tree`](/docs/ai-transport/api/javascript/core/client-session). The returned methods are thin `useCallback` wrappers around `session.tree` and never trigger re-renders on their own.
+
+Use this hook when you need to inspect tree structure outside the visible branch (for example, to count regenerate siblings on a Run before showing navigation arrows). Branch navigation for the currently visible chain lives on [`useView`](/docs/ai-transport/api/react/core/use-view).
+
+<Code>
+```javascript
+import { useTree } from '@ably/ai-transport/react';
+
+function RunSwitcher({ runId }: { runId: string }) {
+  const { getSiblingRuns, hasSiblingRuns } = useTree();
+
+  if (!hasSiblingRuns(runId)) return null;
+  return <Siblings runs={getSiblingRuns(runId)} />;
+}
+```
+</Code>
+
+This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers#client-session-provider) unless `session` is supplied explicitly.
+
+## Parameters <a id="parameters"/>
+
+<Table id='UseTreeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| session | optional | A client session to read tree structure from. Defaults to the nearest provider. | `ClientSession<TInput, TOutput, TProjection, TMessage>` |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+<Table id='TreeHandle'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| getRunNode | Get a Run by `runId`, or `undefined` if not found. | <Table id='RunNode'/> |
+| getRunByCodecMessageId | Get the Run that owns a given `codecMessageId`, or `undefined` if not observed. | <Table id='RunNode'/> |
+| getSiblingRuns | Get all sibling Runs at a fork point, ordered chronologically by `startSerial`. | <Table id='RunNode'/> |
+| hasSiblingRuns | Whether a Run has sibling alternatives. | `(runId) => boolean` |
+
+</Table>
+
+<Table id='RunNode' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| runId | The Run's unique identifier. | String |
+| parentRunId | The runId of the immediately preceding Run on this conversation chain, or `undefined` for the root Run. | String or Undefined |
+| parentCodecMessageId | The codec-message-id this Run is rooted at. `undefined` for the root Run. | String or Undefined |
+| forkOf | The runId of the Run this Run replaces, or `undefined` if this Run is not a fork. | String or Undefined |
+| regeneratesCodecMessageId | The codec-message-id this Run regenerates, or `undefined` for non-regenerate Runs. | String or Undefined |
+| clientId | Identity of the Ably client that started this Run. | String |
+| status | Run lifecycle status. `'active'` while streaming, `'suspended'` while paused awaiting input, otherwise the `RunEndReason`. | `'active' \| 'suspended' \| RunEndReason` |
+| projection | Per-Run codec projection. Folded by the Tree from every event published under this run-id. | `TProjection` |
+| invocationId | The agent-minted `invocationId` observed for this Run, adopted from the `ai-run-start` event. | String |
+| startSerial | Ably serial of the first observed message tagged with this run-id. | String or Undefined |
+| endSerial | Ably serial of the run-end lifecycle event. | String or Undefined |
+
+</Table>
+
+## Look up a Run by id <a id="get-run-node"/>
+
+<MethodSignature>{`getRunNode(runId: string): RunNode<TProjection> | undefined`}</MethodSignature>
+
+Return the full [`RunNode`](#returns) record for a given `runId`, or `undefined` if the Run has not been observed. Use this when you need fields the View's [`RunInfo`](/docs/ai-transport/api/react/core/use-view#returns) does not expose (parent / fork relationships, the raw projection, serials).
+
+## Look up a Run by codec-message-id <a id="get-run-by-codec-message-id"/>
+
+<MethodSignature>{`getRunByCodecMessageId(codecMessageId: string): RunNode<TProjection> | undefined`}</MethodSignature>
+
+Resolve the Run that owns the given `codecMessageId` through the tree's index. Returns `undefined` when the message has not been observed.
+
+## Get sibling Runs <a id="get-sibling-runs"/>
+
+<MethodSignature>{`getSiblingRuns(runId: string): RunNode<TProjection>[]`}</MethodSignature>
+
+Return every Run that is a sibling alternative at the same fork point as `runId`. The result is ordered chronologically by `startSerial`. Two kinds of sibling groups surface here: edit forks (Runs sharing a `parentRunId` and chained via `forkOf`) and regenerate groups (the Run that owns a regenerated codec-message-id plus every Run whose `regeneratesCodecMessageId` points at that codec-message-id).
+
+A Run is in at most one group. When neither applies, the returned array is `[getRunNode(runId)]`.
+
+## Check for sibling alternatives <a id="has-sibling-runs"/>
+
+<MethodSignature>{`hasSiblingRuns(runId: string): boolean`}</MethodSignature>
+
+Whether the Run has any sibling alternatives. Use this to gate sibling navigation UI without materialising the full sibling array.
+
+## Example <a id="example"/>
+
+A run-history sidebar that lists every observed Run and lights up sibling navigation where alternatives exist.
+
+<Code>
+```javascript
+import { useTree, useView } from '@ably/ai-transport/react';
+
+function RunHistory() {
+  const { messages, runOf } = useView();
+  const { getSiblingRuns, hasSiblingRuns } = useTree();
+
+  const runs = messages
+    .map((m) => runOf(m.id))
+    .filter((r): r is NonNullable<typeof r> => Boolean(r));
+
+  return (
+    <ul>
+      {runs.map((run) => (
+        <li key={run.runId}>
+          <RunSummary run={run} />
+          {hasSiblingRuns(run.runId) && (
+            <SiblingPicker siblings={getSiblingRuns(run.runId)} />
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+</Code>

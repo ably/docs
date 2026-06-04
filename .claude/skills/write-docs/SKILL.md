@@ -57,6 +57,8 @@ AI Transport is the testbed for the new principles. Other Ably products will ali
 
 Pick the template that matches the page you are writing.
 
+**Templates describe structure, not headings.** The numbered items below are the *section shape* — what each section covers and roughly in what order. They are not the literal H2 text for the page. A concept-page template item like "Problem statement" becomes a descriptive imperative on the page itself: `## Why Runs exist`, `## Why sessions exist`. "Model" becomes `## Understand the Run lifecycle`, `## Understand sessions and channels`. "Code proof" becomes `## Trigger a Run`, `## Attach to a session`. Adapt the heading to the specific concept; never copy the template label verbatim. Use imperative or descriptive verb phrases per the writing-style guide.
+
 ### Feature page
 
 A feature page maps to one developer JTBD. The section order below distils the structural pattern feature pages follow.
@@ -380,6 +382,13 @@ grep -rn -E "key\s*:\s*['\"][^'\"]+['\"]" "$P" | grep -v authUrl
 # No "docs under construction" / WIP markers
 grep -rni "under construction\|coming soon\|todo:\|wip\b" "$P"
 
+# Every H2 carries an inline anchor (CLAUDE.md convention: `## Heading <a id="slug"/>`)
+for f in "$P"/*.mdx; do
+  total=$(grep -c "^## " "$f")
+  anchored=$(grep -cE '^## .* <a id="[^"]+"' "$f")
+  [ "$total" != "$anchored" ] && echo "$f: $anchored/$total H2s anchored"
+done
+
 # No em dashes (style guide forbids)
 grep -rn "—" "$P"
 
@@ -474,21 +483,23 @@ When reviewing someone else's docs PR (or your own at PR time), walk this list. 
 **Mechanics**
 
 14. Frontmatter complete: `title`, `meta_description`, `meta_keywords`, `intro`, `redirect_from` where the page moved or merged. (Per-interface API reference pages omit `intro`.)
-15. New page added to the relevant nav file under `src/data/nav/`.
-16. `<Aside>` used sparingly and load-bearing. No decorative asides.
-17. Internal links resolve. No references to URLs that only exist in `redirect_from` frontmatter.
+15. Every H2 carries an inline anchor — `## Heading <a id="slug"/>`, per the CLAUDE.md convention. Use the H2-anchor grep above.
+16. Section headings are descriptive imperatives or noun phrases tied to the specific content, not template labels copied verbatim (no `## The model`, `## The problem X solves`, `## Code proof`).
+17. New page added to the relevant nav file under `src/data/nav/`.
+18. `<Aside>` used sparingly and load-bearing. No decorative asides.
+19. Internal links resolve. No references to URLs that only exist in `redirect_from` frontmatter.
 
 **API reference pages only** (additional checks)
 
-18. Method H2s use descriptive verb phrases (`## Create a client transport`), not bare method names. Anchor is JS-canonical kebab-case.
-19. Every method H2 is followed by `<MethodSignature>{` … `}</MethodSignature>` (template-literal form for signatures with `<` or `>`).
-20. Every method with parameters has `### Parameters <a id="{slug}-params"/>` with a 4-column `Parameter | Required | Description | Type` table.
-21. Every method has `### Returns <a id="{slug}-returns"/>` unless it returns `void`/`Unit`.
-22. Type tables default to hidden (`<Table id='X' hidden>`) referenced via `<Table id='X'/>`. Visible types only when they meet one of the four promotion criteria.
-23. Hidden table audit passes. Every hidden has at least one inline reference; every reference has a definition.
-24. Error type referenced via cross-page link to its canonical home (lowercase `#errorinfo` anchor).
-25. Page ends with `## Example` showing end-to-end usage.
-26. No same-page markdown anchor links to type anchors (`[X](#X)`). Type names in prose are backticked; cross-page references go to the type's own page.
+20. Method H2s use descriptive verb phrases (`## Create a client transport`), not bare method names. Anchor is JS-canonical kebab-case.
+21. Every method H2 is followed by `<MethodSignature>{` … `}</MethodSignature>` (template-literal form for signatures with `<` or `>`).
+22. Every method with parameters has `### Parameters <a id="{slug}-params"/>` with a 4-column `Parameter | Required | Description | Type` table.
+23. Every method has `### Returns <a id="{slug}-returns"/>` unless it returns `void`/`Unit`.
+24. Type tables default to hidden (`<Table id='X' hidden>`) referenced via `<Table id='X'/>`. Visible types only when they meet one of the four promotion criteria.
+25. Hidden table audit passes. Every hidden has at least one inline reference; every reference has a definition.
+26. Error type referenced via cross-page link to its canonical home (lowercase `#errorinfo` anchor).
+27. Page ends with `## Example` showing end-to-end usage.
+28. No same-page markdown anchor links to type anchors (`[X](#X)`). Type names in prose are backticked; cross-page references go to the type's own page.
 
 ## When the SDK or product changes shape
 

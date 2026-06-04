@@ -1,0 +1,116 @@
+---
+title: "vercelRunOutcome"
+meta_description: "API reference for vercelRunOutcome, the helper that maps a Vercel streamText finishReason and Run.pipe result to a RunEndReason or a 'suspend' sentinel."
+meta_keywords: "AI Transport, vercelRunOutcome, RunEndReason, streamText, finishReason, Vercel AI SDK, Ably"
+---
+
+`vercelRunOutcome` resolves the outcome of a Vercel `streamText` response that was piped through [`Run.pipe`](/docs/ai-transport/api/javascript/core/agent-session#pipe). It returns either a terminal [`RunEndReason`](/docs/ai-transport/api/javascript/core/agent-session#run-end-reason) you pass to [`Run.end`](/docs/ai-transport/api/javascript/core/agent-session#run-end), or the sentinel `'suspend'` telling you to call [`Run.suspend`](/docs/ai-transport/api/javascript/core/agent-session#run-suspend) instead.
+
+It preserves transport-level outcomes (`'cancelled'`, `'error'`) from the pipe result. When the pipe completed naturally, it awaits Vercel's `finishReason` and returns `'suspend'` for `'tool-calls'` (the LLM requested tools the SDK did not auto-execute, so the run should pause for the next client-published tool result), or `'complete'` otherwise.
+
+Use it at the end of every Vercel route handler so the lifecycle event you publish matches what actually happened on the LLM side.
+
+<Code>
+```javascript
+import { streamText } from 'ai';
+import { vercelRunOutcome } from '@ably/ai-transport/vercel';
+
+const result = streamText({ model, messages, tools });
+const pipeResult = await run.pipe(result.toUIMessageStream());
+const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+
+if (outcome === 'suspend') {
+  await run.suspend();
+} else {
+  await run.end(outcome);
+}
+```
+</Code>
+
+## Resolve the run outcome <a id="vercel-run-outcome"/>
+
+<MethodSignature>{`vercelRunOutcome(pipeResult: StreamResult, finishReason: PromiseLike<FinishReason>): Promise<RunEndReason | 'suspend'>`}</MethodSignature>
+
+The helper applies three rules in order:
+
+1. If `pipeResult.reason` is `'cancelled'` or `'error'`, return it as-is. The transport already knows the run ended for a non-completion reason.
+2. If `pipeResult.reason` is `'complete'`, await `finishReason` and return `'suspend'` for `'tool-calls'`. Any other Vercel finish reason returns `'complete'`.
+3. If `finishReason` rejects, classify the rejection. Abort-shaped errors return `'cancelled'`. Anything else (for example `NoOutputGeneratedError`) returns `'error'`.
+
+The rejection guard matters: Vercel AI SDK v6 rejects `streamText().finishReason` with the abort signal's reason when the stream is aborted before any step completes, and with `NoOutputGeneratedError` when the model produced nothing at all. Without the guard the rejection would bubble out of the route handler, skip `Run.end`, and leave the run with no `ai-run-end` event on the channel.
+
+### Parameters <a id="vercel-run-outcome-params"/>
+
+<Table id='VercelRunOutcomeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| pipeResult | required | The result returned by [`Run.pipe`](/docs/ai-transport/api/javascript/core/agent-session#pipe). | <Table id='StreamResult'/> |
+| finishReason | required | The `finishReason` promise from a Vercel `streamText` result. | `PromiseLike<AI.FinishReason>` |
+
+</Table>
+
+<Table id='StreamResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| reason | Why the stream ended. | `'complete' \| 'cancelled' \| 'error'` |
+| error | The original error when `reason` is `'error'`. | `Error` |
+
+</Table>
+
+### Returns <a id="vercel-run-outcome-returns"/>
+
+`Promise<RunEndReason | 'suspend'>`. Either a terminal reason (`'complete'`, `'cancelled'`, `'error'`) to pass to [`Run.end`](/docs/ai-transport/api/javascript/core/agent-session#run-end), or the sentinel `'suspend'` telling the caller to invoke [`Run.suspend`](/docs/ai-transport/api/javascript/core/agent-session#run-suspend) so a continuation Invocation can resume the Run.
+
+## Example <a id="example"/>
+
+A Vercel route handler that runs a tool-capable model, pipes the stream, and either suspends (for tool resolution) or ends the run with the correct reason.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { createAgentSession, Invocation } from '@ably/ai-transport';
+import { vercelRunOutcome } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+export async function POST(req: Request) {
+  const invocation = Invocation.fromJSON(await req.json());
+
+  const session = createAgentSession({
+    client: ably,
+    channelName: invocation.sessionName,
+  });
+
+  await session.connect();
+  const run = session.createRun(invocation, { signal: req.signal });
+
+  try {
+    await run.start();
+    await run.loadConversation();
+
+    const result = streamText({
+      model: openai('gpt-4'),
+      messages: run.messages,
+      tools: myTools,
+    });
+
+    const pipeResult = await run.pipe(result.toUIMessageStream());
+    const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+
+    if (outcome === 'suspend') {
+      await run.suspend();
+    } else {
+      await run.end(outcome);
+    }
+  } finally {
+    session.close();
+  }
+
+  return Response.json({ invocationId: run.invocationId });
+}
+```
+</Code>

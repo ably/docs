@@ -1,0 +1,296 @@
+---
+title: "ClientSession"
+meta_description: "API reference for the AI Transport ClientSession: factory, properties, lifecycle methods, and the View interface returned by createView()."
+meta_keywords: "AI Transport, ClientSession, createClientSession, View, Tree, connect, createView, cancel, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/client-transport
+  - /docs/ai-transport/api/javascript/client-transport
+---
+
+The `ClientSession` subscribes to an Ably channel, decodes incoming messages through a codec, and builds a conversation tree. It owns the channel attach and the cancel-publish path, exposes a default branch-aware `View` for rendering, and lets you derive additional views over the same tree.
+
+Construct one with `createClientSession` from the core entry point. For Vercel `UIMessage` channels, use the pre-bound factory from [`@ably/ai-transport/vercel`](/docs/ai-transport/api/javascript/vercel/chat-transport) instead.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createClientSession } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+
+const session = createClientSession({
+  client: ably,
+  channelName: 'conversation-42',
+  codec: UIMessageCodec,
+  api: '/api/chat',
+});
+
+await session.connect();
+```
+</Code>
+
+## Properties <a id="properties"/>
+
+<Table id='ClientSessionProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| tree | The complete conversation tree. Holds every known Run node and emits events on any change. Use `view` in most cases; reach for `tree` for low-level inspection. | <Table id='Tree'/> |
+| view | The default paginated, branch-aware view for rendering. Events scope to the visible messages. | <Table id='View'/> |
+
+</Table>
+
+<Table id='Tree' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| getRunNode | `(runId: string) => RunNode \| undefined`. Get a Run by id. | Function |
+| getRunByCodecMessageId | `(codecMessageId: string) => RunNode \| undefined`. Get the Run that owns a given codec-message-id. | Function |
+| getSiblingRuns | `(runId: string) => RunNode[]`. Sibling Runs at a fork point (edit or regenerate group). | Function |
+| hasSiblingRuns | `(runId: string) => boolean`. Whether a Run has sibling alternatives. | Function |
+| getRegenerateGroup | `(runId: string) => { anchorCodecMessageId, runs } \| undefined`. Resolve the regenerate sibling group containing the Run. | Function |
+| on | `(event: 'update' \| 'ably-message' \| 'run' \| 'run-projection-updated', handler) => () => void`. Subscribe to tree changes. Returns an unsubscribe function. | Function |
+
+</Table>
+
+<Table id='View' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| getMessages | `() => TMessage[]`. Visible messages along the selected branch. | Function |
+| runs | `() => RunInfo[]`. Visible Runs along the selected branch. | Function |
+| runOf | `(codecMessageId: string) => RunInfo \| undefined`. Run that owns the message. | Function |
+| run | `(runId: string) => RunInfo \| undefined`. Direct Run lookup by id. | Function |
+| branchSelection | `(codecMessageId: string) => BranchSelection`. Branch siblings at the anchor. | Function |
+| selectSibling | `(codecMessageId: string, index: number) => void`. Select a sibling at the anchor. | Function |
+| hasOlder | `() => boolean`. Whether older Runs can be loaded. | Function |
+| loadOlder | `(limit?: number) => Promise<void>`. Reveal older Runs. | Function |
+| sendMessage | `(messages, options?) => Promise<ActiveRun>`. Send user messages and start a Run. | Function |
+| sendInput | `(events, options?) => Promise<ActiveRun>`. Send raw TInputs. | Function |
+| regenerate | `(messageId, options?) => Promise<ActiveRun>`. Regenerate an assistant message. | Function |
+| edit | `(messageId, inputs, options?) => Promise<ActiveRun>`. Edit a user message. | Function |
+| on | `(event, handler) => () => void`. Subscribe to view updates. | Function |
+| close | `() => void`. Tear down the view. | Function |
+
+</Table>
+
+## Create a client session <a id="constructor"/>
+
+<MethodSignature>{`function createClientSession<TInput, TOutput, TProjection, TMessage>(options: ClientSessionOptions<TInput, TOutput, TProjection, TMessage>): ClientSession<TInput, TOutput, TMessage>`}</MethodSignature>
+
+Construct a `ClientSession` bound to an Ably channel. The session does not attach to the channel until [`connect()`](#connect) resolves.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createClientSession } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+
+const session = createClientSession({
+  client: ably,
+  channelName: 'conversation-42',
+  codec: UIMessageCodec,
+  api: '/api/chat',
+  clientId: 'user-abc',
+});
+```
+</Code>
+
+### Parameters <a id="constructor-params"/>
+
+<Table id='ClientSessionOptions'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| client | required | The Ably Realtime client. The caller owns its lifecycle; `session.close()` does not close the client. | `Ably.Realtime` |
+| channelName | required | The channel to subscribe to and publish cancel signals on. The session owns this channel; do not also resolve it elsewhere with conflicting options. | String |
+| codec | required | The codec used to encode and decode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
+| api | required | Server endpoint URL for the HTTP POST. | String |
+| clientId | optional | The client's identity. Sent to the server in the POST body. | String |
+| headers | optional | Headers for the HTTP POST. Function form for dynamic values (for example, auth tokens). | `Record<string, string>` or `() => Record<string, string>` |
+| body | optional | Additional body fields merged into the HTTP POST. Function form for dynamic values. | `Record<string, unknown>` or `() => Record<string, unknown>` |
+| credentials | optional | Fetch credentials mode for the HTTP POST. | `RequestCredentials` |
+| fetch | optional | Custom fetch implementation. Defaults to `globalThis.fetch`. | `typeof fetch` |
+| messages | optional | Initial messages to seed the conversation tree with. Forms a linear chain. | `TMessage[]` |
+| runStartDeadlineMs | optional | How long `sendMessage()` / `sendInput()` waits for the agent's `ai-run-start` event before rejecting with `RunStartDeadlineExceeded`. Defaults to 30000. | Number |
+| logger | optional | Logger instance for diagnostic output. | `Logger` |
+
+</Table>
+
+### Returns <a id="constructor-returns"/>
+
+`ClientSession<TInput, TOutput, TMessage>`. The session instance. Call [`connect()`](#connect) to attach before sending or cancelling.
+
+## Connect the session <a id="connect"/>
+
+<MethodSignature>{`connect(): Promise<void>`}</MethodSignature>
+
+Subscribe to the channel and implicitly attach. Idempotent: subsequent calls return the same promise.
+
+All write methods on [`view`](/docs/ai-transport/api/javascript/core/client-session#view) and [`cancel`](#cancel) throw `InvalidArgument` until `connect()` resolves.
+
+<Code>
+```javascript
+await session.connect();
+```
+</Code>
+
+### Returns <a id="connect-returns"/>
+
+`Promise<void>`. Resolves when the channel is attached and the session is ready for writes.
+
+## Create an additional view <a id="create-view"/>
+
+<MethodSignature>{`createView(): View<TInput, TOutput, TMessage>`}</MethodSignature>
+
+Create an additional view over the same conversation tree. Each view has independent branch selections and pagination state.
+
+The caller owns the returned view's lifecycle: call its `close()` when it is no longer needed, or `session.close()` closes it.
+
+<Code>
+```javascript
+const secondaryView = session.createView();
+secondaryView.selectSibling(messageId, 1);
+
+// the default view is unaffected
+session.view.branchSelection(messageId).index; // 0
+```
+</Code>
+
+### Returns <a id="create-view-returns"/>
+
+`View<TInput, TOutput, TMessage>`. A new view with its own pagination window and branch selection state.
+
+## Cancel a run <a id="cancel"/>
+
+<MethodSignature>{`cancel(runId: string): Promise<void>`}</MethodSignature>
+
+Publish a cancel signal for the specified Run and close the local stream. The agent receives the cancel through its own channel subscription and ends the Run with reason `'cancelled'`.
+
+<Code>
+```javascript
+const activeRun = await session.view.sendMessage({ role: 'user', text: 'Tell me a story' });
+
+// later, cancel from the UI
+await session.cancel(activeRun.runId);
+```
+</Code>
+
+### Parameters <a id="cancel-params"/>
+
+<Table id='CancelParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| runId | required | The Run to cancel. Typically obtained from `ActiveRun.runId` returned by a send. | String |
+
+</Table>
+
+### Returns <a id="cancel-returns"/>
+
+`Promise<void>`. Resolves once the cancel message has been published. The cancel is best-effort: if the agent has already ended the Run, the cancel is a no-op.
+
+## Subscribe to session errors <a id="on"/>
+
+<MethodSignature>{`on(event: 'error', handler: (error: Ably.ErrorInfo) => void): () => void`}</MethodSignature>
+
+Subscribe to non-fatal session errors. These indicate something went wrong but the session is still operational; examples are subscription callback failures and channel continuity loss.
+
+<Code>
+```javascript
+const unsubscribe = session.on('error', (error) => {
+  console.error('Session error:', error.code, error.message);
+});
+
+// later, when the listener is no longer needed
+unsubscribe();
+```
+</Code>
+
+### Parameters <a id="on-params"/>
+
+<Table id='OnParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | required | The event to subscribe to. Currently only `'error'`. | `'error'` |
+| handler | required | Called with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) for every non-fatal error. | Function |
+
+</Table>
+
+### Returns <a id="on-returns"/>
+
+`() => void`. An unsubscribe function. Call it to remove the listener.
+
+## Close the session <a id="close"/>
+
+<MethodSignature>{`close(): Promise<void>`}</MethodSignature>
+
+Tear down the session. Unsubscribe from the channel, close active streams, clear handlers, and prevent further operations.
+
+`close()` is local-state-only. The server keeps streaming until its Runs end on their own. To stop in-progress Runs, call [`cancel`](#cancel) for each before `close()`.
+
+<Code>
+```javascript
+const runIds = session.view.runs()
+  .filter((run) => run.status === 'active')
+  .map((run) => run.runId);
+
+await Promise.all(runIds.map((runId) => session.cancel(runId)));
+await session.close();
+```
+</Code>
+
+### Returns <a id="close-returns"/>
+
+`Promise<void>`. Resolves once the channel has been released.
+
+## Example <a id="example"/>
+
+End-to-end usage covering construction, connect, send, and teardown.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createClientSession } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+
+const session = createClientSession({
+  client: ably,
+  channelName: 'conversation-42',
+  codec: UIMessageCodec,
+  api: '/api/chat',
+  clientId: 'user-abc',
+});
+
+await session.connect();
+
+session.view.on('update', () => {
+  render(session.view.getMessages());
+});
+
+const activeRun = await session.view.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Plan a 3-day trip to Lisbon.' }],
+});
+
+// The SDK doesn't POST. The application wakes the agent itself.
+await fetch('/api/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(activeRun.toInvocation().toJSON()),
+});
+
+// `started` resolves when the agent's `ai-run-start` lands on the channel.
+await activeRun.started;
+
+await session.close();
+ably.close();
+```
+</Code>

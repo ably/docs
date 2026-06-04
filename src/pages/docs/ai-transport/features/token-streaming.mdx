@@ -47,7 +47,7 @@ A minimal server-side stream uses one call:
 
 <Code>
 ```javascript
-const { reason } = await turn.streamResponse(result.toUIMessageStream());
+const { reason } = await run.pipe(result.toUIMessageStream());
 ```
 </Code>
 
@@ -65,7 +65,7 @@ A streamed message moves through three states:
 | `finished` | The stream completed normally. The message is final. |
 | `aborted` | The stream was cancelled or failed. The partial message is preserved. |
 
-The stream status is carried in the message header (`x-ably-status`). Clients check this to detect whether a message is still streaming.
+The stream status is carried in the message header `status` under the `extras.ai.codec` tier. Clients check this to detect whether a message is still streaming.
 
 ## Implement token streaming <a id="implement"/>
 
@@ -75,26 +75,30 @@ The server creates a turn, invokes the LLM, and streams the response:
 
 <Code>
 ```javascript
-import { createServerTransport } from '@ably/ai-transport/vercel';
+import { Invocation } from '@ably/ai-transport';
+import { createAgentSession } from '@ably/ai-transport/vercel';
 
-const transport = createServerTransport({ channel });
-const turn = transport.newTurn({ turnId, clientId });
+const invocation = Invocation.fromJSON(await req.json());
+const session = createAgentSession({ client: ably, channelName: invocation.sessionName });
+await session.connect();
+const run = session.createRun(invocation, { signal: req.signal });
 
-await turn.start();
-await turn.addMessages(messages, { clientId });
+await run.start();
+await run.loadConversation();
 
 const result = streamText({
   model: anthropic('claude-sonnet-4-20250514'),
-  messages: conversationHistory,
-  abortSignal: turn.abortSignal,
+  messages: run.messages,
+  abortSignal: run.abortSignal,
 });
 
-const { reason } = await turn.streamResponse(result.toUIMessageStream());
-await turn.end(reason);
+const { reason } = await run.pipe(result.toUIMessageStream());
+await run.end(reason);
+session.close();
 ```
 </Code>
 
-`streamResponse` accepts any `ReadableStream`. For Vercel AI SDK, `result.toUIMessageStream()` provides the right format. For other frameworks, produce a `ReadableStream` of your codec's event type.
+`Run.pipe` accepts any `ReadableStream`. For Vercel AI SDK, `result.toUIMessageStream()` provides the right format. For other frameworks, produce a `ReadableStream` of your codec's event type.
 
 ### Client <a id="client"/>
 
@@ -111,8 +115,8 @@ With the generic hooks:
 
 <Code>
 ```javascript
-const { nodes } = useView();
-// Each node.message contains the streamed content, updating in real time.
+const { messages } = useView();
+// Each message updates in real time as tokens are appended on the channel.
 ```
 </Code>
 
@@ -181,7 +185,7 @@ No. Ably charges per published message, not per token. The append rollup reduces
 
 ### How do I stream more than one message per turn? <a id="faq-multi-message"/>
 
-Use `turn.addMessages()` for discrete messages and `turn.streamResponse()` for streamed ones. Each call creates a separate Ably message; the turn is the unit that groups them.
+A single `run.pipe(stream)` consumes the LLM's output stream and appends each chunk as it arrives. Multiple assistant messages, tool calls, and follow-on text within one stream all flow through the same `pipe` call. If your framework produces several discrete streams in one turn (for example a planner emits a status line, then the responder streams the answer), call `run.pipe` once per stream; the Run is the unit that groups them.
 
 ### Why does my client see fewer tokens than the model emits? <a id="faq-fewer-tokens"/>
 
@@ -189,7 +193,7 @@ The append rollup compacts multiple tokens into single published messages within
 
 ### What status do I see on a cancelled response? <a id="faq-cancel-status"/>
 
-The message keeps the content it had at the time of the cancel and its `x-ably-status` header transitions to `aborted`. Use this to distinguish a partial response from a complete one.
+The message keeps the content it had at the time of the cancel and its `status` header (under `extras.ai.codec`) transitions to `aborted`. Use this to distinguish a partial response from a complete one.
 
 ## Related features <a id="related"/>
 

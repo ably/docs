@@ -17,7 +17,7 @@ Behind the scenes:
 2. The POST request is sent to the server with the message content and the generated ID.
 3. The server processes the message and publishes it to the Ably channel.
 4. The client receives the published message through its channel subscription.
-5. The transport matches the published message to the optimistic insert using the `x-ably-msg-id` header and reconciles them.
+5. The session matches the published message to the optimistic insert using the `codec-message-id` header under `extras.ai.codec` and reconciles them.
 
 After reconciliation, the optimistic message is replaced by the server-confirmed version. From the user's perspective, the message was always there.
 
@@ -34,8 +34,8 @@ A single turn includes one or more user messages. When sending more than one, ea
 <Code>
 ```javascript
 await view.edit(messageId, [
-  { role: 'user', content: 'Here is my updated question' },
-  { role: 'user', content: 'And some additional context' },
+  { kind: 'user-message', message: { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Here is my updated question' }] } },
+  { kind: 'user-message', message: { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'And some additional context' }] } },
 ]);
 ```
 </Code>
@@ -44,13 +44,17 @@ Each message in the array is inserted into the tree optimistically. When the ser
 
 ## Handle errors <a id="error-handling"/>
 
-If the POST request fails, the optimistic message stays in the conversation tree and the transport emits an `error` event. The message is not removed automatically; `view.send()` is fire-and-forget. The POST happens in the background:
+If the POST request fails, the optimistic message stays in the conversation tree and the session emits an `error` event. The message is not removed automatically; the agent-wake POST happens in the background after `view.sendMessage()` returns its `ActiveRun`:
 
 <Code>
 ```javascript
-const turn = await view.send([{ role: 'user', content: 'Hello' }]);
+const run = await view.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Hello' }],
+});
 
-transport.on('error', (error) => {
+session.on('error', (error) => {
   console.error('Send failed:', error.message);
 });
 ```
@@ -60,7 +64,7 @@ Your application decides whether to notify the user, offer a retry, or take othe
 
 ## Reconciliation details <a id="reconciliation"/>
 
-The transport uses the `x-ably-msg-id` header to match published messages to optimistic inserts. When the client generates a message, it assigns an ID. The server includes this ID when publishing to the channel. When the client receives the published message through its subscription, it matches the ID and promotes the optimistic message to a confirmed one.
+The session uses the `codec-message-id` header (under the `extras.ai.codec` tier) to match published messages to optimistic inserts. When the client generates a message, it assigns a codec-message-id. The agent stamps the same id on the response when continuing that message. When the client receives the published message through its subscription, it matches the id and promotes the optimistic message to a confirmed one.
 
 A published message that does not match any optimistic insert (for example, a message from another client) is added to the tree normally. The reconciliation logic only applies to messages the current client sent.
 
@@ -70,7 +74,7 @@ A published message that does not match any optimistic insert (for example, a me
 - A message ID collision (the same ID used twice on the same channel) confuses reconciliation. Use `crypto.randomUUID()` to generate IDs.
 - A published message that arrives before the server returns from POST still reconciles correctly. Reconciliation uses the message ID, not request ordering.
 - Two clients sending at the same time produce two distinct optimistic messages and two server publishes. Each client only reconciles its own; the other side appears as a normal observer message.
-- A server that publishes the message without the `x-ably-msg-id` header is treated as a new message, not a reconciliation. Wire the ID through from your route handler.
+- A server that publishes the message without the `codec-message-id` header is treated as a new message, not a reconciliation. The SDK stamps this header automatically; only custom codecs that publish raw need to wire it through.
 
 ## FAQ <a id="faq"/>
 

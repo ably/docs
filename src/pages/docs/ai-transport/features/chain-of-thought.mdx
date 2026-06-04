@@ -18,23 +18,29 @@ With the Vercel AI SDK integration, reasoning arrives as a separate `reasoning` 
 <Code>
 ```javascript
 app.post('/api/chat', async (req, res) => {
-  const { turnId, clientId, messages } = req.body;
-  const turn = transport.newTurn({ turnId, clientId });
+  const invocation = Invocation.fromJSON(await req.json());
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
+  await session.connect();
+  const run = session.createRun(invocation, { signal: req.signal });
+
+  await run.start();
+  await run.loadConversation();
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
-    messages,
-    abortSignal: turn.abortSignal,
+    messages: run.messages,
+    abortSignal: run.abortSignal,
   });
 
-  await turn.streamResponse(result.toUIMessageStream());
-  await turn.end('complete');
+  const { reason } = await run.pipe(result.toUIMessageStream());
+  await run.end(reason);
+  session.close();
   res.json({ ok: true });
 });
 ```
 </Code>
 
-No additional server configuration is needed. If the model produces reasoning tokens, the codec encodes them as a distinct stream within the turn.
+No additional server configuration is needed. If the model produces reasoning tokens, the codec encodes them as a distinct stream within the run.
 
 ## Display reasoning in the UI <a id="displaying-reasoning"/>
 
@@ -42,10 +48,10 @@ On the client, message nodes contain both text and reasoning content. Render the
 
 <Code>
 ```javascript
-const { nodes } = useView({ transport });
+const { messages } = useView();
 
-for (const node of nodes) {
-  for (const part of node.message.parts) {
+for (const message of messages) {
+  for (const part of message.parts) {
     if (part.type === 'reasoning') {
       renderThinkingPanel(part.reasoning);
     } else if (part.type === 'text') {
@@ -66,8 +72,8 @@ Chain of thought support depends on the model and the codec. Not all models prod
 
 - A model that produces reasoning but the codec does not surface it folds reasoning into the text stream. Update the codec or the framework integration if you need it separated.
 - Reasoning tokens are often longer than the final response. They count toward the channel's message rate and storage like any other tokens. See [token streaming](/docs/ai-transport/features/token-streaming#rollup) for rollup tuning.
-- A cancelled turn aborts both streams. Partial reasoning content stays with status `aborted`.
-- Two reasoning streams in the same turn are exposed in the same order they were emitted by the model. Multiple distinct reasoning episodes are common with tool-augmented agents.
+- A cancelled run aborts both streams. Partial reasoning content stays with status `cancelled`.
+- Two reasoning streams in the same run are exposed in the same order they were emitted by the model. Multiple distinct reasoning episodes are common with tool-augmented agents.
 - A client that does not render reasoning parts still receives them on the channel. Filter at the render layer if you want to hide them by default.
 
 ## FAQ <a id="faq"/>

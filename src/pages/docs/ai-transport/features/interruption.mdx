@@ -1,133 +1,133 @@
 ---
 title: "Interruption"
 meta_description: "Let users interrupt AI agents mid-stream with Ably AI Transport. Cancel-then-send and send-alongside patterns for responsive AI interactions."
-meta_keywords: "AI interruption, barge-in, cancel and send, concurrent turns, AI Transport, Ably"
-intro: "Your users can change direction mid-response. AI Transport's session layer lets a client cancel the in-progress turn and start a new one without breaking the stream."
-redirect_from:
-  - /docs/ai-transport/features/barge-in
+meta_keywords: "AI interruption, interrupt, cancel and send, concurrent turns, AI Transport, Ably"
+intro: "Your users can change direction mid-response. AI Transport's session layer lets a client cancel the in-progress Run and start a new one without breaking the stream."
 ---
 
-Interruption lets a user send a new message while the agent is still streaming a response. The new message creates a new [turn](/docs/ai-transport/concepts/turns) on the [session](/docs/ai-transport/concepts/sessions); whether the existing turn is cancelled first or runs in parallel is up to the application. In voice contexts this pattern is also known as barge-in.
+Interruption is the pattern where a user sends a new message while the agent is still streaming a response. The new message creates a new turn on the [session](/docs/ai-transport/concepts/sessions); whether the existing turn is cancelled first or runs in parallel is up to you.
 
 ![Diagram showing session continuity during interruption](../../../../images/content/diagrams/ait-session-continuity.png)
 
-A minimal interruption call cancels the active turn and sends a new message:
+A minimal interruption cancels the active Run and sends a new message:
 
 <Code>
 ```javascript
-await transport.cancel();
-await transport.view.send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Wait, focus on the budget instead' }] }]);
+const active = session.view.runs().filter((run) => run.status === 'active');
+await Promise.all(active.map((run) => session.cancel(run.runId)));
+
+await session.view.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Wait, make it 5 days.' }],
+});
 ```
 </Code>
 
 ## How it works <a id="how-it-works"/>
 
-Turns are independent units of agent work on a session. The session is bidirectional, so the client publishes a cancel signal on the channel at any time, regardless of whether the response is still in flight. A new turn does not have to wait for the previous one to finish.
+Each turn becomes a [Run](/docs/ai-transport/concepts/runs) on the session. The session is bidirectional, so a client can publish a cancel signal at any time, even while the response is mid-flight. A new `sendMessage` doesn't have to wait for the previous Run to finish.
 
-There are two patterns for handling interruption:
+Two patterns:
 
-| Pattern | Behaviour | Use case |
+| Pattern | Behaviour | When to use it |
 | --- | --- | --- |
-| Cancel-then-send | Cancel the active turn, then send a new message. | Stop button followed by a new prompt. |
-| Send-alongside | Send a new message while the active turn continues. | Follow-up without waiting. |
+| Cancel-then-send | Cancel the active Run, then send the new message. | A Stop button followed by a new prompt. |
+| Send-alongside | Send the new message while the active Run continues. | Quick follow-up that doesn't invalidate the in-flight response. |
 
-With cancel-then-send, the active turn is aborted before the new message dispatches. The agent stops generating, cleans up, and starts a fresh turn. With send-alongside, both turns run concurrently, each with its own stream and cancel handle.
+With cancel-then-send, the active Run aborts before the new message dispatches. The agent stops generating, ends the Run with reason `'cancelled'`, and the new Run starts clean. With send-alongside, both Runs run concurrently (each with its own stream and its own cancel handle). See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for the multiplexing model.
 
 ## Implement cancel-then-send <a id="cancel-then-send"/>
 
-Detect whether a turn is active, cancel it, then send a new message. This pattern mimics a stop button followed by a re-prompt.
+Detect whether a Run is active, cancel it, then send the new message:
 
 <Code>
 ```javascript
-import { useActiveTurns, useClientTransport, useView } from '@ably/ai-transport/react';
+import { useClientSession, useView } from '@ably/ai-transport/react';
 
-function Chat({ chatId }) {
-  const { transport } = useClientTransport({ channelName: chatId });
-  const { send } = useView();
-  const activeTurns = useActiveTurns();
+function Chat() {
+  const { session } = useClientSession();
+  const view = useView();
 
   const handleSend = async (text) => {
-    if (activeTurns.size > 0) {
-      await transport.cancel();
-    }
+    const active = session.view.runs().filter((run) => run.status === 'active');
+    await Promise.all(active.map((run) => session.cancel(run.runId)));
 
-    await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }]);
+    await view.sendMessage({
+      id: crypto.randomUUID(),
+      role: 'user',
+      parts: [{ type: 'text', text }],
+    });
   };
 }
 ```
 </Code>
 
-`transport.cancel()` publishes a cancel signal on the channel. The server's `abortSignal` fires, the LLM stream stops, and the turn ends with reason `'cancelled'`. The new message is then sent on a clean turn.
+`session.cancel(runId)` publishes a cancel signal. The agent's `Run.abortSignal` fires, the LLM stream stops, and the Run ends with reason `'cancelled'`. The new message starts a clean Run.
 
 ## Implement send-alongside <a id="send-alongside"/>
 
-Send a new message without cancelling the active turn. Both turns run concurrently. The agent continues streaming the first response while processing the new input.
+Send a new message without cancelling. Both Runs stream concurrently; each `ActiveRun` carries its own `runId` and `cancel()`, and both Runs' outputs land on the same channel where they fold into the conversation tree by `runId`:
 
 <Code>
 ```javascript
-const handleSend = async (text) => {
-  await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }]);
-};
+const followUp = await session.view.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Also include vegan options.' }],
+});
 ```
 </Code>
 
-Each concurrent turn has its own stream and its own cancel handle. Cancel them independently:
+Cancel them independently with `session.cancel(specificRunId)` or `activeRun.cancel()`.
+
+## Drive the Stop / Send toggle <a id="stop-send-toggle"/>
+
+`session.view.runs()` returns the visible `RunInfo` snapshots. Filter by `status === 'active'` to drive the Send / Stop toggle:
 
 <Code>
 ```javascript
-await transport.cancel({ turnId: specificTurnId });
+const { session } = useClientSession();
+const isStreaming = session.view.runs().some((run) => run.status === 'active');
+
+return isStreaming
+  ? <StopButton onClick={() => cancelAll()} />
+  : <SendButton onClick={handleSend} />;
 ```
 </Code>
-
-## Detect active turns <a id="detecting-active-turns"/>
-
-The `useActiveTurns` hook returns a `Map<clientId, Set<turnId>>` of currently streaming turns. Use it to check whether the agent is mid-response:
-
-<Code>
-```javascript
-const activeTurns = useActiveTurns({ transport });
-
-const isStreaming = activeTurns.size > 0;
-
-const agentTurns = activeTurns.get('agent-client-id');
-const agentIsStreaming = agentTurns !== undefined && agentTurns.size > 0;
-```
-</Code>
-
-This is what drives the toggle between a send button and a stop button, or disables input while a cancellation is in progress.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- The cancel signal is asynchronous. A few more tokens arrive after `transport.cancel()` returns and before the agent's `abortSignal` fires. The view emits them; treat tokens after a cancel as part of the cancelled turn, not the new one.
-- A turn that cancels while waiting for a tool result ends with reason `'cancelled'`. Tool invocations triggered before the cancel still run on the server unless your handler honours the same `abortSignal`.
-- A network drop on the client cancels nothing. The server keeps streaming into the session. When the client reconnects, the response is still there. Use `useActiveTurns` to decide whether to show a stop button on reconnect.
-- Sending alongside an existing turn is rate-limited by your channel and any server-side concurrency you enforce. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for the multiplexing model.
-- The `'cancelled'` reason is reported through the view's turn events. Do not rely on the absence of further tokens to detect a cancel.
+- Cancel is asynchronous. A small tail of tokens arrives after `session.cancel(runId)` returns and before the agent's `abortSignal` fires. The view emits them on the cancelled Run; treat them as belonging to that Run, not the new one.
+- A Run cancelled while awaiting a tool result ends with `'cancelled'`. Tool calls triggered before the cancel may still run on your server unless your handler honours the same `AbortSignal`.
+- A network drop on the client cancels nothing. The agent keeps streaming into the session. When the client reconnects, the response is still there. Check `session.view.runs()` on reconnect to decide whether to show Stop.
+- Send-alongside is rate-limited by your channel and any server-side concurrency you enforce. See [concurrent turns](/docs/ai-transport/features/concurrent-turns).
+- `'cancelled'` is reported on the Run's terminal `RunEndReason`. Don't infer cancellation from the absence of further tokens; subscribe to `view.on('run', ...)` and read the lifecycle event.
 
 ## FAQ <a id="faq"/>
 
-### What happens to tokens already in flight when I cancel? <a id="faq-tokens-in-flight"/>
+### What happens to tokens already in flight when I cancel?
 
-The agent keeps publishing until its `abortSignal` fires. A small tail of tokens arrives after `cancel()` returns. The view reflects them on the cancelled turn; the new turn is unaffected.
+The agent keeps publishing until its `abortSignal` fires. A small tail of tokens arrives after `cancel()` returns. The view reflects them on the cancelled Run; the new Run is unaffected.
 
-### Can I cancel one of several concurrent turns without touching the others? <a id="faq-cancel-one"/>
+### Can I cancel one of several concurrent Runs without touching the others?
 
-Yes. Pass a `turnId` to `transport.cancel({ turnId })`. Only the matching turn is cancelled.
+Yes. `session.cancel(runId)` only cancels the matching Run. Pull `runId`s from `session.view.runs()` to target the right one.
 
-### Does `transport.cancel()` work from a different device? <a id="faq-cross-device"/>
+### Does cancel work from a different device?
 
-Yes. Any client connected to the same session publishes a cancel signal. The server receives it through its channel subscription, regardless of which client started the turn. See [cancellation](/docs/ai-transport/features/cancellation) for the authorisation model.
+Yes. Any client connected to the same session can publish a cancel. The agent receives it through its own subscription regardless of which client started the Run. See [cancellation](/docs/ai-transport/features/cancellation) for the authorisation model.
 
-### What if the server is down when I send a new message after a cancel? <a id="faq-server-down"/>
+### What if the agent endpoint is down when I send the follow-up?
 
-The cancel signal is delivered when the server reconnects to the channel. The new message creates a new turn as soon as the server's poke endpoint is reachable. The session and existing messages are unaffected.
+The Ably channel publishes still happen (the cancel and the new user message both land on the channel). The new POST retries the agent endpoint; the new Run starts as soon as the endpoint is reachable. The session and existing messages are unaffected.
 
-### How is interruption different from concurrent turns? <a id="faq-vs-concurrent"/>
+### How is interruption different from concurrent turns?
 
-Interruption is the user-facing pattern: stop and re-prompt, or send a follow-up. [Concurrent turns](/docs/ai-transport/features/concurrent-turns) is the underlying mechanism that makes both patterns possible. Multiple turns coexist on the same session.
+Interruption is the user-facing pattern (Stop and re-prompt, or quick follow-up). [Concurrent turns](/docs/ai-transport/features/concurrent-turns) is the underlying mechanism that makes both possible: multiple Runs coexisting on the same session.
 
 ## Related features <a id="related"/>
 
-- [Cancellation](/docs/ai-transport/features/cancellation): cancel signals, filters, and server-side abort handling.
-- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): multiple turns running in parallel.
+- [Cancellation](/docs/ai-transport/features/cancellation): cancel signals and agent-side authorisation.
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): multiple Runs in flight on the same session.
 - [Double texting](/docs/ai-transport/features/double-texting): handling multiple user messages in quick succession.

@@ -9,105 +9,119 @@ Concurrent turns let multiple request-response cycles run at the same time on on
 
 ## How it works <a id="how-it-works"/>
 
-Turns are multiplexed on the Ably channel via `turnId`. Every message published during a turn (text deltas, tool calls, lifecycle events) carries a header identifying its turn. The client transport reads these headers and routes each message to the correct turn's stream.
+Turns are multiplexed on the Ably channel via `runId`. Every message published during a [Run](/docs/ai-transport/concepts/runs) (text deltas, tool calls, lifecycle events) carries a header identifying its Run. The client session reads these headers and routes each message to the correct Run's stream.
 
 <Code>
 ```javascript
-const turn1 = await view.send([
-  { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Summarize the report' }] },
-]);
-const turn2 = await view.send([
-  { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'What are the key risks?' }] },
-]);
+const run1 = await view.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user', parts: [{ type: 'text', text: 'Summarize the report' }],
+});
+const run2 = await view.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user', parts: [{ type: 'text', text: 'What are the key risks?' }],
+});
 
-for await (const chunk of turn1.stream) {
-  renderToPanel('summary', chunk);
-}
-
-for await (const chunk of turn2.stream) {
-  renderToPanel('risks', chunk);
-}
+// Subscribe to lifecycle events on the session's tree to observe completion:
+const off = session.tree.on('run', (event) => {
+  if (event.runId === run1.runId && event.type === 'end') renderToPanel('summary', 'done');
+  if (event.runId === run2.runId && event.type === 'end') renderToPanel('risks', 'done');
+});
 ```
 </Code>
 
-On the server, each turn is handled independently. The server transport creates a separate turn object per request, each with its own abort signal and lifecycle:
+On the agent side, each Run is handled independently. The agent session creates a separate `Run` per invocation, each with its own abort signal and lifecycle:
 
 <Code>
 ```javascript
 app.post('/api/chat', async (req, res) => {
-  const { turnId, clientId, messages } = req.body;
-  const turn = transport.newTurn({ turnId, clientId });
+  const invocation = Invocation.fromJSON(await req.json());
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
+  await session.connect();
+  const run = session.createRun(invocation, { signal: req.signal });
 
-  await turn.start();
+  await run.start();
+  await run.loadConversation();
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
-    messages,
-    abortSignal: turn.abortSignal,
+    messages: run.messages,
+    abortSignal: run.abortSignal,
   });
 
-  await turn.streamResponse(result.toUIMessageStream());
-  await turn.end('complete');
+  const { reason } = await run.pipe(result.toUIMessageStream());
+  await run.end(reason);
+  session.close();
   res.json({ ok: true });
 });
 ```
 </Code>
 
-## Track active turns <a id="tracking-active-turns"/>
+## Track active runs <a id="tracking-active-runs"/>
 
-`useActiveTurns` returns a map of which clients have which turns in progress:
+`session.view.runs()` returns the visible Runs as projection-free `RunInfo` snapshots. Filter by status and `clientId`:
 
 <Code>
 ```javascript
-const activeTurns = useActiveTurns({ transport });
+const { session } = useClientSession();
+const runs = session.view.runs();
 
-for (const [clientId, turnIds] of activeTurns) {
-  console.log(`${clientId} has ${turnIds.size} active turn(s)`);
+for (const run of runs.filter((r) => r.status === 'active')) {
+  console.log(`${run.clientId} has active run ${run.runId}`);
 }
 
-const isAgentStreaming = activeTurns.has('agent-1');
+const isAgentStreaming = runs.some((r) => r.status === 'active' && r.clientId === 'agent-1');
 ```
 </Code>
 
-The map updates in real time across every connected client. A turn that starts or ends anywhere on the channel updates every subscriber's `useActiveTurns` immediately.
+The view updates in real time across every connected client. A Run that starts or ends anywhere on the channel updates every subscriber's view immediately.
 
-## Scope cancellation to a turn <a id="scoped-cancellation"/>
+## Cancel one run without touching the others <a id="scoped-cancellation"/>
 
-Cancel one turn without affecting others by passing a `turnId` filter:
+Cancel by `runId`:
 
 <Code>
 ```javascript
-await transport.cancel({ turnId: turn1.turnId });
-// turn2 continues streaming
+await session.cancel(run1.runId);
+// run2 continues streaming
 ```
 </Code>
 
-The default cancel (`{ own: true }`) cancels every turn started by this client. For concurrent turns, scoped cancellation is essential.
-
-| Filter | Effect |
-| --- | --- |
-| `{ turnId }` | Cancel one specific turn. |
-| `{ own: true }` | Cancel every turn started by this client. |
-| `{ clientId }` | Cancel every turn by a specific client. |
-| `{ all: true }` | Cancel every active turn on the channel. |
-
-See [cancellation](/docs/ai-transport/features/cancellation) for the full cancel API, including server-side authorisation and abort hooks.
-
-## Wait for turns to complete <a id="waiting-for-turns"/>
-
-`transport.waitForTurn()` returns a promise that resolves when matching turns complete:
+To cancel all your active Runs (Stop button), filter `session.view.runs()` first:
 
 <Code>
 ```javascript
-await transport.waitForTurn({ turnId: turn1.turnId });
-
-await transport.waitForTurn({ own: true });
-
-await transport.waitForTurn({ all: true });
+const myClientId = ably.auth.clientId;
+const myActive = session.view.runs().filter((r) => r.status === 'active' && r.clientId === myClientId);
+await Promise.all(myActive.map((r) => session.cancel(r.runId)));
 ```
 </Code>
 
-Use this to sequence work: send a follow-up only after the first response completes, or disable a submit button until pending turns resolve.
+See [cancellation](/docs/ai-transport/features/cancellation) for the full cancel API, including agent-side authorisation hooks.
+
+## Wait for runs to complete <a id="waiting-for-runs"/>
+
+Each `ActiveRun` exposes `started: Promise<void>` (resolves when the agent's `ai-run-start` is observed). To wait for a Run to terminate, subscribe to the session tree's `run` events and resolve on a matching `end`:
+
+<Code>
+```javascript
+function whenRunEnds(session, runId) {
+  return new Promise((resolve) => {
+    const off = session.tree.on('run', (event) => {
+      if (event.runId === runId && event.type === 'end') {
+        off();
+        resolve(event.reason);
+      }
+    });
+  });
+}
+
+const run1 = await view.sendMessage({ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Hello' }] });
+await whenRunEnds(session, run1.runId);
+```
+</Code>
+
+Use this to sequence work: send a follow-up only after the first response completes, or disable a submit button until the run resolves.
 
 ## Use cases <a id="use-cases"/>
 
@@ -117,10 +131,13 @@ Cancel the current turn and immediately start a new one:
 
 <Code>
 ```javascript
-await transport.cancel({ own: true });
-const newTurn = await view.send([
-  { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Actually, focus on the budget instead' }] },
-]);
+const active = session.view.runs().filter((r) => r.status === 'active');
+await Promise.all(active.map((r) => session.cancel(r.runId)));
+
+const newRun = await view.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user', parts: [{ type: 'text', text: 'Actually, focus on the budget instead' }],
+});
 ```
 </Code>
 
@@ -128,51 +145,55 @@ See [Interruption](/docs/ai-transport/features/interruption) for the full patter
 
 ### Multi-user sessions <a id="multi-user"/>
 
-Two users prompting the same session at the same time. Each user's turn is independent:
+Two users prompting the same session at the same time. Each user's Run is independent:
 
 <Code>
 ```javascript
-const turnA = await viewA.send([
-  { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'What does section 3 mean?' }] },
-]);
+const runA = await viewA.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user', parts: [{ type: 'text', text: 'What does section 3 mean?' }],
+});
 
-const turnB = await viewB.send([
-  { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Summarize section 5' }] },
-]);
+const runB = await viewB.sendMessage({
+  id: crypto.randomUUID(),
+  role: 'user', parts: [{ type: 'text', text: 'Summarize section 5' }],
+});
 ```
 </Code>
 
-Both turns stream concurrently on the shared channel.
+Both Runs stream concurrently on the shared channel.
 
 ### Multi-agent <a id="multi-agent"/>
 
-An orchestrator dispatches work to multiple sub-agents, each streaming concurrently on the same channel:
+An orchestrator dispatches work to multiple sub-agents, each streaming concurrently on the same channel. Each sub-agent receives its own Invocation with a unique `runId`:
 
 <Code>
 ```javascript
 app.post('/api/chat', async (req, res) => {
-  const { messages } = req.body;
-  const researchTurn = transport.newTurn({ turnId: 'research', clientId: 'researcher' });
-  const analysisTurn = transport.newTurn({ turnId: 'analysis', clientId: 'analyst' });
+  const invocation = Invocation.fromJSON(await req.json());
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
+  await session.connect();
 
-  await Promise.all([
-    runResearchAgent(researchTurn, messages),
-    runAnalysisAgent(analysisTurn, messages),
-  ]);
+  // The orchestrator creates additional Invocations for sub-agents and POSTs
+  // to their endpoints. Each sub-agent runs its own session.createRun(...)
+  // against the same channel; their messages multiplex by runId.
+  const researchRun = session.createRun(invocation, { signal: req.signal });
+  await researchRun.start();
+  await runResearchAgent(researchRun);
+
   res.json({ ok: true });
 });
 ```
 </Code>
 
-The client sees both agent responses arriving in parallel, each tagged with its own turn ID and client ID.
+The client sees both agent responses arriving in parallel, each tagged with its own `runId` and `clientId`.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- Concurrent turns share the channel's message rate. A burst of parallel streams approaches the per-connection rate limit faster than a single stream. See [token streaming](/docs/ai-transport/features/token-streaming#rollup) for rollup behaviour.
-- A scoped cancel against a `turnId` that no longer matches an active turn is a no-op. Cancellation does not error on absence.
-- `waitForTurn({ all: true })` includes turns started by other clients. If you only want to wait for your own, use `{ own: true }`.
-- A multi-agent setup with the same `turnId` across sub-agents collides on the channel. Generate a unique `turnId` per sub-agent.
-- Two clients sending at the same time produce two turns. The conversation tree shows both as siblings of the same parent message.
+- Concurrent Runs share the channel's message rate. A burst of parallel streams approaches the per-connection rate limit faster than a single stream. See [token streaming](/docs/ai-transport/features/token-streaming#rollup) for rollup behaviour.
+- `session.cancel(runId)` against a `runId` that no longer matches an active Run is a no-op. Cancellation does not error on absence.
+- A multi-agent setup with the same `runId` across sub-agents collides on the channel. Each Invocation must generate a unique `runId`.
+- Two clients sending at the same time produce two Runs. The conversation tree shows both as siblings of the same parent message.
 
 ## FAQ <a id="faq"/>
 
@@ -180,21 +201,21 @@ The client sees both agent responses arriving in parallel, each tagged with its 
 
 There is no hard limit on the channel side. Practical limits come from your application's concurrency (server compute, model rate limits) and the channel's message rate. Plan for the publish rate, not the turn count.
 
-### Does the client need to track turn IDs? <a id="faq-track-ids"/>
+### Does the client need to track run IDs? <a id="faq-track-ids"/>
 
-The transport tracks turn IDs internally. Hold onto the `turn` handle returned by `send()` only if you need to cancel it specifically or wait for it specifically.
+The session tracks Run identity internally. Hold onto the `ActiveRun` returned by `view.sendMessage()` only if you need to cancel it specifically or wait for it specifically.
 
-### How do I tell which turn a message belongs to? <a id="faq-message-turn"/>
+### How do I tell which run a message belongs to? <a id="faq-message-turn"/>
 
-Each message carries its `turnId` in the header. `useView`'s tree exposes the relationship; you do not parse headers manually.
+Each message carries its `run-id` in `extras.ai.transport`. The session's tree exposes the relationship through `view.runOf(codecMessageId)`; you do not parse headers manually.
 
 ### Can two turns run on behalf of the same user? <a id="faq-same-user"/>
 
 Yes. The `clientId` does not constrain how many turns a client has open. Scoped cancellation lets you target one of them.
 
-### Why use turn IDs instead of message IDs? <a id="faq-ids"/>
+### Why use run IDs instead of message IDs? <a id="faq-ids"/>
 
-A turn is one unit of agent work that produces multiple messages. The turn ID groups every message the agent publishes for that work, so cancel and wait operate on the unit a user understands.
+A Run is one unit of agent work that produces multiple messages. The `runId` groups every message the agent publishes for that work, so cancel and wait operate on the unit a user understands.
 
 ## Related features <a id="related"/>
 

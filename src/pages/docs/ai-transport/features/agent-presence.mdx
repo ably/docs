@@ -26,20 +26,26 @@ const channel = ably.channels.get(sessionChannelName);
 await channel.presence.enter({ status: 'idle' });
 
 app.post('/api/chat', async (req, res) => {
-  const { turnId, clientId, messages } = req.body;
-  const turn = transport.newTurn({ turnId, clientId });
+  const invocation = Invocation.fromJSON(await req.json());
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
+  await session.connect();
+  const run = session.createRun(invocation, { signal: req.signal });
 
+  await run.start();
+  await run.loadConversation();
   await channel.presence.update({ status: 'thinking' });
 
   const result = streamText({
     model: openai('gpt-4o'),
-    messages,
-    abortSignal: turn.abortSignal,
+    messages: run.messages,
+    abortSignal: run.abortSignal,
   });
 
   await channel.presence.update({ status: 'streaming' });
-  await turn.streamResponse(result.toUIMessageStream());
+  const { reason } = await run.pipe(result.toUIMessageStream());
+  await run.end(reason);
   await channel.presence.update({ status: 'idle' });
+  session.close();
   res.json({ ok: true });
 });
 ```
@@ -64,16 +70,16 @@ const agent = members.find((m) => m.clientId === 'agent');
 ```
 </Code>
 
-## Combine presence with active turns <a id="combining-with-active-turns"/>
+## Combine presence with active runs <a id="combining-with-active-turns"/>
 
-For richer status indicators, combine presence data with `useActiveTurns`. Presence tells you the agent's self-reported state. Active turns tell you which turns are in progress:
+For richer status indicators, combine presence data with the active Runs on the view. Presence tells you the agent's self-reported state. `session.view.runs()` tells you which Runs are in progress:
 
 <Code>
 ```javascript
-const activeTurns = useActiveTurns({ transport });
+const { session } = useClientSession();
 const agentStatus = useAgentPresence(channel); // your custom hook
 
-const isStreaming = activeTurns.has('agent');
+const isStreaming = session.view.runs().some((r) => r.status === 'active' && r.clientId === 'agent');
 const isIdle = agentStatus === 'idle' && !isStreaming;
 const isOffline = agentStatus === null;
 ```
@@ -85,7 +91,7 @@ This is enough information for the UI to show a typing indicator while the agent
 
 - An agent that exits without calling `presence.leave()` (for example, a crashed process) is automatically removed from presence after a timeout. The agent is treated as present until the timeout fires. Wire a graceful shutdown that calls `leave` for the best user experience.
 - A serverless agent that comes up for one turn and tears down should enter and leave presence per turn; entering once and leaving once at the end is fine for a long-running agent.
-- Presence updates do not guarantee strict ordering with channel messages. A `streaming` presence update sometimes arrives slightly after the first token. Drive the UI off active turns for token-level state and use presence for higher-level status.
+- Presence updates do not guarantee strict ordering with channel messages. A `streaming` presence update sometimes arrives slightly after the first token. Drive the UI off `session.view.runs()` for token-level state and use presence for higher-level status.
 - Multi-agent setups need unique `clientId` per agent. Two agents with the same `clientId` collide in the presence set.
 - A client without `presence` capability cannot subscribe to updates. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
 
@@ -102,9 +108,9 @@ Yes. Presence is symmetric. A client that enters presence shows up alongside age
 ### How long does presence persist after a disconnect? <a id="faq-timeout"/>
 Until Ably's presence timeout fires (currently around 15 seconds). Active connections are not affected; this is for ungraceful disconnects.
 
-### What is the difference between presence and `useActiveTurns`? <a id="faq-vs-active-turns"/>
+### What is the difference between presence and the view's active runs? <a id="faq-vs-active-runs"/>
 
-Presence is self-reported by the agent. Active turns are observable from the channel by inspecting turn lifecycle events. Presence reports intent; active turns report fact. Both together produce richer status.
+Presence is self-reported by the agent. `session.view.runs()` is observable from the channel by inspecting run lifecycle events. Presence reports intent; active runs report fact. Both together produce richer status.
 
 ### Can I pause inference when no users are connected? <a id="faq-pause"/>
 

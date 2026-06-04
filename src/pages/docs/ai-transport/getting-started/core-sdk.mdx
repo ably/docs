@@ -10,9 +10,9 @@ intro: "Build a chat app using AI Transport's core React hooks directly. You get
 A Next.js chat app where:
 
 - Tokens stream from the model into a durable [session](/docs/ai-transport/concepts/sessions).
-- The client reads the conversation through AI Transport's `useView` hook, with direct access to the [conversation tree](/docs/ai-transport/concepts/conversation-tree).
+- The client reads the conversation through the [`useView`](/docs/ai-transport/api/react/core/use-view) hook, with direct access to the [conversation tree](/docs/ai-transport/concepts/conversation-tree).
 - Branching, edit, regenerate, and pagination are first-class.
-- A stop button cancels the in-progress [turn](/docs/ai-transport/concepts/turns).
+- A Stop button cancels the in-progress [Run](/docs/ai-transport/concepts/runs).
 
 To use AI Transport with Vercel's `useChat` for message management, see [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk).
 
@@ -32,96 +32,124 @@ npm install @ably/ai-transport ably ai @ai-sdk/anthropic next react react-dom
 
 ## Set up authentication <a id="auth"/>
 
-Create an auth endpoint at `/api/auth` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [authentication](/docs/ai-transport/concepts/authentication) for the full setup.
+Create an auth endpoint at `/api/auth` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
 
 The client below uses `authUrl: '/auth'` to fetch tokens from this endpoint.
 
-## Create the server route <a id="server"/>
+## Create the agent route <a id="agent-route"/>
 
-Create `app/api/chat/route.ts`. The server creates a turn, publishes the user message, streams the LLM response through the Ably channel, and returns immediately. `streamText` orchestrates the model, and `UIMessageCodec` encodes its output for Ably. Swap either component if your stack is different.
+Create `app/api/chat/route.ts`. The agent receives an [Invocation](/docs/ai-transport/concepts/invocations), creates an [AgentSession](/docs/ai-transport/api/javascript/core/agent-session), starts a [Run](/docs/ai-transport/concepts/runs), hydrates the conversation, pipes the LLM stream, and ends the Run.
 
 <Code>
 ```javascript
 import { after } from 'next/server';
 import { streamText, convertToModelMessages } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import Ably from 'ably';
-import { createServerTransport } from '@ably/ai-transport';
+import * as Ably from 'ably';
+import { createAgentSession, Invocation } from '@ably/ai-transport';
 import { UIMessageCodec } from '@ably/ai-transport/vercel';
 
 const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
 
 export async function POST(req) {
-  const { messages, history, id, turnId, clientId, forkOf, parent } = await req.json();
-  const channel = ably.channels.get(id);
+  const invocation = Invocation.fromJSON(await req.json());
 
-  const transport = createServerTransport({ channel, codec: UIMessageCodec });
-  const turn = transport.newTurn({ turnId, clientId, parent, forkOf });
-
-  await turn.start();
-
-  if (messages.length > 0) {
-    await turn.addMessages(messages, { clientId });
-  }
-
-  const allMessages = [
-    ...(history ?? []).map((h) => h.message),
-    ...messages.map((m) => m.message),
-  ];
-
-  const result = streamText({
-    model: anthropic('claude-sonnet-4-20250514'),
-    system: 'You are a helpful assistant.',
-    messages: await convertToModelMessages(allMessages),
-    abortSignal: turn.abortSignal,
+  const session = createAgentSession({
+    client: ably,
+    channelName: invocation.sessionName,
+    codec: UIMessageCodec,
   });
+
+  await session.connect();
+
+  const run = session.createRun(invocation, { signal: req.signal });
 
   after(async () => {
-    const { reason } = await turn.streamResponse(result.toUIMessageStream());
-    await turn.end(reason);
-    transport.close();
+    try {
+      await run.start();
+      await run.loadConversation();
+
+      const result = streamText({
+        model: anthropic('claude-sonnet-4-20250514'),
+        system: 'You are a helpful assistant.',
+        messages: await convertToModelMessages(run.messages),
+        abortSignal: run.abortSignal,
+      });
+
+      const { reason } = await run.pipe(result.toUIMessageStream());
+      await run.end(reason);
+    } catch (err) {
+      await run.end('error');
+      throw err;
+    } finally {
+      session.close();
+    }
   });
 
-  return new Response(null, { status: 200 });
+  // Return the agent-minted invocationId so the caller can observe it.
+  return Response.json({ invocationId: run.invocationId });
 }
 ```
 </Code>
 
-## Create the chat component <a id="client"/>
+## Create the chat component <a id="chat-component"/>
 
-Create `app/chat.tsx`. The component uses AI Transport's core hooks directly. `useView` returns the visible messages, a `send` function, and pagination:
+Create `app/chat.tsx`. The component uses [`useView`](/docs/ai-transport/api/react/core/use-view) directly. It returns the visible messages, write methods, branch navigation, and pagination. Because the core SDK doesn't POST to the agent endpoint itself, the component does it after `sendMessage` resolves.
 
 <Code>
 ```javascript
 'use client';
 
-import { useClientTransport, useActiveTurns, useView } from '@ably/ai-transport/react';
 import { useState } from 'react';
+import { useClientSession, useView } from '@ably/ai-transport/react';
 
-export function Chat({ chatId }) {
+async function wakeAgent(run) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(run.toInvocation().toJSON()),
+  });
+  const { invocationId } = await res.json();
+  return invocationId;
+}
+
+export function Chat() {
   const [input, setInput] = useState('');
 
-  const { transport } = useClientTransport();
-  const { messages, send, hasOlder, loadOlder } = useView({ limit: 30 });
-  const activeTurns = useActiveTurns();
-  const isStreaming = activeTurns.size > 0;
+  const { session } = useClientSession();
+  const view = useView({ limit: 30 });
+  const { messages, runOf } = view;
+
+  // `'active'`, `'suspended'`, and `'error'` keep the Stop button visible
+  // so a stuck Run can still be cancelled; `'complete'` and `'cancelled'`
+  // are terminal.
+  const latestRun = runOf(messages.at(-1)?.id ?? '');
+  const isStreaming =
+    latestRun !== undefined &&
+    latestRun.status !== 'complete' &&
+    latestRun.status !== 'cancelled';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
     const text = input;
     setInput('');
-    await send({
+    const run = await view.sendMessage({
       id: crypto.randomUUID(),
       role: 'user',
       parts: [{ type: 'text', text }],
     });
+    await wakeAgent(run);
+  };
+
+  const stop = async () => {
+    if (latestRun) await session.cancel(latestRun.runId);
   };
 
   return (
     <div>
-      {hasOlder && (
-        <button type="button" onClick={loadOlder}>Load older messages</button>
+      {view.hasOlder && (
+        <button type="button" onClick={() => view.loadOlder()}>Load older messages</button>
       )}
       {messages.map((msg) => (
         <div key={msg.id}>
@@ -134,7 +162,7 @@ export function Chat({ chatId }) {
       <form onSubmit={handleSubmit}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." />
         {isStreaming ? (
-          <button type="button" onClick={() => transport.cancel()}>Stop</button>
+          <button type="button" onClick={stop}>Stop</button>
         ) : (
           <button type="submit">Send</button>
         )}
@@ -147,7 +175,7 @@ export function Chat({ chatId }) {
 
 ## Wire it together <a id="wire"/>
 
-Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. `TransportProvider` wires the channel and codec into AI Transport. `UIMessageCodec` matches the server's output format; supply a different codec if your model layer produces different events.
+Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers) wires the channel and codec into AI Transport.
 
 <Code>
 ```javascript
@@ -156,7 +184,7 @@ Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. `Transp
 import { useEffect, useState } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider } from 'ably/react';
-import { TransportProvider } from '@ably/ai-transport/react';
+import { ClientSessionProvider } from '@ably/ai-transport/react';
 import { UIMessageCodec } from '@ably/ai-transport/vercel';
 import { Chat } from './chat';
 
@@ -174,33 +202,35 @@ function Providers({ children }) {
 }
 
 export default function Page() {
-  const chatId = 'my-chat-session';
+  const channelName = 'my-chat-session';
   return (
     <Providers>
-      <TransportProvider channelName={chatId} codec={UIMessageCodec}>
-        <Chat chatId={chatId} />
-      </TransportProvider>
+      <ClientSessionProvider channelName={channelName} codec={UIMessageCodec}>
+        <Chat />
+      </ClientSessionProvider>
     </Providers>
   );
 }
 ```
 </Code>
 
-Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the same URL to see both tabs share the same durable session.
+Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the same URL to see both tabs share the same session.
 
 ## What is happening <a id="whats-happening"/>
 
-1. The client sends the user message via HTTP POST to your API route.
-2. The server publishes the message to the Ably channel, invokes the LLM, and streams tokens to the channel.
-3. Every client subscribed to the channel receives tokens in real time.
-4. If a client disconnects, it reconnects automatically and resumes from where it left off.
+1. The user types a message. `view.sendMessage(...)` mints `runId` and `inputEventId` (one per published input event), publishes the user input on the channel with those ids stamped under `extras.ai.transport`, and returns an `ActiveRun`. The SDK does not POST to your agent endpoint itself.
+2. Your client code calls `activeRun.toInvocation().toJSON()` to get an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ runId, inputEventId, sessionName }`), and POSTs it to your agent endpoint.
+3. The agent endpoint receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a `Run` from the Invocation. `session.createRun(invocation)` mints a fresh `invocationId` (one per HTTP request); the agent returns it on the response so callers can observe it. `Run.start()` waits for the trigger input event on the channel (rewind + live).
+4. The agent streams the LLM response through `run.pipe(...)` to the channel. Every output carries `input-codec-message-id` so the client can correlate by an id it owned at send time.
+5. Every client subscribed to the channel receives the streamed messages in real time. `useView` re-renders as the visible Run's projection updates.
+6. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the SDK rehydrates the view automatically.
 
-`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. You have direct access to the tree: branching, pagination, and sibling navigation.
+`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. The hook exposes `messages`, `hasOlder`, `loadOlder`, `runOf`, `run`, `branchSelection`, `selectSibling`, `sendMessage`, `sendInput`, `regenerate`, and `edit`. It is the reactive mirror of the [`View` interface](/docs/ai-transport/api/javascript/core/client-session#view).
 
 ## Explore next <a id="next"/>
 
-- [Conversation branching](/docs/ai-transport/features/branching): use `useView`'s `getSiblings` and `select` to navigate branches.
-- [Conversation branching](/docs/ai-transport/features/branching): use `useView`'s `edit`, `regenerate`, and `select` to fork and navigate conversations.
+- [Branching, edit, and regenerate](/docs/ai-transport/features/branching): fork the conversation and navigate alternative branches with `view.regenerate`, `view.edit`, and `view.selectSibling`.
 - [History and replay](/docs/ai-transport/features/history): `useView` loads history on mount via the `limit` option.
-- [Sessions](/docs/ai-transport/concepts/sessions): durable sessions and how the conversation persists.
-- [React API reference](/docs/ai-transport/api/react/providers): providers and the per-hook pages.
+- [Cancellation](/docs/ai-transport/features/cancellation): the Stop button pattern and the agent-side `onCancel` authorisation hook.
+- [Concepts: Runs](/docs/ai-transport/concepts/runs): the SDK primitive each turn becomes.
+- [React API reference](/docs/ai-transport/api/react/core/providers): providers and the per-hook pages.

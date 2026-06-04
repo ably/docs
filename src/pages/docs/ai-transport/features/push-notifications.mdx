@@ -36,25 +36,35 @@ Configure a channel rule in the Ably dashboard to trigger push notifications whe
 ```javascript
 // Server: publish a completion event when the agent finishes
 app.post('/api/chat', async (req, res) => {
-  const { turnId, clientId, userId, sessionId, messages } = req.body
-  const turn = transport.newTurn({ turnId, clientId })
+  const body = await req.json()
+  const { userId } = body
+  const invocation = Invocation.fromJSON(body)
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec })
+  await session.connect()
+  const run = session.createRun(invocation, { signal: req.signal })
+
+  await run.start()
+  await run.loadConversation()
 
   const result = streamText({
     model: openai('gpt-4o'),
-    messages,
-    abortSignal: turn.abortSignal,
+    messages: run.messages,
+    abortSignal: run.abortSignal,
   })
 
-  await turn.streamResponse(result.toUIMessageStream())
-  await turn.end('complete')
+  const { reason } = await run.pipe(result.toUIMessageStream())
+  await run.end(reason)
+  session.close()
 
-  // Publish a push-eligible event on a notification channel
-  const notificationChannel = ably.channels.get(`notifications:${userId}`)
-  await notificationChannel.publish('agent-complete', {
-    title: 'Your agent has finished',
-    body: 'Tap to view the response',
-    sessionId,
-  })
+  if (reason === 'complete') {
+    // Publish a push-eligible event on a notification channel
+    const notificationChannel = ably.channels.get(`notifications:${userId}`)
+    await notificationChannel.publish('agent-complete', {
+      title: 'Your agent has finished',
+      body: 'Tap to view the response',
+      sessionName: invocation.sessionName,
+    })
+  }
   res.json({ ok: true })
 })
 ```
