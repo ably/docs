@@ -1,0 +1,81 @@
+---
+title: "Invocations"
+meta_description: "Understand Invocations in AI Transport: the trigger that mediates between a client publishing input and the agent creating a Run."
+meta_keywords: "AI Transport, Invocation, invocationId, runId, inputEventId, agent endpoint, HTTP POST, durable execution"
+intro: "An Invocation is the trigger a client posts to your agent endpoint to say \"create or continue a Run from this input event.\" Each individual HTTP request is a unique Invocation; one Run can be triggered by many (tool results, regenerates, retries)."
+---
+
+An Invocation is the trigger posted to an agent endpoint to start or continue a [Run](/docs/ai-transport/concepts/runs). It carries the run identity, the input event identity, and the session's channel name in the HTTP POST body so the agent can attach to the right channel and wait for the right input event.
+
+The client SDK mints `runId` and `inputEventId` when you call `view.sendMessage()` / `sendInput()` / `regenerate()` / `edit()` and stamps them on the channel publish. The HTTP POST is owned by your application code (or by the bundled Vercel [`ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport)): call `activeRun.toInvocation().toJSON()` to get the wire body and POST it to the agent. The agent mints the `invocationId` when it creates the Run and returns it on the HTTP response so the caller can observe it.
+
+The same Run can be triggered more than once: a fresh send triggers a fresh Invocation; a tool result follow-up creates another; a retry after a serverless cold start creates another. Each HTTP request produces one agent-minted `invocationId`.
+
+## Why Invocations exist <a id="why-invocations"/>
+
+The client and the agent are separated by an unreliable network and a stateless HTTP boundary. The client publishes input on the channel and your application code posts to the agent endpoint. The agent receives the POST, possibly minutes later, and needs to know exactly which work to do:
+
+- Which Run to create or continue, so the agent attaches to the right channel scope and the client can correlate the response.
+- Which input event triggered the work, so the agent's [`Run.start`](/docs/ai-transport/api/javascript/core/agent-session#run-start) can wait for the exact event on the channel.
+- Which channel, since the agent doesn't know the session's channel name except via the trigger.
+
+These three identifiers are the Invocation's payload (`runId`, `inputEventId`, `sessionName`). They're carried in the HTTP POST body so the agent has them before the channel is observable. The `invocationId` is minted by the agent when it creates the Run.
+
+## The Invocation model <a id="model"/>
+
+An `InvocationData` is the wire shape: the JSON body in the POST:
+
+| Field | What it carries |
+| --- | --- |
+| `runId` | The Run this invocation creates or continues. |
+| `inputEventId` | The input event on the channel that triggered this invocation. The agent's `Run.start()` waits for the channel message carrying this `event-id` (rewind + live). |
+| `sessionName` | The session's logical name, used as the Ably channel name. |
+
+The `Invocation` class is the runtime view of that data. The client side uses `ActiveRun.toInvocation()` to obtain one from a returned `ActiveRun`; the agent side uses `Invocation.fromJSON(data)` to construct one from the parsed POST body, then hands it to `session.createRun(invocation, runtime?)`. `createRun` mints a fresh `invocationId` (one per HTTP request), exposes it synchronously as `Run.invocationId`, and stamps it on every event it publishes for this invocation. The application returns `run.invocationId` on the HTTP response so the caller can observe it.
+
+The end-to-end sequence: the client publishes the input event on the channel and gets back an `ActiveRun`. The application POSTs `activeRun.toInvocation().toJSON()` to the agent endpoint. The agent rebuilds the Invocation, calls `createRun` (which mints the `invocationId`), and `run.start()` waits for the matching input event to arrive on the channel via rewind and live. Output events the agent publishes carry the `invocation-id` header, and the application returns the `invocationId` on the HTTP response so the original caller can observe it.
+
+The Invocation is the wire bridge: the channel publish and the HTTP POST reference the same `runId` and `inputEventId`. The agent uses the POST to know *where to attach* and *what to wait for*; it uses the channel to receive the *actual content*. The agent-minted `invocationId` ties the agent's lifecycle and output events back to the specific HTTP request that triggered them.
+
+## What the Invocation layer requires <a id="requires"/>
+
+| Property | Why it matters |
+| --- | --- |
+| Stable identity | The same Invocation must be addressable from both sides. The client SDK stamps `runId` and `event-id` on the channel publish, and your code posts the same identifiers in the body. If they diverged, the agent's lookup would fail. |
+| Deterministic generation | The client mints `runId` and `inputEventId` inside `view.sendMessage()` (and the other write methods). Defaults to `crypto.randomUUID()`; override via [`SendOptions`](/docs/ai-transport/api/javascript/core/client-session#view) for deterministic tests. `SendOptions.runId` is also how you continue an existing Run (tool result, regenerate). The agent mints `invocationId` per HTTP request; supply `RunRuntime.invocationId` to override in tests. |
+| Idempotency | The agent endpoint may receive the same Invocation more than once (network retry, queue redelivery). The agent must treat duplicate Invocations safely, typically by checking whether the Run already has an `ai-run-start` on the channel. |
+| Decoupled timing | The POST may arrive before, simultaneously with, or after the input event on the channel. The agent's `Run.start()` waits for the input event with rewind + live lookup, so the order doesn't matter. |
+| Continuation support | A tool-result delivery or a regenerate produces a new Invocation under the same `runId`. The agent receives a new POST, calls `createRun` with the new Invocation (minting a distinct `invocationId`), and the SDK treats it as a continuation. |
+
+## Receive an Invocation <a id="receive"/>
+
+The agent's HTTP handler:
+
+<Code>
+```javascript
+import { Invocation } from '@ably/ai-transport';
+
+export async function POST(req) {
+  const data = await req.json();
+  const invocation = Invocation.fromJSON(data);
+
+  const session = createAgentSession({ /* ... */ });
+  await session.connect();
+
+  const run = session.createRun(invocation, { signal: req.signal });
+  await run.start(); // waits for the input event with id `invocation.inputEventId`
+  // ...
+
+  return Response.json({ invocationId: run.invocationId });
+}
+```
+</Code>
+
+On the client, the [`view.sendMessage`](/docs/ai-transport/api/javascript/core/client-session#view) call generates the identifiers, stamps them on the channel publish, and returns the `ActiveRun`. Your application code (or the [Vercel `ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport) wrapper) calls `activeRun.toInvocation().toJSON()` to build the POST body and sends it to the agent endpoint.
+
+## Read next <a id="next"/>
+
+- [Runs](/docs/ai-transport/concepts/runs): what an Invocation creates or continues.
+- [Connections](/docs/ai-transport/concepts/connections): `ClientSession` publishes the input; your code POSTs the Invocation; `AgentSession` receives the POST and creates the Run.
+- [AgentSession reference](/docs/ai-transport/api/javascript/core/agent-session): `Invocation.fromJSON` and `createRun` in detail.
+- [Tool calling](/docs/ai-transport/features/tool-calling): tool results produce continuation Invocations.

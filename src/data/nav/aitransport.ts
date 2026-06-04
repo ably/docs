@@ -29,6 +29,14 @@ export default {
             },
           ],
         },
+        {
+          name: 'Set up authentication',
+          link: '/docs/ai-transport/getting-started/authentication',
+        },
+        {
+          name: 'Enable channel rules',
+          link: '/docs/ai-transport/getting-started/channel-rules',
+        },
       ],
     },
     {
@@ -58,16 +66,24 @@ export default {
           link: '/docs/ai-transport/concepts/sessions',
         },
         {
+          name: 'Connections',
+          link: '/docs/ai-transport/concepts/connections',
+        },
+        {
+          name: 'Runs',
+          link: '/docs/ai-transport/concepts/runs',
+        },
+        {
+          name: 'Invocations',
+          link: '/docs/ai-transport/concepts/invocations',
+        },
+        {
+          name: 'Codecs',
+          link: '/docs/ai-transport/concepts/codecs',
+        },
+        {
           name: 'Conversation tree',
           link: '/docs/ai-transport/concepts/conversation-tree',
-        },
-        {
-          name: 'Turns',
-          link: '/docs/ai-transport/concepts/turns',
-        },
-        {
-          name: 'Transport',
-          link: '/docs/ai-transport/concepts/transport',
         },
         {
           name: 'Authentication',
@@ -89,6 +105,24 @@ export default {
         {
           name: 'Vercel AI SDK Core',
           link: '/docs/ai-transport/frameworks/vercel-ai-sdk-core',
+        },
+      ],
+    },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/guides',
+          index: true,
+        },
+        {
+          name: 'Building support chat',
+          link: '/docs/ai-transport/guides/building-support-chat',
+        },
+        {
+          name: 'Building a copilot',
+          link: '/docs/ai-transport/guides/building-a-copilot',
         },
       ],
     },
@@ -116,7 +150,7 @@ export default {
           link: '/docs/ai-transport/features/history',
         },
         {
-          name: 'Conversation branching',
+          name: 'Branching, edit, and regenerate',
           link: '/docs/ai-transport/features/branching',
         },
         {
@@ -182,20 +216,38 @@ export default {
           name: 'JavaScript',
           pages: [
             {
-              name: 'Client transport',
-              link: '/docs/ai-transport/api/javascript/client-transport',
+              name: 'Core SDK',
+              pages: [
+                {
+                  name: 'Client session',
+                  link: '/docs/ai-transport/api/javascript/core/client-session',
+                },
+                {
+                  name: 'Agent session',
+                  link: '/docs/ai-transport/api/javascript/core/agent-session',
+                },
+                {
+                  name: 'Codec',
+                  link: '/docs/ai-transport/api/javascript/core/codec',
+                },
+              ],
             },
             {
-              name: 'Server transport',
-              link: '/docs/ai-transport/api/javascript/server-transport',
-            },
-            {
-              name: 'Vercel integration',
-              link: '/docs/ai-transport/api/javascript/vercel',
-            },
-            {
-              name: 'Codec',
-              link: '/docs/ai-transport/api/javascript/codec',
+              name: 'Vercel',
+              pages: [
+                {
+                  name: 'Chat transport',
+                  link: '/docs/ai-transport/api/javascript/vercel/chat-transport',
+                },
+                {
+                  name: 'Codec',
+                  link: '/docs/ai-transport/api/javascript/vercel/codec',
+                },
+                {
+                  name: 'Run outcome',
+                  link: '/docs/ai-transport/api/javascript/vercel/run-outcome',
+                },
+              ],
             },
           ],
         },
@@ -203,40 +255,50 @@ export default {
           name: 'React',
           pages: [
             {
-              name: 'Providers',
-              link: '/docs/ai-transport/api/react/providers',
+              name: 'Core SDK',
+              pages: [
+                {
+                  name: 'Providers',
+                  link: '/docs/ai-transport/api/react/core/providers',
+                },
+                {
+                  name: 'useClientSession',
+                  link: '/docs/ai-transport/api/react/core/use-client-session',
+                },
+                {
+                  name: 'useView',
+                  link: '/docs/ai-transport/api/react/core/use-view',
+                },
+                {
+                  name: 'useCreateView',
+                  link: '/docs/ai-transport/api/react/core/use-create-view',
+                },
+                {
+                  name: 'useTree',
+                  link: '/docs/ai-transport/api/react/core/use-tree',
+                },
+                {
+                  name: 'useAblyMessages',
+                  link: '/docs/ai-transport/api/react/core/use-ably-messages',
+                },
+              ],
             },
             {
-              name: 'useClientTransport',
-              link: '/docs/ai-transport/api/react/use-client-transport',
-            },
-            {
-              name: 'useView',
-              link: '/docs/ai-transport/api/react/use-view',
-            },
-            {
-              name: 'useCreateView',
-              link: '/docs/ai-transport/api/react/use-create-view',
-            },
-            {
-              name: 'useTree',
-              link: '/docs/ai-transport/api/react/use-tree',
-            },
-            {
-              name: 'useActiveTurns',
-              link: '/docs/ai-transport/api/react/use-active-turns',
-            },
-            {
-              name: 'useAblyMessages',
-              link: '/docs/ai-transport/api/react/use-ably-messages',
-            },
-            {
-              name: 'useChatTransport',
-              link: '/docs/ai-transport/api/react/use-chat-transport',
-            },
-            {
-              name: 'useMessageSync',
-              link: '/docs/ai-transport/api/react/use-message-sync',
+              name: 'Vercel',
+              pages: [
+                {
+                  name: 'ChatTransportProvider',
+                  link: '/docs/ai-transport/api/react/vercel/chat-transport-provider',
+                },
+                {
+                  name: 'useChatTransport',
+                  link: '/docs/ai-transport/api/react/vercel/use-chat-transport',
+                },
+                {
+                  name: 'useMessageSync',
+                  link: '/docs/ai-transport/api/react/vercel/use-message-sync',
+                },
+              ],
             },
           ],
         },

@@ -1,13 +1,13 @@
 ---
-title: "Conversation branching, edit, and regenerate"
-meta_description: "Edit user messages, regenerate AI responses, and navigate branches with Ably AI Transport. The full history is preserved as a tree."
+title: "Branching, edit, and regenerate"
+meta_description: "Edit user messages, regenerate AI responses, and navigate branches with Ably AI Transport. The full history is preserved in the conversation tree."
 meta_keywords: "conversation branching, edit message, regenerate response, conversation tree, AI Transport, Ably"
-intro: "Your users edit any message or regenerate any response, and the conversation forks instead of overwriting. AI Transport stores every branch in the session tree, with one-line UI hooks for sibling navigation."
+intro: "Your users edit any message or regenerate any response, and the conversation forks instead of overwriting. AI Transport stores every branch in the conversation tree, with one-line UI hooks for sibling navigation."
 redirect_from:
   - /docs/ai-transport/features/edit-and-regenerate
 ---
 
-Modern AI chat experiences let users fork the conversation: edit an earlier prompt, regenerate a response, or branch from any point. AI Transport supports this directly. Edit and regenerate are operations on the [conversation tree](/docs/ai-transport/concepts/conversation-tree); every fork creates a sibling branch and nothing is overwritten.
+Your users can revise the past without losing it. The original message stays, the new content forks alongside, and the UI flips between branches. AI Transport handles the tree shape on the wire; you wire up edit, regenerate, and the navigation arrows.
 
 ![Diagram showing session continuity during interruption](../../../../images/content/diagrams/ait-session-continuity.png)
 
@@ -21,94 +21,84 @@ await view.regenerate(assistantMessageId);
 
 ## How it works <a id="how-it-works"/>
 
-The conversation is a tree, not a list. Every message is a node with a parent pointer. When a user edits a message or regenerates a response, the SDK creates a new branch instead of overwriting the original.
+Every Run on the channel carries `parent` and (optionally) `forkOf` headers. The [conversation tree](/docs/ai-transport/concepts/conversation-tree) reads these to build the branching structure: an edit's new Run points its `forkOf` at the original user message; a regenerate's new Run points its `regeneratesCodecMessageId` at the original assistant message.
 
-- `edit()` forks a user message. The original message and its descendants remain intact. A new child is added to the same parent, creating a sibling branch.
-- `regenerate()` forks an assistant message. The original response stays in the tree, and a new sibling is created with a fresh turn.
+Branches are **message-anchored** (per AITRFC-014): the branch decision lives on a `codecMessageId`, not on a `runId`. UIs render navigation arrows next to the bubble: the user's prompt for edit forks, the assistant slot for regenerate groups.
 
-Each fork carries `forkOf` and `parent` headers that tell the server where the new branch diverges from the existing tree. The view flattens the selected branch into a linear list for rendering.
+The View resolves the branch state on demand. Call `view.branchSelection(codecMessageId)` for any message and get back `{ hasSiblings, siblings, index, selected }`. Call `view.selectSibling(codecMessageId, index)` to switch.
 
-## Regenerate a response <a id="regenerate"/>
+## Regenerate <a id="regenerate"/>
 
-Regenerate creates a sibling of an assistant message and starts a new turn. The original response stays in the tree:
+Regenerate creates a sibling Run of an assistant message and starts a fresh turn from the same user prompt. The original response stays in the tree.
 
 <Code>
 ```javascript
 const { regenerate } = useView();
-await regenerate(messageId);
+await regenerate(assistantMessageId);
 ```
 </Code>
 
-The new turn is sent to the server with `forkOf` set to the original assistant message ID and `parent` set to the user message that preceded it. The server generates a new response from that point in the conversation.
+The SDK publishes a `Regenerate` well-known input variant that points at the assistant `codecMessageId`. The agent receives the [Invocation](/docs/ai-transport/concepts/invocations), creates a new Run with `regeneratesCodecMessageId` set, and streams the alternative response.
 
 ## Edit a user message <a id="edit"/>
 
-Edit replaces a user message and starts a new turn from that point. The original message and its descendants remain in the tree as a separate branch:
+Edit replaces a user message and starts a new turn from that point. The original user message and everything below it stays in the tree as a separate branch.
 
 <Code>
 ```javascript
 const { edit } = useView();
-await edit(messageId, [
-  { role: 'user', content: 'Updated question here' },
-]);
+await edit(messageId, {
+  kind: 'user-message',
+  message: {
+    id: crypto.randomUUID(),
+    role: 'user',
+    parts: [{ type: 'text', text: 'Make it 5 days, focused on food.' }],
+  },
+});
 ```
 </Code>
 
-The edit creates a new user message as a sibling of the original and triggers a new turn so the agent responds to the updated message. Multiple messages in a single edit are inserted as a sequence on the new branch:
+Multiple inputs in a single edit are inserted as a sequence on the new branch:
 
 <Code>
 ```javascript
 await view.edit(messageId, [
-  { role: 'user', content: 'First part of my revised input' },
-  { role: 'user', content: 'Second part with additional context' },
+  { kind: 'user-message', message: { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Make it 5 days.' }] } },
+  { kind: 'user-message', message: { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'And focus on food.' }] } },
 ]);
 ```
 </Code>
 
-## Navigate between branches <a id="branch-navigation"/>
+The SDK publishes an `Edit<TMessage>` well-known input variant pointing at the `codecMessageId` being replaced. The agent forks the Run and starts a fresh response from the edited content.
 
-When a message has siblings (from edits or regenerations), the view exposes methods to navigate between them. This is what drives a "1 of 3" UI pattern.
+## Navigate between siblings <a id="navigate"/>
 
-<Code>
-```javascript
-const hasSiblings = view.hasSiblings(messageId);
-const siblings = view.getSiblings(messageId);
-const index = view.getSelectedIndex(messageId);
-
-view.select(messageId, 2); // select the third sibling
-```
-</Code>
-
-A typical branch navigation component:
+When a message has siblings, render arrows that switch between them. `branchSelection` returns a safe bundle for any `codecMessageId`:
 
 <Code>
 ```javascript
-function BranchNav({ messageId, view }) {
-  const siblings = view.getSiblings(messageId);
-  const selected = view.getSelectedIndex(messageId);
-
-  if (siblings.length <= 1) return null;
+function BranchNav({ codecMessageId, view }) {
+  const { hasSiblings, siblings, index } = view.branchSelection(codecMessageId);
+  if (!hasSiblings) return null;
 
   return (
     <div>
-      <button onClick={() => view.select(messageId, selected - 1)} disabled={selected === 0}>
-        ←
-      </button>
-      <span>{selected + 1} of {siblings.length}</span>
-      <button onClick={() => view.select(messageId, selected + 1)} disabled={selected === siblings.length - 1}>
-        →
-      </button>
+      <button onClick={() => view.selectSibling(codecMessageId, index - 1)} disabled={index === 0}>←</button>
+      <span>{index + 1} of {siblings.length}</span>
+      <button onClick={() => view.selectSibling(codecMessageId, index + 1)} disabled={index === siblings.length - 1}>→</button>
     </div>
   );
 }
 ```
 </Code>
 
-When the user selects a different sibling, the view recalculates the flattened branch. Every message below the selection point updates to reflect the chosen branch.
+`branchSelection` always returns a usable object: `hasSiblings: false` for messages that aren't branch anchors, `index: 0` for unknown ids. Safe to call on every rendered bubble without conditionals.
 
-## Show branches side by side <a id="split-pane"/>
+When the user selects a different sibling, the view recomputes the visible branch. Every message below the selection point re-renders to reflect the chosen path.
 
-Multiple views exist over the same conversation tree. Each view has its own branch selection and pagination, so different parts of the UI render different branches at the same time:
+## Side-by-side branches <a id="side-by-side"/>
+
+Multiple views over the same conversation tree have independent branch selections, so different parts of the UI can render different branches simultaneously:
 
 <Code>
 ```javascript
@@ -119,67 +109,73 @@ const view2 = useCreateView();
 ```
 </Code>
 
-This is the pattern for comparison UIs where a user wants to see two regenerated responses side by side without switching back and forth.
+This is the pattern for comparison UIs where the user wants to see two regenerated responses side by side.
 
-## Server handling <a id="server"/>
+## Agent-side handling <a id="agent-side"/>
 
-The server receives `forkOf` and `parent` in the request body. Pass them to `newTurn()` so the transport publishes messages with the correct tree metadata:
+The agent doesn't usually need bespoke branching logic. The Invocation arrives, `createRun` returns a Run with the right identity, and `loadConversation` walks the ancestor chain along the selected branch automatically:
 
 <Code>
 ```javascript
-app.post('/chat', async (req, res) => {
-  const { messages, turnId, clientId, forkOf, parent } = req.body;
+const invocation = Invocation.fromJSON(await req.json());
+const run = session.createRun(invocation, { signal: req.signal });
 
-  const turn = transport.newTurn({ turnId, clientId, forkOf, parent });
-  await turn.start();
+try {
+  await run.start();
+  await run.loadConversation(); // walks ancestor chain along this branch
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
-    messages, // already truncated to the fork point by the client
-    abortSignal: turn.abortSignal,
+    messages: run.messages,
+    abortSignal: run.abortSignal,
   });
 
-  const { reason } = await turn.streamResponse(result.toUIMessageStream());
-  await turn.end(reason);
-});
+  const { reason } = await run.pipe(result.toUIMessageStream());
+  await run.end(reason);
+} catch (err) {
+  await run.end('error');
+  throw err;
+} finally {
+  session.close();
+}
 ```
 </Code>
 
-`forkOf` identifies the message being replaced (the original user message for edit, or the original assistant message for regenerate). `parent` identifies where the new branch connects to the existing tree. The client truncates conversation history to the fork point before sending; the server receives exactly the history the LLM needs.
+`run.messages` after `loadConversation()` returns the complete branch (ancestor turns and the current user input) in order. Pass it straight to the LLM.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- Editing or regenerating mid-stream cancels nothing automatically. Cancel the active turn first if you do not want both to run.
-- A view's branch selection is local to that view. Two devices on the same session see different branches if they have different selections; the tree is shared, the selection is per-view.
-- A deeply nested tree (many edits and regenerations on top of each other) lets the user navigate forever. Cap or hide branch navigation in the UI if your application has a preferred branch.
-- A regenerate against a message whose parent has been edited still works; the new branch attaches at the same `parent` regardless of what siblings exist.
-- The flattened view recomputes when the selection changes. Avoid heavy work in the render path; the tree updates are frequent during streaming.
+- Editing or regenerating mid-stream cancels nothing automatically. Call `session.cancel(runId)` on the active Run first if you do not want both to run.
+- Branch selection is per-view. Two devices on the same session can see different branches simultaneously; the tree is shared, the selection is per-view.
+- Deeply branched trees can have many siblings. A user can navigate forever; cap or hide branch navigation in your UI if your app has a preferred branch.
+- A regenerate against an edited prompt still works. The new branch attaches at the same anchor regardless of what siblings exist.
+- The visible branch recomputes when `selectSibling` is called. Avoid heavy work in the render path; updates are frequent during streaming.
+- An optimistic edit is folded with the published edit. See [optimistic updates](/docs/ai-transport/features/optimistic-updates) for how the SDK reconciles the local insertion with the wire confirmation.
 
 ## FAQ <a id="faq"/>
 
-### Does edit overwrite the original message? <a id="faq-overwrite"/>
+### Does edit overwrite the original message?
 
-No. The original message and its descendants stay in the tree. A new sibling branch is created with the edited content. Users navigate between branches with `view.select()`.
+No. The original stays in the tree. A new sibling branch is created with the edited content. Users navigate between branches with `view.selectSibling()`.
 
-### How is regenerate different from sending a new prompt? <a id="faq-vs-prompt"/>
+### How is regenerate different from sending a new prompt?
 
-Regenerate creates a sibling of an assistant message under the same user prompt. Sending a new prompt adds a new exchange below the current branch. Use regenerate to compare alternative responses; use a new prompt to continue the conversation.
+Regenerate creates a sibling response for the same user prompt. Sending a new prompt adds a new exchange below the current branch. Use regenerate to compare alternative responses to the same question; use a new prompt to continue the conversation.
 
-### Can two clients edit at the same time? <a id="faq-concurrent-edit"/>
+### Can two clients edit at the same time?
 
-Yes. Each edit creates a sibling, so concurrent edits produce two new siblings. The tree merges cleanly; the view's selection determines what each device renders.
+Yes. Each edit creates a sibling, so concurrent edits produce two new siblings. The tree merges cleanly; each device's view selection determines what it renders.
 
-### What if the LLM produces the same response on regenerate? <a id="faq-same-response"/>
+### What if the LLM produces the same response on regenerate?
 
 You get a sibling with the same content. Use temperature or sampling settings to encourage variety, or expose a "regenerate again" affordance.
 
-### How deep does the tree get? <a id="faq-depth"/>
+### How deep can the tree get?
 
-The tree depth is bounded by the conversation length. Branch breadth grows with edits and regenerations. There is no fixed limit; render performance is the practical constraint.
+Tree depth is bounded by the conversation length. Branch breadth grows with edits and regenerations. There's no fixed limit; render performance is the practical constraint.
 
 ## Related features <a id="related"/>
 
-- [History and replay](/docs/ai-transport/features/history): loading conversation history including all branches.
+- [Conversation tree](/docs/ai-transport/concepts/conversation-tree): the data structure branches live in.
 - [Multi-device sessions](/docs/ai-transport/features/multi-device): edits and regenerations sync across devices.
-- [Optimistic updates](/docs/ai-transport/features/optimistic-updates): edits use optimistic insertion for the revised message.
-- [Conversation tree](/docs/ai-transport/concepts/conversation-tree): how forks form the underlying data structure.
+- [Optimistic updates](/docs/ai-transport/features/optimistic-updates): how local-first edits reconcile with the published tree.

@@ -299,6 +299,8 @@ The additional patterns below have been seen repeatedly in AI-assisted drafts an
 * Audience-aware cuts. Once the audience is established (developers and senior engineers), cut explanations of things they already understand. Restating known concepts to fill space makes the writer look unsure of the reader.
 * Copy-paste metaphors. If the same metaphor or framing phrase appears more than twice, vary it. "Drop-in", "the session as the anchor", and "the layer that fills the gap" each get used once and stay specific.
 * Staccato runs. Avoid stacks of short sentences with no variation (for example, "Sessions are durable. They persist. They survive disconnects. They span devices"). Combine some, let others stretch. Rhythm should follow thinking, not a drumbeat.
+* Abstract actors with generic verbs. Cut collective nouns ("participants", "consumers", "entities", "things") and generic verb pairs ("come and go", "happen at three points") when you can name the specific actors and the action they take. Example to cut: "Participants come and go; the session endures." Becomes: "Clients connect and disconnect, agents spin up and terminate, and the session endures." The specific actor + concrete verb reads as observation; the abstract version reads as filler.
+* Summary scaffolds. Cut sentences that announce what's coming or restate what just happened: "Every other concept on this page operates on or within a session", "These properties combine to give you…", "All of these mean that…", "Putting it together…". If the connection is real, the prose makes it without saying so. Sister to "Gift-wrapped endings" — scaffolds happen mid-page, not just at the end.
 
 ## Patterns to keep
 

@@ -7,75 +7,70 @@ redirect_from:
   - /docs/ai-transport/messaging/completion-and-cancellation
 ---
 
-Cancellation is a turn-level operation. The client publishes a cancel signal on the Ably channel; the server matches it against active turns and fires their abort signals. Unlike closing an HTTP connection, cancellation is an explicit signal: the session remains intact, other turns continue, and both sides handle cleanup gracefully.
+Cancellation is a turn-level operation. The client publishes a cancel signal on the Ably channel; the agent receives it on the run with the matching `runId` and fires its abort signal. Unlike closing an HTTP connection, cancellation is an explicit signal: the session remains intact, other runs continue, and both sides handle cleanup gracefully.
 
 A minimal cancel:
 
 <Code>
 ```javascript
-await transport.cancel();
+await session.cancel(activeRun.runId);
 ```
 </Code>
 
 ## How it works <a id="how-it-works"/>
 
-Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message with a filter specifying which turns to cancel. The server's transport matches the filter against active turns and fires their abort signals. The LLM stream stops, the turn ends with reason `'cancelled'`, and every subscriber receives the lifecycle update.
+Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message naming a `runId`. The agent's run with that id fires its `abortSignal`. The LLM stream stops, the run ends with reason `'cancelled'`, and every subscriber receives the lifecycle update.
 
 <Code>
 ```javascript
-// Client: cancel the current turn
-await turn.cancel();
+// Client: cancel the current run
+await activeRun.cancel();
+// or, by id, from anywhere with a reference to the session:
+await session.cancel(activeRun.runId);
 
 // Server: abort signal fires automatically
 const result = streamText({
-  abortSignal: turn.abortSignal,
+  abortSignal: run.abortSignal,
 });
 ```
 </Code>
 
-## Cancel filters <a id="cancel-filters"/>
+## Cancel one run, several, or all <a id="cancel-filters"/>
 
-Cancel signals are scoped. You control which turns are cancelled:
-
-| Filter | Effect | Use case |
-| --- | --- | --- |
-| `{ own: true }` (default) | Cancel all turns started by this client. | Stop button. |
-| `{ turnId: 'abc' }` | Cancel one specific turn. | Cancel a specific generation. |
-| `{ clientId: 'user-1' }` | Cancel all turns by a specific client. | Admin cancellation. |
-| `{ all: true }` | Cancel all turns on the channel. | Emergency stop. |
+Cancel targets a single `runId`. To cancel several runs, iterate over the ones you want:
 
 <Code>
 ```javascript
-// Cancel your own turns (default)
-await transport.cancel();
+// Cancel a specific run
+await session.cancel(activeRun.runId);
 
-// Cancel a specific turn
-await transport.cancel({ turnId: activeTurn.turnId });
-
-// Cancel all turns on the channel
-await transport.cancel({ all: true });
+// Cancel all active runs in the visible view (Stop button)
+const active = session.view.runs().filter((r) => r.status === 'active');
+await Promise.all(active.map((r) => session.cancel(r.runId)));
 ```
 </Code>
+
+Selecting which runs to cancel is application logic. `RunInfo.clientId` tells you the run owner, so you can scope a cancel to runs started by the current client, a specific user, or all visible runs.
 
 ## Server-side handling <a id="server"/>
 
 ### Abort signal <a id="abort-signal"/>
 
-Every turn exposes an `abortSignal` that fires when the turn is cancelled. Pass it to your LLM call:
+Every run exposes an `abortSignal` that fires when the run is cancelled. Pass it to your LLM call:
 
 <Code>
 ```javascript
-const turn = transport.newTurn({ turnId, clientId });
-await turn.start();
+const run = session.createRun(invocation, { signal: req.signal });
+await run.start();
 
 const result = streamText({
   model: anthropic('claude-sonnet-4-20250514'),
-  messages: history,
-  abortSignal: turn.abortSignal,
+  messages: run.messages,
+  abortSignal: run.abortSignal,
 });
 
-const { reason } = await turn.streamResponse(result.toUIMessageStream());
-await turn.end(reason);
+const { reason } = await run.pipe(result.toUIMessageStream());
+await run.end(reason);
 ```
 </Code>
 
@@ -83,33 +78,28 @@ await turn.end(reason);
 
 ### Authorise the cancel <a id="authorization"/>
 
-The `onCancel` hook authorises or rejects cancel requests:
+The `onCancel` hook on `RunRuntime` authorises or rejects cancel requests:
 
 <Code>
 ```javascript
-const turn = transport.newTurn({
-  turnId,
-  clientId,
-  onCancel: async (request) => {
-    const owner = request.turnOwners.get(request.filter.turnId);
-    return owner === request.message.clientId;
-  },
+const run = session.createRun(invocation, {
+  signal: req.signal,
+  onCancel: async (request) => request.message.clientId === invocation.runOwnerClientId,
 });
 ```
 </Code>
 
-The `CancelRequest` includes `message` (the raw cancel message with `clientId`), `filter` (parsed scope), `matchedTurnIds`, and `turnOwners` (map of turn ID to owner client ID). Return `false` to reject. If `onCancel` is not provided, all cancel requests are accepted.
+`CancelRequest` carries the raw cancel `message` (with the requester's `clientId`) and the `runId` it targets. Return `false` to reject; the run continues. If `onCancel` is not provided, all cancel requests are accepted.
 
-### Hook into the abort <a id="abort-hook"/>
+### Publish a final note before cancelling <a id="abort-hook"/>
 
-The `onAbort` hook runs after the abort signal fires, giving you a chance to publish final events before the stream closes:
+The `onCancelled` hook runs when the abort signal fires, giving you a chance to publish final events before the stream closes:
 
 <Code>
 ```javascript
-const turn = transport.newTurn({
-  turnId,
-  clientId,
-  onAbort: async (write) => {
+const run = session.createRun(invocation, {
+  signal: req.signal,
+  onCancelled: async (write) => {
     await write({ type: 'text-delta', textDelta: '\n[Response cancelled]' });
   },
 });
@@ -118,11 +108,13 @@ const turn = transport.newTurn({
 
 ## Cancel on close <a id="cancel-on-close"/>
 
-When a client transport closes, it optionally cancels its own turns:
+`ClientSession.close()` is local-state-only: it does not cancel runs on the wire. To stop in-progress runs before closing, cancel them explicitly:
 
 <Code>
 ```javascript
-await transport.close({ cancel: { own: true } });
+const active = session.view.runs().filter((r) => r.status === 'active');
+await Promise.all(active.map((r) => session.cancel(r.runId)));
+await session.close();
 ```
 </Code>
 
@@ -148,9 +140,9 @@ Yes, if your `onCancel` hook authorises it. The default accepts all cancel reque
 
 The turn cancels once. Subsequent matching signals are no-ops; the abort signal does not refire.
 
-### How do I tell a cancelled turn apart from one that finished normally? <a id="faq-detect"/>
+### How do I tell a cancelled run apart from one that finished normally? <a id="faq-detect"/>
 
-`turn.end(reason)` reports the reason on the channel. Clients receive it through the view's turn-end event. The reason is `'cancelled'` for a cancel and `'complete'` for a normal finish.
+`run.end(reason)` reports the reason on the channel. Clients receive it through the view's `run` lifecycle event. The reason is `'cancelled'` for a cancel and `'complete'` for a normal finish.
 
 ### Does cancel cost a message? <a id="faq-pricing"/>
 

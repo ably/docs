@@ -1,0 +1,88 @@
+---
+title: "UIMessageCodec"
+meta_description: "API reference for UIMessageCodec, the pre-built AI Transport codec for the Vercel AI SDK."
+meta_keywords: "Vercel AI SDK, AI Transport, UIMessageCodec, VercelInput, VercelOutput, VercelProjection, codec, Ably"
+---
+
+`UIMessageCodec` is the pre-built codec for the Vercel AI SDK. It implements [`Codec<VercelInput, VercelOutput, VercelProjection, UIMessage>`](/docs/ai-transport/api/javascript/core/codec) so a session can encode `UIMessageChunk` events out and decode them back into `UIMessage` objects without a custom implementation.
+
+You rarely import `UIMessageCodec` directly. The Vercel-pre-bound [`createClientSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-client-session) and [`createAgentSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-agent-session) already supply it. Import it explicitly when you build a codec wrapper, run the encoder or decoder outside of a session, or compose `UIMessageCodec` into a different codec.
+
+<Code>
+```javascript
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const decoder = UIMessageCodec.createDecoder();
+const projection = UIMessageCodec.init();
+```
+</Code>
+
+## Properties <a id="properties"/>
+
+`UIMessageCodec` is a value, not a type. It satisfies the full [`Codec`](/docs/ai-transport/api/javascript/core/codec) interface for the Vercel `TInput`, `TOutput`, `TProjection`, and `TMessage` parameters listed below.
+
+<Table id='UIMessageCodecProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| init | Build an empty `VercelProjection`. | `() => VercelProjection` |
+| fold | Fold a `VercelInput` or `VercelOutput` into the projection. | `(state, event, meta) => VercelProjection` |
+| createEncoder | Create a Vercel encoder bound to the supplied channel writer. | `(channel, options?) => Encoder<VercelInput, VercelOutput>` |
+| createDecoder | Create a Vercel decoder for the channel. | `() => Decoder<VercelInput, VercelOutput>` |
+| getMessages | Extract the `UIMessage[]` list from a `VercelProjection`. | `(projection) => UIMessage[]` |
+| createUserMessage | Wrap a `UIMessage` as the `UserMessage` input variant. | `(message: UIMessage) => UserMessage<UIMessage>` |
+| createRegenerate | Build a `Regenerate` input targeting an assistant `UIMessage`. | `(target, parent) => Regenerate` |
+
+</Table>
+
+## Type parameters <a id="types"/>
+
+<Table id='VercelInput'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| TInput | Discriminated union of every record-shape a client publishes on the `ai-input` wire. Composed entirely from the SDK's well-known input variants. | `UserMessage<UIMessage> \| Regenerate \| ToolResult \| ToolResultError \| ToolApprovalResponse` |
+
+</Table>
+
+<Table id='VercelOutput'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| TOutput | Every record-shape the agent publishes on the `ai-output` wire. The codec passes Vercel's `UIMessageChunk` through unchanged. | `AI.UIMessageChunk` |
+
+</Table>
+
+<Table id='VercelProjection'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| TProjection | Per-Run projection. Carries the `UIMessage[]` list plus internal stream-tracker state and a high-water-mark serial for idempotency. The SDK does not inspect this shape. Reach for `getMessages` instead. | `{ messages: UIMessage[], ... }` |
+
+</Table>
+
+The well-known input variants ([`UserMessage`](/docs/ai-transport/api/javascript/core/codec#user-message), [`Regenerate`](/docs/ai-transport/api/javascript/core/codec#regenerate), [`ToolResult`](/docs/ai-transport/api/javascript/core/codec#tool-result), [`ToolResultError`](/docs/ai-transport/api/javascript/core/codec#tool-result-error), [`ToolApprovalResponse`](/docs/ai-transport/api/javascript/core/codec#tool-approval-response)) are documented on the [`Codec` reference page](/docs/ai-transport/api/javascript/core/codec#input-variants). The Vercel codec layers no extra input variants.
+
+## Example <a id="example"/>
+
+Decode a single Ably message and fold the resulting events into a fresh projection.
+
+<Code>
+```javascript
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const decoder = UIMessageCodec.createDecoder();
+let projection = UIMessageCodec.init();
+
+channel.subscribe((message) => {
+  const { inputs, outputs } = decoder.decode(message);
+  for (const input of inputs) {
+    projection = UIMessageCodec.fold(projection, input, { serial: message.serial });
+  }
+  for (const output of outputs) {
+    projection = UIMessageCodec.fold(projection, output, { serial: message.serial });
+  }
+  render(UIMessageCodec.getMessages(projection));
+});
+```
+</Code>

@@ -1,0 +1,233 @@
+---
+title: "ChatTransport"
+meta_description: "API reference for the AI Transport Vercel ChatTransport adapter and the Vercel-bound createClientSession and createAgentSession factories."
+meta_keywords: "Vercel AI SDK, AI Transport, ChatTransport, createChatTransport, createClientSession, createAgentSession, UIMessageCodec, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/vercel
+  - /docs/ai-transport/api/javascript/vercel
+---
+
+The Vercel entry point pre-binds the [`UIMessageCodec`](/docs/ai-transport/api/javascript/vercel/codec) and exposes a `ChatTransport` adapter that satisfies the contract Vercel AI SDK's `useChat` hook expects. Use these factories whenever you build a chat UI on top of `useChat` so you do not have to wire the codec yourself.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createClientSession, createChatTransport } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+
+const session = createClientSession({
+  client: ably,
+  channelName: 'conversation-42',
+});
+
+await session.connect();
+
+const chatTransport = createChatTransport(session);
+```
+</Code>
+
+React-side wiring (`ChatTransportProvider`, `useChatTransport`, `useMessageSync`) lives at [`@ably/ai-transport/vercel/react`](/docs/ai-transport/api/react/vercel/use-chat-transport).
+
+## Create a Vercel client session <a id="create-client-session"/>
+
+<MethodSignature>{`function createClientSession(options: VercelClientSessionOptions): ClientSession<VercelInput, VercelOutput, VercelProjection, UIMessage>`}</MethodSignature>
+
+A pre-bound version of the core [`createClientSession`](/docs/ai-transport/api/javascript/core/client-session#constructor) with `codec: UIMessageCodec` already supplied and `api` defaulting to `/api/chat` (matching the Vercel AI SDK's `DefaultChatTransport` default).
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createClientSession } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+
+const session = createClientSession({
+  client: ably,
+  channelName: 'conversation-42',
+  clientId: 'user-abc',
+});
+```
+</Code>
+
+### Parameters <a id="create-client-session-params"/>
+
+<Table id='VercelClientSessionOptions'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| client | required | The Ably Realtime client. The caller owns its lifecycle. | `Ably.Realtime` |
+| channelName | required | The channel to subscribe to and publish cancel signals on. | String |
+| api | optional | Server endpoint URL for the HTTP POST. Defaults to `/api/chat`. | String |
+| clientId | optional | The client's identity, sent to the server in the POST body. | String |
+| headers | optional | Headers for the HTTP POST. Function form for dynamic values. | `Record<string, string>` or `() => Record<string, string>` |
+| body | optional | Additional body fields merged into the HTTP POST. Function form for dynamic values. | `Record<string, unknown>` or `() => Record<string, unknown>` |
+| credentials | optional | Fetch credentials mode for the HTTP POST. | `RequestCredentials` |
+| fetch | optional | Custom fetch implementation. | `typeof fetch` |
+| messages | optional | Initial messages to seed the conversation tree with. | `UIMessage[]` |
+| runStartDeadlineMs | optional | How long a send waits for the agent's `ai-run-start` event before rejecting with `RunStartDeadlineExceeded`. Defaults to 30000. | Number |
+| logger | optional | Logger instance for diagnostic output. | `Logger` |
+
+</Table>
+
+### Returns <a id="create-client-session-returns"/>
+
+`ClientSession<VercelInput, VercelOutput, VercelProjection, UIMessage>`. A client session whose codec is pre-bound to `UIMessageCodec`.
+
+## Create a Vercel agent session <a id="create-agent-session"/>
+
+<MethodSignature>{`function createAgentSession(options: VercelAgentSessionOptions): AgentSession<VercelInput, VercelOutput, VercelProjection, UIMessage>`}</MethodSignature>
+
+A pre-bound version of the core [`createAgentSession`](/docs/ai-transport/api/javascript/core/agent-session#constructor) with `codec: UIMessageCodec` already supplied. Construct one inside your HTTP handler when the request arrives.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { Invocation } from '@ably/ai-transport';
+import { createAgentSession } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+const invocation = Invocation.fromJSON(await req.json());
+
+const session = createAgentSession({
+  client: ably,
+  channelName: invocation.sessionName,
+});
+```
+</Code>
+
+### Parameters <a id="create-agent-session-params"/>
+
+<Table id='VercelAgentSessionOptions'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| client | required | The Ably Realtime client. The caller owns its lifecycle. | `Ably.Realtime` |
+| channelName | required | The channel to publish to. | String |
+| logger | optional | Logger instance for diagnostic output. | `Logger` |
+| onError | optional | Called with non-fatal session-level errors not scoped to any run. | `(error: ErrorInfo) => void` |
+| inputEventLookupTimeoutMs | optional | How long `Run.start()` waits for the input event to arrive. Defaults to 30000. | Number |
+| inputEventBufferLimit | optional | Max distinct input events that may be buffered while waiting for `Run.start()` to register a lookup listener. Defaults to 200. | Number |
+| rewindWindow | optional | Channel rewind applied when the agent attaches. Passed verbatim to Ably's `params.rewind`. Defaults to `"2m"`. | String |
+
+</Table>
+
+### Returns <a id="create-agent-session-returns"/>
+
+`AgentSession<VercelInput, VercelOutput, VercelProjection, UIMessage>`. An agent session whose codec is pre-bound to `UIMessageCodec`.
+
+## Create a chat transport <a id="create-chat-transport"/>
+
+<MethodSignature>{`function createChatTransport(session: ClientSession<VercelInput, VercelOutput, VercelProjection, UIMessage>, chatOptions?: ChatTransportOptions): ChatTransport`}</MethodSignature>
+
+Wrap a `ClientSession` in a `ChatTransport` adapter that satisfies Vercel AI SDK's `useChat` `transport` option. The adapter maps `useChat`'s `sendMessages` and `reconnectToStream` contract onto the session's `view.sendInput`, `view.regenerate`, and tool-resolution paths.
+
+<Code>
+```javascript
+import { useChat } from '@ai-sdk/react';
+import { createChatTransport } from '@ably/ai-transport/vercel';
+
+const chatTransport = createChatTransport(session, {
+  prepareSendMessagesRequest: ({ history }) => ({
+    body: { history },
+  }),
+});
+
+const chat = useChat({ transport: chatTransport });
+```
+</Code>
+
+### Parameters <a id="create-chat-transport-params"/>
+
+<Table id='CreateChatTransportParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| session | required | The core client session to wrap. | `ClientSession<VercelInput, VercelOutput, VercelProjection, UIMessage>` |
+| chatOptions | optional | Hooks for customising request construction. | <Table id='ChatTransportOptions'/> |
+
+</Table>
+
+<Table id='ChatTransportOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| prepareSendMessagesRequest | Customise the POST body and headers before sending. Called by `sendMessages` with the conversation <Table id='SendMessagesRequestContext'/>. | `(context: SendMessagesRequestContext) => { body?, headers? }` |
+
+</Table>
+
+<Table id='SendMessagesRequestContext' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| chatId | Chat session ID (from `useChat`'s id). | String |
+| trigger | What triggered the request. | `'submit-message'` or `'regenerate-message'` |
+| messageId | The message ID for edit or regeneration requests. | String |
+| history | Previous messages in the conversation (context for the LLM). | `UIMessage[]` |
+| messages | The new messages being sent. Empty for regeneration. | `UIMessage[]` |
+| forkOf | The codec-message-id of the message being forked. | String |
+| parent | The codec-message-id of the predecessor in the conversation thread. | String |
+
+</Table>
+
+### Returns <a id="create-chat-transport-returns"/>
+
+[`ChatTransport`](#chat-transport). The adapter to pass to `useChat`'s `transport` option.
+
+## ChatTransport <a id="chat-transport"/>
+
+The transport adapter returned by [`createChatTransport`](#create-chat-transport). Structurally compatible with the AI SDK's internal `ChatTransport<UIMessage>` interface, extended with `close()`, `streaming`, and `onStreamingChange` for coordinating with [`useMessageSync`](/docs/ai-transport/api/react/vercel/use-message-sync).
+
+### Properties
+
+<Table id='ChatTransportProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| sendMessages | Send messages and return a `ReadableStream` of `UIMessageChunk` events. | `(options) => Promise<ReadableStream<UIMessageChunk>>` |
+| reconnectToStream | Reconnect to an existing streaming response. Returns `null` because observer mode handles in-progress streams automatically. | `(options) => Promise<ReadableStream<UIMessageChunk> \| null>` |
+| close | Close the underlying transport, releasing all resources. | `() => Promise<void>` |
+| streaming | Whether an own-run stream is currently being consumed by `useChat`. | Boolean |
+| onStreamingChange | Subscribe to streaming state changes. Used by `useMessageSync` to gate `setMessages` calls during active streams. | `(callback: (streaming: boolean) => void) => () => void` |
+
+</Table>
+
+## Example <a id="example"/>
+
+End-to-end client-side wiring: open a session, wrap it in a chat transport, and hand it to `useChat`.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { useChat } from '@ai-sdk/react';
+import { createClientSession, createChatTransport } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+
+const session = createClientSession({
+  client: ably,
+  channelName: 'conversation-42',
+});
+
+await session.connect();
+
+const chatTransport = createChatTransport(session, {
+  prepareSendMessagesRequest: ({ history, messages }) => ({
+    body: { history, messages },
+  }),
+});
+
+function Chat() {
+  const { messages, sendMessage } = useChat({ transport: chatTransport });
+  return (
+    <>
+      {messages.map((m) => (
+        <Message key={m.id} message={m} />
+      ))}
+      <Composer onSubmit={(text) => sendMessage({ role: 'user', parts: [{ type: 'text', text }] })} />
+    </>
+  );
+}
+```
+</Code>

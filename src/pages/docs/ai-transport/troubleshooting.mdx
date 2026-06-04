@@ -20,15 +20,15 @@ Entries are ordered roughly by how often they cause support tickets, with the mo
 
 **Fix:**
 
-- Enable the *Message annotations, updates, deletes, and appends* rule on the namespace. See [enable message updates and deletes](/docs/ai-transport/concepts/authentication#enable-updates-deletes) for the dashboard, Control API, and CLI steps.
+- Enable the *Message annotations, updates, deletes, and appends* rule on the namespace. See [Enable channel rules](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
 - Note that enabling this rule causes messages to be [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether persistence is enabled on the namespace.
 
 ## Capability or token scope mismatch <a id="capability-mismatch"/>
 
 **Symptom:** The token authenticates, but specific operations fail. There are two common shapes:
 
-- **Channel pattern miss:** the channel attach fails, or a publish is rejected. The capability covers `conversations:*` but your app uses `chat:abc`.
-- **Missing operation:** the connection works but a specific operation does not. Clients cannot cancel generation (missing `publish`). Late joiners or reconnects show only live messages and not the prior conversation (missing `history`). Agent presence never updates (missing `presence`).
+- Channel pattern miss: the channel attach fails, or a publish is rejected. The capability covers `conversations:*` but your app uses `chat:abc`.
+- Missing operation: the connection works but a specific operation does not. Clients cannot cancel generation (missing `publish`). Late joiners or reconnects show only live messages and not the prior conversation (missing `history`). Agent presence never updates (missing `presence`).
 
 **Confirm:**
 
@@ -59,20 +59,20 @@ In both cases the cause is the same: the channel namespace is not configured to 
 - Enable persistence on the channel namespace and set a retention period that covers your expected scroll-back window. See [history and replay](/docs/ai-transport/features/history#faq-retention) for the persistence options.
 - For conversations that need to be retained for longer than the channel allows, persist completed turns to your own store and hydrate from it on session load. See [reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery#loading-history) for how reconnect interacts with history.
 
-## Turn never ends <a id="turn-never-ends"/>
+## Run never ends <a id="turn-never-ends"/>
 
-**Symptom:** The streamed message renders with the streaming status forever. `useActiveTurns` shows the turn as active long after the model finished generating.
+**Symptom:** The streamed message renders with the streaming status forever. `session.view.runs()` shows the Run with `status: 'active'` long after the model finished generating.
 
 **Confirm:**
 
-- Check the server logs around the affected turn. Did `turn.end(reason)` execute? If the route handler threw between `streamResponse` and `end`, the turn never closes.
-- Inspect the channel in the Ably dashboard. The turn-end lifecycle message should appear after the streamed message's close event. If it is missing, the encoder did not publish it.
+- Check the server logs around the affected Run. Did `run.end(reason)` execute? If the route handler threw between `run.pipe` and `run.end`, the Run never closes.
+- Inspect the channel in the Ably dashboard. The `ai-run-end` lifecycle message should appear after the streamed message's close event. If it is missing, the encoder did not publish it.
 
 **Fix:**
 
-- Wrap streaming work in `try`/`finally` and always call `turn.end()` in the `finally` block. A turn that errored should end with reason `'error'`.
-- If you use Next.js `after()`, confirm the callback runs to completion. An unhandled promise rejection inside `after()` aborts the rest of the handler, including `turn.end()`.
-- See [turns](/docs/ai-transport/concepts/turns#lifecycle) for the full lifecycle contract.
+- Wrap streaming work in `try`/`finally` and always call `run.end()` in the `finally` block. A Run that errored should end with reason `'error'`.
+- If you use Next.js `after()`, confirm the callback runs to completion. An unhandled promise rejection inside `after()` aborts the rest of the handler, including `run.end()`.
+- See [Runs](/docs/ai-transport/concepts/runs#lifecycle) for the full lifecycle contract.
 
 ## Cancel doesn't stop the agent <a id="cancel-doesnt-stop"/>
 
@@ -80,14 +80,14 @@ In both cases the cause is the same: the channel namespace is not configured to 
 
 **Confirm:**
 
-- Check the server handler: is `turn.abortSignal` passed to the LLM call?
-- For long-running tools, check whether the tool implementation reads `turn.abortSignal.aborted` and exits when the signal fires.
+- Check the server handler: is `run.abortSignal` passed to the LLM call?
+- For long-running tools, check whether the tool implementation reads `run.abortSignal.aborted` and exits when the signal fires.
 - If `onCancel` is configured, check that it returns `true` for the cancel request. A hook that returns `false` rejects the cancel silently.
 
 **Fix:**
 
-- Pass `turn.abortSignal` to every LLM call, for example `streamText({ abortSignal: turn.abortSignal, ... })`.
-- In server-executed tools, wire `turn.abortSignal` into long-running operations so they exit promptly when the signal fires.
+- Pass `run.abortSignal` to every LLM call, for example `streamText({ abortSignal: run.abortSignal, ... })`.
+- In server-executed tools, wire `run.abortSignal` into long-running operations so they exit promptly when the signal fires.
 - See [cancellation](/docs/ai-transport/features/cancellation#abort-signal) for the full flow.
 
 ## Duplicate or unexpected turns <a id="duplicate-turns"/>
@@ -99,13 +99,13 @@ In both cases the cause is the same: the channel namespace is not configured to 
 
 **Confirm:**
 
-- Inspect the channel for two turn-start events with different `turnId` values for the same user message.
+- Inspect the channel for two `ai-run-start` events with different `runId` values for the same user message.
 - Check whether your send path lives inside a `useEffect`. Imperative event handlers (`onClick`, `onSubmit`) are safer.
 
 **Fix:**
 
-- Guard `send()` so it fires once per user action. Avoid placing it inside an effect without a dependency that prevents re-firing.
-- Before editing or regenerating, cancel the in-flight turn explicitly. AI Transport does not auto-cancel an active turn on edit; see [conversation branching](/docs/ai-transport/features/branching#edit) for the recommended pattern.
+- Guard `view.sendMessage()` so it fires once per user action. Avoid placing it inside an effect without a dependency that prevents re-firing.
+- Before editing or regenerating, cancel the in-flight Run explicitly. AI Transport does not auto-cancel an active Run on edit; see [conversation branching](/docs/ai-transport/features/branching#edit) for the recommended pattern.
 
 ## Message too large to publish <a id="message-too-large"/>
 
@@ -139,7 +139,7 @@ In both cases the cause is the same: the channel namespace is not configured to 
 
 **Symptom:** Two devices on the same conversation show different responses to the same prompt. Edit history navigation diverges between them.
 
-This is intentional. Branch selection is a per-view, per-device choice — each device navigates the conversation tree independently so a user reviewing alternates on one device does not disrupt another device displaying the same conversation.
+This is intentional. Branch selection is a per-view, per-device choice. Each device navigates the conversation tree independently, so a user reviewing alternates on one device does not disrupt another device displaying the same conversation.
 
 **Fix:**
 
@@ -163,7 +163,7 @@ This is intentional. Branch selection is a per-view, per-device choice — each 
 
 ## Agent process crashes mid-stream <a id="agent-crash"/>
 
-**Symptom:** A streamed message stops part-way through and stays in `streaming` status forever. No more tokens arrive and no turn-end event ever fires. From the client's point of view this is indistinguishable from [Turn never ends](#turn-never-ends) — both leave the run in `active` state — but the root cause here is the process dying rather than the handler skipping `turn.end()`.
+**Symptom:** A streamed message stops part-way through and stays in `streaming` status forever. No more tokens arrive and no run-end event ever fires. From the client's point of view this is indistinguishable from [Run never ends](#turn-never-ends): both leave the Run in `active` state. The root cause here is the process dying rather than the handler skipping `run.end()`.
 
 **Confirm:**
 
@@ -190,7 +190,7 @@ This is intentional. Branch selection is a per-view, per-device choice — each 
 
 ## When to escalate <a id="escalate"/>
 
-If you have worked through the entries on this page and the symptom does not match — or the fix did not work — capture:
+If you have worked through the entries on this page and the symptom does not match, or the fix did not work, capture:
 
 - The channel name.
 - The date and time of the affected operation.

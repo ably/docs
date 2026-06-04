@@ -1,13 +1,43 @@
 ---
 title: "Concepts"
-meta_description: "Understand the building blocks of AI Transport: sessions, turns, transport, authentication, conversation tree, and infrastructure, and how they relate."
-meta_keywords: "AI Transport, concepts, sessions, turns, transport, codec, conversation tree, infrastructure"
-intro: "These concepts describe how AI Transport works, what the session is and how it's structured."
+meta_description: "Understand the building blocks of AI Transport: sessions, connections, Runs, Invocations, codecs, the conversation tree, authentication, and infrastructure, and how they relate."
+meta_keywords: "AI Transport, concepts, sessions, connections, Runs, Invocations, codec, conversation tree, infrastructure"
+intro: "These concepts describe how AI Transport works, what the session is, and how it's structured."
 ---
 
-AI Transport is built around the following concepts. The session is the durable conversation, the turn is one unit of agent work inside the session, the transport is how a participant connects, the codec translates between your framework and Ably, the conversation tree organises every message and branch, and the infrastructure is the platform that holds it all together at scale.
+AI Transport is built around the following concepts. The session is the durable conversation, connections are how participants attach to it, the Run is one unit of agent work inside the session, the Invocation is the trigger that creates or continues a Run, the codec translates between your framework and Ably, the conversation tree organises every Run and message, and the infrastructure is the platform that holds it all together at scale.
 
-These concepts compose. The session is the anchor: it contains the conversation tree, hosts turns, and is read and written through transports. The transport carries codec-encoded messages over a channel. The infrastructure is what makes any of it reliable across reconnects, regions, and load.
+These concepts compose. The session is the anchor: it contains the conversation tree, hosts Runs, and is read and written through connections. Connections carry codec-encoded messages over a channel. Invocations bridge the client publish and the agent's Run creation. The infrastructure is what makes any of it reliable across reconnects, regions, and load.
+
+```text
+                        ┌────────────────┐
+                        │  Infrastructure │
+                        │ (Ably platform)│
+                        └────────┬───────┘
+                                 │
+                       ┌─────────▼─────────┐
+                       │     Session       │
+                       │ (shared state on  │
+                       │   an Ably channel)│
+                       └─┬──────┬───────┬──┘
+                         │      │       │
+                  ┌──────▼──┐ ┌─▼────┐ ┌▼─────────────┐
+                  │   Tree   │ │ Runs │ │ Connections   │
+                  │ (branchy │ │ (per │ │ (ClientSession│
+                  │ history) │ │ turn)│ │  / AgentSession)│
+                  └──────────┘ └──┬───┘ └───────────────┘
+                                  │
+                          ┌───────▼────────┐
+                          │  Invocations   │
+                          │ (Run triggers) │
+                          └────────────────┘
+
+                  ┌─────────────┐       ┌──────────────────┐
+                  │   Codecs    │       │ Authentication    │
+                  │ (event ↔   │       │ (Ably token + POST│
+                  │  message)   │       │  auth + cancel)   │
+                  └─────────────┘       └──────────────────┘
+```
 
 ## The session is the state <a id="session"/>
 
@@ -15,33 +45,39 @@ The [session](/docs/ai-transport/concepts/sessions) is the persistent, shared st
 
 Every other concept on this page operates on or within a session.
 
-## A turn is one unit of agent work <a id="turn"/>
+## A connection attaches to the session <a id="connection"/>
 
-A [turn](/docs/ai-transport/concepts/turns) is one unit of agent activity inside the session: the user's input, the agent's response, any tool calls, and the final completion. The turn is the level at which you start, observe, and cancel work.
+A [connection](/docs/ai-transport/concepts/connections) is one participant's hold on the session. `ClientSession` for client applications is long-lived and subscribes to the channel for the duration of the user's app. `AgentSession` for agent processes is typically short-lived and handles one HTTP invocation at a time.
 
-A session contains many turns. Turns coexist on the same session and have independent lifecycles.
+Multiple connections attach to the same session simultaneously and dispose independently.
 
-## The transport connects you to the session <a id="transport"/>
+## A Run is one unit of agent work <a id="run"/>
 
-The [transport](/docs/ai-transport/concepts/transport) is how a participant connects. The client transport is a long-lived object that subscribes to the channel and materialises the session into a tree. The agent transport is short-lived and handles one execution attempt within a turn.
+A [Run](/docs/ai-transport/concepts/runs) is AI Transport's unit of work for one turn: one prompt-response cycle. It has an identity, a lifecycle, and an end reason. The Run is the level at which you start, observe, and cancel work.
 
-The transport is not the session. Multiple transports connect to the same session.
+A session contains many Runs. Runs coexist on the same session and have independent lifecycles.
+
+## An Invocation triggers a Run <a id="invocation"/>
+
+An [Invocation](/docs/ai-transport/concepts/invocations) is the trigger a client posts to the agent endpoint to start or continue a Run. It carries the `runId`, the `inputEventId`, and the session name.
+
+The same Run can be triggered by many Invocations: tool results, regenerates, retries. The agent mints an `invocationId` per HTTP request and returns it on the response so the caller can observe it.
 
 ## The codec translates between your framework and Ably <a id="codec"/>
 
-The codec is the boundary between your domain (text deltas, tool calls, finish events for whatever framework you use) and Ably's message primitives. The transport works with any framework that has a codec implementation.
+A [codec](/docs/ai-transport/concepts/codecs) is the boundary between your domain (text deltas, tool calls, finish events for whatever framework you use) and Ably's message primitives. The codec is direction-typed: `TInput` for client-to-agent events, `TOutput` for agent-to-client events.
 
-The codec is documented in detail on the [transport](/docs/ai-transport/concepts/transport#codec) page and in the [codec API reference](/docs/ai-transport/api/javascript/codec).
+The SDK ships a vocabulary of well-known input variants the codec supports so the standard operations (send, regenerate, edit, tool result, tool approval) work across any framework.
 
 ## The conversation tree holds every branch <a id="conversation-tree"/>
 
-The [conversation tree](/docs/ai-transport/concepts/conversation-tree) is how messages are organised inside the session. Every message, including every branch from an edit or regenerate, is preserved as a node in the tree. A view is a linear path through the tree: the conversation as a participant sees it.
+The [conversation tree](/docs/ai-transport/concepts/conversation-tree) is how Runs and messages are organised inside the session. Every Run and every message, including every branch from an edit or regenerate, is preserved as a node in the tree.
 
-The tree is what makes branching, edit, and regenerate work without losing history.
+A view is a linear path through the tree: the conversation as a participant sees it. The tree is what makes branching, edit, and regenerate work without losing history.
 
 ## Authentication runs at three layers <a id="authentication"/>
 
-[Authentication](/docs/ai-transport/concepts/authentication) covers three concerns at once: an Ably token for channel access, HTTP headers for the server endpoint, and a server-side hook that authorises cancel signals.
+[Authentication](/docs/ai-transport/concepts/authentication) covers three concerns at once: an Ably token for channel access, HTTP headers for the agent endpoint, and a server-side hook that authorises cancel signals.
 
 The first two are standard Ably auth; the third is specific to how AI Transport handles cancellation across participants.
 

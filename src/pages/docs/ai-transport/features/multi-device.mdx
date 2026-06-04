@@ -13,18 +13,18 @@ Fan-out to multiple connected devices is automatic. There's no special configura
 
 <Code>
 ```javascript
-// Client A (laptop): wrap with a TransportProvider for chatId.
-<TransportProvider channelName={chatId} codec={UIMessageCodec}>
+// Client A (laptop): wrap with a ClientSessionProvider for chatId.
+<ClientSessionProvider channelName={chatId} codec={UIMessageCodec}>
   <Chat />
-</TransportProvider>
+</ClientSessionProvider>
 
-// Client B (phone): same channel name in its own TransportProvider, different device.
-<TransportProvider channelName={chatId} codec={UIMessageCodec}>
+// Client B (phone): same channel name in its own ClientSessionProvider, different device.
+<ClientSessionProvider channelName={chatId} codec={UIMessageCodec}>
   <Chat />
-</TransportProvider>
+</ClientSessionProvider>
 
-// Inside Chat, read the transport from context.
-const { transport } = useClientTransport();
+// Inside Chat, read the session from context.
+const { session } = useClientSession();
 ```
 </Code>
 
@@ -34,31 +34,32 @@ Every client connected to the same Ably channel shares the same durable session.
 
 The client transport distinguishes between own turns (started by this client) and observer turns (started by someone else). Both types are tracked, decoded, and added to the conversation tree. The UI updates for every client, regardless of who initiated the action.
 
-## Distinguish own and observer turns <a id="own-vs-observer"/>
+## Distinguish own and observer runs <a id="own-vs-observer"/>
 
-The transport separates turns initiated by the current client from those by other participants:
+The client session separates Runs initiated by the current client from those by other participants:
 
 | Type | Origin | Handle |
 | --- | --- | --- |
-| Own turn | This client sent the HTTP POST that created the turn. | An `ActiveTurn` with a `stream` and a `cancel()` method. |
-| Observer turn | Another client or agent created the turn. | Lifecycle events and streamed messages only; no direct stream handle. |
+| Own Run | This client sent the HTTP POST that created the Run. | An `ActiveRun` returned from `view.sendMessage`, with a `stream` and a `cancel()` method. |
+| Observer Run | Another client or agent created the Run. | Lifecycle events and streamed messages only; no direct stream handle. |
 
-Both types appear in the conversation tree and the UI. The difference is internal routing: own turns have a dedicated stream, observer turns accumulate from channel messages.
+Both types appear in the conversation tree and the UI. The difference is internal routing: own Runs have a dedicated stream, observer Runs accumulate from channel messages. `RunInfo.clientId` on the view tells you which client started any given Run.
 
-## Track active turns across clients <a id="active-turns"/>
+## Track active runs across clients <a id="active-runs"/>
 
-`useActiveTurns` returns a `Map<clientId, Set<turnId>>` of currently streaming turns:
+The session's default view exposes `runs()`. It returns a snapshot of visible Runs as projection-free `RunInfo`, consistent across every connected client:
 
 <Code>
 ```javascript
-const activeTurns = useActiveTurns();
+const { session } = useClientSession();
 
-const isAnyoneStreaming = activeTurns.size > 0;
-const isAgentWorking = activeTurns.has('agent-1');
+const runs = session.view.runs();
+const isAnyoneStreaming = runs.some((r) => r.status === 'active');
+const isAgentWorking = runs.some((r) => r.status === 'active' && r.clientId === 'agent-1');
 ```
 </Code>
 
-This is consistent across every connected client. If client A starts a turn, client B's `useActiveTurns` updates immediately.
+If client A starts a Run, client B's view updates immediately as the `ai-run-start` lands on the channel.
 
 ## Sync with useChat <a id="syncing"/>
 
@@ -80,11 +81,11 @@ A client that connects after the conversation has started loads the full history
 
 <Code>
 ```javascript
-const { nodes, hasOlder, loadOlder } = useView({ limit: 30 });
+const { messages, hasOlder, loadOlder } = useView({ limit: 30 });
 ```
 </Code>
 
-`useView` loads history on mount. If a response is currently streaming, the late joiner sees it in progress; the lifecycle tracker synthesises missing events so the stream renders correctly.
+`useView` loads history on mount. If a response is currently streaming, the late joiner sees it in progress; the codec's lifecycle tracker synthesises missing events so the stream renders correctly.
 
 ## Identify the client <a id="client-identity"/>
 
@@ -100,7 +101,7 @@ const token = jwt.sign({
 ```
 </Code>
 
-The `clientId` is used throughout: turn ownership, cancel scoping (`{ own: true }` filters by the sender's client ID), and active turn tracking. See [authentication](/docs/ai-transport/concepts/authentication) for the full setup.
+The `clientId` is used throughout: turn ownership, cancel scoping (`{ own: true }` filters by the sender's client ID), and active turn tracking. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 

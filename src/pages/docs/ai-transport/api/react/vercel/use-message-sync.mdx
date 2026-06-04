@@ -1,0 +1,95 @@
+---
+title: "useMessageSync"
+meta_description: "Wire AI Transport view updates into Vercel useChat's setMessages from React."
+meta_keywords: "AI Transport, React, useMessageSync, useChat, setMessages, Vercel AI SDK, multi-device, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/use-message-sync
+  - /docs/ai-transport/api/react/use-message-sync
+---
+
+`useMessageSync` subscribes to view updates and syncs them into Vercel AI SDK's `useChat` overlay through the `setMessages` updater. It is how observer clients (other tabs, other devices) catch up with messages that arrive on the channel rather than from `useChat`'s own `sendMessage` calls.
+
+During an active own-run stream the sync is gated so it does not race the AI SDK's internal `write()` and produce an ID mismatch. When the stream ends, the gate opens and the next view update is merged in. Tool resolutions in the local overlay that have not yet echoed back through the channel are preserved during the merge.
+
+<Code>
+```javascript
+import { useChat } from '@ai-sdk/react';
+import { useChatTransport, useMessageSync } from '@ably/ai-transport/vercel/react';
+
+function Chat() {
+  const { chatTransport } = useChatTransport();
+  const { messages, setMessages, sendMessage } = useChat({ transport: chatTransport });
+
+  useMessageSync({ setMessages });
+
+  return <Conversation messages={messages} onSend={sendMessage} />;
+}
+```
+</Code>
+
+This hook must be used within a `ChatTransportProvider` (exported from `@ably/ai-transport/vercel/react`) unless `channelName` resolves to a different registered provider.
+
+## Parameters <a id="parameters"/>
+
+<Table id='UseMessageSyncParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| setMessages | required | The `setMessages` updater function from `useChat()`. Called with an updater that returns the next overlay. | `(updater: (prev: UIMessage[]) => UIMessage[]) => void` |
+| channelName | optional | Channel name of the `ChatTransportProvider` to observe. Omit to use the nearest provider. | String |
+| skip | optional | When `true`, skip all subscriptions. | Boolean |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+`void`. The hook subscribes for its side effects and cleans up on unmount.
+
+## How the sync works <a id="how"/>
+
+The hook does two things:
+
+- Subscribes to the `ChatTransport`'s `onStreamingChange` event. While `streaming` is `true` (own-run stream consumed by `useChat`), the gate is closed and no `setMessages` calls are made.
+- Subscribes to the underlying `View`'s `'update'` event. When the view changes and the gate is open, the hook calls `setMessages` with an updater that merges the view's messages into the overlay.
+
+The merge is per message, not a wholesale replace. For each assistant message, the merge preserves any `dynamic-tool` part in the overlay whose state is `output-available`, `output-error`, `approval-responded`, or `output-denied` while the tree's part is still in an unresolved state. That keeps local `addToolResult` and `addToolApprovalResponse` actions visible until the channel echo lands.
+
+## When to use it <a id="when-to-use"/>
+
+Use `useMessageSync` whenever you mount a `ChatTransportProvider` and render messages through `useChat`. Without it, observer tabs or devices that did not originate a Run never see its messages because `useChat`'s state is local to each `useChat` instance.
+
+If you render messages directly from [`useView`](/docs/ai-transport/api/react/core/use-view) instead of from `useChat`, you do not need `useMessageSync`; `useView` already reflects the view state.
+
+## Example <a id="example"/>
+
+A complete Vercel-React chat with sync wired in. A second browser tab pointing at the same `channelName` sees every message as soon as it arrives on the channel.
+
+<Code>
+```javascript
+import { useChat } from '@ai-sdk/react';
+import { useChatTransport, useMessageSync } from '@ably/ai-transport/vercel/react';
+
+function Chat() {
+  const { chatTransport, chatTransportError } = useChatTransport();
+  const { messages, setMessages, sendMessage, status } = useChat({
+    transport: chatTransport,
+  });
+
+  useMessageSync({ setMessages });
+
+  if (chatTransportError) return <ErrorBanner error={chatTransportError} />;
+
+  return (
+    <>
+      {messages.map((m) => <Message key={m.id} message={m} />)}
+      <Composer
+        disabled={status !== 'ready'}
+        onSubmit={(text) =>
+          sendMessage({ role: 'user', parts: [{ type: 'text', text }] })
+        }
+      />
+    </>
+  );
+}
+```
+</Code>
