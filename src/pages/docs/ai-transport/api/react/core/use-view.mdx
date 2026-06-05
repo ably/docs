@@ -1,7 +1,7 @@
 ---
 title: "useView"
 meta_description: "Subscribe to a paginated, branch-aware view of the AI Transport conversation tree from React."
-meta_keywords: "AI Transport, React, useView, ViewHandle, sendMessage, sendInput, regenerate, edit, conversation, Ably"
+meta_keywords: "AI Transport, React, useView, ViewHandle, send, regenerate, edit, conversation, Ably"
 redirect_from:
   - /docs/ai-transport/api-reference/use-view
   - /docs/ai-transport/api/react/use-view
@@ -16,12 +16,16 @@ By default the hook subscribes to the nearest [`ClientSessionProvider`](/docs/ai
 import { useView } from '@ably/ai-transport/react';
 
 function Conversation() {
-  const { messages, sendMessage } = useView({ limit: 30 });
+  const { messages, send } = useView({ limit: 30 });
 
   return (
     <>
       {messages.map((m) => <Message key={m.id} message={m} />)}
-      <Composer onSubmit={(text) => sendMessage({ role: 'user', parts: [{ type: 'text', text }] })} />
+      <Composer
+        onSubmit={(text) =>
+          send({ kind: 'user-message', message: { role: 'user', parts: [{ type: 'text', text }] } })
+        }
+      />
     </>
   );
 }
@@ -58,8 +62,7 @@ This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api
 | run | Direct lookup by Run id. | <Table id='RunInfo'/> |
 | branchSelection | Resolve the `BranchSelection` bundle anchored at `codecMessageId`. Always returns a safe object. | <Table id='BranchSelection'/> |
 | selectSibling | Select a sibling at the branch point anchored at `codecMessageId`. | `(codecMessageId, index) => void` |
-| sendMessage | Send one or more user messages and start a new Run. Takes optional <Table id='SendOptions'/>. | `(messages, options?) => Promise<ActiveRun<TOutput>>` |
-| sendInput | Send one or more raw `TInput`s on the channel and fire a POST. Takes optional <Table id='SendOptions'/>. | `(events, options?) => Promise<ActiveRun<TOutput>>` |
+| send | Send one or more `TInput`s on the channel and fire a POST. Wrap a domain message via `codec.createUserMessage` (or build the `{ kind: 'user-message', message }` literal) to send a fresh user message. Takes optional <Table id='SendOptions'/>. | `(events, options?) => Promise<ActiveRun<TOutput>>` |
 | regenerate | Regenerate an assistant message using this view's branch for history. | `(messageId, options?) => Promise<ActiveRun<TOutput>>` |
 | edit | Edit a user message, forking from this view's branch. | `(messageId, inputs, options?) => Promise<ActiveRun<TOutput>>` |
 
@@ -130,17 +133,13 @@ Resolve the `BranchSelection` bundle anchored at `codecMessageId`. Always return
 
 Select a sibling at the branch point anchored at `codecMessageId`. `index` is clamped to `[0, siblings.length - 1]`. Silent no-op when the message is not a branch anchor. Emits `'update'` on the underlying view when the visible output changes.
 
-## Send a user message <a id="send-message"/>
+## Send inputs <a id="send"/>
 
-<MethodSignature>{`sendMessage(messages: TMessage | TMessage[], options?: SendOptions): Promise<ActiveRun<TOutput>>`}</MethodSignature>
+<MethodSignature>{`send(events: TInput | TInput[], options?: SendOptions): Promise<ActiveRun<TOutput>>`}</MethodSignature>
 
-Send one or more user messages and start a new Run. Each `TMessage` is wrapped into the codec's `UserMessage` input variant. The parent is auto-computed from this view's selected branch unless overridden via [`SendOptions`](#returns).
+Send one or more `TInput`s on the channel and fire a POST. Each `TInput` carries its own routing metadata (`parent`, `target`, `codecMessageId`).
 
-## Send raw inputs <a id="send-input"/>
-
-<MethodSignature>{`sendInput(events: TInput | TInput[], options?: SendOptions): Promise<ActiveRun<TOutput>>`}</MethodSignature>
-
-Send one or more raw `TInput`s on the channel and fire a POST. Each `TInput` carries its own routing metadata (`parent`, `target`, `codecMessageId`). A send containing at least one `UserMessage` mints a fresh Run; a send containing only tool-resolution inputs is a continuation and should be paired with `options.runId` to extend a suspended Run.
+To send a fresh user message, build a `UserMessage` input. Use the codec factory (`codec.createUserMessage(message)`) or build the literal directly: `{ kind: 'user-message', message }`. A send containing at least one `UserMessage` mints a fresh Run. A send containing only tool-resolution inputs (`tool-result`, `tool-result-error`, `tool-approval-response`) is a continuation and should be paired with `options.runId` to extend a suspended Run.
 
 ## Regenerate an assistant message <a id="regenerate"/>
 
@@ -169,7 +168,7 @@ function Conversation() {
     loadOlder,
     branchSelection,
     selectSibling,
-    sendMessage,
+    send,
     regenerate,
   } = useView({ limit: 30 });
 
@@ -195,7 +194,7 @@ function Conversation() {
       })}
       <Composer
         onSubmit={(text) =>
-          sendMessage({ role: 'user', parts: [{ type: 'text', text }] })
+          send({ kind: 'user-message', message: { role: 'user', parts: [{ type: 'text', text }] } })
         }
       />
     </>

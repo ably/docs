@@ -42,18 +42,17 @@ await view.edit(messageId, [
 ```
 </Code>
 
-Each message in the array is inserted into the tree optimistically. When the server publishes them, they are reconciled individually using their respective message IDs. The order is preserved.
+Each message in the array is inserted into the tree optimistically. When the server publishes them, they are reconciled individually using their respective `codec-message-id`s. The order is preserved.
 
 ## Handle errors <a id="error-handling"/>
 
-If the POST request fails, the optimistic message stays in the conversation tree and the session emits an `error` event. The message is not removed automatically; the agent-wake POST happens in the background after `view.sendMessage()` returns its `ActiveRun`:
+If the POST request fails, the optimistic message stays in the conversation tree and the session emits an `error` event. The message is not removed automatically; the agent-wake POST happens in the background after `view.send()` returns its `ActiveRun`:
 
 <Code>
 ```javascript
-const run = await view.sendMessage({
-  id: crypto.randomUUID(),
-  role: 'user',
-  parts: [{ type: 'text', text: 'Hello' }],
+const run = await view.send({
+  kind: 'user-message',
+  message: { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Hello' }] },
 });
 
 session.on('error', (error) => {
@@ -66,7 +65,7 @@ Your application decides whether to notify the user, offer a retry, or take othe
 
 ## Reconciliation details <a id="reconciliation"/>
 
-The session uses the `codec-message-id` header (under the `extras.ai.codec` tier) to match published messages to optimistic inserts. When the client generates a message, it assigns a codec-message-id. The agent stamps the same id on the response when continuing that message. When the client receives the published message through its subscription, it matches the id and promotes the optimistic message to a confirmed one.
+The session uses the `codec-message-id` header (under the `extras.ai.codec` tier) to match published messages to optimistic inserts. When the client publishes an input, the SDK mints a client-side codec-message-id and stamps it on the wire. The domain message's own `id` is preserved verbatim from the source stream; correlation does not rely on it. When the client receives the published message through its subscription, the SDK matches on the codec-message-id and promotes the optimistic message to a confirmed one.
 
 A published message that does not match any optimistic insert (for example, a message from another client) is added to the tree normally. The reconciliation logic only applies to messages the current client sent.
 

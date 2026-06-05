@@ -25,7 +25,7 @@ Publish side (agent):
 
 Publish side (client):
 
-  TInput events from view.sendMessage / sendInput / regenerate / edit
+  TInput events from view.send / regenerate / edit
         │
         ▼
   Encoder.publishInput
@@ -47,7 +47,7 @@ Subscribe side (both):
   Tree ── Codec.fold per node (TProjection on InputNode or RunNode)
         │
         ▼
-  Codec.getMessages(projection) ── TMessage[]
+  Codec.getMessages(projection) ── CodecMessage<TMessage>[]
         │
         ▼
   View
@@ -66,7 +66,7 @@ The transport layer calls into the codec but never inspects the domain payload. 
 
 The codec is bidirectional with separate type bases:
 
-- `CodecInputEvent` is the base for everything a client publishes. The Vercel codec defines `UserMessage`, `Regenerate`, `Edit`, `ToolResult`, `ToolResultError`, and `ToolApprovalResponse` as well-known input variants on top of this base.
+- `CodecInputEvent` is the base for everything a client publishes. The Vercel codec defines `UserMessage`, `Regenerate`, `ToolResult`, `ToolResultError`, and `ToolApprovalResponse` as well-known input variants on top of this base.
 - `CodecOutputEvent` is the base for everything an agent publishes: text deltas, tool calls, reasoning, file or source parts, data chunks.
 
 Both bases carry a `kind` discriminator the codec reads to dispatch. Inputs additionally carry routing fields (`codecMessageId`, `parent`, `target`) that the encoder stamps onto the wire as transport headers.
@@ -111,7 +111,7 @@ The decoder converts inbound Ably messages back into `TInput` or `TOutput` event
 
 The decoder maintains a stream tracker that maps `stream-id` to its current state. A subscriber that joins mid-stream sees an `update` or `append` for a `stream-id` it has never seen the `create` for; the decoder treats the incoming state as the current full state and accumulates from there. The end state is the same as a subscriber that received every operation.
 
-`decode()` returns a `DecodedMessage<TInput, TOutput>`. The Tree feeds each decoded event through `Codec.fold(projection, event)` to update the owning Run's `TProjection`. `Codec.getMessages(projection)` materialises the projection into the `TMessage[]` the View renders.
+`decode()` returns a `DecodedMessage<TInput, TOutput>`. The Tree feeds each decoded event through `Codec.fold(projection, event)` to update the owning Run's `TProjection`. `Codec.getMessages(projection)` materialises the projection into `CodecMessage<TMessage>[]`: each entry pairs the domain `message` with the SDK's client-minted `codecMessageId`. The View concatenates these across the visible Run chain, exposing the flat domain list as `getMessages()` and the paired list as `getMessagesWithIds()`.
 
 ## Header tier story <a id="header-tier-story"/>
 
@@ -158,7 +158,7 @@ const myCodec = {
     });
   },
   fold(projection, event) { /* reduce one event into the per-Run projection */ },
-  getMessages(projection) { /* return TMessage[] for rendering */ },
+  getMessages(projection) { /* return CodecMessage<TMessage>[] for rendering */ },
   createUserMessage(message) { /* return a UserMessage<TMessage> */ },
 };
 ```
