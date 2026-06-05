@@ -9,6 +9,8 @@ redirect_from:
 
 Tool calling in AI Transport supports both server-executed and client-executed tools. Tool invocations and results are published to the channel, so every client sees tool activity in real time and tool state persists in history.
 
+![Diagram showing tool invocations and results streaming through the channel for server- and client-executed tools](../../../../images/content/diagrams/ait-tool-calling.png)
+
 ## How it works <a id="how-it-works"/>
 
 When the LLM invokes a tool, the invocation is streamed through the channel like any other turn event. Clients see tool calls appear as they are generated. If the tool runs on the server, the result is streamed back in the same turn. If the tool runs on the client, the turn ends; the client submits the result, and a continuation turn starts.
@@ -34,11 +36,11 @@ const result = streamText({
       },
     },
   },
-  abortSignal: turn.abortSignal,
+  abortSignal: run.abortSignal,
 });
 
-const { reason } = await turn.streamResponse(result.toUIMessageStream());
-await turn.end(reason);
+const { reason } = await run.pipe(result.toUIMessageStream());
+await run.end(reason);
 ```
 </Code>
 
@@ -62,65 +64,74 @@ const result = streamText({
       // No execute function: the client handles this.
     },
   },
-  abortSignal: turn.abortSignal,
+  abortSignal: run.abortSignal,
 });
 
-const { reason } = await turn.streamResponse(result.toUIMessageStream());
-await turn.end(reason);
+const { reason } = await run.pipe(result.toUIMessageStream());
+await run.end(reason);
 ```
 </Code>
 
-On the client, detect the pending tool call and submit the result using `view.update()`. The first argument is the Ably message ID of the node containing the tool invocation, not the tool call ID:
+On the client, detect the pending tool call and publish the result as a `tool-result` input. The codec folds the result onto the suspended assistant message, and the agent picks it up to continue the run:
 
 <Code>
 ```javascript
-const { nodes } = useView({ transport });
+const { nodes, view } = useView({ transport });
 
 const pendingNode = nodes.find((n) =>
   n.message.parts?.some((p) => p.type === 'dynamic-tool' && p.state === 'input-available'),
 );
 
 if (pendingNode) {
-  // navigator.geolocation.getCurrentPosition is callback-based, not a promise.
-  const location = await new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject);
-  });
-
   const toolCall = pendingNode.message.parts.find(
     (p) => p.type === 'dynamic-tool' && p.state === 'input-available',
   );
 
-  await view.update(pendingNode.id, [{
-    type: 'tool-output-available',
+  const location = await new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject);
+  });
+
+  const run = await view.sendInput([{
+    kind: 'tool-result',
+    codecMessageId: pendingNode.id,
     toolCallId: toolCall.toolCallId,
     output: { lat: location.coords.latitude, lng: location.coords.longitude },
-  }]);
+  }], { runId: view.runOf(pendingNode.id).runId });
+
+  // Wake the agent so it picks up the result and resumes the run.
+  await fetch('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify(run.toInvocation().toJSON()),
+  });
 }
 ```
 </Code>
 
-Calling `view.update()` submits the tool result to the server and triggers a continuation turn. The server receives the result, includes it in the conversation history, and the LLM generates a response that incorporates the tool output.
+The result is addressed to the suspended assistant message by `codecMessageId`. Reusing the original `runId` keeps the resume on the same run instead of starting a fresh one.
 
-## Cross-turn events with EventsNode <a id="events-node"/>
+## Cross-run events with addEvents <a id="add-events"/>
 
-`addEvents()` delivers events to an existing assistant message. A common use is delivering tool results to a message that contains a pending tool call. Target the message by its Ably message ID:
+The agent uses `Run.addEvents` to push events to a message owned by an earlier run. The common case is delivering a late tool result on a continuation run without starting a new assistant message:
 
 <Code>
 ```javascript
-const assistantMsgId = pendingNode.id;
-const toolCallId = pendingToolCall.toolCallId;
-
-await turn.addEvents(assistantMsgId, [
+await run.addEvents([
   {
-    type: 'tool-output-available',
-    toolCallId,
-    output: { temperature: 22, conditions: 'sunny' },
+    kind: 'event',
+    codecMessageId: pendingAssistantMsgId,
+    events: [
+      {
+        type: 'tool-output-available',
+        toolCallId,
+        output: { temperature: 22, conditions: 'sunny' },
+      },
+    ],
   },
 ]);
 ```
 </Code>
 
-Events published through `addEvents()` update the target message in the view. Because they target an existing message by its ID, late joiners and reconnecting clients see the correct state when the conversation replays from history.
+Events published through `addEvents` update the target message in the view. Because they target an existing message by its `codecMessageId`, late joiners and reconnecting clients see the correct state when the conversation replays from history.
 
 ## History persistence <a id="history"/>
 
@@ -131,8 +142,8 @@ A user who starts a tool-assisted workflow on a laptop continues it on a phone w
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
 - A client-executed tool that the user denies (for example a geolocation permission prompt) leaves the tool call pending. Submit a failure result to unblock the LLM, or end the turn explicitly.
-- A tool that takes longer than the agent's runtime budget runs past `turn.end()`. The continuation turn picks up the result through `addEvents` on the original message; do not start a new turn just to deliver a late result.
-- A server-executed tool that does not honour `turn.abortSignal` keeps running after a cancel. Wire the signal into your tool implementation.
+- A tool that takes longer than the agent's runtime budget runs past `run.end()`. The continuation run picks up the result through `addEvents` on the original message; do not start a new run just to deliver a late result.
+- A server-executed tool that does not honour `run.abortSignal` keeps running after a cancel. Wire the signal into your tool implementation.
 - Two clients submitting the same client-executed tool concurrently produce two continuation turns. Guard against double-submit at the application layer.
 - A failed tool call is delivered with an error result. The view exposes the failure; render it in place rather than silently retrying.
 

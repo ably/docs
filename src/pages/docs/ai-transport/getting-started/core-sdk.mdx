@@ -86,8 +86,7 @@ export async function POST(req) {
     }
   });
 
-  // Return the agent-minted invocationId so the caller can observe it.
-  return Response.json({ invocationId: run.invocationId });
+  return Response.json({ runId: run.runId, invocationId: run.invocationId });
 }
 ```
 </Code>
@@ -109,8 +108,7 @@ async function wakeAgent(run) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(run.toInvocation().toJSON()),
   });
-  const { invocationId } = await res.json();
-  return invocationId;
+  return res.json();
 }
 
 export function Chat() {
@@ -218,9 +216,9 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 
 ## What is happening <a id="whats-happening"/>
 
-1. The user types a message. `view.sendMessage(...)` mints `runId` and `inputEventId` (one per published input event), publishes the user input on the channel with those ids stamped under `extras.ai.transport`, and returns an `ActiveRun`. The SDK does not POST to your agent endpoint itself.
-2. Your client code calls `activeRun.toInvocation().toJSON()` to get an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ runId, inputEventId, sessionName }`), and POSTs it to your agent endpoint.
-3. The agent endpoint receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a `Run` from the Invocation. `session.createRun(invocation)` mints a fresh `invocationId` (one per HTTP request); the agent returns it on the response so callers can observe it. `Run.start()` waits for the trigger input event on the channel (rewind + live).
+1. The user types a message. `view.sendMessage(...)` mints `inputEventId` and the message's `codecMessageId`, publishes the user input on the channel with those ids stamped under `extras.ai.transport`, and returns an `ActiveRun` carrying the `inputCodecMessageId` the client owns synchronously. The SDK does not POST to your agent endpoint itself.
+2. Your client code calls `activeRun.toInvocation().toJSON()` to get an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ inputEventId, sessionName }`), and POSTs it to your agent endpoint.
+3. The agent endpoint receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a `Run` from the Invocation. `session.createRun(invocation)` mints a fresh `runId` (for a fresh run) and a fresh `invocationId`; the agent returns both on the response so callers can observe them. `Run.start()` waits for the trigger input event on the channel (rewind + live).
 4. The agent streams the LLM response through `run.pipe(...)` to the channel. Every output carries `input-codec-message-id` so the client can correlate by an id it owned at send time.
 5. Every client subscribed to the channel receives the streamed messages in real time. `useView` re-renders as the visible Run's projection updates.
 6. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the SDK rehydrates the view automatically.

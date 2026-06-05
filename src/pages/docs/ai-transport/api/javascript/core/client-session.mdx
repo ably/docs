@@ -46,11 +46,9 @@ await session.connect();
 | Property | Description | Type |
 | --- | --- | --- |
 | getRunNode | `(runId: string) => RunNode \| undefined`. Get a Run by id. | Function |
-| getRunByCodecMessageId | `(codecMessageId: string) => RunNode \| undefined`. Get the Run that owns a given codec-message-id. | Function |
-| getSiblingRuns | `(runId: string) => RunNode[]`. Sibling Runs at a fork point (edit or regenerate group). | Function |
-| hasSiblingRuns | `(runId: string) => boolean`. Whether a Run has sibling alternatives. | Function |
-| getRegenerateGroup | `(runId: string) => { anchorCodecMessageId, runs } \| undefined`. Resolve the regenerate sibling group containing the Run. | Function |
-| on | `(event: 'update' \| 'ably-message' \| 'run' \| 'run-projection-updated', handler) => () => void`. Subscribe to tree changes. Returns an unsubscribe function. | Function |
+| getNodeByCodecMessageId | `(codecMessageId: string) => ConversationNode \| undefined`. Get the input or run node that owns a given codec-message-id. Narrow on `kind` (`'input'` or `'run'`) before reading kind-specific fields. | Function |
+| getSiblingNodes | `(key: string) => ConversationNode[]`. The sibling group for a node key: edit versions for an input node, regenerate siblings for a reply run. Ordered oldest-first by serial; single-element when there are no siblings; empty when the key is unknown. | Function |
+| on | `(event: 'update' \| 'ably-message' \| 'run' \| 'output', handler) => () => void`. Subscribe to tree changes. Returns an unsubscribe function. | Function |
 
 </Table>
 
@@ -77,7 +75,7 @@ await session.connect();
 
 ## Create a client session <a id="constructor"/>
 
-<MethodSignature>{`function createClientSession<TInput, TOutput, TProjection, TMessage>(options: ClientSessionOptions<TInput, TOutput, TProjection, TMessage>): ClientSession<TInput, TOutput, TMessage>`}</MethodSignature>
+<MethodSignature>{`function createClientSession<TInput, TOutput, TProjection, TMessage>(options: ClientSessionOptions<TInput, TOutput, TProjection, TMessage>): ClientSession<TInput, TOutput, TProjection, TMessage>`}</MethodSignature>
 
 Construct a `ClientSession` bound to an Ably channel. The session does not attach to the channel until [`connect()`](#connect) resolves.
 
@@ -108,21 +106,15 @@ const session = createClientSession({
 | client | required | The Ably Realtime client. The caller owns its lifecycle; `session.close()` does not close the client. | `Ably.Realtime` |
 | channelName | required | The channel to subscribe to and publish cancel signals on. The session owns this channel; do not also resolve it elsewhere with conflicting options. | String |
 | codec | required | The codec used to encode and decode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
-| api | required | Server endpoint URL for the HTTP POST. | String |
-| clientId | optional | The client's identity. Sent to the server in the POST body. | String |
-| headers | optional | Headers for the HTTP POST. Function form for dynamic values (for example, auth tokens). | `Record<string, string>` or `() => Record<string, string>` |
-| body | optional | Additional body fields merged into the HTTP POST. Function form for dynamic values. | `Record<string, unknown>` or `() => Record<string, unknown>` |
-| credentials | optional | Fetch credentials mode for the HTTP POST. | `RequestCredentials` |
-| fetch | optional | Custom fetch implementation. Defaults to `globalThis.fetch`. | `typeof fetch` |
+| clientId | optional | The client's identity, used as the Ably publisher `clientId` on everything this session publishes. Surfaces on the wire as the run-owner / input-owner id so other clients can attribute messages. | String |
 | messages | optional | Initial messages to seed the conversation tree with. Forms a linear chain. | `TMessage[]` |
-| runStartDeadlineMs | optional | How long `sendMessage()` / `sendInput()` waits for the agent's `ai-run-start` event before rejecting with `RunStartDeadlineExceeded`. Defaults to 30000. | Number |
 | logger | optional | Logger instance for diagnostic output. | `Logger` |
 
 </Table>
 
 ### Returns <a id="constructor-returns"/>
 
-`ClientSession<TInput, TOutput, TMessage>`. The session instance. Call [`connect()`](#connect) to attach before sending or cancelling.
+`ClientSession<TInput, TOutput, TProjection, TMessage>`. The session instance. Call [`connect()`](#connect) to attach before sending or cancelling.
 
 ## Connect the session <a id="connect"/>
 
@@ -174,8 +166,14 @@ Publish a cancel signal for the specified Run and close the local stream. The ag
 ```javascript
 const activeRun = await session.view.sendMessage({ role: 'user', text: 'Tell me a story' });
 
-// later, cancel from the UI
-await session.cancel(activeRun.runId);
+// later, cancel from the UI.
+// activeRun.cancel() works immediately, even before the runId
+// promise on activeRun has resolved.
+await activeRun.cancel();
+
+// Or, when you already have a resolved runId (for example from a
+// RunInfo in view.runs()):
+// await session.cancel(someRunInfo.runId);
 ```
 </Code>
 
@@ -287,8 +285,9 @@ await fetch('/api/chat', {
   body: JSON.stringify(activeRun.toInvocation().toJSON()),
 });
 
-// `started` resolves when the agent's `ai-run-start` lands on the channel.
-await activeRun.started;
+// The agent assigns the runId on the server, so activeRun.runId is a
+// Promise. Await it to read the id.
+const runId = await activeRun.runId;
 
 await session.close();
 ably.close();

@@ -13,19 +13,21 @@ redirect_from:
   - /docs/guides/ai-transport/openai/openai-human-in-the-loop
 ---
 
-Human-in-the-loop uses the tool-calling primitives to create approval gates. The agent requests approval, the turn pauses, and any connected client approves or rejects. Because the session is durable, the approval request reaches the user even after a reconnect or device switch.
+Human-in-the-loop uses the tool-calling primitives to create approval gates. The agent requests approval, the run suspends, and any connected client approves or rejects. Because the session is durable, the approval request reaches the user even after a reconnect or device switch.
+
+![Diagram showing an agent suspending mid-Run for a human approval and resuming when any client responds](../../../../images/content/diagrams/ait-human-in-the-loop.png)
 
 ## How it works <a id="how-it-works"/>
 
-The pattern builds on [tool calling](/docs/ai-transport/features/tool-calling). The agent defines a tool that requires human approval. When the LLM invokes that tool, the turn ends with a pending tool call. The client presents the approval request to the user. When the user approves or rejects, the client submits the result via `view.update()`, which triggers a continuation turn.
+The pattern builds on [tool calling](/docs/ai-transport/features/tool-calling). The agent defines a tool that requires human approval. When the LLM invokes that tool, the run suspends with a pending tool call. The client presents the approval request to the user. When the user approves or rejects, the client publishes a `tool-approval-response` input, which resumes the run.
 
 The flow:
 
 1. The agent streams a response that includes a tool call requiring approval.
-2. The turn ends. The pending tool call is published to the channel.
+2. The run suspends. The pending tool call is published to the channel.
 3. Any connected client renders the pending approval.
-4. The user approves or rejects. The client calls `view.update()` with the result.
-5. A continuation turn starts. The agent receives the approval result and proceeds.
+4. The user approves or rejects. The client publishes a `tool-approval-response` input addressed to the pending message.
+5. The run resumes. The agent receives the approval result and proceeds.
 
 ## Define an approval tool <a id="approval-tool"/>
 
@@ -53,15 +55,15 @@ const result = streamText({
       },
     },
   },
-  abortSignal: turn.abortSignal,
+  abortSignal: run.abortSignal,
 });
 
-const { reason } = await turn.streamResponse(result.toUIMessageStream());
-await turn.end(reason);
+const { reason } = await run.pipe(result.toUIMessageStream());
+await run.end(reason);
 ```
 </Code>
 
-When the LLM decides an action needs approval, it invokes `requestApproval`. The turn ends with the tool call pending.
+When the LLM decides an action needs approval, it invokes `requestApproval`. The run suspends with the tool call pending.
 
 ## Handle approval on the client <a id="client-approval"/>
 
@@ -69,7 +71,7 @@ On the client, detect pending approval requests and present them to the user:
 
 <Code>
 ```javascript
-const { nodes } = useView({ transport });
+const { nodes, view } = useView({ transport });
 
 const pendingNode = nodes.find((n) =>
   n.message.parts?.some(
@@ -82,33 +84,37 @@ const pendingApproval = pendingNode?.message.parts?.find(
 );
 
 if (pendingNode && pendingApproval) {
-  const { action, details } = pendingApproval.args;
+  const { action, details } = pendingApproval.input;
+  const runId = view.runOf(pendingNode.id).runId;
+
+  const respond = async (approved) => {
+    const run = await view.sendInput([{
+      kind: 'tool-approval-response',
+      codecMessageId: pendingNode.id,
+      toolCallId: pendingApproval.toolCallId,
+      approved,
+    }], { runId });
+
+    // Wake the agent so it picks up the response and resumes.
+    await fetch('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify(run.toInvocation().toJSON()),
+    });
+  };
 
   return (
     <ApprovalDialog
       action={action}
       details={details}
-      onApprove={() =>
-        view.update(pendingNode.id, [{
-          type: 'tool-output-available',
-          toolCallId: pendingApproval.toolCallId,
-          output: { approved: true },
-        }])
-      }
-      onReject={() =>
-        view.update(pendingNode.id, [{
-          type: 'tool-output-available',
-          toolCallId: pendingApproval.toolCallId,
-          output: { approved: false, reason: 'User declined' },
-        }])
-      }
+      onApprove={() => respond(true)}
+      onReject={() => respond(false)}
     />
   );
 }
 ```
 </Code>
 
-`view.update()` submits the result and triggers a continuation turn. The agent receives `{ approved: true }` as the tool result and proceeds, or receives the rejection and adjusts.
+The response is addressed to the suspended assistant message by `codecMessageId`, and reusing the original `runId` keeps the resume on the same run. The agent sees the approval as the tool result and proceeds.
 
 ## Approve from any device <a id="multi-device"/>
 
@@ -124,10 +130,10 @@ The agent's turn has already ended, so no connection or timeout is at risk. The 
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- Two devices submitting at the same time race. The first `view.update()` wins; the second submits to an already-resolved tool call and the agent ignores it. Guard against double-submit at the application layer if both devices need to see a consistent decision.
-- A user who rejects must trigger an agent path that handles rejection. The LLM only sees the output you supply; an empty rejection result is ambiguous.
+- Two devices submitting at the same time race. The first response wins; the second submits to an already-resolved tool call and the agent ignores it. Guard against double-submit at the application layer if both devices need to see a consistent decision.
+- A user who rejects must trigger an agent path that handles rejection. The LLM only sees the response you supply; an empty rejection is ambiguous.
 - A pending approval that never receives a response stays pending forever. Add an explicit timeout in your application if you need one; AI Transport does not impose one.
-- The continuation turn runs as a fresh agent invocation. Make sure your server endpoint hydrates the conversation history correctly so the LLM sees the approval result in context.
+- The resume runs as a fresh agent invocation. Make sure your server endpoint hydrates the conversation history correctly so the LLM sees the approval result in context.
 
 ## FAQ <a id="faq"/>
 
