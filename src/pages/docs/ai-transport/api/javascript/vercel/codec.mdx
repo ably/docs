@@ -29,9 +29,12 @@ const projection = UIMessageCodec.init();
 | fold | Fold a `VercelInput` or `VercelOutput` into the projection. | `(state, event, meta) => VercelProjection` |
 | createEncoder | Create a Vercel encoder bound to the supplied channel writer. | `(channel, options?) => Encoder<VercelInput, VercelOutput>` |
 | createDecoder | Create a Vercel decoder for the channel. | `() => Decoder<VercelInput, VercelOutput>` |
-| getMessages | Extract the `UIMessage[]` list from a `VercelProjection`. | `(projection) => UIMessage[]` |
-| createUserMessage | Wrap a `UIMessage` as the `UserMessage` input variant. | `(message: UIMessage) => UserMessage<UIMessage>` |
-| createRegenerate | Build a `Regenerate` input targeting an assistant `UIMessage`. | `(target, parent) => Regenerate` |
+| getMessages | Extract `{ codecMessageId, message }` pairs from a `VercelProjection`. The domain `UIMessage.id` is preserved verbatim from the source stream; the SDK keys correlation off the paired `codecMessageId`. | `(projection) => CodecMessage<UIMessage>[]` |
+| createUserMessage | Wrap a `UIMessage` as the `UserMessage` input variant. | `(message: UIMessage) => VercelInput` |
+| createRegenerate | Build a `Regenerate` input targeting an assistant `UIMessage`. | `(target, parent) => VercelInput` |
+| createToolResult | Build a `ToolResult` input addressed at the assistant codec-message that contains the tool call. | `(codecMessageId, { toolCallId, output }) => VercelInput` |
+| createToolResultError | Build a `ToolResultError` input. | `(codecMessageId, { toolCallId, message }) => VercelInput` |
+| createToolApprovalResponse | Build a `ToolApprovalResponse` input. | `(codecMessageId, { toolCallId, approved, reason? }) => VercelInput` |
 
 </Table>
 
@@ -41,7 +44,7 @@ const projection = UIMessageCodec.init();
 
 | Property | Description | Type |
 | --- | --- | --- |
-| TInput | Discriminated union of every record-shape a client publishes on the `ai-input` wire. Composed entirely from the SDK's well-known input variants. | `UserMessage<UIMessage> \| Regenerate \| ToolResult \| ToolResultError \| ToolApprovalResponse` |
+| TInput | Discriminated union of every record-shape a client publishes on the `ai-input` wire. Composed from the SDK's well-known input variants, with the tool variants parameterised by the Vercel domain payload shapes (`VercelToolResultPayload`, `VercelToolResultErrorPayload`, `VercelToolApprovalResponsePayload`). | `UserMessage<UIMessage> \| Regenerate \| ToolResult<VercelToolResultPayload> \| ToolResultError<VercelToolResultErrorPayload> \| ToolApprovalResponse<VercelToolApprovalResponsePayload>` |
 
 </Table>
 
@@ -57,7 +60,7 @@ const projection = UIMessageCodec.init();
 
 | Property | Description | Type |
 | --- | --- | --- |
-| TProjection | Per-Run projection. Carries the `UIMessage[]` list plus internal stream-tracker state and a high-water-mark serial for idempotency. The SDK does not inspect this shape. Reach for `getMessages` instead. | `{ messages: UIMessage[], ... }` |
+| TProjection | Per-Run projection. Carries the `{ codecMessageId, message }` pair list plus internal stream-tracker state and a high-water-mark serial for idempotency. The SDK does not inspect this shape. Reach for `getMessages` instead. | `{ messages: CodecMessage<UIMessage>[], ... }` |
 
 </Table>
 
@@ -82,7 +85,7 @@ channel.subscribe((message) => {
   for (const output of outputs) {
     projection = UIMessageCodec.fold(projection, output, { serial: message.serial });
   }
-  render(UIMessageCodec.getMessages(projection));
+  render(UIMessageCodec.getMessages(projection).map((entry) => entry.message));
 });
 ```
 </Code>

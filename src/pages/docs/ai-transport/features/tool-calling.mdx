@@ -72,18 +72,16 @@ await run.end(reason);
 ```
 </Code>
 
-On the client, detect the pending tool call and publish the result as a `tool-result` input. The codec folds the result onto the suspended assistant message, and the agent picks it up to continue the run:
+On the client, find the assistant message with the pending tool call and publish a `tool-result` input addressed to its `codecMessageId`. The codec folds the result onto the suspended assistant message, and the agent picks it up to continue the run:
 
 <Code>
 ```javascript
-const { nodes, view } = useView({ transport });
-
-const pendingNode = nodes.find((n) =>
-  n.message.parts?.some((p) => p.type === 'dynamic-tool' && p.state === 'input-available'),
+const pending = session.view.getMessagesWithIds().find(({ message }) =>
+  message.parts?.some((p) => p.type === 'dynamic-tool' && p.state === 'input-available'),
 );
 
-if (pendingNode) {
-  const toolCall = pendingNode.message.parts.find(
+if (pending) {
+  const toolCall = pending.message.parts.find(
     (p) => p.type === 'dynamic-tool' && p.state === 'input-available',
   );
 
@@ -91,12 +89,17 @@ if (pendingNode) {
     navigator.geolocation.getCurrentPosition(resolve, reject);
   });
 
-  const run = await view.sendInput([{
-    kind: 'tool-result',
-    codecMessageId: pendingNode.id,
-    toolCallId: toolCall.toolCallId,
-    output: { lat: location.coords.latitude, lng: location.coords.longitude },
-  }], { runId: view.runOf(pendingNode.id).runId });
+  const run = await session.view.send(
+    {
+      kind: 'tool-result',
+      codecMessageId: pending.codecMessageId,
+      payload: {
+        toolCallId: toolCall.toolCallId,
+        output: { lat: location.coords.latitude, lng: location.coords.longitude },
+      },
+    },
+    { runId: session.view.runOf(pending.codecMessageId).runId },
+  );
 
   // Wake the agent so it picks up the result and resumes the run.
   await fetch('/api/chat', {
@@ -118,7 +121,7 @@ The agent uses `Run.addEvents` to push events to a message owned by an earlier r
 await run.addEvents([
   {
     kind: 'event',
-    codecMessageId: pendingAssistantMsgId,
+    codecMessageId: pendingAssistantCodecMessageId,
     events: [
       {
         type: 'tool-output-available',

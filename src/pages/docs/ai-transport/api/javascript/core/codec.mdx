@@ -39,9 +39,12 @@ const myCodec: Codec<MyInput, MyOutput, MyProjection, MyMessage> = {
 | fold | Fold one event into the projection and return the updated projection. May mutate `state` in place. | `(state, event, meta) => TProjection` |
 | createEncoder | Create a stateful encoder bound to the given channel writer. Takes optional <Table id='EncoderOptions'/>. | `(channel, options?) => Encoder<TInput, TOutput>` |
 | createDecoder | Create a stateful decoder that maps inbound Ably messages to typed inputs and outputs. Each call returns a <Table id='DecodedMessage'/>. | `() => Decoder<TInput, TOutput>` |
-| getMessages | Extract the per-message list from a projection. The SDK uses the result to upsert per-codecMessageId nodes into the conversation tree. | `(projection) => TMessage[]` |
-| createUserMessage | Wrap a `TMessage` as the codec's `UserMessage` variant for publishing on the `ai-input` wire. | `(message) => UserMessage<TMessage>` |
-| createRegenerate | Build a `Regenerate` input that targets an assistant message. The View calls this from `regenerate()`. | `(target, parent) => Regenerate` |
+| getMessages | Extract the per-message list from a projection as `{ codecMessageId, message }` pairs. The SDK uses the pairs to correlate rendered messages back to the wire id; the View concatenates them across the visible Run chain. | `(projection) => CodecMessage<TMessage>[]` |
+| createUserMessage | Wrap a `TMessage` as the codec's `UserMessage` variant for publishing on the `ai-input` wire. Returns the codec's `TInput` so the result is usable as a `View.send` argument without a cast. | `(message) => TInput` |
+| createRegenerate | Build a `Regenerate` input that targets an assistant message. The View calls this from `regenerate()`. | `(target, parent) => TInput` |
+| createToolResult | Optional. Build a `ToolResult` input addressed at the assistant codec-message containing the tool call. The codec defines the payload shape (for example the Vercel layer's `{ toolCallId, output }`). | `(codecMessageId, payload) => TInput` |
+| createToolResultError | Optional. Build a `ToolResultError` input. The codec defines the payload shape (for example `{ toolCallId, message }`). | `(codecMessageId, payload) => TInput` |
+| createToolApprovalResponse | Optional. Build a `ToolApprovalResponse` input. The codec defines the payload shape (for example `{ toolCallId, approved, reason? }`). | `(codecMessageId, payload) => TInput` |
 
 </Table>
 
@@ -212,13 +215,13 @@ Tagged result of decoding one inbound Ably message. The codec routes by the wire
 
 ## Well-known input variants <a id="input-variants"/>
 
-Codec input variants extend the `CodecInputEvent` base. The SDK reserves a handful of well-known `kind` literals so callers can publish a user message, regenerate an assistant message, edit a user message, or resolve a tool call without inventing their own shapes. Codec-specific variants pick any other literal.
+Codec input variants extend the `CodecInputEvent` base. The SDK reserves a handful of well-known `kind` literals so callers can publish a user message, regenerate an assistant message, or resolve a tool call without inventing their own shapes. Codec-specific variants pick any other literal. (Edits ride the user-message path with a `forkOf` routing header; there is no separate `'edit'` kind on the wire.)
 
 <Table id='CodecInputEvent'>
 
 | Property | Description | Type |
 | --- | --- | --- |
-| kind | Discriminator. The SDK reserves `'user-message'`, `'regenerate'`, `'edit'`, `'tool-result'`, `'tool-result-error'`, and `'tool-approval-response'`. | String |
+| kind | Discriminator. The SDK reserves `'user-message'`, `'regenerate'`, `'tool-result'`, `'tool-result-error'`, and `'tool-approval-response'`. | String |
 | parent | The codec-message-id of the preceding codec-message on this branch. Auto-computed when omitted. | String |
 | target | Pointer to another codec-message this input references. Semantic depends on `kind`. | String |
 | codecMessageId | Targets an existing codec-message-id instead of minting a fresh one. Used by continuation inputs that amend an existing assistant message. | String |
@@ -238,7 +241,7 @@ The full input union is the codec author's responsibility. Use the variants belo
 
 </Table>
 
-A new user message. Produced by `Codec.createUserMessage` and surfaced via `View.sendMessage`.
+A new user message. Produced by `Codec.createUserMessage` and surfaced via `View.send` (wrap a domain message via `codec.createUserMessage(message)` or build the literal directly).
 
 ### Regenerate <a id="regenerate"/>
 
@@ -254,21 +257,6 @@ A new user message. Produced by `Codec.createUserMessage` and surfaced via `View
 
 A signal to regenerate an existing assistant codec-message. Produced by `Codec.createRegenerate` and surfaced via `View.regenerate`.
 
-### Edit <a id="edit"/>
-
-<Table id='Edit'>
-
-| Property | Description | Type |
-| --- | --- | --- |
-| kind | Pinned to `'edit'`. | `'edit'` |
-| target | The codec-message-id to replace. Required. | String |
-| parent | The codec-message-id of the preceding codec-message on the new branch. Required. | String |
-| message | The replacement content in the codec's domain representation. | `TMessage` |
-
-</Table>
-
-A signal to replace an existing codec-message with new content. Codecs opt in to edit support by including this variant in their `TInput` union.
-
 ### ToolResult <a id="tool-result"/>
 
 <Table id='ToolResult'>
@@ -277,8 +265,7 @@ A signal to replace an existing codec-message with new content. Codecs opt in to
 | --- | --- | --- |
 | kind | Pinned to `'tool-result'`. | `'tool-result'` |
 | codecMessageId | The assistant codec-message containing the tool call. | String |
-| toolCallId | The tool call this result corresponds to. | String |
-| output | The tool's output value. Codec- and tool-defined shape. | `unknown` |
+| payload | Codec-defined domain payload describing the result. The Vercel codec uses `{ toolCallId, output }`; custom codecs pick their own shape. | `TPayload` |
 
 </Table>
 
@@ -292,12 +279,11 @@ A client-published tool result for a successful execution. Mutates the assistant
 | --- | --- | --- |
 | kind | Pinned to `'tool-result-error'`. | `'tool-result-error'` |
 | codecMessageId | The assistant codec-message containing the tool call. | String |
-| toolCallId | The tool call this error corresponds to. | String |
-| message | Human-readable description of the failure. | String |
+| payload | Codec-defined domain payload describing the failure. The Vercel codec uses `{ toolCallId, message }`. | `TPayload` |
 
 </Table>
 
-A client-published tool result for a failed execution. Codecs that want richer error shapes extend this interface with additional fields.
+A client-published tool result for a failed execution.
 
 ### ToolApprovalResponse <a id="tool-approval-response"/>
 
@@ -307,9 +293,7 @@ A client-published tool result for a failed execution. Codecs that want richer e
 | --- | --- | --- |
 | kind | Pinned to `'tool-approval-response'`. | `'tool-approval-response'` |
 | codecMessageId | The assistant codec-message containing the tool call. | String |
-| toolCallId | The tool call this approval responds to. | String |
-| approved | Whether the user approved the tool execution. | Boolean |
-| reason | Optional human-readable reason (typically used on denial). | String |
+| payload | Codec-defined domain payload describing the decision. The Vercel codec uses `{ toolCallId, approved, reason? }`. | `TPayload` |
 
 </Table>
 
@@ -381,14 +365,13 @@ import type {
   Codec,
   CodecInputEvent,
   CodecOutputEvent,
+  CodecMessage,
   ReducerMeta,
-  UserMessage,
-  Regenerate,
 } from '@ably/ai-transport';
 
 interface MyInput extends CodecInputEvent { kind: 'user-message'; message: MyMessage }
 interface MyOutput extends CodecOutputEvent { type: 'text-delta'; text: string }
-interface MyProjection { highWater: string; messages: MyMessage[] }
+interface MyProjection { highWater: string; messages: CodecMessage<MyMessage>[] }
 interface MyMessage { id: string; role: 'user' | 'assistant'; text: string }
 
 const myCodec: Codec<MyInput, MyOutput, MyProjection, MyMessage> = {
@@ -397,18 +380,18 @@ const myCodec: Codec<MyInput, MyOutput, MyProjection, MyMessage> = {
     if (meta.serial <= state.highWater) return state;
     state.highWater = meta.serial;
     if ('kind' in event && event.kind === 'user-message') {
-      state.messages.push(event.message);
+      state.messages.push({ codecMessageId: meta.messageId ?? event.message.id, message: event.message });
     } else if ('type' in event && event.type === 'text-delta') {
       const last = state.messages.at(-1);
-      if (last?.role === 'assistant') last.text += event.text;
+      if (last?.message.role === 'assistant') last.message.text += event.text;
     }
     return state;
   },
   createEncoder: (channel, options) => buildEncoder(channel, options),
   createDecoder: () => buildDecoder(),
   getMessages: (projection) => projection.messages,
-  createUserMessage: (message): UserMessage<MyMessage> => ({ kind: 'user-message', message }),
-  createRegenerate: (target, parent): Regenerate => ({ kind: 'regenerate', target, parent }),
+  createUserMessage: (message) => ({ kind: 'user-message', message }),
+  createRegenerate: (target, parent) => ({ kind: 'regenerate', target, parent }),
 };
 ```
 </Code>
