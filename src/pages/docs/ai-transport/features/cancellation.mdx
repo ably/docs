@@ -9,24 +9,30 @@ redirect_from:
 
 Cancellation is a turn-level operation. The client publishes a cancel signal on the Ably channel; the agent receives it on the run with the matching `runId` and fires its abort signal. Unlike closing an HTTP connection, cancellation is an explicit signal: the session remains intact, other runs continue, and both sides handle cleanup gracefully.
 
+![Diagram showing a cancel signal stopping the in-progress Run](../../../../images/content/diagrams/ait-cancellation.png)
+
 A minimal cancel:
 
 <Code>
 ```javascript
-await session.cancel(activeRun.runId);
+await activeRun.cancel();
 ```
 </Code>
 
 ## How it works <a id="how-it-works"/>
 
-Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message naming a `runId`. The agent's run with that id fires its `abortSignal`. The LLM stream stops, the run ends with reason `'cancelled'`, and every subscriber receives the lifecycle update.
+Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message keyed on the triggering input's `codec-message-id` (the synchronous handle the client owns from send time). The agent's run, once it has been minted, fires its `abortSignal`. The LLM stream stops, the run ends with reason `'cancelled'`, and every subscriber receives the lifecycle update. A cancel published before the agent has minted the run-id is still honoured: the agent buffers it and fires once the input-event lookup resolves.
 
 <Code>
 ```javascript
-// Client: cancel the current run
+// Client: cancel the current run.
+// activeRun.cancel() works immediately, even before the runId
+// promise on activeRun has resolved.
 await activeRun.cancel();
-// or, by id, from anywhere with a reference to the session:
-await session.cancel(activeRun.runId);
+
+// Or, when you already have a resolved runId (for example from a RunInfo
+// in view.runs()):
+await session.cancel(someRunInfo.runId);
 
 // Server: abort signal fires automatically
 const result = streamText({
@@ -37,13 +43,10 @@ const result = streamText({
 
 ## Cancel one run, several, or all <a id="cancel-filters"/>
 
-Cancel targets a single `runId`. To cancel several runs, iterate over the ones you want:
+`activeRun.cancel()` targets the run the client just kicked off. To cancel several runs, iterate the visible Runs and cancel each by id:
 
 <Code>
 ```javascript
-// Cancel a specific run
-await session.cancel(activeRun.runId);
-
 // Cancel all active runs in the visible view (Stop button)
 const active = session.view.runs().filter((r) => r.status === 'active');
 await Promise.all(active.map((r) => session.cancel(r.runId)));

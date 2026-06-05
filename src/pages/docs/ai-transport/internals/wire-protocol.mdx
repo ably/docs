@@ -10,18 +10,20 @@ AI Transport communicates through Ably channel messages. Every message carries h
 A typical Run produces the following sequence on the channel:
 
 ```text
-Client publishes input event
+Client publishes input event (no run-id on a fresh send)
   name: ai-input
-  extras.ai.transport: { event-id=E1, run-id=R1, codec-message-id=M1, role=user, parent=M0 }
+  extras.ai.transport: { event-id=E1, codec-message-id=M1, role=user, parent=M0 }
   extras.ai.codec:     { stream=false }
 
-Agent publishes run-start (invocation-id minted by createRun)
+Agent publishes run-start (run-id and invocation-id minted by createRun)
   name: ai-run-start
-  extras.ai.transport: { run-id=R1, invocation-id=I1, run-client-id=user-abc, input-client-id=user-abc }
+  extras.ai.transport: { run-id=R1, invocation-id=I1, run-client-id=user-abc, input-client-id=user-abc,
+                         input-codec-message-id=M1 }
 
 Agent publishes assistant stream create
   name: ai-output
-  extras.ai.transport: { run-id=R1, invocation-id=I1, codec-message-id=M2, role=assistant, parent=M1 }
+  extras.ai.transport: { run-id=R1, invocation-id=I1, codec-message-id=M2, role=assistant, parent=M1,
+                         input-codec-message-id=M1 }
   extras.ai.codec:     { stream=true, stream-id=S1, status=streaming }
 
 Agent appends text deltas to M2
@@ -37,7 +39,9 @@ Agent publishes run-end
   extras.ai.transport: { run-id=R1, invocation-id=I1, run-reason=complete }
 ```
 
-A cancel inserts an `ai-cancel` message targeting the `run-id`. The agent's per-Run `AbortSignal` fires, the stream closes with `status=cancelled`, and the agent publishes `ai-run-end` with `run-reason=cancelled`.
+A cancel inserts an `ai-cancel` message keyed by the triggering input's `codec-message-id` (which the client owns from send time, before the agent has minted the `run-id`). The agent's per-Run `AbortSignal` fires once the input lookup resolves the input to the run, the stream closes with `status=cancelled`, and the agent publishes `ai-run-end` with `run-reason=cancelled`.
+
+A continuation (a tool result follow-up, a regenerate, a suspend resume) is different in one wire detail: the client knows the existing `run-id` already, so it stamps it on the continuation input event under `extras.ai.transport.run-id`. The agent reads that header from the input event in its lookup and reuses it as the Run's id; on a fresh send the input event omits `run-id` and the agent mints one in `createRun`.
 
 ## Header tiers <a id="header-tiers"/>
 
@@ -49,7 +53,7 @@ Transport headers carry the routing and identity that the transport layer reads.
 
 | Header | Description |
 | --- | --- |
-| `run-id` | Run correlation. Set on every message in a Run. |
+| `run-id` | Run correlation. Minted by the agent inside `session.createRun(invocation)` for a fresh run, and stamped on every event the agent publishes. Continuation client publishes also carry it (the client knows the existing `run-id` from `ActiveRun.runId` and stamps it on the continuation input event); the agent reads it from the input event's wire headers to reuse the existing Run rather than minting a fresh one. Absent on the first `ai-input` of a fresh send. |
 | `invocation-id` | Per-HTTP-request identifier. Minted by the agent inside `session.createRun(invocation)` (one per HTTP request) and stamped on every event the agent publishes for that invocation (lifecycle + outputs). Not present on client `ai-input` events; the application returns it on the HTTP response so the caller can observe it. |
 | `event-id` | Per-event identifier on client publishes. The invocation body carries the triggering `event-id` so the agent's `Run.start()` knows which event to wait for. Distinct from `codec-message-id` so edits and retries that reuse the same `codec-message-id` still carry a fresh per-send identity. |
 | `codec-message-id` | Message identity in the conversation tree. Used for branch anchoring (edit forks at the user's `codec-message-id`, regenerate forks at the assistant's), for optimistic reconciliation, and for stream append targeting. |
@@ -60,7 +64,6 @@ Transport headers carry the routing and identity that the transport layer reads.
 | `fork-of` | The `codec-message-id` this message replaces. Present on edits. |
 | `msg-regenerate` | The `codec-message-id` of the assistant message this Run regenerates. Stamped on the regenerate input and echoed on `ai-run-start`. |
 | `run-reason` | The reason a Run ended. Present on `ai-run-end`. One of `complete`, `cancelled`, `error`. A suspended Run uses the `ai-run-suspend` event instead and is not terminal. |
-| `run-continue` | Literal `'true'` stamped by the client on a continuation `ai-input` (for example, a tool-result follow-up under the same `run-id`). The agent reads it to decide whether to publish `ai-run-start` (first start) or `ai-run-resume` (continuation). |
 | `error-code` | Numeric error code on `ai-run-end` with `run-reason: error`. |
 | `error-message` | Human-readable error message on `ai-run-end` with `run-reason: error`. |
 
@@ -91,7 +94,6 @@ Every header constant is exported from `@ably/ai-transport` as `HEADER_*`:
 | `HEADER_FORK_OF` | `'fork-of'` |
 | `HEADER_MSG_REGENERATE` | `'msg-regenerate'` |
 | `HEADER_RUN_REASON` | `'run-reason'` |
-| `HEADER_RUN_CONTINUE` | `'run-continue'` |
 | `HEADER_ERROR_CODE` | `'error-code'` |
 | `HEADER_ERROR_MESSAGE` | `'error-message'` |
 | `HEADER_STREAM` | `'stream'` |
@@ -109,7 +111,7 @@ Every AI Transport message rides one of five Ably message names. The codec event
 | `ai-output` | Agent | Every agent-published codec event (text deltas, reasoning, tool calls, file or source parts, data chunks). |
 | `ai-run-start` | Agent | Run lifecycle. The agent publishes this once, for the first start of a Run, before any `ai-output`. |
 | `ai-run-suspend` | Agent | Run lifecycle. The agent pauses the Run pending external input (a tool approval, a human-in-the-loop response). The Run is not terminal; a continuation Invocation resumes it. |
-| `ai-run-resume` | Agent | Run lifecycle. The agent publishes this when a continuation Invocation re-activates a Run (tool-result follow-up, suspended-Run resume), instead of a second `ai-run-start`. The client signals continuation by stamping `run-continue: 'true'` on the input event. |
+| `ai-run-resume` | Agent | Run lifecycle. The agent publishes this when a continuation Invocation re-activates a Run (tool-result follow-up, suspended-Run resume), instead of a second `ai-run-start`. The agent detects the continuation by reading the existing `run-id` off the triggering input event's wire headers; a fresh input event omits `run-id` and produces `ai-run-start`. |
 | `ai-run-end` | Agent | Run lifecycle. Closes the Run terminally with one of `complete`, `cancelled`, `error`. |
 | `ai-cancel` | Client | Cancel intent, targeting a specific `run-id`. The agent matches against its registered Runs and fires the matching `AbortSignal`. |
 
@@ -128,7 +130,8 @@ channel.publish('ai-input', {
   extras: {
     ai: {
       transport: {
-        'run-id': 'R1',
+        // No run-id on a fresh send (the agent mints it). Continuations stamp the
+        // existing run-id here so the agent reuses it instead of minting fresh.
         'event-id': 'E1',
         'codec-message-id': 'M1',
         role: 'user',
@@ -160,14 +163,16 @@ Edit and regenerate forks are message-anchored: the new Run's `fork-of` (for an 
 
 When a client sends, the SDK mints two identifiers on the publishing side:
 
-- `runId`: fresh per send, or reused via `SendOptions.runId` for a continuation (tool result, regenerate).
-- `inputEventId`: one per published input event. The last event in the send becomes the trigger.
+- `inputEventId`: one per published input event. The last event in the send becomes the trigger the agent waits on.
+- `codecMessageId`: identity for the new message in the conversation tree. Surfaced on the returned `ActiveRun` as `inputCodecMessageId` so the client can route the agent's outputs back to the input it owned at send time.
 
-Both are written to the channel under `extras.ai.transport`. The SDK does not POST to the agent endpoint itself; the developer (or the bundled [Vercel `ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport)) calls `activeRun.toInvocation().toJSON()` to obtain an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ runId, inputEventId, sessionName }`) and POSTs it to the agent.
+For continuations only, the client also stamps the existing `run-id` on the input event's wire headers (the client knows it from the previous `ActiveRun.runId`). Fresh sends omit `run-id` and leave the agent to mint it.
 
-On the agent side, `session.createRun(invocation)` mints the `invocationId` (one per HTTP request), exposes it as `Run.invocationId`, and stamps it on every event the agent publishes for this invocation. `Run.start()` attaches the channel with rewind and waits for the trigger `event-id` carried in the invocation body to arrive (live or via rewind). The rewind window is configured by `rewindWindow` on `AgentSessionOptions`; the lookup timeout is `inputEventLookupTimeoutMs`. If the lookup lapses, `Run.start()` rejects with [`InputEventNotFound`](/docs/ai-transport/api/errors).
+The SDK does not POST to the agent endpoint itself; the developer (or the bundled [Vercel `ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport)) calls `activeRun.toInvocation().toJSON()` to obtain an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ inputEventId, sessionName }`) and POSTs it to the agent.
 
-The agent's outputs carry `input-codec-message-id` (the `codec-message-id` of the triggering input) under `extras.ai.transport`. The client uses this to correlate outputs back to the input it owned at send time, so `ActiveRun.started` resolves. The application returns `run.invocationId` on the HTTP response so the caller can observe the agent-minted id directly.
+On the agent side, `session.createRun(invocation)` mints the `invocationId` (one per HTTP request) and either mints a fresh `runId` (no `run-id` on the input event) or reads the existing `runId` off the triggering input event's wire headers (continuation). Both are stamped on every event the agent publishes for this invocation. `Run.start()` attaches the channel with rewind and waits for the trigger `event-id` carried in the invocation body to arrive (live or via rewind). The rewind window is configured by `rewindWindow` on `AgentSessionOptions`; the lookup timeout is `inputEventLookupTimeoutMs`. If the lookup lapses, `Run.start()` rejects with [`InputEventNotFound`](/docs/ai-transport/api/errors).
+
+The agent's outputs carry `input-codec-message-id` (the `codec-message-id` of the triggering input) under `extras.ai.transport`. The client uses this to correlate outputs back to the input it owned at send time, so `ActiveRun.runId` resolves once `ai-run-start` lands. The application returns `run.runId` and `run.invocationId` on the HTTP response so the caller can observe the agent-minted ids directly.
 
 This is the mechanism that lets a serverless agent publish a Run reliably even when the channel publish and the HTTP POST race: the agent waits on the channel until the input event lands, then proceeds.
 

@@ -35,7 +35,7 @@ await run.start();
 
 ## Create an agent session <a id="constructor"/>
 
-<MethodSignature>{`function createAgentSession<TInput, TOutput, TProjection, TMessage>(options: AgentSessionOptions<TInput, TOutput, TProjection, TMessage>): AgentSession<TInput, TOutput, TProjection, TMessage>`}</MethodSignature>
+<MethodSignature>{`function createAgentSession<TInput, TOutput, TProjection, TMessage>(options: AgentSessionOptions<TInput, TOutput, TProjection, TMessage>): AgentSession<TOutput, TProjection, TMessage>`}</MethodSignature>
 
 Construct an `AgentSession` bound to an Ably channel. The session does not attach until [`connect()`](#connect) resolves.
 
@@ -74,7 +74,7 @@ const session = createAgentSession({
 
 ### Returns <a id="constructor-returns"/>
 
-`AgentSession<TInput, TOutput, TProjection, TMessage>`. The session instance. Call [`connect()`](#connect) before [`createRun`](#create-run).
+`AgentSession<TOutput, TProjection, TMessage>`. The session instance. Call [`connect()`](#connect) before [`createRun`](#create-run).
 
 ## Connect the session <a id="connect"/>
 
@@ -94,7 +94,7 @@ await session.connect();
 
 ## Create a run <a id="create-run"/>
 
-<MethodSignature>{`createRun(invocation: Invocation, runtime?: RunRuntime<TOutput>): Run<TInput, TOutput, TProjection, TMessage>`}</MethodSignature>
+<MethodSignature>{`createRun(invocation: Invocation, runtime?: RunRuntime<TOutput>): Run<TOutput, TProjection, TMessage>`}</MethodSignature>
 
 Create a new `Run` from an `Invocation`. Synchronous: no channel activity until [`Run.start`](#run-start) is called. The Run is registered for cancel routing immediately so early cancels fire the `abortSignal`.
 
@@ -120,8 +120,7 @@ const run = session.createRun(invocation, { signal: req.signal });
 
 | Property | Description | Type |
 | --- | --- | --- |
-| runId | The Run this invocation creates. | String |
-| inputEventId | The specific input event on the channel that triggered this invocation. | String |
+| inputEventId | The specific input event on the channel that triggered this invocation. Run identity is resolved from that event's wire headers. | String |
 | sessionName | Logical name of the session, used as the Ably channel name. | String |
 
 </Table>
@@ -131,6 +130,7 @@ const run = session.createRun(invocation, { signal: req.signal });
 | Property | Description | Type |
 | --- | --- | --- |
 | invocationId | Override the invocation id for this Run. Defaults to a fresh `crypto.randomUUID()` (the normal path; one per HTTP request). Supply a non-empty value for deterministic ids in tests. | String |
+| runId | Override the run id for a fresh run. Defaults to a fresh `crypto.randomUUID()`. Continuations ignore this and read the existing `runId` off the triggering input event. Supply a non-empty value for deterministic ids in tests. | String |
 | signal | External `AbortSignal` (typically the HTTP request's `req.signal`) that cancels the run when fired. | `AbortSignal` |
 | onMessage | Called before each Ably message is published. Mutate the message in place to add custom headers under `extras.ai`. | `(message: Ably.Message) => void` |
 | onCancelled | Called when the run is cancelled. Receives a `write` function to publish final outputs before cancellation finalises. | `(write) => void \| Promise<void>` |
@@ -141,7 +141,7 @@ const run = session.createRun(invocation, { signal: req.signal });
 
 ### Returns <a id="create-run-returns"/>
 
-A `Run<TInput, TOutput, TProjection, TMessage>` handle for publishing lifecycle events, user messages, and streamed output. See [Run interface](#run) below.
+A `Run<TOutput, TProjection, TMessage>` handle for publishing lifecycle events, user messages, and streamed output. See [Run interface](#run) below.
 
 ## Run <a id="run"/>
 
@@ -321,8 +321,7 @@ const invocation = Invocation.fromJSON(data);
 
 | Property | Description | Type |
 | --- | --- | --- |
-| runId | Identifier for the Run this invocation creates or continues. | String |
-| inputEventId | Identifier for the input event on the channel that triggered this invocation. | String |
+| inputEventId | Identifier for the input event on the channel that triggered this invocation. Run identity is resolved from that event's wire headers, not from the body. | String |
 | sessionName | Logical name of the session, used as the Ably channel name. | String |
 
 </Table>
@@ -331,9 +330,9 @@ const invocation = Invocation.fromJSON(data);
 
 `Run.messages` returns different content depending on lifecycle stage:
 
-- **Before [`start`](#run-start) resolves**: empty array.
-- **After `start`**: the user-prompt messages looked up on the channel for this invocation.
-- **After [`loadConversation`](#load-conversation)**: the full multi-turn conversation, with ancestor Run messages followed by the current Run's messages, oldest turn first.
+- Before [`start`](#run-start) resolves: empty array.
+- After `start`: the user-prompt messages looked up on the channel for this invocation.
+- After [`loadConversation`](#load-conversation): the full multi-turn conversation, with ancestor Run messages followed by the current Run's messages, oldest turn first.
 
 Use [`loadConversation`](#load-conversation) before piping to the LLM in any conversation past the first turn.
 
@@ -382,7 +381,7 @@ export async function POST(req: Request) {
     session.close();
   }
 
-  return Response.json({ invocationId: run.invocationId });
+  return Response.json({ runId: run.runId, invocationId: run.invocationId });
 }
 ```
 </Code>

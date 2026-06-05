@@ -7,6 +7,8 @@ intro: "Your application runs multiple AI request-response cycles on one session
 
 Concurrent turns let multiple request-response cycles run at the same time on one session. Each turn has its own stream, cancel handle, and lifecycle. This is what makes interruption, multi-user sessions, and multi-agent architectures possible.
 
+![Diagram showing two concurrent Runs multiplexed on a single channel by runId](../../../../images/content/diagrams/ait-concurrent-turns.png)
+
 ## How it works <a id="how-it-works"/>
 
 Turns are multiplexed on the Ably channel via `runId`. Every message published during a [Run](/docs/ai-transport/concepts/runs) (text deltas, tool calls, lifecycle events) carries a header identifying its Run. The client session reads these headers and routes each message to the correct Run's stream.
@@ -78,11 +80,11 @@ The view updates in real time across every connected client. A Run that starts o
 
 ## Cancel one run without touching the others <a id="scoped-cancellation"/>
 
-Cancel by `runId`:
+Cancel via the handle the client owns synchronously:
 
 <Code>
 ```javascript
-await session.cancel(run1.runId);
+await run1.cancel();
 // run2 continues streaming
 ```
 </Code>
@@ -101,7 +103,7 @@ See [cancellation](/docs/ai-transport/features/cancellation) for the full cancel
 
 ## Wait for runs to complete <a id="waiting-for-runs"/>
 
-Each `ActiveRun` exposes `started: Promise<void>` (resolves when the agent's `ai-run-start` is observed). To wait for a Run to terminate, subscribe to the session tree's `run` events and resolve on a matching `end`:
+Each `ActiveRun` exposes `runId: Promise<string>` (resolves with the agent-minted id once `ai-run-start` is observed). To wait for a Run to terminate, await the id and then subscribe to the session tree's `run` events:
 
 <Code>
 ```javascript
@@ -117,7 +119,8 @@ function whenRunEnds(session, runId) {
 }
 
 const run1 = await view.sendMessage({ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Hello' }] });
-await whenRunEnds(session, run1.runId);
+const run1Id = await run1.runId;
+await whenRunEnds(session, run1Id);
 ```
 </Code>
 
