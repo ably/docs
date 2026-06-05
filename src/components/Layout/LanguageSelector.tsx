@@ -64,19 +64,35 @@ const SingleLanguageSelector = () => {
   };
 
   if (!selectedOption) {
-    return <Skeleton className="w-[180px] h-5 my-[9px]" />;
+    return <Skeleton className="w-[195px] h-5 my-[9px]" />;
   }
 
   const selectedLang = languageInfo[selectedOption.label];
+
+  // With only one language available there is nothing to choose between, so render a
+  // static, non-interactive element. It keeps the same bordered styling as the dropdown
+  // trigger but drops the chevron and any dropdown behaviour.
+  if (options.length <= 1) {
+    return (
+      <div className="flex items-center md:relative w-full">
+        <div className={cn(secondaryButtonClassName, 'gap-1.5')} aria-label="Code language">
+          <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+          <span className="font-semibold">{selectedLang?.label}</span>
+          <Badge color="neutral" size="xs" className="my-px">
+            v{selectedOption.version}
+          </Badge>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center md:relative w-full">
       <Select.Root value={value} onValueChange={handleValueChange}>
         <Select.Trigger asChild>
           <button
-            className={cn(secondaryButtonClassName, 'gap-1.5', options.length > 1 ? 'cursor-pointer' : 'cursor-auto')}
+            className={cn(secondaryButtonClassName, 'gap-1.5 w-[195px] justify-start cursor-pointer')}
             aria-label="Select code language"
-            disabled={options.length === 1}
           >
             <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
             <span className="font-semibold">{selectedLang?.label}</span>
@@ -84,7 +100,7 @@ const SingleLanguageSelector = () => {
               v{selectedOption.version}
             </Badge>
             {options.length > 1 && (
-              <Select.Icon className="flex items-center">
+              <Select.Icon className="flex items-center ml-auto">
                 <Icon name="icon-gui-chevron-down-solid" size="12px" />
               </Select.Icon>
             )}
@@ -211,6 +227,24 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
   }
 
   const selectedLang = languageInfo[selectedOption.label];
+
+  // With only one language available there is nothing to choose between, so render a
+  // static, non-interactive element. It keeps the same bordered styling as the dropdown
+  // trigger but drops the chevron and any dropdown behaviour.
+  if (options.length <= 1) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 whitespace-nowrap">{label}</span>
+        <div className={cn(secondaryButtonClassName, 'gap-1.5')} aria-label={`${label} language`}>
+          <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+          <span className="font-semibold">{selectedLang?.label}</span>
+          <Badge color="neutral" size="xs" className="my-px">
+            v{selectedOption.version}
+          </Badge>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2">

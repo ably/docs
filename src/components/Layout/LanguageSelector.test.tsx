@@ -142,6 +142,25 @@ describe('LanguageSelector', () => {
     expect(screen.getByText('Python')).toBeInTheDocument();
   });
 
+  it('renders a static label without a dropdown when only one language is available', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        tree: [0],
+        languages: ['javascript'],
+        language: 'javascript',
+      },
+      products: [['pubsub']],
+    });
+
+    render(<LanguageSelector />);
+
+    expect(screen.getByText('JavaScript')).toBeInTheDocument();
+    expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
+    // No dropdown chevron and no combobox trigger when there is nothing to choose between.
+    expect(screen.queryByText('icon-gui-chevron-down-solid')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
   it('navigates when a language option is selected', async () => {
     render(<LanguageSelector />);
     const trigger = screen.getByRole('combobox', { name: /select code language/i });
