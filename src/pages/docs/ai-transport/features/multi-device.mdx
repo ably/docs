@@ -40,10 +40,10 @@ The client session separates Runs initiated by the current client from those by 
 
 | Type | Origin | Handle |
 | --- | --- | --- |
-| Own Run | This client sent the HTTP POST that created the Run. | An `ActiveRun` returned from `view.send`, with a `stream` and a `cancel()` method. |
-| Observer Run | Another client or agent created the Run. | Lifecycle events and streamed messages only; no direct stream handle. |
+| Own Run | This client sent the HTTP POST that created the Run. | An `ActiveRun` returned from `view.send`, with `runId`, `inputCodecMessageId`, `cancel()`, and `toInvocation()`. |
+| Observer Run | Another client or agent created the Run. | Lifecycle events and folded outputs through the tree; no per-client handle. |
 
-Both types appear in the conversation tree and the UI. The difference is internal routing: own Runs have a dedicated stream, observer Runs accumulate from channel messages. `RunInfo.clientId` on the view tells you which client started any given Run.
+Both types appear in the conversation tree and the UI. Folded outputs flow through the tree the same way regardless of origin; `RunInfo.clientId` on the view tells you which client started any given Run.
 
 ## Track active runs across clients <a id="active-runs"/>
 
@@ -101,11 +101,11 @@ const token = jwt.sign({
 ```
 </Code>
 
-The `clientId` is used throughout: turn ownership, cancel scoping (`{ own: true }` filters by the sender's client ID), and active turn tracking. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
+The `clientId` is used throughout: turn ownership, cancel authorisation in the agent's `onCancel` hook, and active turn tracking. Filter `view.runs()` by `clientId === ably.auth.clientId` when you want to act on this client's own Runs only. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- Two clients sharing the same `clientId` are indistinguishable to the transport. Cancel signals scoped to `{ own: true }` cancel turns from both. Use a unique `clientId` per device when ownership matters.
+- Two clients sharing the same `clientId` are indistinguishable to the transport. A cancel filter that keys on `clientId` (for example "cancel only my own Runs") cancels Runs from both. Use a unique `clientId` per device when ownership matters.
 - A late joiner without channel history capability sees the live stream but not the conversation that came before. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
 - A client that loses connectivity mid-stream resumes its own view on reconnect. Other clients' views are unaffected.
 - Two devices sending messages at the same time create two separate turns on the same session. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for the multiplexing model.

@@ -31,11 +31,13 @@ if (outcome === 'suspend') {
 
 <MethodSignature>{`vercelRunOutcome(pipeResult: StreamResult, finishReason: PromiseLike<FinishReason>): Promise<RunEndReason | 'suspend'>`}</MethodSignature>
 
-The helper applies three rules in order:
+The helper applies two rules:
 
 1. If `pipeResult.reason` is `'cancelled'` or `'error'`, return it as-is. The transport already knows the run ended for a non-completion reason.
-2. If `pipeResult.reason` is `'complete'`, await `finishReason` and return `'suspend'` for `'tool-calls'`. Any other Vercel finish reason returns `'complete'`.
-3. If `finishReason` rejects, classify the rejection. Abort-shaped errors return `'cancelled'`. Anything else (for example `NoOutputGeneratedError`) returns `'error'`.
+2. If `pipeResult.reason` is `'complete'`, await `finishReason` and translate:
+   - `'tool-calls'` returns `'suspend'`. The LLM requested tools the SDK did not auto-execute, so the run should pause for the next client-published tool result.
+   - Any other Vercel finish reason returns `'complete'`.
+   - If `finishReason` rejects, classify the rejection: abort-shaped errors return `'cancelled'`; anything else (for example `NoOutputGeneratedError`) returns `'error'`.
 
 The rejection guard matters: Vercel AI SDK v6 rejects `streamText().finishReason` with the abort signal's reason when the stream is aborted before any step completes, and with `NoOutputGeneratedError` when the model produced nothing at all. Without the guard the rejection would bubble out of the route handler, skip `Run.end`, and leave the run with no `ai-run-end` event on the channel.
 
@@ -72,8 +74,8 @@ A Vercel route handler that runs a tool-capable model, pipes the stream, and eit
 import * as Ably from 'ably';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { createAgentSession, Invocation } from '@ably/ai-transport';
-import { vercelRunOutcome } from '@ably/ai-transport/vercel';
+import { Invocation } from '@ably/ai-transport';
+import { createAgentSession, vercelRunOutcome } from '@ably/ai-transport/vercel';
 
 const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
 

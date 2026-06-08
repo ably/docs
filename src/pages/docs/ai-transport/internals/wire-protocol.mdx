@@ -27,11 +27,11 @@ Agent publishes assistant stream create
   extras.ai.codec:     { stream=true, stream-id=S1, status=streaming }
 
 Agent appends text deltas to M2
-  name: ai-output  (channel.appendMessage)
+  channel.appendMessage on the assistant message's serial
   extras.ai.codec:     { stream-id=S1, status=streaming }
 
 Agent closes the stream
-  name: ai-output  (channel.updateMessage)
+  name: ai-output  (channel.appendMessage with status=complete)
   extras.ai.codec:     { stream-id=S1, status=complete }
 
 Agent publishes run-end
@@ -78,15 +78,12 @@ Codec headers carry the stream lifecycle the codec encoder and decoder read. The
 | `status` | Lifecycle status of a streamed message. One of `streaming`, `complete`, `cancelled`. Set only when `stream` is `'true'`. |
 | `discrete` | Marks a message as a discrete part. Set by `publishDiscreteBatch`; not set on lifecycle events from `publishDiscrete`. |
 
-Every header constant is exported from `@ably/ai-transport` as `HEADER_*`:
+The following header constants are exported from `@ably/ai-transport` as `HEADER_*`:
 
 | Constant | Value |
 | --- | --- |
 | `HEADER_RUN_ID` | `'run-id'` |
-| `HEADER_INVOCATION_ID` | `'invocation-id'` |
-| `HEADER_EVENT_ID` | `'event-id'` |
 | `HEADER_CODEC_MESSAGE_ID` | `'codec-message-id'` |
-| `HEADER_INPUT_CODEC_MESSAGE_ID` | `'input-codec-message-id'`. Stamped on agent outputs to echo the triggering input's `codec-message-id`, so the client can correlate by an id it owned at send time. |
 | `HEADER_RUN_CLIENT_ID` | `'run-client-id'` |
 | `HEADER_INPUT_CLIENT_ID` | `'input-client-id'` |
 | `HEADER_ROLE` | `'role'` |
@@ -99,11 +96,12 @@ Every header constant is exported from `@ably/ai-transport` as `HEADER_*`:
 | `HEADER_STREAM` | `'stream'` |
 | `HEADER_STREAM_ID` | `'stream-id'` |
 | `HEADER_STATUS` | `'status'` |
-| `HEADER_DISCRETE` | `'discrete'` |
+
+The remaining wire headers (`invocation-id`, `event-id`, `input-codec-message-id`, `discrete`) are SDK internals and not part of the exported constant surface. The SDK reads and writes them through the `getTransportHeaders` and `getCodecHeaders` utilities.
 
 ## Event names <a id="event-names"/>
 
-Every AI Transport message rides one of five Ably message names. The codec event's own `type` is carried in the `codec-type` domain header so the decoder can dispatch.
+AI Transport uses seven Ably message names. The decoder dispatches on the Ably message `name` (and the `stream` header to distinguish discrete from streamed content), not on a separate codec-type header.
 
 | Event | Direction | Description |
 | --- | --- | --- |
@@ -149,7 +147,7 @@ A streamed message is published incrementally. It uses three Ably operations:
 
 1. `channel.publish('ai-output', ...)` with `stream: 'true'` and `status: 'streaming'`. The publish returns a serial that the encoder captures.
 2. `channel.appendMessage(...)` for each token, using the captured serial. The append carries the codec payload and the `stream-id`.
-3. `channel.updateMessage(...)` to close the stream with `status: 'complete'` (or `'cancelled'`).
+3. A final `channel.appendMessage(...)` with `status: 'complete'` (or `'cancelled'`) closes the stream. `channel.updateMessage(...)` is only used as a recovery path when an intermediate append failed and the encoder needs to flush the accumulated payload.
 
 A subscriber that joins mid-stream sees the latest accumulated state of the message on attach (Ably stores the rollup) and then live appends after that. The decoder treats the on-attach state as the current full state and accumulates from there.
 

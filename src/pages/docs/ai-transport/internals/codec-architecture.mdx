@@ -79,39 +79,39 @@ The encoder converts outbound events into Ably publish operations. It exposes fo
 
 | Method | Purpose |
 | --- | --- |
-| `publishInput(events, options)` | Publish one or more `TInput` events on `ai-input`. Discrete publishes; one Ably message per event. Stamps `event-id`, `codec-message-id`, and routing headers under `extras.ai.transport`. |
-| `publishOutput(events, options)` | Publish one or more `TOutput` events on `ai-output`. Streams when the codec's reducer marks events as appendable; otherwise publishes discretely. |
-| `cancel(reason)` | Close any in-flight streams with `status: 'cancelled'`. |
+| `publishInput(input, options?)` | Publish a single `TInput` event on `ai-input`. Stamps the codec-message-id and merges per-write headers under `extras.ai.transport`. |
+| `publishOutput(output, options?)` | Publish a single `TOutput` event on `ai-output`. Streams when the codec marks the event as appendable; otherwise publishes discretely. |
+| `cancel(reason?)` | Close any in-flight streams with `status: 'cancelled'`. |
 | `close()` | Flush pending appends, close active streams, release resources. |
 
 ### Streamed mode
 
-For events the codec's reducer marks as appendable (text deltas, reasoning deltas), the encoder runs a three-step pipeline per stream:
+For events the codec marks as appendable (text deltas, reasoning deltas), the encoder runs a three-step pipeline per stream, exposed through the encoder core as `startStream`, `appendStream`, and `closeStream`:
 
-1. `publishOutput` of the first event in the stream calls `channel.publish` with `stream: 'true'`, `status: 'streaming'`, and a fresh `stream-id`. The publish returns a serial; the encoder retains it for subsequent appends.
-2. Each subsequent appendable event calls `channel.appendMessage` with the captured serial and the codec payload.
-3. When the reducer marks an event as terminal, the encoder calls `channel.updateMessage` with `status: 'complete'` (or `'cancelled'` on cancel).
+1. `startStream(streamId, payload)` calls `channel.publish` with `stream: 'true'`, `status: 'streaming'`, and the supplied `stream-id`. The publish returns a serial; the encoder core retains it for subsequent appends.
+2. Each subsequent appendable delta calls `appendStream(streamId, data)`, which fire-and-forgets `channel.appendMessage` with the captured serial.
+3. The terminal event calls `closeStream(streamId, payload)`, which writes a final `channel.appendMessage` with `status: 'complete'` (or `cancelStream(streamId)` writes `status: 'cancelled'`).
 
-Per-token append calls do not block the encoder. The encoder collects every append promise and awaits them as a batch when the stream closes. If any append rejected, the encoder writes a final `updateMessage` containing the full accumulated payload, so subscribers see the intended final state even when intermediate appends were lost.
+Per-token append calls do not block the encoder. The encoder collects every append promise and awaits them as a batch when the stream closes. If any append rejected, the encoder writes a recovery `channel.updateMessage` containing the full accumulated payload, so subscribers see the intended final state even when intermediate appends were lost.
 
 ### Discrete mode
 
-Client publishes (`publishInput`) and lifecycle events use discrete mode: one `channel.publish` per event, no appends. Discrete events still carry the codec payload and any per-event headers.
+Client publishes (`publishInput`) and lifecycle events use discrete mode: one `channel.publish` per event, no appends. Discrete events still carry the codec payload and any per-event headers. Codecs that need to publish several discrete messages atomically use `publishDiscreteBatch` from the encoder core to send them in a single channel publish.
 
 ## Decoder <a id="decoder"/>
 
-The decoder converts inbound Ably messages back into `TInput` or `TOutput` events. It dispatches on the message's Ably action.
+The decoder converts inbound Ably messages back into `TInput` or `TOutput` events. It dispatches on the inbound message's Ably action.
 
 | Action | Meaning | Decoder behaviour |
 | --- | --- | --- |
-| `create` | A new message arrived | Begin a new stream (or emit a discrete event). |
-| `append` | A token was appended | Emit an appended chunk for the matching `stream-id`. |
-| `update` | A message was updated | Update the stream state. If `status` is terminal, close the stream. |
-| `delete` | A message was removed | Remove the message from state. |
+| `message.create` | A new message arrived | Begin a new stream (when `stream: 'true'`) or hand the payload to the codec's discrete decode hook. |
+| `message.append` | A token was appended | Emit a delta for the matching `stream-id`; emit end events when the append carries `status: 'complete'`. |
+| `message.update` | A message was replaced | Prefix-match against the tracked stream. If the new data extends the accumulated text, emit the delta; otherwise treat as first-contact and accumulate. |
+| `message.delete` | A message was removed | Clear the stream's tracker state. |
 
-The decoder maintains a stream tracker that maps `stream-id` to its current state. A subscriber that joins mid-stream sees an `update` or `append` for a `stream-id` it has never seen the `create` for; the decoder treats the incoming state as the current full state and accumulates from there. The end state is the same as a subscriber that received every operation.
+The decoder maintains a stream tracker that maps Ably channel serial to its current state. A subscriber that joins mid-stream sees a `message.update` or `message.append` for a serial it has never seen the `message.create` for; the decoder treats the incoming state as the current full state and accumulates from there. The end state is the same as a subscriber that received every operation.
 
-`decode()` returns a `DecodedMessage<TInput, TOutput>`. The Tree feeds each decoded event through `Codec.fold(projection, event)` to update the owning Run's `TProjection`. `Codec.getMessages(projection)` materialises the projection into `CodecMessage<TMessage>[]`: each entry pairs the domain `message` with the SDK's client-minted `codecMessageId`. The View concatenates these across the visible Run chain, exposing the flat domain list as `getMessages()` and the paired list as `getMessagesWithIds()`.
+`decode()` returns a `DecodedMessage<TInput, TOutput>`. The Tree feeds each decoded event through `Codec.fold(projection, event)` to update the owning Run's `TProjection`. `Codec.getMessages(projection)` materialises the projection into `CodecMessage<TMessage>[]`: each entry pairs the domain `message` with the SDK's client-minted `codecMessageId`. The View concatenates these across the visible Run chain and exposes the pair list as `getMessages()`. There is no second naked-message accessor; callers that just need the domain objects map `.message`.
 
 ## Header tier story <a id="header-tier-story"/>
 
@@ -124,47 +124,78 @@ Codec headers (`stream`, `stream-id`, `status`, `discrete`) live under `extras.a
 To support a framework not covered by the SDK:
 
 1. Define your `TInput` and `TOutput` event shapes as subtypes of `CodecInputEvent` and `CodecOutputEvent`.
-2. Implement the `Codec<TInput, TOutput, TProjection, TMessage>` interface. The required methods are `createEncoder`, `createDecoder`, `fold` (per-Run reducer), `getMessages` (projection to messages), and `createUserMessage` (wrap a `TMessage` as a `UserMessage` input).
-3. Use `createEncoderCore` and `createDecoderCore` from `@ably/ai-transport` for the base publish and dispatch machinery; provide hooks that map your framework's event types to the core operations (discrete, stream-start, stream-append, stream-close).
+2. Implement the `Codec<TInput, TOutput, TProjection, TMessage>` interface. The required methods are `init` (initial per-Run projection), `fold` (reduce one event into the projection), `createEncoder`, `createDecoder`, `getMessages` (projection to messages), `createUserMessage` (wrap a `TMessage` as a `UserMessage` input), and `createRegenerate` (build a `Regenerate` input). The tool-resolution factories (`createToolResult`, `createToolResultError`, `createToolApprovalResponse`) are optional; implement them only if your `TInput` union includes those variants.
+3. Use `createEncoderCore` and `createDecoderCore` from `@ably/ai-transport` for the base publish and dispatch machinery. The encoder core exposes `publishDiscrete`, `publishDiscreteBatch`, `startStream`, `appendStream`, `closeStream`, `cancelStream`, and `cancelAllStreams`. The decoder core takes a `DecoderCoreHooks<TEvent>` object with `buildStartEvents`, `buildDeltaEvents`, `buildEndEvents`, and `decodeDiscrete` hooks.
 
 <Code>
 ```javascript
-import {
-  createEncoderCore,
-  createDecoderCore,
-  createLifecycleTracker,
-} from '@ably/ai-transport';
+import { createEncoderCore, createDecoderCore } from '@ably/ai-transport';
 
 const myCodec = {
+  init() {
+    return { messages: [], openStreams: new Map() };
+  },
+  fold(projection, event, meta) {
+    // reduce one event into the per-Run projection, using meta.serial for idempotency
+    return projection;
+  },
   createEncoder(channel, options) {
     const core = createEncoderCore(channel, options);
     return {
-      publishInput: async (events, opts) => core.publishDiscreteBatch(events, opts),
-      publishOutput: async (events, opts) => {
-        for (const ev of events) {
-          if (isAppendable(ev)) await core.appendStream(ev.streamId, ev, opts);
-          else await core.publishDiscrete(ev, opts);
+      publishInput: async (input, opts) =>
+        core.publishDiscrete(
+          { name: 'ai-input', data: input, codecHeaders: { 'codec-type': input.kind } },
+          opts,
+        ),
+      publishOutput: async (output, opts) => {
+        if (isStreamStart(output)) {
+          return core.startStream(output.id, { name: 'ai-output', data: output.delta ?? '' }, opts);
         }
+        if (isStreamDelta(output)) {
+          core.appendStream(output.id, output.delta);
+          return;
+        }
+        if (isStreamEnd(output)) {
+          return core.closeStream(output.id, { name: 'ai-output', data: '' });
+        }
+        return core.publishDiscrete({ name: 'ai-output', data: output }, opts);
       },
       cancel: () => core.cancelAllStreams(),
       close: () => core.close(),
     };
   },
   createDecoder() {
-    return createDecoderCore({
-      onCreate: (msg) => parsePayload(msg.data),
-      onAppend: (msg) => parsePayload(msg.data),
-      onUpdate: (msg) => parsePayload(msg.data),
+    const core = createDecoderCore({
+      buildStartEvents: (tracker) => [{ type: 'stream-start', id: tracker.streamId }],
+      buildDeltaEvents: (tracker, delta) => [{ type: 'stream-delta', id: tracker.streamId, delta }],
+      buildEndEvents: (tracker) => [{ type: 'stream-end', id: tracker.streamId }],
+      decodeDiscrete: (payload) => [payload.data],
     });
+    return {
+      decode: (message) => {
+        const events = core.decode(message);
+        // Tag each event as TInput or TOutput based on the wire name.
+        return message.name === 'ai-input'
+          ? { inputs: events, outputs: [] }
+          : { inputs: [], outputs: events };
+      },
+    };
   },
-  fold(projection, event) { /* reduce one event into the per-Run projection */ },
-  getMessages(projection) { /* return CodecMessage<TMessage>[] for rendering */ },
-  createUserMessage(message) { /* return a UserMessage<TMessage> */ },
+  getMessages(projection) {
+    // return CodecMessage<TMessage>[] for rendering
+    return projection.messages;
+  },
+  createUserMessage(message) {
+    return { kind: 'user-message', message };
+  },
+  createRegenerate(target, parent) {
+    return { kind: 'regenerate', target, parent };
+  },
 };
 ```
 </Code>
 
-See the [Codec API reference](/docs/ai-transport/api/javascript/core/codec) for the full interface.
+See the [Codec API reference](/docs/ai-transport/api/javascript/core/codec) for the full interface and signatures.
 
 ## Related pages <a id="related"/>
 

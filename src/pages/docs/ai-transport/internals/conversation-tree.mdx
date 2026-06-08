@@ -5,7 +5,7 @@ meta_keywords: "conversation tree, branching, fork, sibling resolution, regenera
 intro: "Internal mechanics of the conversation tree: the input-and-run two-node turn model, message-anchored sibling resolution, and how the View walks the tree to produce a flat message list."
 ---
 
-AI Transport models a conversation as a tree of two node kinds: an `InputNode` for every user prompt and a `RunNode` for every agent reply. Each turn is two nodes joined by a parent edge: the input node hangs off the previous reply, and the reply run hangs off its input. Each node holds a per-node codec projection folded from the events published under its key; the View walks the chosen branch and extracts a flat `TMessage[]` from those projections.
+AI Transport models a conversation as a tree of two node kinds: an `InputNode` for every user prompt and a `RunNode` for every agent reply. Each turn is two nodes joined by a parent edge: the input node hangs off the previous reply, and the reply run hangs off its input. Each node holds a per-node codec projection folded from the events published under its key; the View walks the chosen branch and extracts a flat `CodecMessage<TMessage>[]` from those projections. Each entry pairs the domain message with the codec-message-id the SDK keys on.
 
 A conversation with one edit and one regenerate looks like:
 
@@ -88,7 +88,7 @@ The result is ordered oldest-first by serial. It is a single-element array when 
 
 The View consumes this to compute `branchSelection(codecMessageId)`, which returns a `BranchSelection<TMessage>` bundle (`hasSiblings`, `siblings`, `index`, `selected`). The View's per-instance `selections` map records the selected sibling at each anchor; `selectSibling(codecMessageId, index)` updates it and emits an `'update'` event.
 
-## Walking the tree <a id="walking-the-tree"/>
+## Walk the tree <a id="walking-the-tree"/>
 
 The View walks the tree to produce a flat ordered list of nodes along the currently selected branch:
 
@@ -98,13 +98,13 @@ The View walks the tree to produce a flat ordered list of nodes along the curren
 4. Move to the selected node's children: nodes whose `parentCodecMessageId` is the current node's primary key.
 5. Stop when there are no children.
 
-The View concatenates each visible node's messages from `codec.getMessages(node.projection)`, then applies regenerate substitution: when the visible chain contains both an original reply and its regenerate sibling, the regenerate's content replaces the original in the rendered message list. The result is a linear list of `TMessage` representing the currently selected conversation.
+The View concatenates each visible node's messages from `codec.getMessages(node.projection)`, then applies regenerate substitution: when the visible chain contains both an original reply and its regenerate sibling, the regenerate's content replaces the original in the rendered message list. The result is a `CodecMessage<TMessage>[]` representing the currently selected conversation. Each pair carries the domain message and its codec-message-id.
 
 ## Serial ordering and optimistic reconciliation <a id="serial-ordering-and-optimistic-reconciliation"/>
 
 Messages within a node are ordered by their Ably serial. The serial is the total order Ably assigns on the channel, consistent across all subscribers. Optimistic messages do not have a serial when first inserted; they sort after every confirmed message until the server publish lands. When the published event arrives the Tree promotes the placeholder to the real serial and re-sorts. In practice the change is invisible because the optimistic message was published moments before the confirmation.
 
-## Querying the tree <a id="querying-the-tree"/>
+## Query the tree <a id="querying-the-tree"/>
 
 The `Tree` interface exposes:
 

@@ -13,7 +13,7 @@ Tool calling in AI Transport supports both server-executed and client-executed t
 
 ## How it works <a id="how-it-works"/>
 
-When the LLM invokes a tool, the invocation is streamed through the channel like any other turn event. Clients see tool calls appear as they are generated. If the tool runs on the server, the result is streamed back in the same turn. If the tool runs on the client, the turn ends; the client submits the result, and a continuation turn starts.
+When the LLM invokes a tool, the invocation is streamed through the channel like any other turn event. Clients see tool calls appear as they are generated. If the tool runs on the server, the result is streamed back in the same run. If the tool runs on the client, the agent calls `run.suspend()` so the Run stays live; the client submits the result, and a continuation invocation resumes the same Run.
 
 Tool state (invocations, arguments, results) is part of the channel's message history. Late joiners and reconnecting clients see the full tool activity, not just the final text.
 
@@ -67,16 +67,26 @@ const result = streamText({
   abortSignal: run.abortSignal,
 });
 
-const { reason } = await run.pipe(result.toUIMessageStream());
-await run.end(reason);
+const pipeResult = await run.pipe(result.toUIMessageStream());
+const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+
+if (outcome === 'suspend') {
+  await run.suspend();
+} else {
+  await run.end(outcome);
+}
 ```
 </Code>
+
+[`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) returns `'suspend'` when `streamText` finishes with `finishReason: 'tool-calls'`, so the agent suspends instead of ending. The pending tool call stays on the channel for any connected client to fulfil.
 
 On the client, find the assistant message with the pending tool call and publish a `tool-result` input addressed to its `codecMessageId`. The codec folds the result onto the suspended assistant message, and the agent picks it up to continue the run:
 
 <Code>
 ```javascript
-const pending = session.view.getMessagesWithIds().find(({ message }) =>
+const { messages, runOf, send } = useView();
+
+const pending = messages.find(({ message }) =>
   message.parts?.some((p) => p.type === 'dynamic-tool' && p.state === 'input-available'),
 );
 
@@ -89,7 +99,7 @@ if (pending) {
     navigator.geolocation.getCurrentPosition(resolve, reject);
   });
 
-  const run = await session.view.send(
+  const run = await send(
     {
       kind: 'tool-result',
       codecMessageId: pending.codecMessageId,
@@ -98,7 +108,7 @@ if (pending) {
         output: { lat: location.coords.latitude, lng: location.coords.longitude },
       },
     },
-    { runId: session.view.runOf(pending.codecMessageId).runId },
+    { runId: runOf(pending.codecMessageId).runId },
   );
 
   // Wake the agent so it picks up the result and resumes the run.
@@ -144,7 +154,7 @@ A user who starts a tool-assisted workflow on a laptop continues it on a phone w
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- A client-executed tool that the user denies (for example a geolocation permission prompt) leaves the tool call pending. Submit a failure result to unblock the LLM, or end the turn explicitly.
+- A client-executed tool that the user denies (for example a geolocation permission prompt) leaves the tool call pending. Submit a failure with `codec.createToolResultError(codecMessageId, { toolCallId, message })` (or the literal `{ kind: 'tool-result-error', ... }`) to unblock the LLM, or end the turn explicitly.
 - A tool that takes longer than the agent's runtime budget runs past `run.end()`. The continuation run picks up the result through `addEvents` on the original message; do not start a new run just to deliver a late result.
 - A server-executed tool that does not honour `run.abortSignal` keeps running after a cancel. Wire the signal into your tool implementation.
 - Two clients submitting the same client-executed tool concurrently produce two continuation turns. Guard against double-submit at the application layer.

@@ -65,7 +65,7 @@ const session = createAgentSession({
 | channelName | required | The channel to publish to. The session owns this channel; do not also resolve it elsewhere with conflicting options. | String |
 | codec | required | The codec used to encode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
 | logger | optional | Logger instance for diagnostic output. | `Logger` |
-| onError | optional | Called with non-fatal session-level errors not scoped to any run (cancel listener failures, channel continuity loss). | `(error: ErrorInfo) => void` |
+| onError | optional | Called with non-fatal session-level errors not scoped to any run (cancel listener failures, channel continuity loss). | `(error: Ably.ErrorInfo) => void` |
 | inputEventLookupTimeoutMs | optional | How long `Run.start()` waits for the run's input event(s) to arrive on the channel before rejecting with `InputEventNotFound`. Defaults to 30000. | Number |
 | inputEventBufferLimit | optional | Maximum number of distinct input events that may be buffered while waiting for `Run.start()` to register a lookup listener. FIFO-evicted when exceeded. Defaults to 200. | Number |
 | rewindWindow | optional | Channel rewind applied when the agent attaches. Passed verbatim to Ably's `params.rewind`. Accepts duration strings (`"2m"`, `"30s"`) or message counts as strings (`"50"`). Defaults to `"2m"`. | String |
@@ -133,9 +133,9 @@ const run = session.createRun(invocation, { signal: req.signal });
 | runId | Override the run id for a fresh run. Defaults to a fresh `crypto.randomUUID()`. Continuations ignore this and read the existing `runId` off the triggering input event. Supply a non-empty value for deterministic ids in tests. | String |
 | signal | External `AbortSignal` (typically the HTTP request's `req.signal`) that cancels the run when fired. | `AbortSignal` |
 | onMessage | Called before each Ably message is published. Mutate the message in place to add custom headers under `extras.ai`. | `(message: Ably.Message) => void` |
-| onCancelled | Called when the run is cancelled. Receives a `write` function to publish final outputs before cancellation finalises. | `(write) => void \| Promise<void>` |
+| onCancelled | Called when the run is cancelled. Receives a `write` function to publish final outputs before cancellation finalises. | `(write: (output: TOutput) => Promise<void>) => void \| Promise<void>` |
 | onCancel | Called when a cancel arrives. Return `true` to accept, `false` to reject. Defaults to accepting all. | `(req: CancelRequest) => Promise<boolean>` |
-| onError | Called with non-fatal run-scoped errors. | `(error: ErrorInfo) => void` |
+| onError | Called with non-fatal run-scoped errors. | `(error: Ably.ErrorInfo) => void` |
 
 </Table>
 
@@ -242,6 +242,18 @@ Publish events targeting existing messages. Each node specifies a `codecMessageI
 | events | Outputs to apply to the target message. | `TOutput[]` |
 
 </Table>
+
+### Load a Run's projection <a id="load-projection"/>
+
+<MethodSignature>{`loadProjection(): Promise<TProjection>`}</MethodSignature>
+
+Fetch every channel message bound to this Run and fold them through the codec into a single projection. Use this to reconstruct a single Run's full state (including client-published tool-output amends the agent did not observe live) when resuming a suspended Run before piping fresh output. The companion to [`loadConversation`](#load-conversation), which walks ancestors; `loadProjection` covers only the current Run.
+
+The caller extracts what they need via [`Codec.getMessages`](/docs/ai-transport/api/javascript/core/codec).
+
+#### Returns <a id="load-projection-returns"/>
+
+`Promise<TProjection>`. The codec projection produced by folding every event for this Run in serial order.
 
 ### Load the full conversation <a id="load-conversation"/>
 
