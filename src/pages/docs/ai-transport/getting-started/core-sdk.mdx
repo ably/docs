@@ -32,7 +32,7 @@ npm install @ably/ai-transport ably ai @ai-sdk/anthropic next react react-dom
 
 ## Set up authentication <a id="auth"/>
 
-Create an auth endpoint at `/api/auth` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
+Create an auth endpoint at `/auth` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
 
 The client below uses `authUrl: '/auth'` to fetch tokens from this endpoint.
 
@@ -93,7 +93,7 @@ export async function POST(req) {
 
 ## Create the chat component <a id="chat-component"/>
 
-Create `app/chat.tsx`. The component uses [`useView`](/docs/ai-transport/api/react/core/use-view) directly. It returns the visible messages, write methods, branch navigation, and pagination. Because the core SDK doesn't POST to the agent endpoint itself, the component does it after `sendMessage` resolves.
+Create `app/chat.tsx`. The component uses [`useView`](/docs/ai-transport/api/react/core/use-view) directly. It returns the visible messages, write methods, branch navigation, and pagination. Because the core SDK doesn't POST to the agent endpoint itself, the component does it after `view.send` resolves.
 
 <Code>
 ```javascript
@@ -101,6 +101,7 @@ Create `app/chat.tsx`. The component uses [`useView`](/docs/ai-transport/api/rea
 
 import { useState } from 'react';
 import { useClientSession, useView } from '@ably/ai-transport/react';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
 
 async function wakeAgent(run) {
   const res = await fetch('/api/chat', {
@@ -121,7 +122,7 @@ export function Chat() {
   // `'active'`, `'suspended'`, and `'error'` keep the Stop button visible
   // so a stuck Run can still be cancelled; `'complete'` and `'cancelled'`
   // are terminal.
-  const latestRun = runOf(messages.at(-1)?.id ?? '');
+  const latestRun = runOf(messages.at(-1)?.codecMessageId ?? '');
   const isStreaming =
     latestRun !== undefined &&
     latestRun.status !== 'complete' &&
@@ -132,14 +133,11 @@ export function Chat() {
     if (!input.trim()) return;
     const text = input;
     setInput('');
-    const run = await view.send({
-      kind: 'user-message',
-      message: {
-        id: crypto.randomUUID(),
-        role: 'user',
-        parts: [{ type: 'text', text }],
-      },
-    });
+    const run = await view.send(UIMessageCodec.createUserMessage({
+      id: crypto.randomUUID(),
+      role: 'user',
+      parts: [{ type: 'text', text }],
+    }));
     await wakeAgent(run);
   };
 
@@ -152,10 +150,10 @@ export function Chat() {
       {view.hasOlder && (
         <button type="button" onClick={() => view.loadOlder()}>Load older messages</button>
       )}
-      {messages.map((msg) => (
-        <div key={msg.id}>
-          <strong>{msg.role}:</strong>{' '}
-          {msg.parts.map((part, i) =>
+      {messages.map(({ codecMessageId, message }) => (
+        <div key={codecMessageId}>
+          <strong>{message.role}:</strong>{' '}
+          {message.parts.map((part, i) =>
             part.type === 'text' ? <span key={i}>{part.text}</span> : null,
           )}
         </div>
@@ -226,7 +224,7 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 5. Every client subscribed to the channel receives the streamed messages in real time. `useView` re-renders as the visible Run's projection updates.
 6. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the SDK rehydrates the view automatically.
 
-`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. The hook exposes `messages`, `hasOlder`, `loadOlder`, `runOf`, `run`, `branchSelection`, `selectSibling`, `send`, `regenerate`, and `edit`. It is the reactive mirror of the [`View` interface](/docs/ai-transport/api/javascript/core/client-session#view).
+`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. The hook exposes `messages`, `hasOlder`, `loading`, `loadError`, `loadOlder`, `runOf`, `run`, `runs`, `branchSelection`, `selectSibling`, `send`, `regenerate`, and `edit`. It is the reactive mirror of the [`View` interface](/docs/ai-transport/api/javascript/core/client-session#view).
 
 ## Explore next <a id="next"/>
 

@@ -15,13 +15,13 @@ When a user sends a message, the client inserts it into the conversation tree be
 
 Behind the scenes:
 
-1. The client generates a message ID and inserts the message into the conversation tree.
-2. The POST request is sent to the server with the message content and the generated ID.
-3. The server processes the message and publishes it to the Ably channel.
-4. The client receives the published message through its channel subscription.
-5. The session matches the published message to the optimistic insert using the `codec-message-id` header under `extras.ai.codec` and reconciles them.
+1. The client mints a `codec-message-id` and inserts the message into the conversation tree.
+2. The client publishes the input directly to the Ably channel, stamped with that `codec-message-id`.
+3. The application POSTs the invocation pointer (`inputEventId`, `sessionName`) to the agent endpoint to wake the agent. The POST does not carry the message body; the agent reads the input event off the channel.
+4. The client receives its own publish back through the channel subscription.
+5. The session matches the echo to the optimistic insert by `codec-message-id` and promotes it to a confirmed message.
 
-After reconciliation, the optimistic message is replaced by the server-confirmed version. From the user's perspective, the message was always there.
+After reconciliation, the optimistic message is replaced by the wire-confirmed version. From the user's perspective, the message was always there.
 
 ## Serial promotion <a id="serial-promotion"/>
 
@@ -46,7 +46,7 @@ Each message in the array is inserted into the tree optimistically. When the ser
 
 ## Handle errors <a id="error-handling"/>
 
-If the POST request fails, the optimistic message stays in the conversation tree and the session emits an `error` event. The message is not removed automatically; the agent-wake POST happens in the background after `view.send()` returns its `ActiveRun`:
+If the channel publish fails, the SDK removes the optimistic message from the tree automatically and the session emits an `error` event. If the channel publish succeeds but the agent-wake POST fails, the optimistic message stays in the tree (it is a real, published message); your application chooses whether to surface a retry to the user:
 
 <Code>
 ```javascript
@@ -71,7 +71,7 @@ A published message that does not match any optimistic insert (for example, a me
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- A failed POST leaves the optimistic message in the tree. Your application chooses whether to mark it failed, offer retry, or remove it. The transport does not delete optimistic messages automatically.
+- A failed channel publish is rolled back: the optimistic message is removed from the tree and the session emits an `error` event. A failed agent-wake POST leaves the (published) message in the tree because it is a real conversation entry; your application chooses whether to surface a retry.
 - A message ID collision (the same ID used twice on the same channel) confuses reconciliation. Use `crypto.randomUUID()` to generate IDs.
 - A published message that arrives before the server returns from POST still reconciles correctly. Reconciliation uses the message ID, not request ordering.
 - Two clients sending at the same time produce two distinct optimistic messages and two server publishes. Each client only reconciles its own; the other side appears as a normal observer message.

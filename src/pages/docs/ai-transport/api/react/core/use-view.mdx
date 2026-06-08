@@ -20,7 +20,9 @@ function Conversation() {
 
   return (
     <>
-      {messages.map((m) => <Message key={m.id} message={m} />)}
+      {messages.map(({ codecMessageId, message }) => (
+        <Message key={codecMessageId} message={message} />
+      ))}
       <Composer
         onSubmit={(text) =>
           send({ kind: 'user-message', message: { role: 'user', parts: [{ type: 'text', text }] } })
@@ -41,7 +43,7 @@ This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
 | session | optional | A client session whose default view to subscribe to. Defaults to the nearest provider. | `ClientSession<TInput, TOutput, TProjection, TMessage>` |
-| view | optional | A specific view to subscribe to directly. Takes priority over `session`. | `View<TInput, TOutput, TMessage>` |
+| view | optional | A specific view to subscribe to directly. Takes priority over `session`. | `View<TInput, TMessage>` |
 | limit | optional | Maximum number of older Runs to reveal per page. When provided, auto-loads the first page on mount. | Number |
 | skip | optional | When `true`, skip all subscriptions and return an empty handle immediately. | Boolean |
 
@@ -53,18 +55,19 @@ This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api
 
 | Property | Description | Type |
 | --- | --- | --- |
-| messages | The visible domain messages along the selected branch, concatenated across all visible Runs. | `TMessage[]` |
+| messages | The visible messages along the selected branch, each paired with its `codecMessageId`. Read the domain object from each entry's `message` field. | `CodecMessage<TMessage>[]` |
 | hasOlder | Whether there are older Runs that can be revealed via `loadOlder`. | Boolean |
 | loading | Whether a page load is currently in progress. | Boolean |
 | loadError | Set when the most recent `loadOlder` call failed. Cleared automatically on the next successful load. | `Ably.ErrorInfo` or Undefined |
 | loadOlder | Reveal older Runs. No-op if already loading. | `() => Promise<void>` |
 | runOf | Look up the `RunInfo` for the Run that owns the given `codecMessageId`. | <Table id='RunInfo'/> |
 | run | Direct lookup by Run id. | <Table id='RunInfo'/> |
+| runs | Snapshot of the visible Runs along the selected branch, in chronological order. Returns `[]` when the view isn't resolved. | `() => RunInfo[]` |
 | branchSelection | Resolve the `BranchSelection` bundle anchored at `codecMessageId`. Always returns a safe object. | <Table id='BranchSelection'/> |
 | selectSibling | Select a sibling at the branch point anchored at `codecMessageId`. | `(codecMessageId, index) => void` |
-| send | Send one or more `TInput`s on the channel and fire a POST. Wrap a domain message via `codec.createUserMessage` (or build the `{ kind: 'user-message', message }` literal) to send a fresh user message. Takes optional <Table id='SendOptions'/>. | `(events, options?) => Promise<ActiveRun<TOutput>>` |
-| regenerate | Regenerate an assistant message using this view's branch for history. | `(messageId, options?) => Promise<ActiveRun<TOutput>>` |
-| edit | Edit a user message, forking from this view's branch. | `(messageId, inputs, options?) => Promise<ActiveRun<TOutput>>` |
+| send | Send one or more `TInput`s on the channel and fire a POST. Wrap a domain message via `codec.createUserMessage` (or build the `{ kind: 'user-message', message }` literal) to send a fresh user message. Takes optional <Table id='SendOptions'/>. | `(events, options?) => Promise<ActiveRun>` |
+| regenerate | Regenerate an assistant message using this view's branch for history. | `(messageId, options?) => Promise<ActiveRun>` |
+| edit | Edit a user message, forking from this view's branch. | `(messageId, inputs, options?) => Promise<ActiveRun>` |
 
 </Table>
 
@@ -75,7 +78,7 @@ This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api
 | runId | The Run's unique identifier. | String |
 | clientId | Identity of the Ably client that started this Run. Empty string when the wire didn't carry an owner client id. | String |
 | status | Run lifecycle status. `'active'` while streaming, `'suspended'` while paused awaiting input, otherwise the `RunEndReason` the Run terminated with. | `'active' \| 'suspended' \| RunEndReason` |
-| invocationId | The agent-minted `invocationId` observed for this Run on the wire (`extras.ai.transport.invocation-id`). Adopted from `ai-run-start`. | String |
+| invocationId | The agent-minted `invocationId` observed for this Run, adopted from `ai-run-start`. Empty string until run-start arrives, or if the wire didn't carry an invocation-id. | String |
 
 </Table>
 
@@ -135,21 +138,21 @@ Select a sibling at the branch point anchored at `codecMessageId`. `index` is cl
 
 ## Send inputs <a id="send"/>
 
-<MethodSignature>{`send(events: TInput | TInput[], options?: SendOptions): Promise<ActiveRun<TOutput>>`}</MethodSignature>
+<MethodSignature>{`send(events: TInput | TInput[], options?: SendOptions): Promise<ActiveRun>`}</MethodSignature>
 
 Send one or more `TInput`s on the channel and fire a POST. Each `TInput` carries its own routing metadata (`parent`, `target`, `codecMessageId`).
 
-To send a fresh user message, build a `UserMessage` input. Use the codec factory (`codec.createUserMessage(message)`) or build the literal directly: `{ kind: 'user-message', message }`. A send containing at least one `UserMessage` mints a fresh Run. A send containing only tool-resolution inputs (`tool-result`, `tool-result-error`, `tool-approval-response`) is a continuation and should be paired with `options.runId` to extend a suspended Run.
+To send a fresh user message, build a `UserMessage` input. Use the codec factory (`codec.createUserMessage(message)`) or build the literal directly: `{ kind: 'user-message', message }`. A send containing at least one `UserMessage` mints a fresh Run. A send containing only tool-resolution inputs (`tool-result`, `tool-result-error`, `tool-approval-response`) is a continuation; pair it with `options.runId` to extend a suspended Run.
 
 ## Regenerate an assistant message <a id="regenerate"/>
 
-<MethodSignature>{`regenerate(messageId: string, options?: SendOptions): Promise<ActiveRun<TOutput>>`}</MethodSignature>
+<MethodSignature>{`regenerate(messageId: string, options?: SendOptions): Promise<ActiveRun>`}</MethodSignature>
 
 Regenerate an assistant message. Creates a new Run that targets the message and threads under its parent user message. Both ids are computed automatically from this view's branch.
 
 ## Edit a user message <a id="edit"/>
 
-<MethodSignature>{`edit(messageId: string, inputs: TInput | TInput[], options?: SendOptions): Promise<ActiveRun<TOutput>>`}</MethodSignature>
+<MethodSignature>{`edit(messageId: string, inputs: TInput | TInput[], options?: SendOptions): Promise<ActiveRun>`}</MethodSignature>
 
 Edit a user message. Creates a new Run that forks the target message with the replacement inputs. `forkOf`, `parent`, and history are computed automatically from this view's branch.
 
@@ -175,19 +178,19 @@ function Conversation() {
   return (
     <>
       {hasOlder && <button onClick={() => loadOlder()}>Load older</button>}
-      {messages.map((m) => {
-        const branch = branchSelection(m.id);
+      {messages.map(({ codecMessageId, message }) => {
+        const branch = branchSelection(codecMessageId);
         return (
-          <div key={m.id}>
-            <Message message={m} />
+          <div key={codecMessageId}>
+            <Message message={message} />
             {branch.hasSiblings && (
               <BranchControls
                 selection={branch}
-                onSelect={(i) => selectSibling(m.id, i)}
+                onSelect={(i) => selectSibling(codecMessageId, i)}
               />
             )}
-            {m.role === 'assistant' && (
-              <button onClick={() => regenerate(m.id)}>Regenerate</button>
+            {message.role === 'assistant' && (
+              <button onClick={() => regenerate(codecMessageId)}>Regenerate</button>
             )}
           </div>
         );

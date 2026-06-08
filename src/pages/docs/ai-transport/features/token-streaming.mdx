@@ -62,8 +62,8 @@ A streamed message moves through three states:
 | State | Meaning |
 | --- | --- |
 | `streaming` | Tokens are being appended. The message grows as tokens arrive. |
-| `finished` | The stream completed normally. The message is final. |
-| `aborted` | The stream was cancelled or failed. The partial message is preserved. |
+| `complete` | The stream completed normally. The message is final. |
+| `cancelled` | The stream was cancelled. The partial message is preserved. |
 
 The stream status is carried in the message header `status` under the `extras.ai.codec` tier. Clients check this to detect whether a message is still streaming.
 
@@ -126,7 +126,7 @@ The codec converts domain events to Ably operations:
 
 - Start: create a new Ably message on the channel.
 - Append: append content to the existing message (Ably message append operation).
-- Close: update the message with a terminal status (`finished` or `aborted`).
+- Close: append a terminal status (`complete` or `cancelled`) to the message.
 
 If an append fails, for example due to a transient network issue, the encoder falls back to a full message update operation to recover. The accumulated response is never lost.
 
@@ -168,10 +168,10 @@ If `appendRollupWindow` allows a single response to exceed your [connection inbo
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
 - A network drop during streaming pauses delivery to the affected client. The server keeps publishing. On reconnect, the client receives the accumulated content of the message up to the latest append, not a replay of every token. This allows the client to efficiently catchup to the latest response state without replaying the response token-by-token.
-- An aborted stream leaves the partial message on the channel with status `aborted`. Render it the same as a complete message; treat the absence of further tokens as the signal to stop animating.
+- A cancelled stream leaves the partial message on the channel with status `cancelled`. Render it the same as a complete message; treat the absence of further tokens as the signal to stop animating.
 - If `appendRollupWindow` is set to `0ms` to maximise model output rate, you become responsible for keeping the publish rate under your connection limit.
 - An append fallback (full message update) is invisible to subscribers; the message content is consistent. If you log channel operations, you see periodic updates instead of appends.
-- A turn that times out on the server before the stream finishes ends with reason `'error'`. The partial message has status `aborted`.
+- A turn that times out on the server before the stream finishes ends with run reason `'error'`. The partial message is closed with status `cancelled`.
 
 ## FAQ <a id="faq"/>
 
@@ -193,7 +193,7 @@ The append rollup compacts multiple tokens into single published messages within
 
 ### What status do I see on a cancelled response? <a id="faq-cancel-status"/>
 
-The message keeps the content it had at the time of the cancel and its `status` header (under `extras.ai.codec`) transitions to `aborted`. Use this to distinguish a partial response from a complete one.
+The message keeps the content it had at the time of the cancel and its `status` header transitions to `cancelled`. Use this to distinguish a partial response from a complete one.
 
 ## Related features <a id="related"/>
 

@@ -21,19 +21,18 @@ The agent enters presence on the AI Transport session channel with status data. 
 
 <Code>
 ```javascript
-// Server: agent enters presence when it connects.
-const channel = ably.channels.get(sessionChannelName);
-await channel.presence.enter({ status: 'idle' });
-
 app.post('/api/chat', async (req, res) => {
   const invocation = Invocation.fromJSON(await req.json());
   const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
   await session.connect();
   const run = session.createRun(invocation, { signal: req.signal });
 
+  // Enter presence on this invocation's channel so every subscriber sees the agent.
+  const channel = ably.channels.get(invocation.sessionName);
+  await channel.presence.enter({ status: 'thinking' });
+
   await run.start();
   await run.loadConversation();
-  await channel.presence.update({ status: 'thinking' });
 
   const result = streamText({
     model: openai('gpt-4o'),
@@ -44,7 +43,7 @@ app.post('/api/chat', async (req, res) => {
   await channel.presence.update({ status: 'streaming' });
   const { reason } = await run.pipe(result.toUIMessageStream());
   await run.end(reason);
-  await channel.presence.update({ status: 'idle' });
+  await channel.presence.leave();
   session.close();
   res.json({ ok: true });
 });
@@ -91,7 +90,7 @@ This is enough information for the UI to show a typing indicator while the agent
 
 - An agent that exits without calling `presence.leave()` (for example, a crashed process) is automatically removed from presence after a timeout. The agent is treated as present until the timeout fires. Wire a graceful shutdown that calls `leave` for the best user experience.
 - A serverless agent that comes up for one turn and tears down should enter and leave presence per turn; entering once and leaving once at the end is fine for a long-running agent.
-- Presence updates do not guarantee strict ordering with channel messages. A `streaming` presence update sometimes arrives slightly after the first token. Drive the UI off `session.view.runs()` for token-level state and use presence for higher-level status.
+- Presence updates do not guarantee strict ordering with channel messages. A `streaming` presence update sometimes arrives slightly after the first token. Drive the UI off `session.view.runs()` for run-level state (active, suspended, terminal) and use presence for higher-level status the agent self-reports.
 - Multi-agent setups need unique `clientId` per agent. Two agents with the same `clientId` collide in the presence set.
 - A client without `presence` capability cannot subscribe to updates. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
 

@@ -21,7 +21,7 @@ await activeRun.cancel();
 
 ## How it works <a id="how-it-works"/>
 
-Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message keyed on the triggering input's `codec-message-id` (the synchronous handle the client owns from send time). The agent's run, once it has been minted, fires its `abortSignal`. The LLM stream stops, the run ends with reason `'cancelled'`, and every subscriber receives the lifecycle update. A cancel published before the agent has minted the run-id is still honoured: the agent buffers it and fires once the input-event lookup resolves.
+Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message keyed on the triggering input's `codec-message-id` (the synchronous handle the client owns from send time). Once the agent has resolved the cancel to a registered Run, that Run's `abortSignal` fires. The LLM stream stops, the run ends with reason `'cancelled'`, and every subscriber receives the lifecycle update. A cancel published before the agent has minted the run-id is still honoured: the agent buffers it and fires once the input-event lookup resolves.
 
 <Code>
 ```javascript
@@ -85,14 +85,16 @@ The `onCancel` hook on `RunRuntime` authorises or rejects cancel requests:
 
 <Code>
 ```javascript
+const userId = await authenticateUser(req);
+
 const run = session.createRun(invocation, {
   signal: req.signal,
-  onCancel: async (request) => request.message.clientId === invocation.runOwnerClientId,
+  onCancel: async (request) => request.message.clientId === userId,
 });
 ```
 </Code>
 
-`CancelRequest` carries the raw cancel `message` (with the requester's `clientId`) and the `runId` it targets. Return `false` to reject; the run continues. If `onCancel` is not provided, all cancel requests are accepted.
+`CancelRequest` carries the raw cancel `message` (with the requester's `clientId`) and the `runId` it targets. Resolve the authorised identity from the inbound HTTP request and compare against `request.message.clientId`; the Ably service verifies the publisher's `clientId` before the cancel reaches the agent, so the value is trustworthy. Return `false` to reject; the run continues. If `onCancel` is not provided, all cancel requests are accepted.
 
 ### Publish a final note before cancelling <a id="abort-hook"/>
 
@@ -103,7 +105,7 @@ The `onCancelled` hook runs when the abort signal fires, giving you a chance to 
 const run = session.createRun(invocation, {
   signal: req.signal,
   onCancelled: async (write) => {
-    await write({ type: 'text-delta', textDelta: '\n[Response cancelled]' });
+    await write({ type: 'text-delta', id: 'cancel-note', delta: '\n[Response cancelled]' });
   },
 });
 ```

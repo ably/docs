@@ -19,15 +19,15 @@ Human-in-the-loop uses the tool-calling primitives to create approval gates. The
 
 ## How it works <a id="how-it-works"/>
 
-The pattern builds on [tool calling](/docs/ai-transport/features/tool-calling). The agent defines a tool that requires human approval. When the LLM invokes that tool, the run suspends with a pending tool call. The client presents the approval request to the user. When the user approves or rejects, the client publishes a `tool-approval-response` input, which resumes the run.
+The pattern builds on [tool calling](/docs/ai-transport/features/tool-calling). The agent defines a tool that requires human approval. When the LLM invokes that tool, the agent calls `run.suspend()` instead of `run.end()` so the Run stays live, and the pending tool call is published to the channel. The client presents the approval request to the user. When the user approves or rejects, the client publishes a `tool-approval-response` input addressed to the suspended assistant, and a continuation invocation resumes the Run under the same `runId`.
 
 The flow:
 
 1. The agent streams a response that includes a tool call requiring approval.
-2. The run suspends. The pending tool call is published to the channel.
+2. The LLM's stream finishes with `finishReason: 'tool-calls'`. The agent calls `run.suspend()` and the pending tool call is visible on the channel.
 3. Any connected client renders the pending approval.
-4. The user approves or rejects. The client publishes a `tool-approval-response` input addressed to the pending message.
-5. The run resumes. The agent receives the approval result and proceeds.
+4. The user approves or rejects. The client publishes a `tool-approval-response` input addressed to the pending message, then POSTs a continuation invocation to the agent.
+5. A continuation invocation enters the same `runId` and the agent picks up the approval result and proceeds.
 
 ## Define an approval tool <a id="approval-tool"/>
 
@@ -58,12 +58,18 @@ const result = streamText({
   abortSignal: run.abortSignal,
 });
 
-const { reason } = await run.pipe(result.toUIMessageStream());
-await run.end(reason);
+const pipeResult = await run.pipe(result.toUIMessageStream());
+const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+
+if (outcome === 'suspend') {
+  await run.suspend();
+} else {
+  await run.end(outcome);
+}
 ```
 </Code>
 
-When the LLM decides an action needs approval, it invokes `requestApproval`. The run suspends with the tool call pending.
+When the LLM decides an action needs approval, it invokes `requestApproval`. `streamText` finishes with `finishReason: 'tool-calls'`; [`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) translates that to `'suspend'`, so the agent calls `run.suspend()` and the pending tool call stays on the channel for any connected client to act on.
 
 ## Handle approval on the client <a id="client-approval"/>
 
@@ -71,22 +77,24 @@ On the client, detect pending approval requests and present them to the user:
 
 <Code>
 ```javascript
-const pending = session.view.getMessagesWithIds().find(({ message }) =>
+const { messages, runOf, send } = useView();
+
+const pending = messages.find(({ message }) =>
   message.parts?.some(
-    (p) => p.type === 'dynamic-tool' && p.toolName === 'requestApproval' && p.state === 'input-available',
+    (p) => p.type === 'dynamic-tool' && p.toolName === 'requestApproval' && p.state === 'approval-requested',
   ),
 );
 
 const pendingApproval = pending?.message.parts?.find(
-  (p) => p.type === 'dynamic-tool' && p.state === 'input-available',
+  (p) => p.type === 'dynamic-tool' && p.state === 'approval-requested',
 );
 
 if (pending && pendingApproval) {
   const { action, details } = pendingApproval.input;
-  const runId = session.view.runOf(pending.codecMessageId).runId;
+  const runId = runOf(pending.codecMessageId).runId;
 
   const respond = async (approved) => {
-    const run = await session.view.send(
+    const run = await send(
       {
         kind: 'tool-approval-response',
         codecMessageId: pending.codecMessageId,
