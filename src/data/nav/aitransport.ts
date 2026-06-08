@@ -109,24 +109,6 @@ export default {
       ],
     },
     {
-      name: 'Guides',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/docs/ai-transport/guides',
-          index: true,
-        },
-        {
-          name: 'Building support chat',
-          link: '/docs/ai-transport/guides/building-support-chat',
-        },
-        {
-          name: 'Building a copilot',
-          link: '/docs/ai-transport/guides/building-a-copilot',
-        },
-      ],
-    },
-    {
       name: 'Features',
       pages: [
         {
