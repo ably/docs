@@ -1,0 +1,278 @@
+---
+title: Auth
+meta_description: "API reference for the Authentication (Auth) interface in the Ably Pub/Sub JavaScript Realtime SDK."
+meta_keywords: "Ably Pub/Sub SDK, JavaScript, Auth API, authorize, createTokenRequest, requestToken, revokeTokens, AuthOptions, TokenParams, TokenDetails, TokenRequest"
+---
+
+The `Auth` interface is responsible for managing tokens and [authentication](/docs/auth) for an Ably client. Access it via the `auth` property of a [`Realtime`](/docs/pub-sub/api/javascript/realtime/realtime-client) client instance.
+
+The principal use of `Auth` is to create Ably `TokenRequest`s with `createTokenRequest()`, or to obtain Ably Tokens from Ably with `requestToken()`, and then issue these short-lived tokens to less-trusted clients. Typically, your servers should be the only devices to hold the [private API key](/docs/auth#api-keys), which is used to sign Ably `TokenRequest`s or request Ably Tokens. If you adopt this model, your private API key is never shared with clients directly.
+
+<Code>
+```javascript
+const auth = realtime.auth;
+```
+</Code>
+
+<aside data-type='important'>
+[JWTs](/docs/auth/token/jwt) are the recommended mechanism for authenticating with Ably in the majority of cases.
+</aside>
+
+## Properties
+
+The `Auth` interface has the following properties:
+
+<Table id='AuthProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| clientId | The client ID this client is identified as. Trusted [client identifiers](/docs/auth/identified-clients) allow a client to be identified to other clients. May be `null` if the client was instantiated without a `clientId` (anonymous client). | String or Null |
+
+</Table>
+
+## Authorize the client <a id="authorize"/>
+
+<MethodSignature>{`auth.authorize(tokenParams?: TokenParams, authOptions?: AuthOptions): Promise<TokenDetails>`}</MethodSignature>
+
+Instructs the SDK to get a new token immediately. Once fetched, it will upgrade the current realtime connection to use the new token, or, if not connected, initiate a connection to Ably once the new token has been obtained. Also stores any `tokenParams` and `authOptions` passed in as the new defaults, to be used for all subsequent implicit or explicit token requests.
+
+Any `tokenParams` and `authOptions` objects passed in will entirely replace (as opposed to being merged with) the current `client.auth` `tokenParams` and `authOptions`.
+
+A subsidiary use case for `authorize()` is to preemptively trigger renewal of a token or to acquire a new token with a revised set of capabilities.
+
+<Code>
+```javascript
+const tokenDetails = await realtime.auth.authorize({ clientId: 'user-123' });
+console.log(tokenDetails.token);
+```
+</Code>
+
+### Parameters <a id="authorize-params"/>
+
+The `authorize()` method takes the following parameters:
+
+<Table id='AuthorizeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| tokenParams | Optional | Parameters used when generating the requested token. When omitted, the default token parameters configured on the client are used. | <Table id='TokenParams'/> |
+| authOptions | Optional | Authentication options. When omitted, the default authentication options configured on the client are used. | <Table id='AuthOptions'/> |
+
+</Table>
+
+<Table id='TokenParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| ttl | Optional | Requested time to live for the token in milliseconds. When omitted, the Ably REST API default of 60 minutes is applied. Default: 1 hour. | Number |
+| capability | Optional | The capabilities associated with this token. A JSON-encoded canonicalized representation of the [resource paths and associated operations](/docs/auth/capabilities). Default: `{"*":["*"]}`. | String or Object |
+| clientId | Optional | A client ID, used for identifying this client as an [identified client](/docs/auth/identified-clients) when publishing messages or for presence purposes. The `clientId` can be any non-empty string, except it cannot contain a `*`. This option is primarily intended for use when the SDK is instantiated with a key. A `clientId` may also be implicit in a token used to instantiate the SDK, and an error is raised if a `clientId` specified here conflicts with the one implicit in the token. | String |
+| timestamp | Optional | The timestamp of this request as milliseconds since the Unix epoch. Used together with `nonce` to prevent token requests being replayed. Not valid as a default token parameter. | Number |
+| nonce | Optional | A cryptographically secure random string of at least 16 characters, used to ensure the `TokenRequest` cannot be reused. | String |
+
+</Table>
+
+<Table id='AuthOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| authCallback | Optional | A function with the form `authCallback(tokenParams, callback(error, tokenOrTokenRequest))` that is called when a new token is required. The role of the callback is to obtain a fresh token, one of: an Ably Token string (in plain text format); a signed [`TokenRequest`](/docs/auth/token); a `TokenDetails` (in JSON format); an [Ably JWT](/docs/auth/token#jwt). The `callback` is invoked with the obtained token string, `TokenDetails`, `TokenRequest`, or Ably JWT on success, or with an error on failure. | Function |
+| authUrl | Optional | A URL that the SDK may use to obtain a fresh token, one of: an Ably Token string (in plain text format); a signed `TokenRequest` (in JSON format); a `TokenDetails` (in JSON format); an [Ably JWT](/docs/auth/token/jwt). For example, this can be used by a client to obtain signed Ably `TokenRequest`s from an application server. | String |
+| authMethod | Optional | The HTTP verb to use for the request, either `GET` or `POST`. Default: `GET`. | String |
+| authHeaders | Optional | A set of key-value pair headers to be added to any request made to the `authUrl`. Useful when an `authorization` header is required to authenticate a client to the `authUrl`. If the `authHeaders` object contains an `authorization` key, then `withCredentials` is set on the XHR request. | Object |
+| authParams | Optional | A set of key-value pair params to be added to any request made to the `authUrl`. When the `authMethod` is `GET`, query params are sent. When it is `POST`, form encoded params are sent. | Object |
+| key | Optional | The full API key string used in plain text. When defined, the client will use Basic authentication, or the SDK can use this key to create signed `TokenRequest`s. | String |
+| token | Optional | An authenticated token. This can either be a token string or a `TokenDetails` object. The token string may be obtained from the `token` property of a `TokenDetails` component of an Ably `TokenRequest` response, or it may be a JSON Web Token satisfying [the Ably requirements for JWTs](/docs/auth/token#jwt). This option is mostly useful for testing: since tokens are short-lived, in production you almost always want to use an authentication method that allows the SDK to renew the token automatically when the previous one expires or is revoked. | String or <Table id='TokenDetails'/> |
+| tokenDetails | Optional | A `TokenDetails` object. This option is mostly useful for testing. | <Table id='TokenDetails'/> |
+| useTokenAuth | Optional | When set to `true`, forces token authentication to be used. If a `clientId` has not been specified, the Ably Token issued is anonymous. | Boolean |
+| queryTime | Optional | When `true`, the SDK will query the Ably servers for the current time when issuing `TokenRequest`s, instead of relying on a locally-available time of day. Knowing the time accurately is needed to create valid signed Ably `TokenRequest`s, so this option is useful for SDK instances on auth servers whose clock cannot be kept synchronized through normal means, such as an NTP daemon. The server is queried for the current time once per SDK instance, which stores the offset from the local clock, so if using this option you should avoid instancing a new SDK instance per request. Default: `false`. | Boolean |
+
+</Table>
+
+<Table id='TokenDetails' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| token | The Ably Token itself. A typical Ably Token string appears with the form `xVLyHw.A-pwh7wicf3afTfgiw4k2Ku33kcnSA7z6y8FjuYpe3QaNRTEo4`. | String |
+| issued | The timestamp at which this token was issued as milliseconds since the Unix epoch. | Number |
+| expires | The timestamp at which this token expires as milliseconds since the Unix epoch. | Number |
+| capability | The capabilities associated with this token. A JSON-encoded canonicalized representation of the [resource paths and associated operations](/docs/auth/capabilities). | String |
+| clientId | The client ID, if any, bound to this token. If a client ID is included, the token authenticates its bearer as that client ID, and the token may only be used to perform operations on behalf of that client ID. The client is then considered to be an [identified client](/docs/auth/identified-clients). | String |
+
+</Table>
+
+### Returns <a id="authorize-returns"/>
+
+`Promise<TokenDetails>`
+
+Returns a promise. The promise is fulfilled with a `TokenDetails` object containing the new token once the realtime connection has been successfully upgraded to use it. On failure to obtain a token or upgrade the token, the connection moves to the `SUSPENDED` or `FAILED` state and the promise is rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Create a TokenRequest <a id="create-token-request"/>
+
+<MethodSignature>{`auth.createTokenRequest(tokenParams?: TokenParams, authOptions?: AuthOptions): Promise<TokenRequest>`}</MethodSignature>
+
+Creates and signs an Ably `TokenRequest` based on the specified (or, if none specified, the SDK's stored) `tokenParams` and `authOptions`. Note this can only be used when the API `key` value is available locally. Otherwise, the Ably `TokenRequest` must be obtained from the key owner. Use this to generate an Ably `TokenRequest` in order to implement an Ably Token request callback for use by other clients.
+
+Both `authOptions` and `tokenParams` are optional. When omitted or `null`, the defaults specified in the `ClientOptions` when the SDK was instantiated, or set later via [`authorize()`](#authorize), are used. Values passed in are used instead of (rather than being merged with) the default values.
+
+Issuing an Ably `TokenRequest` to clients in favor of a token avoids sharing your private API key, as explained in [token authentication](/docs/auth/token).
+
+<Code>
+```javascript
+const tokenRequest = await realtime.auth.createTokenRequest({ clientId: 'user-123' });
+// Send tokenRequest JSON to the requesting client
+```
+</Code>
+
+### Parameters <a id="create-token-request-params"/>
+
+The `createTokenRequest()` method takes the following parameters:
+
+<Table id='CreateTokenRequestParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| tokenParams | Optional | Parameters used when generating the `TokenRequest`. | <Table id='TokenParams'/> |
+| authOptions | Optional | Authentication options. | <Table id='AuthOptions'/> |
+
+</Table>
+
+### Returns <a id="create-token-request-returns"/>
+
+`Promise<TokenRequest>`
+
+Returns a promise. The promise is fulfilled with a `TokenRequest` object, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+<Table id='TokenRequest'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| keyName | The name of the key against which this request is made. The key name is public, whereas the key secret is private. | String |
+| ttl | Requested time to live for the token in milliseconds. When omitted, the default of 60 minutes is used. If the request is successful, the TTL of the returned token is less than or equal to this value, depending on application settings and the attributes of the issuing key. | Number |
+| timestamp | The timestamp of this request as milliseconds since the Unix epoch. | Number |
+| capability | Capability of the requested token. If the request is successful, the capability of the returned token will be the intersection of this capability with the capability of the issuing key. The capability is a JSON-encoded canonicalized representation of the [resource paths and associated operations](/docs/auth/capabilities). | String |
+| clientId | The client ID to associate with the requested token. When provided, the token may only be used to perform operations on behalf of that client ID. | String |
+| nonce | A cryptographically secure random string of at least 16 characters, used to ensure the `TokenRequest` cannot be reused. | String |
+| mac | The Message Authentication Code for this request. | String |
+
+</Table>
+
+## Request an Ably Token <a id="request-token"/>
+
+<MethodSignature>{`auth.requestToken(tokenParams?: TokenParams, authOptions?: AuthOptions): Promise<TokenDetails>`}</MethodSignature>
+
+Calls the `requestToken` REST API endpoint to obtain an Ably Token according to the specified `tokenParams` and `authOptions`.
+
+Both `authOptions` and `tokenParams` are optional. When omitted or `null`, the defaults specified in the `ClientOptions` when the SDK was instantiated, or set later via [`authorize()`](#authorize), are used. Values passed in are used instead of (rather than being merged with) the default values.
+
+Issuing an Ably `TokenRequest` to clients in favor of a token avoids sharing your private API key, as explained in [token authentication](/docs/auth/token).
+
+Note that since you normally use the [`ClientOptions`](/docs/pub-sub/api/javascript/realtime/realtime-client#constructor-params) callbacks to authenticate dynamically, you'll rarely need to call `requestToken()` explicitly, but it's available when you need finer control.
+
+<Code>
+```javascript
+const tokenDetails = await realtime.auth.requestToken();
+```
+</Code>
+
+### Parameters <a id="request-token-params"/>
+
+The `requestToken()` method takes the following parameters:
+
+<Table id='RequestTokenParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| tokenParams | Optional | Parameters for the requested token. | <Table id='TokenParams'/> |
+| authOptions | Optional | Authentication options. | <Table id='AuthOptions'/> |
+
+</Table>
+
+### Returns <a id="request-token-returns"/>
+
+`Promise<TokenDetails>`
+
+Returns a promise. The promise is fulfilled with a `TokenDetails` object, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Revoke tokens <a id="revoke-tokens"/>
+
+<MethodSignature>{`auth.revokeTokens(specifiers: TokenRevocationTargetSpecifier[], options?: TokenRevocationOptions): Promise<BatchResult>`}</MethodSignature>
+
+Revokes the tokens specified by the provided array of `TokenRevocationTargetSpecifier`s. Only tokens issued by an API key that had [token revocation](/docs/auth/revocation) enabled before the token was issued can be revoked.
+
+<Code>
+```javascript
+const result = await realtime.auth.revokeTokens(
+  [{ type: 'clientId', value: 'user-123' }],
+  { allowReauthMargin: true }
+);
+console.log(`${result.successCount} succeeded, ${result.failureCount} failed`);
+```
+</Code>
+
+### Parameters <a id="revoke-tokens-params"/>
+
+The `revokeTokens()` method takes the following parameters:
+
+<Table id='RevokeTokensParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| specifiers | Required | An array of objects describing which tokens should be revoked. | Array of <Table id='TokenRevocationTargetSpecifier'/> |
+| options | Optional | Options for the revoke request. | <Table id='TokenRevocationOptions'/> |
+
+</Table>
+
+<Table id='TokenRevocationTargetSpecifier' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| type | Required | The type of token revocation target specifier. Valid values are `clientId`, `revocationKey`, or `channel`. | String |
+| value | Required | The value of the token revocation target specifier. | String |
+
+</Table>
+
+<Table id='TokenRevocationOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| issuedBefore | Optional | A Unix timestamp in milliseconds. Only tokens issued before this time are revoked. Default: the current time. Requests with an `issuedBefore` in the future, or more than an hour in the past, will be rejected. | Number |
+| allowReauthMargin | Optional | If `true`, permits a token renewal cycle to take place without needing established connections to be dropped, by postponing enforcement to 30 seconds in the future and sending existing connections a hint to obtain (and upgrade the connection to use) a new token. Default: `false` (effect is near-immediate). | Boolean |
+
+</Table>
+
+### Returns <a id="revoke-tokens-returns"/>
+
+`Promise<BatchResult>`
+
+Returns a promise. The promise is fulfilled with a `BatchResult` whose `results` array contains a success or failure entry for each specifier. The promise is rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object if the request itself fails.
+
+<Table id='BatchResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| successCount | The number of successful operations in the request. | Number |
+| failureCount | The number of unsuccessful operations in the request. | Number |
+| results | The per-specifier results, one entry per specifier. | Array of <Table id='TokenRevocationSuccessResult'/> or <Table id='TokenRevocationFailureResult'/> |
+
+</Table>
+
+<Table id='TokenRevocationSuccessResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| target | The target specifier. | String |
+| appliesAt | The time at which the token revocation will take effect, as a Unix timestamp in milliseconds. | Number |
+| issuedBefore | A Unix timestamp in milliseconds. Only tokens issued earlier than this time will be revoked. | Number |
+
+</Table>
+
+<Table id='TokenRevocationFailureResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| target | The target specifier. | String |
+| error | An [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object describing the reason token revocation failed for this target. | [ErrorInfo](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) |
+
+</Table>
+
