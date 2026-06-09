@@ -1,0 +1,400 @@
+---
+title: RealtimePresence
+meta_description: "API reference for the Presence (RealtimePresence) interface in the Ably Pub/Sub JavaScript Realtime SDK."
+meta_keywords: "Ably Pub/Sub SDK, JavaScript, RealtimePresence API, enter, leave, update, get, subscribe, unsubscribe, history, enterClient, leaveClient, updateClient, PresenceAction"
+---
+
+A `RealtimePresence` object enables a client to be present on a channel and to query and subscribe to the presence set; access it via the [`presence`](/docs/pub-sub/api/javascript/realtime/realtime-channel) property of a [`RealtimeChannel`](/docs/pub-sub/api/javascript/realtime/realtime-channel) instance.
+
+<Code>
+```javascript
+const presence = channel.presence;
+```
+</Code>
+
+## Properties
+
+The `RealtimePresence` interface has the following properties:
+
+<Table id='RealtimePresenceProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| syncComplete | Indicates whether the presence member set is synchronized with the server after a channel attach. When a channel is attached, the Ably service immediately synchronizes the presence member set with the client. Typically this completes in milliseconds, however when the presence member set is very large, bandwidth constraints may slow this synchronization down. | Boolean |
+
+</Table>
+
+## Subscribe to presence events <a id="subscribe"/>
+
+<MethodSignature>{`presence.subscribe(listener: presenceMessageCallback): Promise<void>`}</MethodSignature>
+
+Subscribe to presence events on the channel. The listener is invoked for every presence message received.
+
+<MethodSignature>{`presence.subscribe(action: PresenceAction | PresenceAction[], listener?: presenceMessageCallback): Promise<void>`}</MethodSignature>
+
+Subscribe to presence events for a specific action (or array of actions). The listener is invoked only for matching events.
+
+<Code>
+```javascript
+await channel.presence.subscribe((presenceMessage) => {
+  console.log(`${presenceMessage.action} from ${presenceMessage.clientId}`);
+});
+
+await channel.presence.subscribe('enter', (presenceMessage) => {
+  console.log(`${presenceMessage.clientId} entered`);
+});
+```
+</Code>
+
+### Parameters <a id="subscribe-params"/>
+
+The `subscribe()` method takes the following parameters:
+
+<Table id='SubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| action | Optional | The presence action(s) to subscribe to. If omitted, the listener fires for every presence event. | <Table id='PresenceAction'/> or `PresenceAction[]` |
+| listener | Optional | A function invoked with a [`PresenceMessage`](/docs/pub-sub/api/javascript/realtime/presence-message) for each matching event. Required when subscribing to all events; with an `action` argument it may be omitted to attach the channel without registering a listener. | Function |
+
+</Table>
+
+<Table id='PresenceAction' hidden>
+
+| Value | Description |
+| --- | --- |
+| absent | Reserved for internal use. This is an internal enum value and is not delivered to subscribers as a presence event. |
+| present | A member is present at the time of channel attach. Synthesized for each existing member when a client first subscribes. |
+| enter | A new member entered the presence set. |
+| leave | A member left the presence set, either explicitly or implicitly (e.g. due to disconnection). |
+| update | A present member updated their data. |
+
+</Table>
+
+### Returns <a id="subscribe-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the channel has been attached and the subscription is active, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+### Considerations <a id="subscribe-considerations"/>
+
+Note the following behaviours when subscribing to presence events:
+
+* If the channel is `initialized` (no attempt to attach has yet been made), calling `subscribe()` implicitly attaches the channel. The listener is still registered regardless of the outcome of the implicit attach.
+* If `subscribe()` is called more than once with the same listener, the listener is registered each time. For example, if you subscribe twice with the same listener and a presence message is later received, that listener is invoked twice.
+* The registered listener remains active regardless of the underlying channel state. For example, if the channel later becomes `detached` or `failed` and is then reattached, listeners originally registered are still invoked when a presence message is received. Listeners are only removed by calling [`unsubscribe()`](#unsubscribe) or by releasing the underlying channel with `realtime.channels.release(name)`.
+* If an exception is thrown in a listener and bubbles up to the event emitter, it is caught and logged at `error` level so that it does not affect other listeners for the same event.
+
+## Enter the presence set <a id="enter"/>
+
+<MethodSignature>{`presence.enter(data?: any): Promise<void>`}</MethodSignature>
+
+Enter the presence set for the channel, optionally with data that is associated with the present member. In order to enter the presence set the client must be [identified by having a client ID](/docs/auth/identified-clients), [have permission to be present](/docs/auth/capabilities), and be attached to the channel. The SDK will implicitly attach to the channel when entering. Entering when already entered is treated as an [`update()`](#update).
+
+<Code>
+```javascript
+await channel.presence.enter('status string');
+```
+</Code>
+
+### Parameters <a id="enter-params"/>
+
+The `enter()` method takes the following parameters:
+
+<Table id='EnterParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| data | Optional | The data payload for the present member. Supported payload types are strings, JSON objects and arrays, buffers containing arbitrary binary data, and `null`. | Any |
+
+</Table>
+
+### Returns <a id="enter-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the client has entered the presence set, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Update the present member <a id="update"/>
+
+<MethodSignature>{`presence.update(data?: any): Promise<void>`}</MethodSignature>
+
+Update the current member's data on the channel. This broadcasts an `update` event to all presence subscribers. The pre-requisites for `update()` are the same as for [`enter()`](#enter). If an attempt to `update()` is made before the client has entered the channel, the update is treated as an `enter`.
+
+<Code>
+```javascript
+await channel.presence.update('new status');
+```
+</Code>
+
+### Parameters <a id="update-params"/>
+
+The `update()` method takes the following parameters:
+
+<Table id='UpdateParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| data | Optional | The new data payload for the present member. May be `null`. | Any |
+
+</Table>
+
+### Returns <a id="update-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the update has been delivered, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Leave the presence set <a id="leave"/>
+
+<MethodSignature>{`presence.leave(data?: any): Promise<void>`}</MethodSignature>
+
+Leave the presence set for the channel. Optionally provide data to broadcast with the leave event. The client must already have [entered the presence set](#enter).
+
+<Code>
+```javascript
+await channel.presence.leave();
+```
+</Code>
+
+### Parameters <a id="leave-params"/>
+
+The `leave()` method takes the following parameters:
+
+<Table id='LeaveParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| data | Optional | The data payload to broadcast with the leave event. | Any |
+
+</Table>
+
+### Returns <a id="leave-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the client has left the presence set, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Get the presence set <a id="get"/>
+
+<MethodSignature>{`presence.get(params?: RealtimePresenceParams): Promise<PresenceMessage[]>`}</MethodSignature>
+
+Retrieve the current members of the presence set for the channel. The returned array contains a [`PresenceMessage`](/docs/pub-sub/api/javascript/realtime/presence-message) object for each member, with metadata such as the member's `clientId`, `connectionId`, action, and any associated data.
+
+The member set is retained in memory by the client, so this method typically returns immediately. However, by default it waits until the presence member set is synchronized, so if synchronization is not yet complete after the channel attaches, it waits until synchronization is complete.
+
+When a channel is attached, the Ably service synchronizes the presence member set with the client. This typically completes in milliseconds, however a very large member set may take longer.
+
+When a channel is `initialized` (i.e. no attempt to attach has yet been made), calling `get()` will implicitly attach the channel.
+
+<Code>
+```javascript
+const members = await channel.presence.get();
+console.log(`${members.length} members present`);
+```
+</Code>
+
+### Parameters <a id="get-params"/>
+
+The `get()` method takes the following parameters:
+
+<Table id='GetParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Optional | Filter and synchronization options for the query. | <Table id='RealtimePresenceParams'/> |
+
+</Table>
+
+<Table id='RealtimePresenceParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| waitForSync | Optional | When `true`, `get()` returns the members once the presence set has been fully synchronized with the server. When `false`, the current presence set members are returned without waiting. Default: `true`. | Boolean |
+| clientId | Optional | Filters the returned members by `clientId`. | String |
+| connectionId | Optional | Filters the returned members by `connectionId`. | String |
+
+</Table>
+
+### Returns <a id="get-returns"/>
+
+`Promise<PresenceMessage[]>`
+
+Returns a promise. The promise is fulfilled with an array of [`PresenceMessage`](/docs/pub-sub/api/javascript/realtime/presence-message) objects representing the current members of the presence set, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Unsubscribe from presence events <a id="unsubscribe"/>
+
+<MethodSignature>{`presence.unsubscribe(action: PresenceAction | PresenceAction[], listener: presenceMessageCallback): void`}</MethodSignature>
+
+Remove the listener for the specified `PresenceAction`.
+
+<MethodSignature>{`presence.unsubscribe(action: PresenceAction | PresenceAction[]): void`}</MethodSignature>
+
+Remove all listeners registered against the specified action(s).
+
+<MethodSignature>{`presence.unsubscribe(listener: presenceMessageCallback): void`}</MethodSignature>
+
+Remove the specified listener from all presence actions.
+
+<MethodSignature>{`presence.unsubscribe(): void`}</MethodSignature>
+
+Remove all listeners.
+
+<Code>
+```javascript
+channel.presence.unsubscribe();
+```
+</Code>
+
+### Parameters <a id="unsubscribe-params"/>
+
+The `unsubscribe()` method takes the following parameters:
+
+<Table id='UnsubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| action | Optional | The action(s) to unsubscribe from. | <Table id='PresenceAction'/> or `PresenceAction[]` |
+| listener | Optional | The specific listener to remove. If omitted, all matching listeners are removed. | Function |
+
+</Table>
+
+## Get presence history <a id="history"/>
+
+<MethodSignature>{`presence.history(params?: RealtimeHistoryParams): Promise<PaginatedResult<PresenceMessage>>`}</MethodSignature>
+
+Get a [paginated](/docs/pub-sub/api/javascript/realtime/realtime-client#PaginatedResult) set of historical presence message events for the channel. If the [channel is configured to persist messages](/docs/storage-history/storage), the presence message history will typically be available for 24 - 72 hours. If not, presence message events are only retained in memory by the Ably service for two minutes.
+
+<Code>
+```javascript
+const history = await channel.presence.history({ limit: 50 });
+history.items.forEach((member) => {
+  console.log(member.action, member.clientId);
+});
+```
+</Code>
+
+### Parameters <a id="history-params"/>
+
+The `history()` method takes the following parameters:
+
+<Table id='HistoryParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Optional | Query parameters as specified in the [presence history API documentation](/docs/storage-history/history#presence-history). | <Table id='RealtimeHistoryParams'/> |
+
+</Table>
+
+<Table id='RealtimeHistoryParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| start | Optional | The time from which messages are retrieved, as milliseconds since the Unix epoch. | Number |
+| end | Optional | The time until which messages are retrieved, as milliseconds since the Unix epoch. Default: current time. | Number |
+| direction | Optional | The order of returned messages. `'backwards'` orders from most recent to oldest; `'forwards'` orders from oldest to most recent. Default: `'backwards'`. | String |
+| limit | Optional | An upper limit on the number of messages returned. Default: 100. Maximum: 1000. | Number |
+| untilAttach | Optional | When `true`, retrieves [continuous history](/docs/storage-history/history#continuous-history) up until the channel attachment point. Requires the channel to be attached and `direction` to be `'backwards'`. If the channel is not attached, or `direction` is `forwards`, this option results in an error. | Boolean |
+
+</Table>
+
+### Returns <a id="history-returns"/>
+
+`Promise<PaginatedResult<PresenceMessage>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](/docs/pub-sub/api/javascript/realtime/realtime-client#PaginatedResult) containing an array of [`PresenceMessage`](/docs/pub-sub/api/javascript/realtime/presence-message) objects, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Enter the presence set on behalf of a client <a id="enter-client"/>
+
+<MethodSignature>{`presence.enterClient(clientId: string, data?: any): Promise<void>`}</MethodSignature>
+
+Enter the presence set on behalf of the given client ID. This is useful when a single client is acting on behalf of multiple clients, for example a server-side process managing presence for [multiple client IDs](/docs/presence-occupancy/presence#multiple-client-ids). Requires the client to be authenticated with a `clientId` matching the supplied value, or with a wildcard `clientId`. The wildcard requirement can be satisfied with an API key, or a token bound to a wildcard client ID.
+
+<Code>
+```javascript
+await channel.presence.enterClient('user-123', 'status');
+```
+</Code>
+
+### Parameters <a id="enter-client-params"/>
+
+The `enterClient()` method takes the following parameters:
+
+<Table id='EnterClientParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| clientId | Required | The client ID to enter the presence set on behalf of. | String |
+| data | Optional | The data payload for the present member. | Any |
+
+</Table>
+
+### Returns <a id="enter-client-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the client has been entered into the presence set, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Update a client's presence data <a id="update-client"/>
+
+<MethodSignature>{`presence.updateClient(clientId: string, data?: any): Promise<void>`}</MethodSignature>
+
+Update the data for an existing present member on behalf of the given client ID. If the client is not already in the presence set, this is treated as an [`enterClient()`](#enter-client).
+
+<Code>
+```javascript
+await channel.presence.updateClient('user-123', 'new status');
+```
+</Code>
+
+### Parameters <a id="update-client-params"/>
+
+The `updateClient()` method takes the following parameters:
+
+<Table id='UpdateClientParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| clientId | Required | The client ID whose data is to be updated. | String |
+| data | Optional | The new data payload. | Any |
+
+</Table>
+
+### Returns <a id="update-client-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the update has been delivered, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Leave the presence set on behalf of a client <a id="leave-client"/>
+
+<MethodSignature>{`presence.leaveClient(clientId: string, data?: any): Promise<void>`}</MethodSignature>
+
+Leave the presence set on behalf of the given client ID. Requires the same authentication conditions as [`enterClient()`](#enter-client).
+
+<Code>
+```javascript
+await channel.presence.leaveClient('user-123');
+```
+</Code>
+
+### Parameters <a id="leave-client-params"/>
+
+The `leaveClient()` method takes the following parameters:
+
+<Table id='LeaveClientParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| clientId | Required | The client ID to remove from the presence set. | String |
+| data | Optional | The data payload to broadcast with the leave event. | Any |
+
+</Table>
+
+### Returns <a id="leave-client-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the client has left the presence set, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
