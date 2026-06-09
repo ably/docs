@@ -576,6 +576,50 @@ export default {
           name: 'SSE API',
           link: '/docs/api/sse',
         },
+        {
+          name: 'JavaScript SDK',
+          pages: [
+            {
+              name: 'Realtime interface',
+              pages: [
+                { name: 'Realtime', link: '/docs/pub-sub/api/javascript/realtime/realtime-client' },
+                { name: 'Auth', link: '/docs/pub-sub/api/javascript/realtime/auth' },
+                { name: 'Connection', link: '/docs/pub-sub/api/javascript/realtime/connection' },
+                { name: 'Crypto', link: '/docs/pub-sub/api/javascript/realtime/crypto' },
+                {
+                  name: 'Channels and messages',
+                  pages: [
+                    { name: 'Channels', link: '/docs/pub-sub/api/javascript/realtime/channels' },
+                    { name: 'RealtimeChannel', link: '/docs/pub-sub/api/javascript/realtime/realtime-channel' },
+                    { name: 'ChannelDetails', link: '/docs/pub-sub/api/javascript/realtime/channel-details' },
+                    { name: 'Message', link: '/docs/pub-sub/api/javascript/realtime/message' },
+                    { name: 'RealtimeAnnotations', link: '/docs/pub-sub/api/javascript/realtime/realtime-annotations' },
+                  ],
+                },
+                {
+                  name: 'Presence',
+                  pages: [
+                    { name: 'RealtimePresence', link: '/docs/pub-sub/api/javascript/realtime/realtime-presence' },
+                    { name: 'PresenceMessage', link: '/docs/pub-sub/api/javascript/realtime/presence-message' },
+                  ],
+                },
+                {
+                  name: 'Push notifications',
+                  pages: [
+                    { name: 'Push', link: '/docs/pub-sub/api/javascript/realtime/push' },
+                    { name: 'PushChannel', link: '/docs/pub-sub/api/javascript/realtime/push-channel' },
+                    { name: 'PushAdmin', link: '/docs/pub-sub/api/javascript/realtime/push-admin' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          link: 'https://ably.com/docs/sdk/js/v2.0/',
+          name: 'JavaScript SDK (TypeDoc)',
+          external: true,
+        },
       ],
     },
   ],
