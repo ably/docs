@@ -2,22 +2,24 @@
 title: "Agent presence"
 meta_description: "Show agent status in your AI application with Ably Presence. Display streaming, thinking, idle, and offline states in real time."
 meta_keywords: "agent presence, AI status, presence API, agent state, AI Transport, Ably"
-intro: "Your users see when the agent is thinking, streaming, idle, or offline. AI Transport channels carry Ably Presence, so an agent self-reports its state and every client sees it in real time."
+intro: "Your users see when the agent is thinking, streaming, idle, or offline. An agent self-reports its state on the session and every client sees it in real time."
 redirect_from:
   - /docs/ai-transport/sessions-identity/online-status
 ---
 
-Agent presence gives session participants a real-time view of which agents are active and what they are doing. Agent presence uses Ably's native [Presence](/docs/presence-occupancy/presence) API on the AI Transport session channel. This works for a single orchestrator agent or a fleet of sub-agents, and conveys whether the agent is streaming, thinking, idle, or offline.
+Agent presence gives session participants a real-time view of which agents are active and what they are doing. Agent presence uses Ably's native [Presence](/docs/presence-occupancy/presence) through the `session.presence` object on the AI Transport session. This works for a single orchestrator agent or a fleet of sub-agents, and conveys whether the agent is streaming, thinking, idle, or offline.
 
 ![Diagram showing presence-aware agent status updates](../../../../images/content/diagrams/ait-presence-aware.png)
 
 <Aside data-type='note'>
-Agent presence is not built into the AI Transport SDK. It uses the Ably Presence API alongside AI Transport.
+Presence carries the status an agent *reports about itself*. For the observed fact of which runs are active, independent of any self-report, read run lifecycle from the conversation with `session.view.runs()`. The two are complementary; [combine them](#combining-with-active-turns) for the richest status.
 </Aside>
 
 ## How it works <a id="how-it-works"/>
 
-The agent enters presence on the AI Transport session channel with status data. As the agent moves through its turn lifecycle (receiving a message, thinking, streaming, finishing), it updates its presence data. Every connected client receives these updates in real time.
+Both [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session) and [`AgentSession`](/docs/ai-transport/api/javascript/core/agent-session) expose presence directly as `session.presence`, with the standard `enter`, `update`, `leave`, `get`, and `subscribe` operations. Presence operations attach the session's channel for you, so you can call them without first awaiting `connect()`.
+
+The agent enters presence with its initial status, then updates that status as it moves through a turn (receiving a message, thinking, streaming, finishing) and leaves when it shuts down. Every connected client receives those updates in real time.
 
 <Code>
 ```javascript
@@ -27,9 +29,8 @@ app.post('/api/chat', async (req, res) => {
   await session.connect();
   const run = session.createRun(invocation, { signal: req.signal });
 
-  // Enter presence on this invocation's channel so every subscriber sees the agent.
-  const channel = ably.channels.get(invocation.sessionName);
-  await channel.presence.enter({ status: 'thinking' });
+  // Enter presence so every connected client sees what the agent is doing.
+  await session.presence.enter({ status: 'thinking' });
 
   await run.start();
   await run.loadConversation();
@@ -40,11 +41,12 @@ app.post('/api/chat', async (req, res) => {
     abortSignal: run.abortSignal,
   });
 
-  await channel.presence.update({ status: 'streaming' });
+  await session.presence.update({ status: 'streaming' });
   const { reason } = await run.pipe(result.toUIMessageStream());
   await run.end(reason);
-  await channel.presence.leave();
-  session.close();
+
+  await session.presence.leave();
+  await session.close();
   res.json({ ok: true });
 });
 ```
@@ -52,46 +54,67 @@ app.post('/api/chat', async (req, res) => {
 
 ## Subscribe to agent status <a id="subscribing"/>
 
-On the client, subscribe to presence events to track the agent's current state:
+On the client, subscribe to presence events to track the agent's current state as it changes:
 
 <Code>
 ```javascript
-const channel = ably.channels.get(sessionChannelName);
+const session = createClientSession({ client: ably, channelName, codec: UIMessageCodec });
 
-channel.presence.subscribe((member) => {
+session.presence.subscribe((member) => {
   if (member.clientId === 'agent') {
     console.log(`Agent is ${member.data.status}`);
   }
 });
 
-const members = await channel.presence.get();
+const members = await session.presence.get();
 const agent = members.find((m) => m.clientId === 'agent');
 ```
 </Code>
 
+You can put whatever your UI needs into presence data: a coarse `status`, a progress percentage, the name of the tool the agent is currently calling. Presence carries the agent's self-report; the conversation itself carries the run lifecycle.
+
 ## Combine presence with active runs <a id="combining-with-active-turns"/>
 
-For richer status indicators, combine presence data with the active Runs on the view. Presence tells you the agent's self-reported state. `session.view.runs()` tells you which Runs are in progress:
+For richer status indicators, combine presence data with the active runs on the view. Presence tells you the agent's self-reported state; `session.view.runs()` tells you which runs are actually in progress:
 
 <Code>
 ```javascript
 const { session } = useClientSession();
-const agentStatus = useAgentPresence(channel); // your custom hook
+const { presenceData } = usePresenceListener({ channelName: 'ai:demo' });
+const agent = presenceData.find((m) => m.clientId === 'agent');
 
 const isStreaming = session.view.runs().some((r) => r.status === 'active' && r.clientId === 'agent');
-const isIdle = agentStatus === 'idle' && !isStreaming;
-const isOffline = agentStatus === null;
+const isIdle = agent?.data?.status === 'idle' && !isStreaming;
+const isOffline = !agent;
 ```
 </Code>
 
 This is enough information for the UI to show a typing indicator while the agent thinks, a streaming animation while tokens arrive, and an offline badge when the agent disconnects.
+
+## React <a id="react"/>
+
+`ClientSessionProvider` (and `ChatTransportProvider`, which wraps it) renders an ably-js `<ChannelProvider>` for the session's channel, so ably-js's presence hooks ([`usePresence`, `usePresenceListener`](/docs/getting-started/react#step-3)) work for any descendant without wrapping the subtree in your own `<ChannelProvider>`. Read the agent's reported status straight from the presence set:
+
+<Code>
+```javascript
+import { usePresenceListener } from 'ably/react';
+
+function AgentStatus() {
+  const { presenceData } = usePresenceListener({ channelName: 'ai:demo' });
+  const agent = presenceData.find((member) => member.clientId === 'agent');
+
+  if (!agent) return <span>Agent offline</span>;
+  return <span>Agent is {agent.data?.status}</span>;
+}
+```
+</Code>
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
 - An agent that exits without calling `presence.leave()` (for example, a crashed process) is automatically removed from presence after a timeout. The agent is treated as present until the timeout fires. Wire a graceful shutdown that calls `leave` for the best user experience.
 - A serverless agent that comes up for one turn and tears down should enter and leave presence per turn; entering once and leaving once at the end is fine for a long-running agent.
 - Presence updates do not guarantee strict ordering with channel messages. A `streaming` presence update sometimes arrives slightly after the first token. Drive the UI off `session.view.runs()` for run-level state (active, suspended, terminal) and use presence for higher-level status the agent self-reports.
-- Multi-agent setups need unique `clientId` per agent. Two agents with the same `clientId` collide in the presence set.
+- Multi-agent setups need a unique `clientId` per agent. Two agents with the same `clientId` collide in the presence set.
 - A client without `presence` capability cannot subscribe to updates. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
 
 ## FAQ <a id="faq"/>
@@ -102,9 +125,10 @@ Presence enter, update, and leave each consume a message on the channel. See [th
 
 ### Can clients enter presence too? <a id="faq-clients"/>
 
-Yes. Presence is symmetric. A client that enters presence shows up alongside agents in the presence set. Use the `clientId` to distinguish.
+Yes. Presence is symmetric. A client that enters presence shows up alongside agents in the presence set. Use the `clientId` to distinguish them.
 
 ### How long does presence persist after a disconnect? <a id="faq-timeout"/>
+
 Until Ably's presence timeout fires (currently around 15 seconds). Active connections are not affected; this is for ungraceful disconnects.
 
 ### What is the difference between presence and the view's active runs? <a id="faq-vs-active-runs"/>
@@ -113,10 +137,11 @@ Presence is self-reported by the agent. `session.view.runs()` is observable from
 
 ### Can I pause inference when no users are connected? <a id="faq-pause"/>
 
-Yes. Subscribe to presence and check whether any non-agent participants are present. If none, end the turn or short-circuit the LLM call. This is one of the cost-saving patterns presence enables.
+Yes. Subscribe to presence and check whether any non-agent participants are present. If none, end the run or short-circuit the LLM call. This is one of the cost-saving patterns presence enables.
 
 ## Related features <a id="related"/>
 
 - [Presence](/docs/presence-occupancy/presence): the Ably Presence API used for agent status.
-- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): tracking active turns across clients.
+- [Sessions](/docs/ai-transport/concepts/sessions): `session.presence` on the client and agent sessions.
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): tracking active runs across clients.
 - [Multi-device sessions](/docs/ai-transport/features/multi-device): presence works across every connected device.
