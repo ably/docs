@@ -1,0 +1,155 @@
+---
+title: "ChatTransportProvider"
+meta_description: "API reference for ChatTransportProvider: the Vercel React entry point that wraps a ClientSession in a ChatTransport bound to UIMessageCodec."
+meta_keywords: "AI Transport, React, ChatTransportProvider, ChatTransport, ClientSession, useChat, Vercel AI SDK"
+redirect_from:
+  - /docs/ai-transport/api-reference/chat-transport-provider
+  - /docs/ai-transport/api/react/chat-transport-provider
+---
+
+`ChatTransportProvider` is the entry point for the Vercel React integration. It wraps children in a `ClientSessionProvider` bound to `UIMessageCodec`, constructs a [`ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport) over that session, and exposes both through React context. Descendants call [`useChatTransport`](/docs/ai-transport/api/react/vercel/use-chat-transport) to get the transport (and the session) for Vercel `useChat`.
+
+The Realtime client is read from the surrounding `<AblyProvider>`. The session is created once on first render. The chat transport is recreated only when `chatOptions` changes.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { ChatTransportProvider } from '@ably/ai-transport/vercel/react';
+
+const ably = new Ably.Realtime({ authUrl: '/api/auth/token' });
+
+function App() {
+  return (
+    <AblyProvider client={ably}>
+      <ChatTransportProvider channelName="conversation-42">
+        <Chat />
+      </ChatTransportProvider>
+    </AblyProvider>
+  );
+}
+```
+</Code>
+
+`ChatTransportProvider` also re-exports the Vercel-baked core hooks (`useClientSession`, `useView`, `useTree`, `useCreateView`, `useAblyMessages`, and the underlying `ClientSessionProvider`) from the same entry point, all pre-bound to the Vercel `TInput` / `TOutput` / `TProjection` / `TMessage` types.
+
+## Props <a id="props"/>
+
+`ChatTransportProviderProps` extends [`ClientSessionProviderProps`](/docs/ai-transport/api/react/core/providers#client-session-provider-props) with the `codec` field omitted (always `UIMessageCodec`) and adds four transport-owned options for the agent-invocation POST.
+
+<Table id='ChatTransportProviderProps'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| channelName | The channel the session subscribes to. Used as the registry key for nested providers. | String |
+| api | Endpoint the chat transport POSTs the invocation to, to wake the agent. Defaults to `/api/chat`. | String |
+| credentials | Fetch credentials mode for the invocation POST. Set to `'include'` for cookie-based cross-origin auth. | `RequestCredentials` |
+| fetch | Custom fetch implementation for the invocation POST. Defaults to `globalThis.fetch`. | `typeof globalThis.fetch` |
+| chatOptions | Hooks for customising chat request construction (for example `prepareSendMessagesRequest`). Must be stable across renders; wrap in `useMemo` or define outside the component. A new object reference recreates the `ChatTransport`. | <Table id='ChatTransportOptions'/> |
+| clientId | The client's identity, used as the Ably publisher `clientId` on everything the session publishes. | String |
+| messages | Initial messages to seed the conversation tree with. | `UIMessage[]` |
+| logger | Logger instance for diagnostic output. | `Logger` |
+| children | Descendant components that consume the chat transport via [`useChatTransport`](/docs/ai-transport/api/react/vercel/use-chat-transport). | `ReactNode` |
+
+</Table>
+
+<Table id='ChatTransportOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| prepareSendMessagesRequest | Hook called before each `sendMessages` request. Returns `{ body?, headers? }` to merge into the agent-invocation POST. The run's invocation identifiers always take precedence over the returned body. | `(context: SendMessagesRequestContext) => { body?, headers? }` |
+
+</Table>
+
+## Behaviour <a id="behaviour"/>
+
+`useChatTransport` and the re-exported `useClientSession` / `useView` / `useTree` / `useCreateView` / `useAblyMessages` find the nearest provider in the tree. Pass `channelName` to look up a specific provider by name when nesting multiple.
+
+The underlying `ClientSession` is created once on first render via `useRef`, and `connect()` runs from a `useEffect`. The session is closed when the provider truly unmounts.
+
+The `ChatTransport` itself is not closed on unmount: its `close()` delegates to `ClientSession.close()`, which the inner `ClientSessionProvider` already calls. Auto-closing here would double-close in React Strict Mode.
+
+If `createClientSession` throws, the error surfaces via [`useClientSession.sessionError`](/docs/ai-transport/api/react/core/use-client-session#returns) and [`useChatTransport.chatTransportError`](/docs/ai-transport/api/react/vercel/use-chat-transport). The component tree does not crash.
+
+## Nest providers for multiple sessions <a id="nest"/>
+
+Nest providers with distinct `channelName` values to manage more than one chat in the same tree. Each provider merges its slot into the parent record so descendants can address any registered session by name.
+
+<Code>
+```javascript
+<ChatTransportProvider channelName="ai:main">
+  <ChatTransportProvider channelName="ai:aux">
+    <App />
+  </ChatTransportProvider>
+</ChatTransportProvider>
+```
+</Code>
+
+Inside `App`:
+
+<Code>
+```javascript
+import { useChatTransport } from '@ably/ai-transport/vercel/react';
+
+function App() {
+  const main = useChatTransport({ channelName: 'ai:main' });
+  const aux = useChatTransport({ channelName: 'ai:aux' });
+  // ...
+}
+```
+</Code>
+
+## Example <a id="example"/>
+
+Full Vercel chat wiring using `ChatTransportProvider`, `useChatTransport`, and `useChat` from `@ai-sdk/react`.
+
+<Code>
+```javascript
+'use client';
+
+import { useEffect, useState } from 'react';
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { ChatTransportProvider, useChatTransport } from '@ably/ai-transport/vercel/react';
+import { useChat } from '@ai-sdk/react';
+
+function Providers({ children }) {
+  const [client, setClient] = useState(null);
+
+  useEffect(() => {
+    const ably = new Ably.Realtime({ authUrl: '/api/auth/token', clientId: 'user' });
+    setClient(ably);
+    return () => ably.close();
+  }, []);
+
+  if (!client) return null;
+  return <AblyProvider client={client}>{children}</AblyProvider>;
+}
+
+function Chat() {
+  const { chatTransport } = useChatTransport();
+  const { messages, sendMessage, status, stop } = useChat({ transport: chatTransport });
+
+  return (
+    <div>
+      {messages.map((m) => (
+        <div key={m.id}>{m.role}: {m.parts.map((p) => p.type === 'text' ? p.text : '').join('')}</div>
+      ))}
+      {status === 'streaming'
+        ? <button type="button" onClick={stop}>Stop</button>
+        : <button type="button" onClick={() => sendMessage({ text: 'Hello' })}>Send</button>}
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Providers>
+      <ChatTransportProvider channelName="my-chat">
+        <Chat />
+      </ChatTransportProvider>
+    </Providers>
+  );
+}
+```
+</Code>

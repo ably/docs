@@ -23,6 +23,7 @@ export default {
     nodejs: '2.21',
     typescript: '2.21',
     react: '2.21',
+    nextjs: '2.21',
     csharp: '1.2',
     flutter: '1.2',
     java: '1.7',
@@ -43,11 +44,7 @@ export default {
     android: '1.2',
   },
   aiTransport: {
-    javascript: '2.21',
-    react: '2.21',
-    java: '1.7',
-    python: '3.1',
-    swift: '1.2',
+    javascript: '0.2',
   },
   spaces: {
     javascript: '0.5',

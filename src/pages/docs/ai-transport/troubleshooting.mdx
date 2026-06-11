@@ -1,0 +1,200 @@
+---
+title: "Troubleshooting"
+meta_description: "Debug common Ably AI Transport problems. Channel namespace configuration, capability and token issues, history retention, turn lifecycle, cancellation, multi-device, and connection recovery."
+meta_keywords: "AI Transport troubleshooting, channel namespace, capability, history retention, turn lifecycle, cancellation, reconnect"
+intro: "Common AI Transport problems and how to fix them. Each entry follows the same shape: the symptom you see, what to check to confirm the cause, and the fix to apply."
+---
+
+Entries are ordered roughly by how often they cause support tickets, with the most common failure modes first.
+
+## Channel namespace not configured for AI Transport <a id="namespace-not-configured"/>
+
+**Symptom:** Clients see an empty assistant message, or a message containing only the first token. The server errors on subsequent publishes. The initial `message.create` succeeds, but the `message.append` operations that AI Transport uses to stream tokens fail with error code `93002` (`Can only update/delete/append messages on channels with mutableMessages enabled`) because the namespace does not permit appends. This is the single most common AI Transport failure.
+
+**Confirm:**
+
+- Check the server logs for error `93002` after the first token. The message reads `Can only update/delete/append messages on channels with mutableMessages enabled`.
+- Open the Ably dashboard for your app's settings.
+- Find the channel namespace your conversations live on (for example a namespace of `conversations` should have channel names like `conversations:abc`).
+- Check whether *Message annotations, updates, deletes, and appends* is enabled on that namespace.
+
+**Fix:**
+
+- Enable the *Message annotations, updates, deletes, and appends* rule on the namespace. See [Enable channel rules](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+- Note that enabling this rule causes messages to be [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether persistence is enabled on the namespace.
+
+## Capability or token scope mismatch <a id="capability-mismatch"/>
+
+**Symptom:** The token authenticates, but specific operations fail. There are two common shapes:
+
+- Channel pattern miss: the channel attach fails, or a publish is rejected. The capability covers `conversations:*` but your app uses `chat:abc`.
+- Missing operation: the connection works but a specific operation does not. Clients cannot cancel generation (missing `publish`). Late joiners or reconnects show only live messages and not the prior conversation (missing `history`). Agent presence never updates (missing `presence`).
+
+**Confirm:**
+
+- Decode the JWT returned by your auth endpoint and inspect the `x-ably-capability` claim. It is a JSON-encoded map of channel patterns to permitted operations.
+- Compare each operation your application performs against the capability for the relevant channel name.
+
+**Fix:**
+
+- Make the channel pattern in the capability cover the channel names your application uses. Patterns are case-sensitive; wildcards like `conversations:*` only cover channels with that exact prefix.
+- Grant every operation the application needs: `subscribe` and `publish` for messages, `history` for loading past conversation, `presence` for agent presence. See [capability operations](/docs/auth/capabilities#capability-operations) for the full list and [authentication](/docs/ai-transport/concepts/authentication) for the AI Transport capability shape.
+
+## History disappears <a id="history-disappears"/>
+
+**Symptom:** Past conversation messages are not available when the user expects them. Two scenarios trigger the same root cause:
+
+- The user opens the app the next day, tries to scroll back, and older messages are gone.
+- The user is offline longer than the live recovery window. On reconnect the SDK falls back to history, but no past messages arrive.
+
+In both cases the cause is the same: the channel namespace is not configured to persist messages long enough for the use case.
+
+**Confirm:**
+
+- Check the retention setting on the channel namespace in the Ably dashboard. The default in-memory retention covers only the live recovery window (around 2 minutes) and is not suitable for scroll-back.
+- Confirm whether your application is meant to read history from Ably alone, or to hydrate from an external store.
+
+**Fix:**
+
+- Enable persistence on the channel namespace and set a retention period that covers your expected scroll-back window. See [history and replay](/docs/ai-transport/features/history#faq-retention) for the persistence options.
+- For conversations that need to be retained for longer than the channel allows, persist completed turns to your own store and hydrate from it on session load. See [reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery#loading-history) for how reconnect interacts with history.
+
+## Run never ends <a id="turn-never-ends"/>
+
+**Symptom:** The streamed message renders with the streaming status forever. `session.view.runs()` shows the Run with `status: 'active'` long after the model finished generating.
+
+**Confirm:**
+
+- Check the server logs around the affected Run. Did `run.end(reason)` execute? If the route handler threw between `run.pipe` and `run.end`, the Run never closes.
+- Inspect the channel in the Ably dashboard. The `ai-run-end` lifecycle message should appear after the streamed message's close event. If it is missing, the encoder did not publish it.
+
+**Fix:**
+
+- Wrap streaming work in `try`/`finally` and always call `run.end()` in the `finally` block. A Run that errored should end with reason `'error'`.
+- If you use Next.js `after()`, confirm the callback runs to completion. An unhandled promise rejection inside `after()` aborts the rest of the handler, including `run.end()`.
+- See [Runs](/docs/ai-transport/concepts/runs#lifecycle) for the full lifecycle contract.
+
+## Cancel doesn't stop the agent <a id="cancel-doesnt-stop"/>
+
+**Symptom:** The client publishes a cancel signal, the cancel message lands on the channel, but the agent keeps streaming tokens until the model finishes naturally.
+
+**Confirm:**
+
+- Check the server handler: is `run.abortSignal` passed to the LLM call?
+- For long-running tools, check whether the tool implementation reads `run.abortSignal.aborted` and exits when the signal fires.
+- If `onCancel` is configured, check that it returns `true` for the cancel request. A hook that returns `false` rejects the cancel silently.
+
+**Fix:**
+
+- Pass `run.abortSignal` to every LLM call, for example `streamText({ abortSignal: run.abortSignal, ... })`.
+- In server-executed tools, wire `run.abortSignal` into long-running operations so they exit promptly when the signal fires.
+- See [cancellation](/docs/ai-transport/features/cancellation#abort-signal) for the full flow.
+
+## Duplicate or unexpected turns <a id="duplicate-turns"/>
+
+**Symptom:** A single user action produces two turns. The streamed response duplicates, or the user sees two siblings where they expected one. Two common causes:
+
+- React Strict Mode (or a stale `useEffect`) calls `send()` twice in development.
+- The user edits or regenerates a message while a previous turn is still streaming. The edit does not cancel the in-progress turn, so both streams run side by side.
+
+**Confirm:**
+
+- Inspect the channel for two `ai-run-start` events with different `runId` values for the same user message.
+- Check whether your send path lives inside a `useEffect`. Imperative event handlers (`onClick`, `onSubmit`) are safer.
+
+**Fix:**
+
+- Guard `view.send()` so it fires once per user action. Avoid placing it inside an effect without a dependency that prevents re-firing.
+- Before editing or regenerating, cancel the in-flight Run explicitly. AI Transport does not auto-cancel an active Run on edit; see [conversation branching](/docs/ai-transport/features/branching#edit) for the recommended pattern.
+
+## Message too large to publish <a id="message-too-large"/>
+
+**Symptom:** A publish fails with error code `40009` (maximum message length exceeded). Inside a streaming turn this surfaces as a `StreamError` (`104008`) on the server. Tool outputs or model responses that contain large payloads do not reach the channel.
+
+**Confirm:**
+
+- Identify the message that failed. Tool results that include binary data, large embeddings, or full document bodies are the usual culprits.
+- Check your Ably package's message size limit. The cap is 64 KiB on Free and Standard, 256 KiB on Pro and Enterprise.
+
+**Fix:**
+
+- Stream large tool results across multiple events instead of publishing them in one message.
+- Persist large payloads to an external store and send only a reference (URL or ID) over the channel.
+
+## Two devices share a clientId <a id="shared-clientid"/>
+
+**Symptom:** Ownership-scoped behaviour misbehaves across two devices for the same user. Cancels intended for one device cancel turns on the other. Presence shows the user appearing and disappearing as both devices update their state.
+
+**Confirm:**
+
+- Inspect the JWT each device receives. If both tokens have the same `x-ably-clientId`, they are indistinguishable to the Ably service.
+- Check whether your token-issuing logic generates a unique identifier per device (typically `userId + deviceId`), or only uses `userId`.
+
+**Fix:**
+
+- Assign a unique `clientId` per device or per session for any case where ownership matters. A common pattern is `<userId>:<deviceId>` so the user remains identifiable while devices remain distinguishable.
+- See [multi-device sessions](/docs/ai-transport/features/multi-device) for the model.
+
+## Branch selection out of sync across devices <a id="branch-out-of-sync"/>
+
+**Symptom:** Two devices on the same conversation show different responses to the same prompt. Edit history navigation diverges between them.
+
+This is intentional. Branch selection is a per-view, per-device choice. Each device navigates the conversation tree independently, so a user reviewing alternates on one device does not disrupt another device displaying the same conversation.
+
+**Fix:**
+
+- If branch selection should be shared (for example, a co-pilot where both devices must agree), synchronise the chosen leaf through your own application state, or by sending a message on the channel that the other client can react to and change its selections.
+- See [conversation branching](/docs/ai-transport/features/branching#branch-navigation) for how branch selection works.
+
+## Reconnect loop <a id="reconnect-loop"/>
+
+**Symptom:** The client connects, drops, reconnects, drops again. The cycle repeats every few seconds. Channel state never stabilises.
+
+**Confirm:**
+
+- Inspect the Ably connection state on the client (`realtimeClient.connection.state`). A reconnect loop cycles `connecting` → `connected` → `disconnected` rapidly.
+- If each `disconnected` event carries a token error, your auth endpoint is returning tokens that Ably is rejecting on every reconnect.
+
+**Fix:**
+
+- Verify the auth endpoint signs tokens with the correct key for the right environment (a dev key against a prod app is a common cause).
+- Lengthen token TTL if it is set very short. The SDK refreshes ahead of expiry; very short lifetimes fight the refresh.
+- If the token is rejected for capability rather than signing, see [capability or token scope mismatch](#capability-mismatch).
+
+## Agent process crashes mid-stream <a id="agent-crash"/>
+
+**Symptom:** A streamed message stops part-way through and stays in `streaming` status forever. No more tokens arrive and no run-end event ever fires. From the client's point of view this is indistinguishable from [Run never ends](#turn-never-ends): both leave the Run in `active` state. The root cause here is the process dying rather than the handler skipping `run.end()`.
+
+**Confirm:**
+
+- Check server logs for the crashed process around the timestamp of the affected turn. An exception or an OOM kill typically appears there.
+- If you cannot see the crash directly, check infrastructure signals: serverless function timeouts that expire before `after()` finishes, container OOM kills, and process restarts are common causes.
+
+**Fix:**
+
+- Add structured error logging around the streaming path so the cause is visible. Common causes are model provider errors, OOM in long tool calls, and serverless function timeouts.
+- Decide on the application response: surface a retry control to the user, or auto-retry from the application layer. AI Transport does not retry the LLM call automatically. See [reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery#faq-agent-crash) for the contract.
+
+## Publish fails in suspended state <a id="publish-suspended"/>
+
+**Symptom:** A publish from the client returns an error. The connection has been disconnected for more than around two minutes and has moved to `suspended` state.
+
+**Confirm:**
+
+- Inspect the connection state at the moment of the failed publish. A `suspended` connection has lost message continuity, and there is no live connection to the Ably platform. The underlying Ably SDK (`ably-js`) rejects the publish locally because it cannot guarantee ordering against the live stream.
+
+**Fix:**
+
+- Check connection state before publishing user-driven actions, and queue them locally while the connection is not `connected`.
+- Flush the queue once the connection returns to `connected`. `ably-js` does not buffer publishes through a `suspended` state because continuity has already been lost.
+
+## When to escalate <a id="escalate"/>
+
+If you have worked through the entries on this page and the symptom does not match, or the fix did not work, capture:
+
+- The channel name.
+- The date and time of the affected operation.
+- The `clientId` of the affected server agent or client device.
+- The first error log entry on either side.
+
+[Open a support ticket](https://ably.com/contact) with these. The Ably side of the system is observable to support; the application side needs the IDs to correlate.

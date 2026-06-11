@@ -1,0 +1,89 @@
+---
+title: "Conversation tree"
+meta_description: "Understand how AI Transport organises messages into a branching conversation tree, and how views provide each participant with their own linear perspective."
+meta_keywords: "AI Transport, messages, conversation tree, branching, views, pagination, edit, regenerate"
+intro: "Every conversation in AI Transport is a tree of messages. The tree keeps every branch; a view is the linear path through it that a participant sees."
+redirect_from:
+  - /docs/ai-transport/concepts/messages-and-conversation-tree
+---
+
+Every conversation in AI Transport is a tree of messages. Each message has a unique identity and a position in the tree. The tree preserves all paths through the conversation, including edits and regenerations which create a branching tree structure, so that no content is ever lost.
+
+![Diagram showing a branching conversation tree with two independent Views selecting different paths](../../../../images/content/diagrams/ait-concepts-conversation-tree.png)
+
+## Understand messages <a id="messages"/>
+
+A message is a discrete unit of content in the conversation: a user's input, an assistant's response, a tool call, a tool result. Each message has a unique identity (its message ID) and a position in the tree defined by pointers to parent or sibling messages.
+
+A message may arrive on the channel as a single publish or as a sequence of operations that share the same message ID. A streamed assistant response, for example, is initiated with a publish and built up through a series of appends (token deltas) until a final closing append marks it complete. These are not separate messages; they are the incremental delivery of a single message. The message ID is the identity; the channel operations are the mechanism.
+
+Each message carries transport headers (identity, parentage, role, streaming state) and a codec-encoded payload. Messages are ordered by their serial and are immutable once complete.
+
+## Understand the conversation tree <a id="tree"/>
+
+The tree holds the complete branching history of a conversation. Every message that has ever been part of the [session](/docs/ai-transport/concepts/sessions), whether it is currently visible or not, is a node in the tree.
+
+The tree is not a linear list. When you regenerate a response, the new response is a sibling of the old one, not a replacement. When you edit a message, the edited version forks from the same parent as the original. This means the tree preserves all paths through the conversation, not just the currently visible one. No message is ever deleted from the tree by a regeneration or edit; it becomes a sibling on an alternative branch.
+
+### Construct the tree from transport headers <a id="tree-construction"/>
+
+Each message on the channel carries transport headers that define the tree structure:
+
+- A message ID that uniquely identifies the node.
+- A parent pointer that establishes the parent-child relationship.
+- An optional fork-of pointer that marks a regeneration or edit.
+
+The tree applies these headers to construct the graph. Messages are ordered by their serial, so the tree's construction is deterministic. The same sequence of messages always produces the same tree.
+
+### Use the tree as the source of truth <a id="tree-source-of-truth"/>
+
+The tree is the single source of truth for conversation state. It is unfiltered: it contains every node on every branch, and it emits events for every mutation regardless of which branch was affected. The tree does not know or care which branch a particular participant is looking at. That is the view's job.
+
+## Understand views <a id="views"/>
+
+A view is a linear projection over the tree. It selects one sibling at each branch point and produces the flat sequence of messages that a participant works with: the conversation as it appears in a chat UI, or the message history that an agent sends to an LLM.
+
+The tree contains every branch; the view chooses a path through it. When a conversation has been regenerated three times at a particular point, the tree holds all three responses as siblings. The view selects one of them and presents the conversation as if that response is the only one, while still allowing navigation to the others.
+
+### Maintain independent views per participant <a id="independent-views"/>
+
+Each participant can have their own view with independent branch selections. Two clients looking at the same session might be viewing different branches of the same conversation. The tree is shared; the views are independent.
+
+### Manage pagination <a id="pagination"/>
+
+The view manages pagination. Not all messages need to be visible at once. Older messages can be withheld and loaded on demand. The view tracks the boundary between visible and withheld messages and provides the mechanism to expand the window.
+
+### Receive scoped events <a id="scoped-events"/>
+
+The view emits the same kinds of events as the tree (updates, turn lifecycle), but scoped to visibility. If a mutation affects a branch that the view is not currently showing, the view does not emit an event. This is the filtering that makes views practical for driving UI: a component subscribed to view events only re-renders when something it is displaying changes.
+
+### Interact through a view <a id="interaction"/>
+
+The view is the surface through which participants interact with the conversation. Sending a message, regenerating a response, editing a message, and updating an existing message are all operations on a view. The view knows its current position in the tree (the selected branch, the last visible message) and uses that context to construct the correct parent and fork-of pointers for new operations.
+
+## Work with the tree and views <a id="example"/>
+
+The session exposes the default view as a property. Iterate the visible messages on the selected branch through `getMessages()`; each entry pairs the domain `message` with its `codecMessageId`:
+
+<Code>
+```javascript
+const view = session.view;
+
+for (const { codecMessageId, message } of view.getMessages()) {
+  const text = message.parts
+    .filter((p) => p.type === 'text')
+    .map((p) => p.text)
+    .join('');
+  console.log(codecMessageId, message.role, text);
+}
+```
+</Code>
+
+Additional views over the same tree are created with `session.createView()`. The tree behind the view holds every branch; the view selects one path through it. See [conversation branching](/docs/ai-transport/features/branching) for creating branches with edit and regenerate and navigating between siblings.
+
+## Read next <a id="next"/>
+
+- [Sessions](/docs/ai-transport/concepts/sessions): understand the persistent, shared conversation state that the tree belongs to.
+- [Runs](/docs/ai-transport/concepts/runs): understand how agent work is structured within the session.
+- [Optimistic updates](/docs/ai-transport/features/optimistic-updates): how messages are inserted locally and reconciled with the published tree.
+- [Conversation branching](/docs/ai-transport/features/branching): understand how branches are created and navigated.

@@ -9,6 +9,10 @@ export default {
     label: 'React',
     syntaxHighlighterKey: 'javascript',
   },
+  nextjs: {
+    label: 'Next.js',
+    syntaxHighlighterKey: 'javascript',
+  },
   java: {
     label: 'Java',
     syntaxHighlighterKey: 'java',

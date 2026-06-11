@@ -70,25 +70,25 @@ describe('Breadcrumbs', () => {
     render(<Breadcrumbs />);
 
     // Current page (last item) should be disabled
-    expect(screen.getByText('Current Page')).toHaveClass('text-gui-unavailable');
+    expect(screen.getByText('Current Page')).toHaveClass('text-neutral-700');
     expect(screen.getByText('Current Page')).toHaveClass('pointer-events-none');
 
     // Non-linked nodes (link='#') should be disabled
-    expect(screen.getByText('Subsection 1')).toHaveClass('text-gui-unavailable');
+    expect(screen.getByText('Subsection 1')).toHaveClass('text-neutral-700');
     expect(screen.getByText('Subsection 1')).toHaveClass('pointer-events-none');
 
     // Active links should not be disabled
-    expect(screen.getByText('Section 1')).not.toHaveClass('text-gui-unavailable');
+    expect(screen.getByText('Section 1')).not.toHaveClass('text-neutral-700');
     expect(screen.getByText('Section 1')).not.toHaveClass('pointer-events-none');
   });
 
   it('shows only the last active node in mobile view', () => {
     render(<Breadcrumbs />);
 
-    // All items except index 0 should have 'hidden sm:flex' classes
+    // All items except index 0 should have 'hidden md:flex' classes
     expect(screen.getByText('Section 1')).not.toHaveClass('hidden');
-    expect(screen.getByText('Subsection 1')).toHaveClass('hidden', 'sm:flex');
-    expect(screen.getByText('Current Page')).toHaveClass('hidden', 'sm:flex');
+    expect(screen.getByText('Subsection 1')).toHaveClass('hidden', 'md:flex');
+    expect(screen.getByText('Current Page')).toHaveClass('hidden', 'md:flex');
   });
 
   it('correctly identifies last active node when current page is non-linked', () => {
@@ -108,8 +108,8 @@ describe('Breadcrumbs', () => {
     });
 
     render(<Breadcrumbs />);
-    expect(screen.getByText('Section 1')).toHaveClass('hidden', 'sm:flex');
+    expect(screen.getByText('Section 1')).toHaveClass('hidden', 'md:flex');
     expect(screen.getByText('Subsection 1')).not.toHaveClass('hidden');
-    expect(screen.getByText('Current Page')).toHaveClass('hidden', 'sm:flex');
+    expect(screen.getByText('Current Page')).toHaveClass('hidden', 'md:flex');
   });
 });

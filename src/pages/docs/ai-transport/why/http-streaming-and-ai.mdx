@@ -1,0 +1,116 @@
+---
+title: "HTTP streaming and AI"
+meta_description: "Why direct HTTP streaming breaks down for production AI: streams fail on disconnect, sessions do not span devices, clients cannot reach the agent, multi-agent routing is complex, and there are no agent health signals."
+meta_keywords: "HTTP streaming, SSE limitations, AI agents, durable sessions, server-sent events, AI production"
+intro: "Direct HTTP streaming is fine for one-off interactions and breaks down everywhere else. These are the limitations that show up once an AI app is in production, and what teams end up building on top."
+---
+
+Most AI frameworks default to a single pattern: the client makes an HTTP request, the agent handles it, and the response streams back over Server-Sent Events or a similar HTTP stream. It is simple, every framework supports it, and it works for one-shot interactions. The simplicity is also the source of every limitation below.
+
+The limitations all share one cause: the client-to-agent interaction is coupled to the transport that carries it. The connection, the request, and the streamed response have the same lifetime. Anything that needs the interaction to outlive the connection, or to be visible to anything beyond that one client, requires building new infrastructure on top.
+
+## The default pattern <a id="the-default-pattern"/>
+
+A typical Vercel AI SDK route returns the model's stream as the HTTP response:
+
+<Code>
+```javascript
+import { streamText } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
+
+export async function POST(req) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages,
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+</Code>
+
+The client opens a fetch with `Accept: text/event-stream` (or equivalent), reads tokens as they arrive, and renders them. The conversation exists in two places: the HTTP request body (what the client sent) and the HTTP response stream (what the model produces). When the response ends, the interaction ends.
+
+## Streams fail on disconnect <a id="streams-fail-on-disconnect"/>
+
+The lifetime of the response is the lifetime of the connection. When the connection drops, the response is gone. This happens routinely: a phone switches from Wi-Fi to cellular, a user refreshes the page, a laptop lid closes mid-response. The LLM keeps generating tokens; there is nowhere to deliver them.
+
+![Diagram showing an SSE token stream working, then breaking on connection drop, then the bolt-on infrastructure teams assemble to recover](../../../../images/content/diagrams/ait-sse-stream-failures.png)
+
+SSE includes a `Last-Event-ID` mechanism for a reconnecting client to specify a resume position. In practice almost no AI deployment supports it, because supporting it requires substantial backend work:
+
+- Assign monotonic IDs to every token event.
+- Buffer events in an external store (Redis, Kafka, or similar) keyed by client and conversation.
+- Add an HTTP endpoint that accepts a `Last-Event-ID`, looks up the buffer, and resumes the stream from that position.
+- Decide how long to retain buffered events and how to evict stale entries.
+
+That is a substantial departure from a stateless request handler. Even with the work done, resume only covers reconnection of an existing client. It does not cover continuity after a page refresh, because SSE has no built-in concept of session identity. Building session continuity is yet another layer on top.
+
+## Sessions do not span devices <a id="sessions-do-not-span-devices"/>
+
+With HTTP streaming, the connection is exclusive to the requesting client and the agent that handled it. A second tab or a phone has no way into that stream. It exists only for the client that initiated the request.
+
+In production, users move between surfaces constantly: a second browser tab, the mobile app, picking the conversation up later from a different device. Without shared access to the session, each surface is isolated. There is no way for a new client to see the in-progress stream or even the current state of the conversation.
+
+Building this on top of HTTP streaming requires:
+
+- A server-side session store (database or Redis) that buffers conversation state.
+- A reconcile path on every device join that loads the buffered state and subscribes to live updates.
+- A separate push channel (WebSocket, server-sent events, polling) so the second device sees new tokens.
+
+That is two transports running in parallel: HTTP for one client, push for everyone else. The complexity scales with how many surfaces the session needs to reach.
+
+## Clients cannot reach the agent <a id="clients-cannot-reach-the-agent"/>
+
+An SSE request from the client to the agent is one-way: server to client. The client has no way to send a signal to the agent through the same connection once the initial request has been made. The only upstream action the client has is to close the connection.
+
+Using connection-close as the sole upstream signal creates a fundamental conflict. Consider a Stop button. The implementation has to choose between two interpretations of a closed connection: either it is a cancel (the LLM should stop) or it is a disconnect (the LLM should keep going so the stream can resume). There is no way to disambiguate.
+
+Even with a bidirectional transport like WebSocket, the connection is still an exclusive pipe between one client and one agent. Other devices have no upstream channel, so they cannot interrupt or steer from a second device.
+
+Teams that need bidirectional control build a separate signalling channel: a WebSocket dedicated to control messages, or a queue (Kafka, SQS, Redis pub/sub) the client publishes to and the agent polls. That doubles the operational surface: two transports, two reconnect models, two delivery guarantees to reconcile.
+
+## Multi-agent architectures are complex <a id="multi-agent-architectures-are-complex"/>
+
+In multi-agent systems, an orchestrator handles the client's connection and delegates work to specialised sub-agents. When the client-to-orchestrator connection is exclusive and point-to-point, every sub-agent interaction has to be proxied by the orchestrator. If users need to see intermediate progress from sub-agents, every update is mediated through the orchestrator.
+
+This creates two problems. First, the orchestrator becomes a coupling point: every sub-agent change requires orchestrator changes. Second, observability is mediated: the client cannot directly see sub-agent activity, so dashboards and audit trails have to be reconstructed server-side.
+
+A shared session changes this. Each sub-agent publishes to the same session. The client (and any observer) subscribes once and sees every agent's output as it happens. The orchestrator coordinates work without serialising the output stream.
+
+## No agent health signals <a id="no-agent-health-signals"/>
+
+HTTP streaming does not tell you whether the agent is still working. A stream that pauses for thirty seconds might be a long tool call, might be a model warming up, or might be a crashed process. The client has no way to distinguish.
+
+Teams that need to render agent health build polling layers: a `/status?conversation=...` endpoint that the client hits every few seconds, returning the agent's current state. The endpoint reads from a database the agent updates on every state transition. The polling cadence is a trade-off: too fast and you double your request volume, too slow and the UI lags behind real state by seconds.
+
+A presence-aware transport publishes the agent's state changes to the session. The client sees `agent: thinking`, `agent: streaming`, `agent: idle` as live events, not polled snapshots.
+
+## What you'd have to build <a id="what-youd-build"/>
+
+Teams that ship production AI on direct HTTP streaming end up building the same stack of supporting infrastructure repeatedly:
+
+- Redis (or equivalent) for event buffering and stream resume.
+- A database for conversation persistence and multi-device session state.
+- A queue or WebSocket for bidirectional signalling (cancel, approval, interrupt).
+- A status endpoint and polling client for agent health.
+- A reconciliation layer to merge the persisted state and the live stream when a new client joins.
+- An orchestrator that mediates between the client and sub-agents, with its own visibility model.
+
+All of this infrastructure has nothing to do with the AI product. It is the transport layer being reinvented around the limitations of HTTP streaming.
+
+## The durable session alternative <a id="the-durable-session-alternative"/>
+
+A durable session replaces the ephemeral HTTP stream with a persistent, shared medium that any client or agent connects to. The properties the infrastructure above tries to assemble (persistence, ordering, multi-subscriber fan-out, bidirectional publishing, presence) are properties the session already has.
+
+AI Transport implements durable sessions on Ably channels. See [Why AI Transport](/docs/ai-transport/why) for the positive case, [Sessions](/docs/ai-transport/concepts/sessions) for the model, and [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk) to build something on top of it.
+
+![Diagram showing how AI Transport concepts compose around the session, with connections attaching from outside and the conversation tree, Runs, Invocations, codecs, authentication, and infrastructure relating to it](../../../../images/content/diagrams/ait-concepts-overview.png)
+
+## Read next <a id="next"/>
+
+- [Why AI Transport](/docs/ai-transport/why): how a durable session layer solves each of these problems.
+- [Sessions](/docs/ai-transport/concepts/sessions): the persistent, shared conversation state that replaces the ephemeral connection.
+- [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk): the practical adoption path.

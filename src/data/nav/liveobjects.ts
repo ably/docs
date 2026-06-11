@@ -9,25 +9,30 @@ export default {
   },
   content: [
     {
-      name: 'About LiveObjects',
-      link: '/docs/liveobjects',
-      index: true,
-      languages: ['javascript', 'swift', 'java'],
-    },
-    {
       name: 'Getting started',
       pages: [
         {
-          name: 'JavaScript',
-          link: '/docs/liveobjects/quickstart/javascript',
+          name: 'About LiveObjects',
+          link: '/docs/liveobjects',
+          index: true,
+          languages: ['javascript', 'swift', 'java'],
         },
         {
-          name: 'Swift',
-          link: '/docs/liveobjects/quickstart/swift',
-        },
-        {
-          name: 'Java',
-          link: '/docs/liveobjects/quickstart/java',
+          name: 'By language',
+          pages: [
+            {
+              name: 'JavaScript',
+              link: '/docs/liveobjects/quickstart/javascript',
+            },
+            {
+              name: 'Swift',
+              link: '/docs/liveobjects/quickstart/swift',
+            },
+            {
+              name: 'Java',
+              link: '/docs/liveobjects/quickstart/java',
+            },
+          ],
         },
       ],
     },
@@ -53,11 +58,6 @@ export default {
         {
           name: 'Synchronization',
           link: '/docs/liveobjects/concepts/synchronization',
-          languages: ['javascript', 'swift', 'java'],
-        },
-        {
-          name: 'Billing',
-          link: '/docs/liveobjects/concepts/billing',
           languages: ['javascript', 'swift', 'java'],
         },
       ],
@@ -107,6 +107,10 @@ export default {
           link: '/docs/liveobjects/rest-api-usage',
         },
       ],
+    },
+    {
+      name: 'LiveObjects pricing',
+      link: '/docs/liveobjects/pricing',
     },
   ],
   api: [

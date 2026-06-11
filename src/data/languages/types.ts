@@ -25,6 +25,7 @@ export const languageKeys = [
   'rest',
   'css',
   'laravel',
+  'nextjs',
 ] as const;
 
 export type LanguageKey = (typeof languageKeys)[number];

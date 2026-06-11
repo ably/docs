@@ -1,6 +1,7 @@
 import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Icon from '@ably/ui/core/Icon';
+import { Input } from 'src/components/ui/Input';
 import { products } from '../../data/examples';
 import Button from '@ably/ui/core/Button';
 import cn from '@ably/ui/core/utils/cn';
@@ -111,18 +112,22 @@ const ExamplesFilter = ({
 
   return (
     <>
-      <div className="h-[2.125rem] sm:h-[1.875rem] w-5 absolute left-2 top-1 flex items-center justify-center select-none cursor-default">
-        <Icon name={'icon-gui-magnifying-glass-outline'} size="1rem" />
+      <div className="relative w-full">
+        <Icon
+          name="icon-gui-magnifying-glass-outline"
+          size="16px"
+          additionalCSS="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-neutral-600 dark:text-neutral-700 pointer-events-none"
+        />
+        <Input
+          type="search"
+          className="rounded bg-neutral-100 dark:bg-neutral-1200 pl-9 w-full h-10 sm:h-[2.125rem]"
+          placeholder="Find an example..."
+          autoComplete="off"
+          aria-label="Search examples"
+          role="searchbox"
+          onChange={(e) => handleSearch(e)}
+        />
       </div>
-      <input
-        type="search"
-        className="ui-input pl-9 w-full h-10 sm:h-[2.125rem] ui-text-p3"
-        placeholder="Find an example"
-        autoComplete="off"
-        aria-label="Search examples"
-        role="searchbox"
-        onChange={(e) => handleSearch(e)}
-      />
       <Button
         className="flex sm:hidden mt-4 w-full"
         variant="secondary"

@@ -1,0 +1,397 @@
+---
+title: "Codec"
+meta_description: "API reference for the AI Transport Codec interface. Build custom codecs to integrate any AI framework with Ably channels."
+meta_keywords: "AI Transport, Codec, Encoder, Decoder, DecodedMessage, CodecInputEvent, CodecOutputEvent, Reducer, custom codec, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/codec
+  - /docs/ai-transport/api/javascript/codec
+---
+
+The `Codec` interface is the bridge between an AI framework and Ably channel messages. It describes the wire as a flat stream of input and output events and folds those events into a per-Run projection that the SDK extracts messages from for the conversation tree.
+
+Implement `Codec<TInput, TOutput, TProjection, TMessage>` to integrate any AI framework with AI Transport. The SDK ships [`UIMessageCodec`](/docs/ai-transport/api/javascript/vercel/codec) for the Vercel AI SDK. For other frameworks, implement the methods below.
+
+<Code>
+```typescript
+import type { Codec } from '@ably/ai-transport';
+
+const myCodec: Codec<MyInput, MyOutput, MyProjection, MyMessage> = {
+  init() { /* ... */ },
+  fold(state, event, meta) { /* ... */ },
+  createEncoder(channel, options) { /* ... */ },
+  createDecoder() { /* ... */ },
+  getMessages(projection) { /* ... */ },
+  createUserMessage(message) { /* ... */ },
+  createRegenerate(target, parent) { /* ... */ },
+};
+```
+</Code>
+
+## Properties <a id="properties"/>
+
+`Codec` extends [`Reducer<TInput | TOutput, TProjection>`](#reducer) and adds factories for encoders, decoders, and the message-extraction step the SDK uses to populate the tree.
+
+<Table id='CodecProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| init | Build an empty initial projection. Called once per Run before any events are folded. | `() => TProjection` |
+| fold | Fold one event into the projection and return the updated projection. May mutate `state` in place. | `(state, event, meta) => TProjection` |
+| createEncoder | Create a stateful encoder bound to the given channel writer. Takes optional <Table id='EncoderOptions'/>. | `(channel, options?) => Encoder<TInput, TOutput>` |
+| createDecoder | Create a stateful decoder that maps inbound Ably messages to typed inputs and outputs. Each call returns a <Table id='DecodedMessage'/>. | `() => Decoder<TInput, TOutput>` |
+| getMessages | Extract the per-message list from a projection as `{ codecMessageId, message }` pairs. The SDK uses the pairs to correlate rendered messages back to the wire id; the View concatenates them across the visible Run chain. | `(projection) => CodecMessage<TMessage>[]` |
+| createUserMessage | Wrap a `TMessage` as the codec's `UserMessage` variant for publishing on the `ai-input` wire. Returns the codec's `TInput` so the result is usable as a `View.send` argument without a cast. | `(message) => TInput` |
+| createRegenerate | Build a `Regenerate` input that targets an assistant message. The View calls this from `regenerate()`. | `(target, parent) => TInput` |
+| createToolResult | Optional. Build a `ToolResult` input addressed at the assistant codec-message containing the tool call. The codec defines the payload shape (for example the Vercel layer's `{ toolCallId, output }`). | `(codecMessageId, payload) => TInput` |
+| createToolResultError | Optional. Build a `ToolResultError` input. The codec defines the payload shape (for example `{ toolCallId, message }`). | `(codecMessageId, payload) => TInput` |
+| createToolApprovalResponse | Optional. Build a `ToolApprovalResponse` input. The codec defines the payload shape (for example `{ toolCallId, approved, reason? }`). | `(codecMessageId, payload) => TInput` |
+
+</Table>
+
+## Fold an event into a projection <a id="fold"/>
+
+<MethodSignature>{`fold(state: TProjection, event: TInput | TOutput, meta: ReducerMeta): TProjection`}</MethodSignature>
+
+The reducer contract: fold one event into the projection. The same `(state, event, meta)` triple must produce the same result every time. Re-folding an event whose serial has already been incorporated must be a no-op. The reducer is free to store a high-water-mark inside the projection.
+
+<Table id='ReducerMeta' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| serial | Ably channel serial of the message that produced this event. The reducer uses this for idempotency and deduplication. | String |
+| messageId | Optional `codec-message-id` from the inbound Ably message. Reducers use this to route an event to a target message within the projection. | String |
+
+</Table>
+
+### Parameters <a id="fold-params"/>
+
+<Table id='FoldParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| state | required | The current projection. May be mutated and returned. | `TProjection` |
+| event | required | The next input or output event to fold. | `TInput \| TOutput` |
+| meta | required | Transport-derived metadata stamped from the inbound Ably message. | <Table id='ReducerMeta'/> |
+
+</Table>
+
+### Returns <a id="fold-returns"/>
+
+`TProjection`. The updated projection.
+
+## Create an encoder <a id="create-encoder"/>
+
+<MethodSignature>{`createEncoder(channel: ChannelWriter, options?: EncoderOptions): Encoder<TInput, TOutput>`}</MethodSignature>
+
+Build a stateful encoder bound to a channel. The encoder owns the message-append lifecycle for both directions on a single channel.
+
+### Parameters <a id="create-encoder-params"/>
+
+<Table id='CreateEncoderParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| channel | required | The channel writer to publish through. An `Ably.RealtimeChannel` satisfies this directly. | `ChannelWriter` |
+| options | optional | Per-encoder defaults (clientId, extras, messageId, onMessage hook). | <Table id='EncoderOptions'/> |
+
+</Table>
+
+<Table id='EncoderOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| clientId | Default clientId for all writes. | String |
+| extras | Default extras merged into every Ably message. | <Table id='Extras'/> |
+| onMessage | Hook called before each Ably message is published. Mutate the message in place to add transport-level headers under `extras.ai`. | `(message: Ably.Message) => void` |
+| messageId | Default `codec-message-id` for messages where the event payload doesn't supply one. | String |
+
+</Table>
+
+<Table id='Extras' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| headers | Transport-tier headers to attach to the message's `extras.ai.transport` namespace. | `Record<string, string>` |
+
+</Table>
+
+### Returns <a id="create-encoder-returns"/>
+
+[`Encoder<TInput, TOutput>`](#encoder). A stateful encoder bound to the supplied channel.
+
+## Create a decoder <a id="create-decoder"/>
+
+<MethodSignature>{`createDecoder(): Decoder<TInput, TOutput>`}</MethodSignature>
+
+Build a stateful decoder for a single channel subscription. The decoder maintains stream-tracker state across messages so that mid-stream join synthesises any missing start events before deltas reach the SDK. The reducer always sees a clean `(start, delta*, end)` sequence.
+
+### Returns <a id="create-decoder-returns"/>
+
+[`Decoder<TInput, TOutput>`](#decoder). A stateful decoder for the channel.
+
+## Encoder <a id="encoder"/>
+
+A stateful encoder for a single channel. Two publish methods enforce direction at the call site. `publishInput` writes to the `ai-input` wire, `publishOutput` writes to the `ai-output` wire. Stream-tracker state lives inside the encoder and is shared across both directions.
+
+### Properties
+
+<Table id='EncoderProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| publishInput | Encode and publish a single client input on the `ai-input` wire. Throws synchronously if the codec cannot encode the given input variant. | `(input, options?) => Promise<void>` |
+| publishOutput | Encode and publish a single agent output on the `ai-output` wire. Throws synchronously if the codec cannot encode the given output variant. | `(output, options?) => Promise<void>` |
+| cancel | Cancel any in-progress streams and emit a codec-specific cancel signal. Idempotent. | `(reason?: string) => Promise<void>` |
+| close | Flush pending appends and release encoder resources. | `() => Promise<void>` |
+
+</Table>
+
+<Table id='WriteOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| clientId | Override the default clientId for this write. | String |
+| extras | Override the default extras for this write. | <Table id='Extras'/> |
+| messageId | Message identity for projection routing. Stamped as `codec-message-id`. | String |
+
+</Table>
+
+### Publish an input <a id="publish-input"/>
+
+<MethodSignature>{`publishInput(input: TInput, options?: WriteOptions): Promise<void>`}</MethodSignature>
+
+Encode and publish a single client input on the `ai-input` wire. Per-write overrides live in [`WriteOptions`](#write-options).
+
+#### Parameters <a id="publish-input-params"/>
+
+<Table id='PublishInputParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| input | required | The input event to encode and publish. | `TInput` |
+| options | optional | Per-write overrides (clientId, extras, messageId). | <Table id='WriteOptions'/> |
+
+</Table>
+
+### Publish an output <a id="publish-output"/>
+
+<MethodSignature>{`publishOutput(output: TOutput, options?: WriteOptions): Promise<void>`}</MethodSignature>
+
+Encode and publish a single agent output on the `ai-output` wire.
+
+#### Parameters <a id="publish-output-params"/>
+
+<Table id='PublishOutputParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| output | required | The output event to encode and publish. | `TOutput` |
+| options | optional | Per-write overrides. | <Table id='WriteOptions'/> |
+
+</Table>
+
+## Decoder <a id="decoder"/>
+
+A stateful decoder for a single channel subscription. Decodes one Ably inbound message into the input and output halves.
+
+### Decode a message <a id="decode"/>
+
+<MethodSignature>{`decode(message: Ably.InboundMessage): DecodedMessage<TInput, TOutput>`}</MethodSignature>
+
+Tagged result of decoding one inbound Ably message. The codec routes by the wire `name` and returns inputs and outputs separately so the SDK never has to introspect direction.
+
+<Table id='DecodedMessage' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| inputs | Inputs decoded from the inbound message (populated when the wire `name` is `ai-input`). | `TInput[]` |
+| outputs | Outputs decoded from the inbound message (populated when the wire `name` is `ai-output`). | `TOutput[]` |
+
+</Table>
+
+### Returns <a id="decode-returns"/>
+
+`DecodedMessage<TInput, TOutput>`. Tagged inputs and outputs. <Table id='DecodedMessage'/>
+
+## Well-known input variants <a id="input-variants"/>
+
+Codec input variants extend the `CodecInputEvent` base. The SDK reserves a handful of well-known `kind` literals so callers can publish a user message, regenerate an assistant message, or resolve a tool call without inventing their own shapes. Codec-specific variants pick any other literal. (Edits ride the user-message path with a `forkOf` routing header; there is no separate `'edit'` kind on the wire.)
+
+<Table id='CodecInputEvent'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | Discriminator. The SDK reserves `'user-message'`, `'regenerate'`, `'tool-result'`, `'tool-result-error'`, and `'tool-approval-response'`. | String |
+| parent | The codec-message-id of the preceding codec-message on this branch. Auto-computed when omitted. | String |
+| target | Pointer to another codec-message this input references. Semantic depends on `kind`. | String |
+| codecMessageId | Targets an existing codec-message-id instead of minting a fresh one. Used by continuation inputs that amend an existing assistant message. | String |
+
+</Table>
+
+The full input union is the codec author's responsibility. Use the variants below directly or extend them with extra fields.
+
+### UserMessage <a id="user-message"/>
+
+<Table id='UserMessage'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | Pinned to `'user-message'`. | `'user-message'` |
+| message | The user's message in the codec's domain representation. | `TMessage` |
+
+</Table>
+
+A new user message. Produced by `Codec.createUserMessage` and surfaced via `View.send` (wrap a domain message via `codec.createUserMessage(message)` or build the literal directly).
+
+### Regenerate <a id="regenerate"/>
+
+<Table id='Regenerate'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | Pinned to `'regenerate'`. | `'regenerate'` |
+| target | The codec-message-id of the assistant to regenerate. Required. | String |
+| parent | The codec-message-id of the parent user message the new assistant threads under. Required. | String |
+
+</Table>
+
+A signal to regenerate an existing assistant codec-message. Produced by `Codec.createRegenerate` and surfaced via `View.regenerate`.
+
+### ToolResult <a id="tool-result"/>
+
+<Table id='ToolResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | Pinned to `'tool-result'`. | `'tool-result'` |
+| codecMessageId | The assistant codec-message containing the tool call. | String |
+| payload | Codec-defined domain payload describing the result. The Vercel codec uses `{ toolCallId, output }`; custom codecs pick their own shape. | `TPayload` |
+
+</Table>
+
+A client-published tool result for a successful execution. Mutates the assistant codec-message addressed by `codecMessageId`.
+
+### ToolResultError <a id="tool-result-error"/>
+
+<Table id='ToolResultError'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | Pinned to `'tool-result-error'`. | `'tool-result-error'` |
+| codecMessageId | The assistant codec-message containing the tool call. | String |
+| payload | Codec-defined domain payload describing the failure. The Vercel codec uses `{ toolCallId, message }`. | `TPayload` |
+
+</Table>
+
+A client-published tool result for a failed execution.
+
+### ToolApprovalResponse <a id="tool-approval-response"/>
+
+<Table id='ToolApprovalResponse'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | Pinned to `'tool-approval-response'`. | `'tool-approval-response'` |
+| codecMessageId | The assistant codec-message containing the tool call. | String |
+| payload | Codec-defined domain payload describing the decision. The Vercel codec uses `{ toolCallId, approved, reason? }`. | `TPayload` |
+
+</Table>
+
+A client-published response to an agent-emitted tool-approval request. Flips the targeted tool call from pending-approval to approved or denied.
+
+## Codec output base <a id="output-base"/>
+
+<Table id='CodecOutputEvent'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | Discriminator. Codec authors pick the literal value per variant. | String |
+
+</Table>
+
+Every codec output variant must satisfy `CodecOutputEvent`. The SDK reads `type` so it can reliably narrow `TInput | TOutput` (inputs carry `kind`, outputs carry `type`).
+
+## Wire payloads <a id="payloads"/>
+
+The encoder and decoder cores describe Ably messages with two payload shapes, used internally by `createEncoderCore` and `createDecoderCore`. Custom codec implementations that build on those cores work with these shapes directly.
+
+`MessagePayload` describes a discrete Ably message.
+
+<Table id='MessagePayload'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| name | Ably message name (for example `"text"`, `"tool-input"`, `"user-message"`). | String |
+| data | Message data. Ably handles serialisation. | `unknown` |
+| codecHeaders | Codec-tier headers carried under `extras.ai.codec`. | `Record<string, string>` |
+| transportHeaders | Transport-tier headers carried under `extras.ai.transport`. | `Record<string, string>` |
+| ephemeral | Mark this message as ephemeral (not persisted in channel history). | Boolean |
+
+</Table>
+
+`StreamPayload` describes a streamed message. Data must be a string because the append lifecycle uses text append semantics. Deltas are concatenated for recovery and prefix-matching on the decoder.
+
+<Table id='StreamPayload'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| name | Ably message name. | String |
+| data | Initial or closing data for the stream. Must be a string for append/accumulate semantics. | String |
+| codecHeaders | Codec-tier headers carried under `extras.ai.codec`. | `Record<string, string>` |
+| transportHeaders | Transport-tier headers carried under `extras.ai.transport`. | `Record<string, string>` |
+
+</Table>
+
+## Reducer <a id="reducer"/>
+
+The reducer is a pure, stateless folding contract that `Codec` extends.
+
+<Table id='Reducer'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| init | Build an empty initial projection. | `() => TProjection` |
+| fold | Fold one event into the projection. | `(state, event, meta) => TProjection` |
+
+</Table>
+
+## Example <a id="example"/>
+
+A minimal codec skeleton that folds a single input and output variant and extracts a flat message list.
+
+<Code>
+```typescript
+import type {
+  Codec,
+  CodecInputEvent,
+  CodecOutputEvent,
+  CodecMessage,
+  ReducerMeta,
+} from '@ably/ai-transport';
+
+interface MyInput extends CodecInputEvent { kind: 'user-message'; message: MyMessage }
+interface MyOutput extends CodecOutputEvent { type: 'text-delta'; text: string }
+interface MyProjection { highWater: string; messages: CodecMessage<MyMessage>[] }
+interface MyMessage { id: string; role: 'user' | 'assistant'; text: string }
+
+const myCodec: Codec<MyInput, MyOutput, MyProjection, MyMessage> = {
+  init: () => ({ highWater: '', messages: [] }),
+  fold: (state, event, meta: ReducerMeta) => {
+    if (meta.serial <= state.highWater) return state;
+    state.highWater = meta.serial;
+    if ('kind' in event && event.kind === 'user-message') {
+      state.messages.push({ codecMessageId: meta.messageId ?? event.message.id, message: event.message });
+    } else if ('type' in event && event.type === 'text-delta') {
+      const last = state.messages.at(-1);
+      if (last?.message.role === 'assistant') last.message.text += event.text;
+    }
+    return state;
+  },
+  createEncoder: (channel, options) => buildEncoder(channel, options),
+  createDecoder: () => buildDecoder(),
+  getMessages: (projection) => projection.messages,
+  createUserMessage: (message) => ({ kind: 'user-message', message }),
+  createRegenerate: (target, parent) => ({ kind: 'regenerate', target, parent }),
+};
+```
+</Code>

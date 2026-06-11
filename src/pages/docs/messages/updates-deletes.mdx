@@ -215,6 +215,31 @@ operation = MessageOperation(description="reason for update")
 result = await channel.update_message(message, operation)
 print("Message updated")
 ```
+
+```go
+realtime, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+// This assumes there is an 'updates' namespace with a rule enabling updates and deletes
+channel := realtime.Channels.Get("updates:example")
+
+// Publish the original message and get its serial from the result
+result, err := channel.PublishWithResult(context.Background(), "message-name", "original-data")
+if err != nil {
+    panic(err)
+}
+
+// Publish an update using the serial
+msg := &ably.Message{
+    Serial: *result.Serial,
+    Data:   "updated-data",
+}
+_, err = channel.UpdateMessage(context.Background(), msg, ably.UpdateWithDescription("reason for update"))
+if err != nil {
+    panic(err)
+}
+```
 </Code>
 
 #### Returns
@@ -232,7 +257,7 @@ The fields that can be updated are:
 
 #### Conflation <a id="update-conflation"/>
 
-Ably may opportunistically discard out of date updates to a given message, for example, during a serverside batching step, or within a [rewind](/docs/channels/options/rewind) backlog. This means subscribers are not guaranteed to receive every intermediate update if multiple updates occur in quick succession, but it is guaranteed that the last update that they receive will represent the most recent version of the message (matching the version that will be eventually retrievable by a history or [getMessage()](http://localhost:8000/docs/messages/updates-deletes#get) request).
+Ably may opportunistically discard out of date updates to a given message, for example, during a serverside batching step, or within a [rewind](/docs/channels/options/rewind) backlog. This means subscribers are not guaranteed to receive every intermediate update if multiple updates occur in quick succession, but it is guaranteed that the last update that they receive will represent the most recent version of the message (matching the version that will be eventually retrievable by a history or [getMessage()](/docs/messages/updates-deletes#get) request).
 
 #### Capabilities <a id="update-capabilities"/>
 
@@ -399,6 +424,31 @@ operation = MessageOperation(description="reason for delete")
 result = await channel.delete_message(message, operation)
 print("Message deleted")
 ```
+
+```go
+realtime, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+// This assumes there is an 'updates' namespace with a rule enabling updates and deletes
+channel := realtime.Channels.Get("updates:example")
+
+// Publish the original message and get its serial from the result
+result, err := channel.PublishWithResult(context.Background(), "message-name", "original-data")
+if err != nil {
+    panic(err)
+}
+
+// Delete the message using the serial
+msg := &ably.Message{
+    Serial: *result.Serial,
+    Data:   "", // clear the previous data
+}
+_, err = channel.DeleteMessage(context.Background(), msg, ably.UpdateWithDescription("reason for delete"))
+if err != nil {
+    panic(err)
+}
+```
 </Code>
 
 #### Returns
@@ -413,7 +463,7 @@ That means that if you e.g. want the deleted message to have empty `data` (to pr
 
 #### Conflation <a id="delete-conflation"/>
 
-Since deletes are just updates with a different action, [as with updates](#update-conflation), Ably may opportunistically discard out of date versions of a given message, for example, during a serverside batching step, or within a [rewind](/docs/channels/options/rewind) backlog. This means subscribers are not guaranteed to receive every intermediate update if multiple updates/deletes occur in quick succession, but it is guaranteed that the last update/delete that they receive will represent the most recent version of the message (matching the version that will be eventually retrievable by a history or [getMessage()](http://localhost:8000/docs/messages/updates-deletes#get) request).
+Since deletes are just updates with a different action, [as with updates](#update-conflation), Ably may opportunistically discard out of date versions of a given message, for example, during a serverside batching step, or within a [rewind](/docs/channels/options/rewind) backlog. This means subscribers are not guaranteed to receive every intermediate update if multiple updates/deletes occur in quick succession, but it is guaranteed that the last update/delete that they receive will represent the most recent version of the message (matching the version that will be eventually retrievable by a history or [getMessage()](/docs/messages/updates-deletes#get) request).
 
 #### Capabilities <a id="delete-capabilities"/>
 
@@ -608,6 +658,35 @@ channel.publish([.init(name: "message-name", data: "Hello")]) { result, error in
     }
 }
 ```
+
+```go
+realtime, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+// This assumes there is an 'updates' namespace with a rule enabling updates and deletes
+channel := realtime.Channels.Get("updates:example")
+
+// Publish the original message and get its serial from the result
+result, err := channel.PublishWithResult(context.Background(), "message-name", "Hello")
+if err != nil {
+    panic(err)
+}
+
+// Append to the message a few times (without needing to await each to finish
+// before doing the next); the data will be concatenated
+for _, fragment := range []string{", ", "World", "!"} {
+    err := channel.AppendMessageAsync(&ably.Message{
+        Serial: *result.Serial,
+        Data:   fragment,
+    }, nil)
+    if err != nil {
+        panic(err)
+    }
+}
+
+// the message in history now has data: "Hello, World!"
+```
 </Code>
 
 #### Returns
@@ -734,6 +813,23 @@ serial = "0123456789-001@abcdefghij:001"
 
 message = await channel.get_message(serial)
 ```
+
+```go
+rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+channel := rest.Channels.Get("updates:example")
+
+// Example serial; for example from the `serial` property of a `Message` you previously received
+serial := "0123456789-001@abcdefghij:001"
+
+message, err := channel.GetMessage(context.Background(), serial)
+if err != nil {
+    panic(err)
+}
+_ = message
+```
 </Code>
 
 ## Get message versions <a id="versions"/>
@@ -799,6 +895,32 @@ serial = "0123456789-001@abcdefghij:001"
 
 page = await channel.getMessageVersions(serial)
 print("Found " + len(page.items) + " versions");
+```
+
+```go
+rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+    panic(err)
+}
+channel := rest.Channels.Get("updates:example")
+
+// Example serial; for example from the `serial` property of a `Message` you previously received
+serial := "0123456789-001@abcdefghij:001"
+
+pages, err := channel.GetMessageVersions(serial, nil).Pages(context.Background())
+if err != nil {
+    panic(err)
+}
+for pages.Next(context.Background()) {
+    versions := pages.Items()
+    fmt.Printf("Found %d versions on this page\n", len(versions))
+    for _, msg := range versions {
+        fmt.Printf("  %s: %v\n", msg.Serial, msg.Data)
+    }
+}
+if err := pages.Err(); err != nil {
+    panic(err)
+}
 ```
 </Code>
 

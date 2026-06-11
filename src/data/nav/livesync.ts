@@ -9,9 +9,14 @@ export default {
   },
   content: [
     {
-      name: 'About LiveSync',
-      link: '/docs/livesync',
-      index: true,
+      name: 'Getting started',
+      pages: [
+        {
+          name: 'About LiveSync',
+          link: '/docs/livesync',
+          index: true,
+        },
+      ],
     },
     {
       name: 'MongoDB',
@@ -42,6 +47,10 @@ export default {
           link: '/docs/livesync/postgres/quickstart',
         },
       ],
+    },
+    {
+      name: 'LiveSync pricing',
+      link: '/docs/livesync/pricing',
     },
   ],
   api: [

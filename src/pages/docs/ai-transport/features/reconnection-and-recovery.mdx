@@ -2,86 +2,106 @@
 title: "Reconnection and recovery"
 meta_description: "AI Transport streams survive connection drops automatically. Clients reconnect and resume from where they left off with no lost tokens."
 meta_keywords: "reconnection, recovery, AI Transport, Ably, durable sessions, stream recovery, connection drops"
+intro: "Your users never see a half-streamed response disappear. AI Transport keeps the agent publishing through the session, and the client resumes from the exact point of disconnection."
 redirect_from:
   - /docs/ai-transport/sessions-identity/resuming-sessions
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
+Streams survive connection drops automatically. When a client disconnects, the agent keeps streaming to the [session](/docs/ai-transport/concepts/sessions). When the client reconnects, it resumes from the exact point it left off, with no lost tokens, no broken responses, and no manual retry code.
 
-AI Transport streams survive connection drops automatically. When a client disconnects, Ably handles reconnection. When it comes back, the client resumes from exactly where it left off - no lost tokens, no broken responses, no manual retry logic.
+This is built into the transport layer. Application code does not need to do anything.
+
+![Diagram showing a client disconnecting mid-stream and resuming from the exact point of disconnection on reconnect](../../../../images/content/diagrams/ait-reconnection-recovery.png)
 
 ## How it works <a id="how-it-works"/>
 
-The durable session (Ably channel) persists independently of any single connection. When a client's connection drops:
+The durable session on the Ably channel persists independently of any single connection. When a client's connection drops:
 
-1. The agent continues streaming tokens to the channel - the stream is not tied to the client's connection.
-2. Ably's client SDK automatically reconnects.
-3. On reconnection, the client transport uses `untilAttach` to load any messages it missed during the gap.
-4. The conversation state is restored seamlessly - the client sees the complete response.
-
-No application code needed. This is built into the transport layer.
-
-<Aside data-type='note'>
-With direct HTTP streaming, a connection drop kills the response stream. The LLM may still be generating, but the tokens have nowhere to go. Resuming requires building custom buffering, sequence numbering, and resume handlers from scratch.
-</Aside>
+1. The agent continues streaming tokens to the channel; the stream is not tied to the client's connection.
+2. The Ably SDK reconnects automatically.
+3. On reconnect, the client transport uses `untilAttach` to load any messages it missed during the gap.
+4. The conversation state is restored. The client sees the complete response.
 
 ## Recovery scenarios <a id="recovery-scenarios"/>
 
-There are two recovery paths depending on how long the client was disconnected:
+Two recovery paths exist depending on how long the client was disconnected.
 
-When the disconnection is brief, Ably's connection protocol handles it automatically. The client reconnects and the SDK uses `untilAttach` to load any messages published while the client was away. There is no gap - the response resumes exactly where it left off.
+When the disconnection is brief, Ably's connection protocol handles it. The client reconnects and the SDK uses `untilAttach` to load any messages published during the gap. There is no missing window; the response resumes exactly where it left off.
 
-When the client has been offline for a longer period (beyond the channel's persistence window for live recovery), it loads the full conversation from channel history on reconnect. The client can paginate through history using `view.loadOlder()` to reconstruct the complete conversation.
+When the client has been offline for longer than the live recovery window, it loads the full conversation from channel history on reconnect. Pagination through history uses `view.loadOlder()` to reconstruct the rest of the conversation.
 
-## Encoder recovery <a id="encoder-recovery"/>
+## Server-side encoder recovery <a id="encoder-recovery"/>
 
-On the server side, the encoder handles transient failures during streaming. If an append operation fails (for example, due to a network blip between the server and Ably), the encoder falls back to a full message update:
+On the server side, the encoder handles transient failures during streaming. If an append operation fails, for example due to a network blip between the server and Ably, the encoder falls back to a full message update:
 
 1. Append the next token to the message (normal path).
 2. If the append fails, send a full update with the accumulated content (recovery path).
 3. Continue appending from the recovered state.
 
-This happens automatically inside `turn.streamResponse()`. The accumulated response is never lost, even if individual append operations fail.
+This happens inside `run.pipe()`. The accumulated response is never lost, even when individual append operations fail.
 
 ## Mid-stream joins <a id="mid-stream-joins"/>
 
-When a client joins a channel while a response is already streaming, the lifecycle tracker ensures it receives the correct sequence of events. Missing lifecycle events (like the stream start) are synthesized so the client can process the in-progress stream correctly.
+When a client joins a channel while a response is already streaming, the lifecycle tracker delivers the correct sequence of events. Missing lifecycle events (such as the stream start) are synthesised so the client processes the in-progress stream correctly.
 
-This means a client can open a second tab while the agent is mid-response and immediately see the streaming content.
+A second tab opened during streaming sees the streaming content immediately.
 
 ## Load history on reconnect <a id="loading-history"/>
 
-The client transport loads conversation history using Ably's `untilAttach` parameter:
+`useView` loads conversation history using Ably's `untilAttach` parameter:
 
 <Code>
 ```javascript
-const { nodes, hasOlder, loadOlder } = useView({ transport, limit: 30 })
+const { messages, hasOlder, loadOlder } = useView({ limit: 30 });
 ```
 </Code>
 
-`useView` automatically loads history on mount. The `untilAttach` flag ensures no gap between historical messages and live messages - every message is accounted for.
+`useView` loads history on mount. The `untilAttach` flag prevents a gap between historical messages and live messages; every message is accounted for.
 
 To load older messages beyond the initial window:
 
 <Code>
 ```javascript
-const { nodes, hasOlder, loadOlder } = useView({ transport, limit: 30 })
+const { messages, hasOlder, loadOlder } = useView({ limit: 30 });
 
-// hasOlder indicates whether there are more messages to load
 if (hasOlder) {
-  await loadOlder()
-  // The view window expands internally - nodes updates with the older messages
+  await loadOlder();
 }
 ```
 </Code>
 
+## Edge cases and unhappy paths <a id="edge-cases"/>
+
+- A client that drops mid-stream and reconnects after the live recovery window does not get every individual token replayed. It receives the accumulated content of the message up to the latest append. The user-visible result is the same.
+- A client without channel history capability cannot reconnect after the live recovery window. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
+- An agent that crashes mid-stream leaves the partial message on the channel. Its `status` header stays at `streaming` because the stream never closed. A retry creates a new message, not a continuation of the partial one.
+- The encoder fallback to a full message update is invisible to subscribers. If you log channel operations, you see periodic updates between appends.
+- A client clock drift does not affect recovery. Reconnection uses the channel's serial, not wall-clock time.
+
+## FAQ <a id="faq"/>
+
+### What is the live recovery window? <a id="faq-window"/>
+
+It is the period during which Ably can replay messages without falling back to history. The duration depends on the connection state and the channel configuration. After that window, the SDK switches to history-based recovery transparently.
+
+### Does the user see the agent pause when they reconnect? <a id="faq-pause"/>
+
+No. The view emits the accumulated content of the streamed message on reconnect, then continues with any further appends. The user sees the response as continuous.
+
+### How long is the response retained after the agent ends the turn? <a id="faq-retention"/>
+
+For the channel history retention period. Configure this through the channel's persistence settings. See [history and replay](/docs/ai-transport/features/history) for the recovery patterns.
+
+### What if the agent process dies before the stream finishes? <a id="faq-agent-crash"/>
+
+The partial message stays on the channel with its `status` header at `streaming` because the stream never closed. The session is intact. A new turn restarts the work; AI Transport does not automatically retry the LLM call.
+
+### Does the client need special code to handle reconnection? <a id="faq-app-code"/>
+
+No. The transport handles reconnection internally. `useView` exposes `hasOlder` and `loadOlder` for explicit history pagination, which is the only application-visible recovery primitive.
+
 ## Related features <a id="related"/>
 
-- [Token streaming](/docs/ai-transport/features/token-streaming) - what gets recovered.
-- [Multi-device sessions](/docs/ai-transport/features/multi-device) - reconnection across devices.
-- [History and replay](/docs/ai-transport/features/history) - loading conversation history.
-- [Client transport API](/docs/ai-transport/api-reference/client-transport) - reference for client transport connection and recovery methods.
-- [Sessions](/docs/ai-transport/concepts/sessions) - how durable sessions enable recovery.
-- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.
+- [Token streaming](/docs/ai-transport/features/token-streaming): what gets recovered.
+- [Multi-device sessions](/docs/ai-transport/features/multi-device): the same recovery model across devices.
+- [History and replay](/docs/ai-transport/features/history): loading conversation history.

@@ -11,6 +11,7 @@ import { LanguageKey } from 'src/data/languages/types';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
 import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { secondaryButtonClassName } from './utils/styles';
 import * as Select from '../ui/Select';
 import { Skeleton } from '../ui/Skeleton';
 
@@ -63,42 +64,47 @@ const SingleLanguageSelector = () => {
   };
 
   if (!selectedOption) {
-    return <Skeleton className="w-[180px] h-5 my-[9px]" />;
+    return <Skeleton className="w-[195px] h-5 my-[9px]" />;
   }
 
   const selectedLang = languageInfo[selectedOption.label];
 
+  // With only one language available there is nothing to choose between, so render a
+  // static, non-interactive element. It keeps the same bordered styling as the dropdown
+  // trigger but drops the chevron and any dropdown behaviour.
+  if (options.length <= 1) {
+    return (
+      <div className="flex items-center md:relative w-full">
+        <div className={cn(secondaryButtonClassName, 'gap-1.5')} aria-label="Code language">
+          <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+          <span className="font-semibold">{selectedLang?.label}</span>
+          <Badge color="neutral" size="xs" className="my-px">
+            v{selectedOption.version}
+          </Badge>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="flex items-center md:relative w-full text-right md:text-left"
-      style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
-    >
+    <div className="flex items-center md:relative w-full">
       <Select.Root value={value} onValueChange={handleValueChange}>
-        <Select.Trigger
-          className={cn(
-            'border-none inline-flex items-center group/lang-dropdown focus-base rounded px-0',
-            options.length > 1 ? 'cursor-pointer' : 'cursor-auto',
-          )}
-          style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
-          aria-label="Select code language"
-          disabled={options.length === 1}
-        >
-          <div className="ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 flex gap-2 items-center">
+        <Select.Trigger asChild>
+          <button
+            className={cn(secondaryButtonClassName, 'gap-1.5 w-[195px] justify-start cursor-pointer')}
+            aria-label="Select code language"
+          >
             <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
-            <span className="text-neutral-900 dark:text-neutral-400 font-semibold">{selectedLang?.label}</span>
+            <span className="font-semibold">{selectedLang?.label}</span>
             <Badge color="neutral" size="xs" className="my-px">
               v{selectedOption.version}
             </Badge>
-          </div>
-          {options.length > 1 && (
-            <Select.Icon className="flex items-center pl-2 text-red-orange cursor-pointer">
-              <Icon
-                name="icon-gui-chevron-down-micro"
-                size="20px"
-                additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
-              />
-            </Select.Icon>
-          )}
+            {options.length > 1 && (
+              <Select.Icon className="flex items-center ml-auto">
+                <Icon name="icon-gui-chevron-down-solid" size="12px" />
+              </Select.Icon>
+            )}
+          </button>
         </Select.Trigger>
 
         <Select.Portal>
@@ -119,9 +125,6 @@ const SingleLanguageSelector = () => {
                 ),
               }}
             >
-              <p className="ui-text-overline2 text-left p-2 pb-3 text-neutral-700 dark:text-neutral-600">
-                Code Language
-              </p>
               {options.map((option) => {
                 const lang = languageInfo[option.label];
                 return (
@@ -225,35 +228,45 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
 
   const selectedLang = languageInfo[selectedOption.label];
 
+  // With only one language available there is nothing to choose between, so render a
+  // static, non-interactive element. It keeps the same bordered styling as the dropdown
+  // trigger but drops the chevron and any dropdown behaviour.
+  if (options.length <= 1) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 whitespace-nowrap">{label}</span>
+        <div className={cn(secondaryButtonClassName, 'gap-1.5')} aria-label={`${label} language`}>
+          <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
+          <span className="font-semibold">{selectedLang?.label}</span>
+          <Badge color="neutral" size="xs" className="my-px">
+            v{selectedOption.version}
+          </Badge>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 whitespace-nowrap">{label}</span>
       <Select.Root value={value} onValueChange={handleValueChange}>
-        <Select.Trigger
-          className={cn(
-            'border-none inline-flex items-center group/lang-dropdown focus-base rounded px-0',
-            options.length > 1 ? 'cursor-pointer' : 'cursor-auto',
-          )}
-          style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
-          aria-label={`Select ${label.toLowerCase()} language`}
-          disabled={options.length === 1}
-        >
-          <div className="ui-text-label4 text-left leading-none text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 flex gap-2 items-center">
+        <Select.Trigger asChild>
+          <button
+            className={cn(secondaryButtonClassName, 'gap-1.5', options.length > 1 ? 'cursor-pointer' : 'cursor-auto')}
+            aria-label={`Select ${label.toLowerCase()} language`}
+            disabled={options.length === 1}
+          >
             <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
-            <span className="text-neutral-900 dark:text-neutral-400 font-semibold">{selectedLang?.label}</span>
+            <span className="font-semibold">{selectedLang?.label}</span>
             <Badge color="neutral" size="xs" className="my-px">
               v{selectedOption.version}
             </Badge>
-          </div>
-          {options.length > 1 && (
-            <Select.Icon className="flex items-center pl-2 text-red-orange cursor-pointer">
-              <Icon
-                name="icon-gui-chevron-down-micro"
-                size="20px"
-                additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
-              />
-            </Select.Icon>
-          )}
+            {options.length > 1 && (
+              <Select.Icon className="flex items-center">
+                <Icon name="icon-gui-chevron-down-solid" size="12px" />
+              </Select.Icon>
+            )}
+          </button>
         </Select.Trigger>
 
         <Select.Portal>

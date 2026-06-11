@@ -1,0 +1,74 @@
+---
+title: "Vercel AI SDK UI"
+meta_description: "How Ably AI Transport integrates with Vercel AI SDK UI (@ai-sdk/react) to add durable sessions and multi-device sync to useChat."
+meta_keywords: "AI Transport, Vercel AI SDK UI, useChat, ChatTransport, durable sessions, React, multi-device"
+intro: "Vercel AI SDK UI gives you client side react hooks like useChat for building chat interfaces. AI Transport plugs into useChat as a ChatTransport, so the same UI gets durable sessions, multi-device sync, and bidirectional control."
+redirect_from:
+  - /docs/ai-transport/framework-guides/vercel-ai-sdk
+---
+
+[Vercel AI SDK UI](https://ai-sdk.dev/docs/ai-sdk-ui) is Vercel's React library for building AI chat interfaces. Its `useChat` hook manages the conversation state, sends user messages, and renders streaming responses. The framework intentionally leaves the transport pluggable through the `ChatTransport` interface; AI Transport implements that interface and adds the durability that direct HTTP streaming cannot.
+
+Ready to build? See [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk).
+
+## What Vercel AI SDK UI brings <a id="vercel-brings"/>
+
+| Capability | Description |
+| --- | --- |
+| `useChat` hook | Manages the `UIMessage` array, the `status` field (`submitted`, `streaming`, `ready`, `error`), and the methods `sendMessage`, `regenerate`, and `stop`. |
+| `UIMessage` model | Messages with parts (text, reasoning, tool calls, tool results, files, sources). Each part tracks its own streaming state. |
+| `ChatTransport` interface | The plug-in point. `sendMessages` submits messages; `reconnectToStream` resumes an interrupted stream. The default implementation is HTTP plus Server-Sent Events. |
+| UI components | Patterns and primitives for chat layouts, message rendering, and input handling. |
+
+This is what AI Transport composes with. It does not replace any of these. It replaces the transport underneath.
+
+## What AI Transport adds <a id="ait-adds"/>
+
+| Capability | Description |
+| --- | --- |
+| Durable sessions | Tokens flow through an Ably channel that outlives any single connection. A client reconnects and resumes from where it left off. |
+| Multi-device sync | Every device subscribed to the session sees the same conversation in real time. |
+| Bidirectional control | Cancel, steer, and interrupt the agent from any client. No separate control channel. |
+| Active run tracking | `view.runs()` exposes which clients have Runs streaming and which Runs are in progress. |
+| Conversation branching | Edit and regenerate create forks in the conversation tree, not destructive replacements. |
+| Approval gates that reach the user anywhere | Pending tool approvals persist on the session until someone acts on them. |
+| History and replay | Load the full conversation on reconnect, page refresh, or new device join. |
+| Token compaction | Reconnecting clients receive accumulated responses, not a replay of every token. |
+
+These are the same capability bullets used on the [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) page; the capability surface is the same whichever layer you integrate against.
+
+## Where they connect <a id="how-they-connect"/>
+
+AI Transport implements the `ChatTransport` interface. Swapping it in is a small change to `useChat`:
+
+<Code>
+```javascript
+// Before: default HTTP transport
+const { messages } = useChat();
+
+// After: Ably transport (everything else stays the same)
+// Wrap your tree with <ChatTransportProvider channelName={chatId}> first.
+const { chatTransport } = useChatTransport();
+const { messages } = useChat({ transport: chatTransport });
+```
+</Code>
+
+The integration has four parts:
+
+1. The `UIMessageCodec` encodes Vercel's `UIMessageChunk` events as Ably messages. Every chunk type (`text-delta`, `tool-input`, `finish`, and others) maps to an Ably message with headers that track its metadata. The codec encodes on the server, decodes on the client, and reassembles chunks into complete `UIMessage` objects.
+2. `ChatTransportProvider` creates the underlying `ClientSession` and the `ChatTransport` adapter and makes both available through context. `useChatTransport` is a context reader that returns `{ session, chatTransport }`.
+3. `useMessageSync` subscribes to the transport's conversation tree and pushes updates into `useChat`'s `setMessages`. This is what brings multi-device sync and conversation branching into Vercel's local state without `useChat` natively supporting them.
+4. On the server, `run.pipe(result.toUIMessageStream())` pipes the model's output through the codec encoder to the Ably channel. The HTTP response returns status 200 with an empty body. Tokens reach every connected client through the channel, not through the HTTP response. See [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) for the server-side detail.
+
+## Scope and trade-offs <a id="scope"/>
+
+Vercel AI SDK UI is intentionally focused on Vercel's data model. By design, it does not handle multi-device session continuity, branch navigation, or bidirectional control. AI Transport fills that gap without changing how you use `useChat`. The same `messages` array, the same `sendMessage`, the same `stop` button; the behaviours underneath move from ephemeral HTTP to durable sessions.
+
+If you need direct access to the conversation tree (branch navigation, split-pane views, custom message construction), see [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core).
+
+## Read next <a id="next"/>
+
+- [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk): build a working app.
+- [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core): the server-side integration that pairs with this page.
+- [Vercel integration API reference](/docs/ai-transport/api/javascript/vercel): the full API surface for the Vercel integration.
+- [Conversation branching](/docs/ai-transport/features/branching): one of the capabilities `useMessageSync` brings to `useChat`.

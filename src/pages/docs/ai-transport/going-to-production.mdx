@@ -1,0 +1,94 @@
+---
+title: "Going to production"
+meta_description: "Production checklist for Ably AI Transport: limits, monitoring, auth hardening, and the pricing pointer. Shipping AI Transport responsibly."
+meta_keywords: "AI Transport, production checklist, going to production, limits, monitoring, auth hardening, Ably"
+intro: "Before you ship AI Transport in production, walk through this checklist. It covers the operational concerns that come up across every feature."
+---
+
+This page is the production checklist for AI Transport. Work through each item before traffic moves to production. Where a topic has detail beyond what fits inline, the relevant link is in the item.
+
+Each feature page also has its own edge cases and unhappy paths section; this page covers the cross-cutting concerns.
+
+## Pricing <a id="pricing"/>
+
+AI Transport runs on Ably's [usage-based billing](/docs/platform/pricing). Costs scale with published and delivered messages, channel time, and connection time. The exact rates depend on your package; [contact Ably](https://ably.com/contact) for enterprise pricing.
+
+Two AI Transport patterns affect cost predictably:
+
+- Token streaming uses Ably's append rollup to compact many token events into fewer published messages. The default rollup window is 40 ms (about 25 messages per second per stream). See [token streaming](/docs/ai-transport/features/token-streaming#rollup) for tuning.
+- Channel history retention determines how long the session is hydratable from Ably alone. Longer retention costs more storage; pair with an external store for long-lived conversations.
+
+For a worked example, see the [AI chatbot pricing example](/docs/platform/pricing/examples/ai-chatbot).
+
+## Limits and quotas <a id="limits"/>
+
+The [platform limits page](/docs/platform/pricing/limits) covers the hard limits in detail. The ones that matter most for AI Transport:
+
+- Connection inbound message rate. A single stream that exceeds the per-connection rate triggers rate-limiting. Use the append rollup window to control the publish rate. See [token streaming](/docs/ai-transport/features/token-streaming#configure-rollup).
+- Channel message rate. Concurrent turns and multi-agent setups share the channel's rate budget.
+- Message size. Large tool outputs or attachments approach the per-message size limit. Stream large results or persist them externally and reference the URL.
+- Channel history retention. Configure retention through the channel namespace settings. Plan for the longest session you expect to hydrate from Ably alone.
+
+## Monitoring and observability <a id="monitoring"/>
+
+Watch four signals:
+
+- Channel publish rate per session, against the connection's inbound rate limit.
+- Turn lifecycle outcomes (`completed`, `cancelled`, `failed`). A rising failure rate is your first signal that something is wrong with model orchestration, auth, or capacity.
+- Server-side LLM latency and error rate, from your model provider. The Ably side is decoupled from the LLM; track them separately.
+
+Wire these into your existing dashboards through Ably's [integrations](/docs/integrations). Webhooks, Kafka, and other sinks expose channel activity. Ably also offers [Stats API](/docs/metadata-stats/stats) for usage data.
+
+## Auth hardening <a id="auth-hardening"/>
+
+The defaults are safe for development. For production:
+
+- Scope channel capabilities to the specific conversation channel (or the namespace) the user needs access to. `publish`, `subscribe`, and `history` only on channels the user owns.
+- Set `clientId` in the token, not on the client. The Ably service verifies tokens; client-set IDs are unverified and spoofable.
+- Use short token lifetimes and `authUrl` (or `authCallback`) so the SDK refreshes tokens automatically. One-hour tokens are a reasonable default.
+- Implement [token revocation](/docs/auth/revocation) for forced sign-out.
+- For cancel authorisation, set the `onCancel` hook on every turn. Reject cancels from clients that do not own the turn unless you specifically want admin-style global cancels.
+
+See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the recipes and [authentication concept](/docs/ai-transport/concepts/authentication) for the model.
+
+## Data shipping and retention <a id="data"/>
+
+If you persist conversations beyond the channel's retention:
+
+- Persist completed turns to your own store on `run.end()`. Hydrate sessions from the store on demand; the channel handles live activity.
+- Channel history retention is configured per namespace. Pick a value that matches your live-recovery window, not your total retention target. The external store covers anything longer.
+- For analytics or search, stream channel activity to your data warehouse through [webhooks](/docs/integrations/webhooks) or [Kafka](/docs/integrations/kafka). This is one-way; AI Transport reads from the channel, not the warehouse.
+
+## Compliance <a id="compliance"/>
+
+Ably is SOC 2 Type II certified and HIPAA compliant. See [security and compliance](/security-and-compliance) for more information.
+
+For the application-side:
+
+- Message content, including tool inputs and outputs are conversation content. They are visible to every subscriber by capability.
+- For region-pinned data residency, scope capabilities to namespaces hosted in the right region. See [Ably's edge network](/docs/platform/architecture/edge-network).
+
+## Deployment notes <a id="deployment"/>
+
+A few patterns that come up:
+
+- Serverless agents are fine. Each turn creates a server transport, processes the turn, and tears down. The session is on the channel, not in the agent process.
+- `after()` (Next.js) or equivalent post-response continuation is what lets the HTTP route return before the model finishes streaming. Without it, the streaming budget is bound to the request timeout.
+- Multiple agent regions are supported. Ably's infrastructure keeps state present in every region; an agent in one region publishes and clients in any region see the same state with low latency from their nearest edge.
+
+## When adopting AI Transport in production, also consider <a id="cross-cutting"/>
+
+Each feature page has its own edge cases. The cross-cutting items to walk through:
+
+- [Token streaming](/docs/ai-transport/features/token-streaming#edge-cases): rollup tuning, partial responses on cancel.
+- [Cancellation](/docs/ai-transport/features/cancellation#edge-cases): cancel authorisation, abort signal handling in tools.
+- [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery#edge-cases): the live recovery window, history capability scoping.
+- [Multi-device sessions](/docs/ai-transport/features/multi-device#edge-cases): `clientId` uniqueness, capability scoping per user.
+- [Tool calling](/docs/ai-transport/features/tool-calling#edge-cases): tool timeouts honouring abort signals, large tool outputs.
+- [Human-in-the-loop](/docs/ai-transport/features/human-in-the-loop#edge-cases): pending approvals that never resolve.
+
+## Read next <a id="next"/>
+
+- [Set up authentication](/docs/ai-transport/getting-started/authentication): the practical auth setup.
+- [Authentication concept](/docs/ai-transport/concepts/authentication): the three-layer model and capability reference.
+- [Infrastructure](/docs/ai-transport/concepts/infrastructure): the platform guarantees you are relying on.

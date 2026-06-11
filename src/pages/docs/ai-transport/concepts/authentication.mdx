@@ -1,272 +1,107 @@
 ---
 title: "Authentication"
 meta_description: "Understand how authentication works in Ably AI Transport: Ably token auth for channel access, HTTP headers for server endpoints, and cancel authorization."
-meta_keywords: "AI Transport, authentication, token auth, cancel authorization, HTTP headers, credentials"
+meta_keywords: "AI Transport, authentication, token auth, cancel authorization, HTTP headers, credentials, capabilities"
+intro: "AI Transport authenticates at three layers: an Ably token for the channel, HTTP credentials for the agent endpoint, and a server-side hook that authorises cancel signals."
 redirect_from:
   - /docs/ai-transport/how-it-works/authentication
   - /docs/ai-transport/sessions-identity/identifying-users-and-agents
 ---
 
-Authentication in AI Transport operates at three levels: Ably token authentication for channel access, HTTP headers for server endpoint authorization, and cancel authorization for controlling who can cancel turns.
+Authentication in AI Transport operates at three levels: Ably token authentication for channel access, HTTP credentials for agent endpoint authorisation, and cancel authorisation for controlling who can stop a Run. Each layer is independent and addresses a different trust boundary.
+
+For the practical setup (signing tokens, wiring `authCallback`, securing the agent POST), see [Set up authentication](/docs/ai-transport/getting-started/authentication).
+
+## The three layers <a id="layers"/>
+
+| Layer | What it protects | How it works |
+| --- | --- | --- |
+| Ably token | Channel publish, subscribe, history, presence. | Your server signs a short-lived JWT that names the user's `clientId` and capabilities. The client SDK fetches it via `authCallback` and refreshes before expiry. |
+| Agent endpoint | The HTTP POST that wakes the agent. | Your application's normal endpoint auth: cookies, bearer tokens, signed headers. Carries no AI-Transport-specific semantics. |
+| Cancel authorisation | Who can stop a Run. | An `onCancel` hook on the agent's `RunRuntime`. The agent inspects the cancel sender and accepts or rejects. |
+
+The Ably token controls *what can land on the channel*. The agent endpoint auth controls *who can trigger a Run*. Cancel authorisation controls *who can stop one that's already running*. Different concerns, separately enforced.
 
 ## Authentication flow <a id="auth-flow"/>
 
 1. Your auth server authenticates the user.
 2. Your auth server issues an Ably-compatible token (JWT format is recommended for most apps).
-3. The client SDK fetches tokens with `authCallback` and refreshes them automatically before expiry.
-4. The authenticated Pub/Sub client provides channels to AI Transport via `useChannel` or `channels.get`.
+3. The client SDK fetches tokens through `authCallback` and refreshes them automatically before expiry.
+4. The authenticated Ably Realtime client provides channels to AI Transport via the session providers.
 
 <Aside data-type='important'>
 Never use API keys in client-side code. API keys do not expire and are not suitable for untrusted clients.
 </Aside>
 
-## Server setup <a id="server-setup"/>
-
-Create an endpoint that validates user-provided credentials and returns JWTs with the appropriate AI Transport capabilities:
-
-<Code>
-```javascript
-// Server-side JWT with AI Transport capabilities
-import jwt from 'jsonwebtoken';
-
-const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
-
-const ablyJwt = jwt.sign(
-  {
-    'x-ably-capability': JSON.stringify({
-      // Only allow access to a specific conversation channel
-      'your-conversation': ['publish', 'subscribe', 'history'],
-    }),
-    'x-ably-clientId': userId,
-  },
-  keySecret,
-  { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' }
-);
-```
-</Code>
-
-## Client setup <a id="client-setup"/>
-
-<Code>
-```javascript
-import * as Ably from 'ably';
-
-const realtimeClient = new Ably.Realtime({
-  authCallback: async (tokenParams, callback) => {
-    try {
-      const response = await fetch('/api/ably-token', { credentials: 'include' });
-      if (!response.ok) throw new Error('Auth failed');
-      const jwt = await response.text();
-      callback(null, jwt);
-    } catch (error) {
-      callback(error, null);
-    }
-  },
-});
-
-const channel = realtimeClient.channels.get('your-conversation');
-```
-
-```react
-'use client'
-
-import { useEffect, useState } from 'react';
-import * as Ably from 'ably';
-import { AblyProvider } from 'ably/react';
-import { TransportProvider, useClientTransport } from '@ably/ai-transport/react';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
-
-// 1. Create an authenticated Ably client and wrap your app
-export function Providers({ children }) {
-  const [client, setClient] = useState(null);
-
-  useEffect(() => {
-    const ably = new Ably.Realtime({
-      authCallback: async (_tokenParams, callback) => {
-        try {
-          const response = await fetch('/api/ably-token', { credentials: 'include' });
-          callback(null, await response.text());
-        } catch (err) {
-          callback(err instanceof Error ? err.message : String(err), null);
-        }
-      },
-    });
-    setClient(ably);
-    return () => ably.close();
-  }, []);
-
-  if (!client) return null;
-  return <AblyProvider client={client}>{children}</AblyProvider>;
-}
-
-// 2. Wrap with TransportProvider, then access the transport inside
-function App({ conversationId }) {
-  return (
-    <TransportProvider channelName={conversationId} codec={UIMessageCodec}>
-      <Chat conversationId={conversationId} />
-    </TransportProvider>
-  );
-}
-
-function Chat({ conversationId }) {
-  const transport = useClientTransport({ channelName: conversationId });
-  // ...
-}
-```
-</Code>
-
-<Aside data-type='note'>
-AI Transport uses `clientId` throughout the SDK to identify who started a turn, who is sending messages, and who is requesting cancellation. Set the client ID in the Ably token to ensure it is verified by the Ably service and cannot be spoofed.
-</Aside>
-
-For more details, see [token authentication](/docs/auth/token), [capabilities](/docs/auth/capabilities), and [identified clients](/docs/auth/identified-clients).
-
-## Enable message updates and deletes <a id="enable-updates-deletes"/>
-
-AI Transport requires the *Message annotations, updates, deletes, and appends* channel rule to be enabled on the channel namespace used for conversations. Without this rule, the transport cannot function correctly.
-
-<Aside data-type='important'>
-When message updates and deletes are enabled, messages are [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether or not persistence is enabled, in order to support the feature. This may increase your usage since [we charge for persisting messages](https://faqs.ably.com/how-does-ably-count-messages).
-</Aside>
-
-<Tabs>
-<Tab value="dashboard" label="Dashboard">
-
-In your app [settings](https://ably.com/accounts/any/apps/any/settings):
-
-1. Click **Add new rule**.
-2. Enter the channel name or namespace on which to enable message updates and deletes.
-3. Check **Message annotations, updates, deletes, and appends**.
-4. Click **Create rule** to save.
-
-</Tab>
-<Tab value="control-api" label="Control API">
-
-Create a rule with updates and deletes enabled using the Control API by sending a `POST` request to [`/apps/{app_id}/namespaces`](/docs/api/control-api):
-
-<Code>
-```shell
-curl -X POST https://control.ably.net/v1/apps/{APP_ID}/namespaces \
-  -H "Authorization: Bearer {ACCESS_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "my-namespace",
-    "mutableMessages": true
-  }'
-```
-</Code>
-
-</Tab>
-<Tab value="cli" label="Ably CLI">
-
-Use the [Ably CLI](/docs/platform/tools/cli) to create a rule with updates and deletes enabled:
-
-<Code>
-```shell
-ably apps rules create \
-  --name "my-namespace" \
-  --mutable-messages
-```
-</Code>
-
-Run `ably apps rules create --help` for a full list of available options.
-
-</Tab>
-</Tabs>
-
 ## AI Transport capabilities <a id="capabilities"/>
 
-Capabilities are permissions that control what operations a client can perform. When you create a token for an AI Transport user, specify which capabilities they have:
+Capabilities are permissions on the Ably channel. When you issue a token for an AI Transport user, the capability claim names which operations they can perform on which channels.
 
 | Feature | Required capabilities |
 |---------|----------------------|
 | Send user messages to channel | `publish` |
 | Receive streamed tokens | `subscribe` |
 | Replay history on reconnect | `subscribe`, `history` |
-| Cancel a turn | `publish` |
+| Cancel a Run | `publish` |
 | All AI Transport features | `publish`, `subscribe`, `history` |
+
+A token that's missing a capability fails silently at the operation site, not at construction. Capability mismatches are one of the most common setup mistakes; see [troubleshooting: capability or token scope mismatch](/docs/ai-transport/troubleshooting#capability-mismatch).
 
 ## Channel-scoped capabilities <a id="scoped-capabilities"/>
 
-You can scope capabilities to specific conversation channels, a namespace of channels, or all channels:
+Capabilities are keyed by channel name pattern. The same token can grant different operations on different channels:
 
-* `my-conversation` - a specific conversation channel
-* `conversations:*` - all channels in the `conversations:` namespace
-* `*` - all channels
+* `my-conversation`: a specific conversation channel.
+* `conversations:*`: all channels in the `conversations:` namespace.
+* `*`: all channels.
+
+Scope tokens to the smallest channel set the user needs. A user's token granting access to one conversation should name that conversation, not the whole namespace.
 
 ## Token lifecycle and permission updates <a id="token-lifecycle"/>
 
-- With `authCallback` or `authUrl`, token refresh is automatic and handled by the SDK.
-- To change a user's capabilities during an active session, issue a new token from your auth server and re-authenticate:
+- With `authCallback` or `authUrl`, token refresh is automatic. The SDK fetches a new token before the current one expires.
+- To change a user's capabilities mid-session, issue a new token from your auth server and re-authenticate the client:
 
 <Code>
 ```javascript
-// Re-authenticate to pick up updated capabilities
 await realtimeClient.auth.authorize();
 ```
 </Code>
 
 - To immediately remove access, [revoke issued tokens](/docs/auth/revocation).
-- If your capability JSON is too large for JWT or must remain confidential, use native [Ably Tokens](/docs/auth/token/ably-tokens).
+- If your capability JSON is too large for a JWT claim, or must remain confidential, use native [Ably Tokens](/docs/auth/token/ably-tokens) instead.
 
-## Server endpoint authentication <a id="server-auth"/>
+## Agent endpoint authentication <a id="server-auth"/>
 
-When the client sends user messages, it makes an HTTP POST to the server endpoint. `TransportProvider` accepts two props for authenticating these requests:
+The HTTP POST that wakes the agent is a separate request from anything on the Ably channel. It carries application credentials (a session cookie, a bearer token, or whatever your endpoint normally expects). The Ably token does not authenticate this POST; the agent endpoint authenticates it through your own application auth.
 
-**headers**: Static or dynamic HTTP headers sent with every POST.
+On the core flow, the application owns the POST and sets credentials in its `fetch` call. On the Vercel flow, [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) accepts a `credentials` prop and a `chatOptions.prepareSendMessagesRequest` hook that returns `{ body?, headers? }` per request, which the transport merges into every invocation POST.
 
-<Code>
-```javascript
-<TransportProvider
-  channelName={conversationId}
-  codec={UIMessageCodec}
-  headers={() => ({
-    'Authorization': `Bearer ${getAuthToken()}`,
-  })}
->
-  <Chat />
-</TransportProvider>
-```
-</Code>
+## Cancel authorisation <a id="cancel-auth"/>
 
-**credentials**: Controls whether cookies are sent with the POST request. This maps directly to the Fetch API `credentials` option. Set to `'include'` if your server uses cookie-based session authentication (for example, NextAuth or `express-session`) and the endpoint is cross-origin. For same-origin requests, the browser sends cookies by default and this option is not needed.
+When a client publishes a cancel signal, the agent decides whether to honour it. The `onCancel` hook on `RunRuntime` receives a `CancelRequest` carrying the raw Ably cancel `message` and the `runId` it targets. Compare the cancel sender's `clientId` against whichever identity your application considers authorised; here, the user identity resolved from the inbound HTTP request:
 
 <Code>
 ```javascript
-<TransportProvider
-  channelName={conversationId}
-  codec={UIMessageCodec}
-  credentials='include'
->
-  <Chat />
-</TransportProvider>
-```
-</Code>
+const userId = await authenticateUser(req);
 
-The server endpoint validates these credentials however it normally would: JWT verification, session cookies, or API keys.
-
-## Cancel authorization <a id="cancel-auth"/>
-
-When a client publishes a cancel signal, the server can authorize or reject it. The `onCancel` hook on `NewTurnOptions` receives a `CancelRequest` with the filter, matched turn IDs, and a map of turn owners:
-
-<Code>
-```javascript
-const turn = transport.newTurn({
-  turnId,
-  clientId,
+const run = session.createRun(invocation, {
+  signal: req.signal,
   onCancel: async (request) => {
-    // Only allow the turn owner to cancel
-    const owner = request.turnOwners.get(request.filter.turnId)
-    return owner === request.message.clientId
+    return request.message.clientId === userId;
   },
-})
+});
 ```
 </Code>
 
-If `onCancel` returns `false`, the cancellation is rejected. If `onCancel` is not provided, all cancel requests are accepted by default.
+Return `true` to allow the cancel (the `abortSignal` fires, the stream closes). Return `false` to reject it (the Run continues). If `onCancel` is not provided, every cancel is accepted.
+
+The Ably token's `clientId` is verified by the Ably service before the cancel reaches the agent, so the `clientId` on the cancel message is trustworthy; the agent can authorise off it without independent verification.
 
 ## Read next <a id="next"/>
 
-- [Getting started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk): set up authentication in a working app.
-- [Getting started with the Core SDK](/docs/ai-transport/getting-started/core-sdk): set up authentication without a framework wrapper.
-- [Cancellation](/docs/ai-transport/features/cancellation): how cancel signals and authorization work in detail.
+- [Set up authentication](/docs/ai-transport/getting-started/authentication): sign tokens, wire `authCallback`, secure the agent POST.
+- [Enable channel rules](/docs/ai-transport/getting-started/channel-rules): the one-time Ably namespace configuration AI Transport requires.
+- [Cancellation](/docs/ai-transport/features/cancellation): how cancel signals are routed and authorised in detail.
+- [Ably capabilities](/docs/auth/capabilities): the full Ably capability reference.
+- [Identified clients](/docs/auth/identified-clients): how `clientId` is verified by the Ably service.

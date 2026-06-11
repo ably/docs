@@ -67,7 +67,16 @@ const headerLinkIcon = `<svg aria-hidden="true" height="20" version="1.1" viewBo
 export const plugins = [
   'gatsby-plugin-postcss',
   'gatsby-plugin-image',
-  'gatsby-plugin-sharp',
+  process.env.NODE_ENV === 'production'
+    ? 'gatsby-plugin-sharp'
+    : {
+        resolve: 'gatsby-plugin-sharp',
+        options: {
+          defaults: {
+            formats: ['auto'],
+          },
+        },
+      },
   'gatsby-transformer-yaml',
   {
     resolve: 'gatsby-transformer-sharp',

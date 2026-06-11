@@ -1,0 +1,151 @@
+---
+title: "Providers"
+meta_description: "API reference for the AI Transport React providers: ClientSessionProvider and the createSessionHooks factory."
+meta_keywords: "AI Transport, React, ClientSessionProvider, createSessionHooks, ClientSessionSlot, providers, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/providers
+  - /docs/ai-transport/api/react/providers
+---
+
+`ClientSessionProvider` creates a `ClientSession` once on mount, connects it, and exposes it to descendants through React context. The hooks in `@ably/ai-transport/react` read the session via this provider, so wrap every subtree that uses them in one.
+
+Nest multiple providers with distinct `channelName` values to manage more than one session in the same tree. Each provider merges its slot into the parent registry so descendants can address any registered session by `channelName`.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { ClientSessionProvider } from '@ably/ai-transport/react';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/api/auth/token' });
+
+function App() {
+  return (
+    <AblyProvider client={ably}>
+      <ClientSessionProvider channelName="conversation-42" codec={UIMessageCodec}>
+        <Chat />
+      </ClientSessionProvider>
+    </AblyProvider>
+  );
+}
+```
+</Code>
+
+## ClientSessionProvider <a id="client-session-provider"/>
+
+The provider reads the Ably Realtime client from the surrounding `<AblyProvider>` and forwards it, along with the supplied props, to `createClientSession`. The session is created once on first render via `useRef`. `connect()` is invoked from a `useEffect` so the session is subscribed and attached before the first descendant read.
+
+If `createClientSession` throws, the error is stored on the slot alongside an undefined session. `useClientSession` surfaces it as [`sessionError`](/docs/ai-transport/api/react/core/use-client-session#returns) so the component tree does not crash.
+
+### Props <a id="client-session-provider-props"/>
+
+`ClientSessionProviderProps` extends all [`ClientSessionOptions`](/docs/ai-transport/api/javascript/core/client-session#constructor-params) except `client` (which is read from `<AblyProvider>`).
+
+<Table id='ClientSessionProviderProps'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| channelName | The channel the session subscribes to. Used as the registry key for nested providers. | String |
+| codec | The codec used to encode and decode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
+| clientId | The client's identity, used as the Ably publisher `clientId` for everything the session publishes. | String |
+| messages | Initial messages to seed the conversation tree with. | `TMessage[]` |
+| logger | Logger instance for diagnostic output. | `Logger` |
+| children | Descendant components that consume the session via hooks. | `ReactNode` |
+
+</Table>
+
+## ClientSessionSlot <a id="client-session-slot"/>
+
+A single entry in the registry holding the session and any error from construction. [`useClientSession`](/docs/ai-transport/api/react/core/use-client-session) returns this shape.
+
+<Table id='ClientSessionSlot'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| session | The constructed session, or `undefined` if construction failed. | `ClientSession<TInput, TOutput, TProjection, TMessage>` or Undefined |
+| sessionError | Construction error from `createClientSession`, or `undefined` on success. | `Ably.ErrorInfo` or Undefined |
+
+</Table>
+
+## Bake hook types with createSessionHooks <a id="create-session-hooks"/>
+
+<MethodSignature>{`function createSessionHooks<TInput, TOutput, TProjection, TMessage>(): SessionHooks<TInput, TOutput, TProjection, TMessage>`}</MethodSignature>
+
+A factory that captures the codec's four type parameters once and returns a bundle of type-safe hooks plus a narrowed `ClientSessionProvider`. Hook call sites need no type parameters once you have called the factory.
+
+Use this when you have one codec for the whole app and want call sites that look like `const view = useView({ limit: 30 })` without generics. The Vercel React entry point already exports a bundle baked to the Vercel types.
+
+<Code>
+```javascript
+// session.ts: shared module
+import { createSessionHooks } from '@ably/ai-transport/react';
+import type {
+  VercelInput,
+  VercelOutput,
+  VercelProjection,
+} from '@ably/ai-transport/vercel';
+import type { UIMessage } from 'ai';
+
+export const {
+  ClientSessionProvider,
+  useClientSession,
+  useView,
+  useTree,
+  useCreateView,
+  useAblyMessages,
+} = createSessionHooks<VercelInput, VercelOutput, VercelProjection, UIMessage>();
+```
+</Code>
+
+The factory takes four type parameters. Omitting them leaves every hook inferred as `unknown`; pass them explicitly so call sites stay type-safe.
+
+### Returns <a id="create-session-hooks-returns"/>
+
+<Table id='SessionHooks'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| ClientSessionProvider | `ClientSessionProvider` narrowed to the captured types. No JSX type params needed. | `ComponentType<ClientSessionProviderProps>` |
+| useClientSession | Type-narrowed [`useClientSession`](/docs/ai-transport/api/react/core/use-client-session). | Function |
+| useView | Type-narrowed [`useView`](/docs/ai-transport/api/react/core/use-view). | Function |
+| useTree | Type-narrowed [`useTree`](/docs/ai-transport/api/react/core/use-tree). | Function |
+| useAblyMessages | Type-narrowed [`useAblyMessages`](/docs/ai-transport/api/react/core/use-ably-messages). | Function |
+| useCreateView | Type-narrowed [`useCreateView`](/docs/ai-transport/api/react/core/use-create-view). | Function |
+
+</Table>
+
+## Example <a id="example"/>
+
+Nested providers with distinct channel names and a child component that addresses each session by name.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { ClientSessionProvider, useClientSession } from '@ably/ai-transport/react';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/api/auth/token' });
+
+function App() {
+  return (
+    <AblyProvider client={ably}>
+      <ClientSessionProvider channelName="ai:main" codec={UIMessageCodec}>
+        <ClientSessionProvider channelName="ai:aux" codec={UIMessageCodec}>
+          <Chat />
+        </ClientSessionProvider>
+      </ClientSessionProvider>
+    </AblyProvider>
+  );
+}
+
+function Chat() {
+  const { session: main } = useClientSession({ channelName: 'ai:main' });
+  const { session: aux, sessionError } = useClientSession({ channelName: 'ai:aux' });
+
+  if (sessionError) return <ErrorBanner error={sessionError} />;
+  return <SplitPane mainSession={main} auxSession={aux} />;
+}
+```
+</Code>
