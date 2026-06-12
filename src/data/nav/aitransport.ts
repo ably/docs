@@ -34,7 +34,7 @@ export default {
           link: '/docs/ai-transport/getting-started/authentication',
         },
         {
-          name: 'Enable channel rules',
+          name: 'Configure the channel rule',
           link: '/docs/ai-transport/getting-started/channel-rules',
         },
       ],
