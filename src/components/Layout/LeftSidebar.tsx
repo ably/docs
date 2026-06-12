@@ -58,6 +58,8 @@ const accordionTriggerClassName = cn(
 
 const accordionLinkClassName = 'pl-3 py-1';
 
+const sectionHeadingClassName = 'ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 pb-2 pt-5 pl-3 pr-2';
+
 const iconClassName = 'text-neutral-1300 dark:text-neutral-000 transition-transform';
 
 const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProductContent)[]; tree: number[] }) => {
@@ -193,16 +195,47 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
 
 /** Render top-level nav sections as static headings with their content always expanded. */
 const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductContent)[]; tree: number[] }) => {
+  const { activePage } = useLayoutContext();
+  const location = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+
   return (
     <div className="p-3">
       {content.map((page, index) => {
         const hasDeeperLayer = 'pages' in page && page.pages;
 
+        // A top-level entry with a link but no child pages (e.g. a product's pricing page)
+        // is a destination, not a section, so render it as a clickable link rather than a
+        // static heading.
+        if (!hasDeeperLayer && 'link' in page && page.link) {
+          const isSelected = page.link === activePage.page.link;
+
+          return (
+            <Link
+              key={page.name}
+              to={buildLinkWithParams(page.link, searchParams)}
+              className={cn(
+                'ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000',
+                'mt-4 flex items-center justify-between gap-2 rounded-lg py-1.5 pl-3 pr-2',
+                'hover:bg-neutral-100 dark:hover:bg-neutral-1200',
+                isSelected && 'bg-orange-100 hover:bg-orange-100',
+              )}
+              {...(page.external && {
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              })}
+            >
+              <span>{page.name}</span>
+              {page.external && (
+                <Icon name="icon-gui-arrow-top-right-on-square-outline" additionalCSS={iconClassName} size="16px" />
+              )}
+            </Link>
+          );
+        }
+
         return (
           <div key={page.name}>
-            <div className="ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 pb-2 pt-5 pl-3 pr-2">
-              {page.name}
-            </div>
+            <div className={sectionHeadingClassName}>{page.name}</div>
             {hasDeeperLayer && <ChildAccordion content={page.pages} tree={[...tree, index]} />}
           </div>
         );

@@ -126,4 +126,25 @@ describe('LeftSidebar', () => {
     // Should not be inside an accordion trigger button
     expect(sectionHeading.closest('button')).toBeNull();
   });
+
+  it('renders a top-level entry with a link but no child pages as a clickable link', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        page: { name: 'Postgres database connector', link: '/docs/livesync/postgres' },
+        tree: [{ index: 6, page: { name: 'Ably LiveSync', link: '/docs/livesync' } }],
+        languages: [],
+        language: 'javascript',
+        product: 'liveSync',
+        template: null,
+        hasProductBar: false,
+      },
+    });
+
+    render(<LeftSidebar />);
+
+    // "LiveSync pricing" is a top-level link, so it should render as an anchor, not a heading
+    const pricingLink = screen.getByText('LiveSync pricing').closest('a');
+    expect(pricingLink).not.toBeNull();
+    expect(pricingLink).toHaveAttribute('href', '/docs/livesync/pricing');
+  });
 });
