@@ -45,7 +45,7 @@ const buildNavBarItems = (): NavBarItem[] => {
 // --- Styles ---
 
 const tabBaseClassName = cn(
-  'flex items-center gap-1.5 h-9 px-3 whitespace-nowrap rounded-lg transition-colors',
+  'flex items-center gap-2 h-9 px-3 whitespace-nowrap rounded-lg transition-colors',
   'ui-text-label3 font-semibold',
   'focus-base',
 );
@@ -87,7 +87,7 @@ const ProductBar = ({ className, onSelectProduct, selectedProduct }: ProductBarP
     >
       <div
         className={cn(
-          'gap-0.5 pl-2 pr-5 py-2 max-w-[1600px] mx-auto',
+          'gap-1 pl-2 pr-5 py-2 max-w-[1600px] mx-auto',
           selectionMode ? 'flex flex-wrap' : 'flex items-center overflow-x-auto scrollbar-none',
         )}
       >
@@ -121,8 +121,8 @@ const ProductBar = ({ className, onSelectProduct, selectedProduct }: ProductBarP
               {iconName && (
                 <Icon
                   name={iconName}
-                  size="16px"
-                  additionalCSS={cn(isActive ? 'text-orange-600' : 'text-neutral-700 dark:text-neutral-600')}
+                  size="20px"
+                  additionalCSS={cn(isActive ? 'text-orange-600' : 'text-neutral-900 dark:text-neutral-400')}
                 />
               )}
               <span>{item.name}</span>
