@@ -1,46 +1,27 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { SessionDataProvider } from '@ably/ui/core/scripts';
+
 import UserContext from './user-context';
 import { UserContextWrapper } from './user-context/wrap-with-provider';
+import { WEB_API_USER_DATA_ENDPOINT } from './user-context/api-keys';
 
-import { createRemoteDataStore, attachStoreToWindow, reducerSessionData } from '@ably/ui/core/scripts';
-
-import { reducerApiKeyData } from 'src/redux/api-key/api-key-reducer';
-
-const onClientEntry = () => {
-  const store = createRemoteDataStore({
-    ...reducerSessionData,
-    ...reducerApiKeyData,
-  });
-
-  attachStoreToWindow(store);
-};
-
-/**
- * This test is disabled until we can see the issue below being resolved in
- * msw.
- *
- * https://github.com/mswjs/msw/issues/1785
- */
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('<UserContextWrapper />', async () => {
-  onClientEntry();
-
+test('UserContextWrapper publishes session and demo api keys via UserContext', async () => {
   render(
-    <UserContextWrapper>
-      <UserContext.Consumer>
-        {({ sessionState, apiKeys }) => {
-          return (
+    <SessionDataProvider sessionDataUrl={WEB_API_USER_DATA_ENDPOINT}>
+      <UserContextWrapper>
+        <UserContext.Consumer>
+          {({ sessionState, apps }) => (
             <>
               <div data-testid="session">{JSON.stringify(sessionState)}</div>
-              <div data-testid="api-keys">{JSON.stringify(apiKeys)}</div>
+              <div data-testid="apps">{JSON.stringify(apps)}</div>
             </>
-          );
-        }}
-      </UserContext.Consumer>
-    </UserContextWrapper>,
+          )}
+        </UserContext.Consumer>
+      </UserContextWrapper>
+    </SessionDataProvider>,
   );
 
-  expect(await screen.getByText('DEMO:API-KEY G')).toBeInTheDocument();
+  expect(await screen.findByText(/DEMO:API-KEY/)).toBeInTheDocument();
 });

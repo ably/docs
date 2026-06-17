@@ -4,7 +4,7 @@ import {
   WEB_API_USER_DATA_ENDPOINT,
   WEB_API_KEYS_DATA_ENDPOINT,
   WEB_API_TEMP_KEY_ENDPOINT,
-} from 'src/redux/api-key/constants';
+} from 'src/contexts/user-context/api-keys';
 
 export const handlers = [
   http.get(WEB_API_USER_DATA_ENDPOINT, () => {

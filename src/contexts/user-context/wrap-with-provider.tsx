@@ -1,48 +1,52 @@
-import React, { useContext, useEffect, useState } from 'react';
-
-import { connectState, selectSessionData, fetchSessionData, getRemoteDataStore } from '@ably/ui/core/scripts';
-import { fetchApiKeyData } from 'src/redux/api-key';
-import { selectData } from 'src/redux/select-data';
-import {
-  API_KEYS_REDUCER_KEY,
-  WEB_API_KEYS_DATA_ENDPOINT,
-  WEB_API_USER_DATA_ENDPOINT,
-} from 'src/redux/api-key/constants';
+import React, { useEffect, useMemo, useState } from 'react';
+import { SessionDataProvider, useSessionData } from '@ably/ui/core/scripts';
 
 import UserContext, { UserDetails, type App, SessionState } from '../user-context';
+import { fetchApps, WEB_API_USER_DATA_ENDPOINT } from './api-keys';
 
 //
 // This wrapper component is responsible for loading up our user session and
-// user/demo API keys and make it available to all our pages via the
-// UserContext.
+// user/demo API keys and making both available via UserContext. Session data
+// comes from SessionDataProvider (SWR-backed) in @ably/ui; API keys are
+// fetched directly because the shape is docs-specific.
 //
 export const UserContextWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const userContext = useContext(UserContext);
-  const [userState, setUserState] = useState<UserDetails>(userContext);
+  const { sessionData } = useSessionData();
+  const [apps, setApps] = useState<App[]>([]);
 
   useEffect(() => {
-    const store = getRemoteDataStore();
-
-    connectState(selectSessionData, (session: SessionState) => {
-      setUserState((existing) => ({ ...existing, sessionState: session }));
-    });
-
-    fetchSessionData(store, WEB_API_USER_DATA_ENDPOINT);
-
-    connectState(selectData(API_KEYS_REDUCER_KEY), (state: { data?: App[] }) => {
-      const data = Array.isArray(state?.data) ? state.data : [];
-      setUserState((existing) => ({ ...existing, apps: data }));
-    });
-
-    fetchApiKeyData(store, WEB_API_KEYS_DATA_ENDPOINT);
+    let cancelled = false;
+    const loadApps = async () => {
+      try {
+        const next = await fetchApps();
+        if (!cancelled) {
+          setApps(next);
+        }
+      } catch (e) {
+        console.warn('Could not load api keys:', e);
+      }
+    };
+    void loadApps();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  return <UserContext.Provider value={userState}>{children}</UserContext.Provider>;
+  const value = useMemo<UserDetails>(
+    () => ({
+      sessionState: (sessionData ?? {}) as unknown as SessionState,
+      apps,
+    }),
+    [sessionData, apps],
+  );
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
 
-// This little indirection is needed so we can make use of hooks in our wrapper component
 const wrapRootElement = ({ element }: { element: React.ReactNode }) => (
-  <UserContextWrapper>{element}</UserContextWrapper>
+  <SessionDataProvider sessionDataUrl={WEB_API_USER_DATA_ENDPOINT}>
+    <UserContextWrapper>{element}</UserContextWrapper>
+  </SessionDataProvider>
 );
 
 export default wrapRootElement;

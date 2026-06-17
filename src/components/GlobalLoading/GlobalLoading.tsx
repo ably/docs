@@ -1,8 +1,6 @@
 import { FC, ReactNode, useEffect, useContext, useMemo } from 'react';
 import { useStaticQuery, graphql } from 'gatsby';
 
-// Session-related scripts
-import '@ably/ui/core/scripts';
 import UserContext from '../../contexts/user-context';
 
 import externalScriptInjector from 'src/external-scripts';
