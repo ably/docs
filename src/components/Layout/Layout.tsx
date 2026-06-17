@@ -24,6 +24,7 @@ export type Frontmatter = {
   redirect_from?: string[];
   last_updated?: string;
   intro?: string;
+  json_ld?: Record<string, unknown>;
 };
 
 export type PageContextType = {
