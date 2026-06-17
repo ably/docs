@@ -27,6 +27,10 @@ export default {
         link: '/docs/chat',
       },
       {
+        name: 'aiTransport',
+        link: '/docs/ai-transport',
+      },
+      {
         name: 'spaces',
         link: '/docs/spaces',
       },
@@ -37,10 +41,6 @@ export default {
       {
         name: 'liveSync',
         link: '/docs/livesync',
-      },
-      {
-        name: 'aiTransport',
-        link: '/docs/ai-transport',
       },
     ],
   },
