@@ -160,6 +160,10 @@ export default {
           link: '/docs/ai-transport/features/agent-presence',
         },
         {
+          name: 'LiveObjects State',
+          link: '/docs/ai-transport/features/liveobjects',
+        },
+        {
           name: 'Push notifications',
           link: '/docs/ai-transport/features/push-notifications',
         },
