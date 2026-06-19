@@ -1,32 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import type { GatsbyBrowser } from 'gatsby';
 
-import { reducerFlashes } from '@ably/ui/core/Flash';
 import { initInsights, trackPageView, setupObserver } from '@ably/ui/core/insights';
-import {
-  attachStoreToWindow,
-  createRemoteDataStore,
-  reducerBlogPosts,
-  reducerSessionData,
-} from '@ably/ui/core/scripts';
 import { PostHogProvider } from 'posthog-js/react';
 import posthog from 'posthog-js';
 
-import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
 import { useSiteMetadata } from './src/hooks/use-site-metadata';
 
 const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   setupObserver();
-
-  const store = createRemoteDataStore({
-    ...reducerBlogPosts,
-    ...reducerSessionData,
-    ...reducerApiKeyData,
-    ...reducerFlashes,
-  });
-
-  attachStoreToWindow(store);
 };
 
 /**

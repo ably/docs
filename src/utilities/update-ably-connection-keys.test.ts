@@ -7,15 +7,7 @@ const originalEnv = process.env;
 // Test fixtures
 const createMockAppApiKey = (whole_key: string): AppApiKey => ({
   whole_key,
-  ui_compatible_capabilities: true,
-  capability: {},
-  revocableTokens: true,
-  paas_linked: false,
-  is_webhook: false,
-  webhook_url: '',
-  created: '2023-01-01',
   name: 'Test Key',
-  id: 'test-id',
 });
 
 const createUserDataWithBothApps = (): UserDetails => ({
