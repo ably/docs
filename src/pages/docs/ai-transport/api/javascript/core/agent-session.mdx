@@ -302,9 +302,25 @@ Use `suspend` instead of `end` when you want the run to come back. Use `end` onl
 
 ### End the run <a id="run-end"/>
 
-<MethodSignature>{`end(reason: RunEndReason): Promise<void>`}</MethodSignature>
+<MethodSignature>{`end(params: RunEndParams): Promise<void>`}</MethodSignature>
 
-Publish the `ai-run-end` event to the channel terminally and clean up. `reason` is one of `'complete'`, `'cancelled'`, or `'error'`. To pause a Run instead of ending it, use [`suspend`](#run-suspend).
+Publish the `ai-run-end` event to the channel terminally and clean up. `params` is a [`RunEndParams`](#run-end-params) object carrying the terminal `reason` and, when `reason` is `'error'`, an optional `error`. To pause a Run instead of ending it, use [`suspend`](#run-suspend).
+
+#### Parameters <a id="run-end-params"/>
+
+`RunEndParams` is discriminated on `reason`:
+
+- `{ reason: 'complete' | 'cancelled' }` — a non-error terminal reason; carries no `error`.
+- `{ reason: 'error', error? }` — the run ended in error; `error` is an optional `Ably.ErrorInfo` to surface to clients. Omit it to end in error without detail.
+
+<Table id='RunEndParams'>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| reason | required | The terminal reason. | `RunEndReason` |
+| error | optional | The terminal error to surface to clients. Allowed only when `reason` is `'error'`. | `Ably.ErrorInfo` |
+
+</Table>
 
 ## Close the session <a id="close"/>
 
@@ -362,7 +378,7 @@ Use [`loadConversation`](#load-conversation) before piping to the LLM in any con
 
 ## RunEndReason <a id="run-end-reason"/>
 
-`'complete' | 'cancelled' | 'error'`. Passed to [`Run.end`](#run-end) and reflected on `RunInfo.status` once the Run terminates.
+`'complete' | 'cancelled' | 'error'`. The terminal-reason discriminant: it is the `reason` field of the [`RunEndParams`](#run-end-params) you pass to [`Run.end`](#run-end), the `reason` on [`StreamResult`](#pipe-returns), and the value reflected on `RunInfo.status` once the Run terminates.
 
 A Run that pauses for external input (tool approval, human-in-the-loop) uses [`Run.suspend`](#run-suspend) instead of `end`, which publishes `ai-run-suspend` and leaves the Run alive at `RunInfo.status === 'suspended'`. A continuation Invocation resumes it via `ai-run-resume`.
 
@@ -397,9 +413,9 @@ export async function POST(req: Request) {
 
     const llmStream = await callMyLLM(run.messages);
     const result = await run.pipe(llmStream);
-    await run.end(result.reason);
+    await run.end({ reason: result.reason });
   } catch (err) {
-    await run.end('error');
+    await run.end({ reason: 'error' });
     throw err;
   } finally {
     session.close();
