@@ -6,7 +6,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { throttle } from 'es-toolkit/compat';
 import cn from 'src/utilities/cn';
 import Icon from 'src/components/Icon';
-import TabMenu from '@ably/ui/core/TabMenu';
+import TabMenu from 'src/components/ui/TabMenu';
 import Logo from 'src/images/ably-logo.svg';
 import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';

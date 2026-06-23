@@ -6,7 +6,7 @@ import { LanguageKey } from 'src/data/languages/types';
 import { ExampleFiles, ExampleWithContent } from 'src/data/examples/types';
 import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
 import { IconName } from 'src/components/Icon/types';
-import SegmentedControl from '@ably/ui/core/SegmentedControl';
+import SegmentedControl from 'src/components/ui/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
 import cn from 'src/utilities/cn';
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
