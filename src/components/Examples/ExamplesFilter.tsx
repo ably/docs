@@ -9,7 +9,7 @@ import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks/use-on-click-outside';
 import { navigate } from 'gatsby';
-import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { ProductName } from 'src/components/ui/ProductTile/data';
 import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Matches Tailwind's `sm` screen (768px), where the filter switches from the

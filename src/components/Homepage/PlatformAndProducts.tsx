@@ -1,4 +1,4 @@
-import ProductTile from '@ably/ui/core/ProductTile';
+import ProductTile from 'src/components/ui/ProductTile';
 import cn from 'src/utilities/cn';
 import { Image, ImageProps, getImageFromList } from 'src/components/Image';
 import type { PlatformProductsSectionData, PlatformCardData } from 'src/data/content/types';

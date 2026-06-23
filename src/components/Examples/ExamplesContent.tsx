@@ -6,7 +6,7 @@ import { ImageProps } from '../Image';
 import { examples, products } from '../../data/examples/';
 import { filterSearchExamples } from './filter-search-examples';
 import ExamplesNoResults from './ExamplesNoResults';
-import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { ProductName } from 'src/components/ui/ProductTile/data';
 import { useLocation } from '@reach/router';
 
 export type SelectedFilters = { products: ProductName[]; useCases: string[] };
