@@ -1,12 +1,7 @@
 // docs design tokens — originally @ably/ui's Tailwind theme, now owned locally
 // (DX-1128). gui-disabled-* alias gui-unavailable for the disabled-state classes.
 module.exports = {
-  content: [
-    './src/pages/docs/*.{ts,tsx}',
-    './src/components/**/*.{ts,tsx}',
-    './src/templates/**/*.{ts,tsx}',
-    './node_modules/@ably/ui/core/**/*.{js,json}',
-  ],
+  content: ['./src/pages/docs/*.{ts,tsx}', './src/components/**/*.{ts,tsx}', './src/templates/**/*.{ts,tsx}'],
   safelist: [{ pattern: /^hljs.*/ }],
   darkMode: ['selector', '.ui-theme-dark'],
   theme: {
