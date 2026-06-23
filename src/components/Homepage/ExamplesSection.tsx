@@ -1,7 +1,7 @@
 import type { ExamplesSectionData } from 'src/data/content/types';
 import { getImageFromList, ImageProps } from 'src/components/Image';
 import { Image } from 'src/components/Image';
-import FeaturedLink from '@ably/ui/core/FeaturedLink';
+import FeaturedLink from 'src/components/ui/FeaturedLink';
 
 export const ExamplesSection = ({ section, images }: { section: ExamplesSectionData; images: ImageProps[] }) => {
   const imageUrl = getImageFromList(images, section.image);

@@ -14,7 +14,7 @@ jest.mock('src/components/Icon', () => ({
   default: ({ name }: { name: string }) => <div>{name}</div>,
 }));
 
-jest.mock('@ably/ui/core/Badge', () => ({
+jest.mock('src/components/ui/Badge', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));

@@ -2,7 +2,7 @@ import React, { PropsWithChildren, useContext, useEffect, useRef } from 'react';
 import Markdown from 'markdown-to-jsx/react';
 import { Link } from 'gatsby';
 import Icon from 'src/components/Icon';
-import LinkButton from '@ably/ui/core/LinkButton';
+import LinkButton from 'src/components/ui/LinkButton';
 import { UnstyledOpenInCodeSandboxButton } from '@codesandbox/sandpack-react';
 
 import { Head } from '../components/Head';

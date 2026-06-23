@@ -2,3 +2,5 @@
 // static `icon-gui-*` / `icon-social-*` / `icon-product-*` names and the
 // dynamic `icon-tech-${language}` usages, while keeping the icon-* convention.
 export type IconName = `icon-${string}`;
+
+export type IconSize = `${number}px` | `${number}em` | `${number}rem` | `calc(${string})`;
