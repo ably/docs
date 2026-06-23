@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useLocation } from '@reach/router';
-import cn from '@ably/ui/core/utils/cn';
-import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
+import cn from 'src/utilities/cn';
+import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from 'src/utilities/heights';
 import { PRODUCT_BAR_HEIGHT } from './utils/heights';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageData } from 'src/data/languages';

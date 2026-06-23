@@ -1,4 +1,4 @@
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 
 export const tooltipContentClassName = cn(
   'px-2 py-1 bg-neutral-1000 dark:bg-neutral-300 text-neutral-200 dark:text-neutral-1100 ui-text-p3 font-medium rounded-lg relative z-50 mt-2',

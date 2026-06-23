@@ -1,7 +1,7 @@
 import React from 'react';
 import { PageProps } from 'gatsby';
 import { useLocation } from '@reach/router';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 
 import '../../styles/global.css';
 import { Container } from 'src/components/Container';

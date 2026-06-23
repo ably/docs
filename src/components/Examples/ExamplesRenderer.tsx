@@ -8,7 +8,7 @@ import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-ke
 import { IconName } from '@ably/ui/core/Icon/types';
 import SegmentedControl from '@ably/ui/core/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 // Shared tsconfig for proper ES2020+ transpilation in Sandpack
 import examplesTsConfig from '../../../examples/tsconfig.json';

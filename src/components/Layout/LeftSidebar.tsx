@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
 import { useLocation } from '@reach/router';
 import * as Accordion from '@radix-ui/react-accordion';
-import cn from '@ably/ui/core/utils/cn';
-import { HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
+import cn from 'src/utilities/cn';
+import { HEADER_HEIGHT } from 'src/utilities/heights';
 import Icon from '@ably/ui/core/Icon';
 
 import { productData } from 'src/data';

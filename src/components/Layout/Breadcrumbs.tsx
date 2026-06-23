@@ -2,7 +2,7 @@ import React from 'react';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
 import Icon from '@ably/ui/core/Icon';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { hierarchicalKey } from './utils/nav';
 
 const linkStyles =
