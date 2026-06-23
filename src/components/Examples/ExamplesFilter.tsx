@@ -1,6 +1,6 @@
 import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import { Input } from 'src/components/ui/Input';
 import { products } from '../../data/examples';
 import Button from '@ably/ui/core/Button';

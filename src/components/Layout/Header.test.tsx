@@ -17,7 +17,7 @@ jest.mock('src/contexts/layout-context', () => ({
   }),
 }));
 
-jest.mock('@ably/ui/core/Icon', () => {
+jest.mock('src/components/Icon', () => {
   const MockIcon: React.FC<{ name: string }> = ({ name }) => <div>{name}</div>;
   MockIcon.displayName = 'MockIcon';
   return MockIcon;

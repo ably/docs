@@ -1,6 +1,6 @@
 import React, { FC, useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import {
   highlightSnippet,
   LINE_HIGHLIGHT_CLASSES,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 
 export const GoTopButton = () => {
   const [showGoTop, setShowGoTop] = useState(false);

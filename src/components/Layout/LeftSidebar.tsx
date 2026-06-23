@@ -4,7 +4,7 @@ import { useLocation } from '@reach/router';
 import * as Accordion from '@radix-ui/react-accordion';
 import cn from 'src/utilities/cn';
 import { HEADER_HEIGHT } from 'src/utilities/heights';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 
 import { productData } from 'src/data';
 import { ProductKey } from 'src/data/types';

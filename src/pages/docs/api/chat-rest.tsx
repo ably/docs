@@ -1,5 +1,5 @@
 import { Link, withAssetPrefix } from 'gatsby';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import { useSiteMetadata } from '../../../hooks/use-site-metadata';
 import { Head } from '../../../components/Head';
 import { Loader } from '../../../components/Redoc';

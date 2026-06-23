@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from '@reach/router';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import cn from 'src/utilities/cn';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 import { track } from '@ably/ui/core/insights';
 import { productData } from 'src/data';
 import { languageInfo } from 'src/data/languages';

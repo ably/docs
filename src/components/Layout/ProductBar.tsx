@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import cn from 'src/utilities/cn';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 
 import { productData } from 'src/data';
 import { ProductKey } from 'src/data/types';

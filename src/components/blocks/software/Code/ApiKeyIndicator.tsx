@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 
 type ApiKeyIndicatorProps = { tooltip: string };
 

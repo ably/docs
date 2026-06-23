@@ -1,4 +1,4 @@
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import Link from 'src/components/Link';
 import { btn_sdks } from '../sdks.module.css';
 import cn from 'src/utilities/cn';

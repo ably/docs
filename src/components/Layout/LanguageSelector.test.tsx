@@ -9,7 +9,7 @@ jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: jest.fn(),
 }));
 
-jest.mock('@ably/ui/core/Icon', () => ({
+jest.mock('src/components/Icon', () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <div>{name}</div>,
 }));

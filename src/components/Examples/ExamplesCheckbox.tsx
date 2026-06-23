@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import cn from 'src/utilities/cn';
 
 const ExamplesCheckbox = ({

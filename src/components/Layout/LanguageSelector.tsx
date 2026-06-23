@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
 import Badge from '@ably/ui/core/Badge';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 import cn from 'src/utilities/cn';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';
 import { track } from '@ably/ui/core/insights';

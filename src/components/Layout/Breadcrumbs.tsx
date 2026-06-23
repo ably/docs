@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import cn from 'src/utilities/cn';
 import { hierarchicalKey } from './utils/nav';
 

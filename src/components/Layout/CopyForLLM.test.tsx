@@ -24,7 +24,7 @@ jest.mock('@reach/router', () => ({
   useLocation: () => ({ pathname: '/docs/test-page' }),
 }));
 
-jest.mock('@ably/ui/core/Icon', () => ({
+jest.mock('src/components/Icon', () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <span data-testid={`icon-${name}`}>{name}</span>,
 }));

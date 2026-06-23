@@ -1,4 +1,4 @@
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import {
   inlineGridParagraph,
   inlineContentContainer,

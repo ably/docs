@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 import Status, { StatusUrl } from '@ably/ui/core/Status';
 import cn from 'src/utilities/cn';
 import type { PageContextType } from './Layout';
