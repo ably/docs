@@ -1,5 +1,5 @@
 import React from 'react';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import Aside from '../../blocks/dividers/Aside';
 
 const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'public-preview'];

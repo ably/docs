@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { TableData, useNestedTable } from './NestedTableContext';
 import { parseTableChildren } from './parseTable';
 import { NestedTablePropertyRow } from './NestedTablePropertyRow';

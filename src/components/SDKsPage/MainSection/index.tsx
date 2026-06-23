@@ -1,5 +1,5 @@
 import React from 'react';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { container } from '../sdks.module.css';
 import CardGrid from '../Card/CardGrid';
 import { data } from '../data';
