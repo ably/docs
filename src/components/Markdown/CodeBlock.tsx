@@ -7,8 +7,8 @@ import {
   registerDefaultLanguages,
   parseLineHighlights,
   splitHtmlLines,
-} from '@ably/ui/core/utils/syntax-highlighter';
-import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
+} from 'src/utilities/syntax-highlighter';
+import languagesRegistry from 'src/utilities/syntax-highlighter-registry';
 
 registerDefaultLanguages(languagesRegistry);
 
