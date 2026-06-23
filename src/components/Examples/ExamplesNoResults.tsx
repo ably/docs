@@ -1,4 +1,4 @@
-import Badge from '@ably/ui/core/Badge';
+import Badge from 'src/components/ui/Badge';
 import { Link } from 'gatsby';
 
 const ExamplesNoResults = () => {

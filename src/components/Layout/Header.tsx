@@ -7,7 +7,7 @@ import { throttle } from 'es-toolkit/compat';
 import cn from 'src/utilities/cn';
 import Icon from 'src/components/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
-import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
+import Logo from 'src/images/ably-logo.svg';
 import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';
 import LeftSidebar from './LeftSidebar';

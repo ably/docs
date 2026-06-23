@@ -1,7 +1,8 @@
 import React, { PropsWithChildren, useContext, useEffect, useRef } from 'react';
 import Markdown from 'markdown-to-jsx/react';
 import { Link } from 'gatsby';
-import LinkButton from '@ably/ui/core/LinkButton';
+import LinkButton from 'src/components/ui/LinkButton';
+import Icon from 'src/components/Icon';
 import { UnstyledOpenInCodeSandboxButton } from '@codesandbox/sandpack-react';
 
 import { Head } from '../components/Head';
@@ -12,6 +13,7 @@ import { getApiKey } from 'src/utilities/update-ably-connection-keys';
 import ExamplesRenderer from 'src/components/Examples/ExamplesRenderer';
 import { LanguageKey } from 'src/data/languages/types';
 import { ChevronLeftIcon } from '@heroicons/react/16/solid';
+import { CodeBracketIcon } from '@heroicons/react/24/outline';
 
 const MarkdownOverrides = {
   h1: {
@@ -174,12 +176,17 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
                 href={`https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`}
                 target="_blank"
                 variant="secondary"
-                rightIcon="icon-social-github"
+                rightIcon={<Icon name="icon-social-github" />}
               >
                 View on GitHub
               </LinkButton>
               <UnstyledOpenInCodeSandboxButton className="p-0">
-                <LinkButton href={'#'} variant="secondary" rightIcon="icon-gui-code-bracket-outline" className="w-full">
+                <LinkButton
+                  href={'#'}
+                  variant="secondary"
+                  rightIcon={<CodeBracketIcon aria-hidden />}
+                  className="w-full"
+                >
                   View on CodeSandbox
                 </LinkButton>
               </UnstyledOpenInCodeSandboxButton>
