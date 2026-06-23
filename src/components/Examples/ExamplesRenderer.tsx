@@ -5,7 +5,7 @@ import { CodeEditor } from 'src/components/CodeEditor';
 import { LanguageKey } from 'src/data/languages/types';
 import { ExampleFiles, ExampleWithContent } from 'src/data/examples/types';
 import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
-import { IconName } from '@ably/ui/core/Icon/types';
+import { IconName } from 'src/components/Icon/types';
 import SegmentedControl from '@ably/ui/core/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
 import cn from 'src/utilities/cn';

@@ -1,7 +1,6 @@
 import React, { PropsWithChildren, useContext, useEffect, useRef } from 'react';
 import Markdown from 'markdown-to-jsx/react';
 import { Link } from 'gatsby';
-import Icon from '@ably/ui/core/Icon';
 import LinkButton from '@ably/ui/core/LinkButton';
 import { UnstyledOpenInCodeSandboxButton } from '@codesandbox/sandpack-react';
 
@@ -12,6 +11,7 @@ import UserContext from 'src/contexts/user-context';
 import { getApiKey } from 'src/utilities/update-ably-connection-keys';
 import ExamplesRenderer from 'src/components/Examples/ExamplesRenderer';
 import { LanguageKey } from 'src/data/languages/types';
+import { ChevronLeftIcon } from '@heroicons/react/16/solid';
 
 const MarkdownOverrides = {
   h1: {
@@ -143,7 +143,7 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
       <Head title={meta_title} canonical={canonical} description={meta_description} />
       <div className="my-10">
         <Link to="/examples" className="flex gap-1 items-center mb-5">
-          <Icon name="icon-gui-chevron-left-micro" size="16px" />
+          <ChevronLeftIcon className="size-[16px]" aria-hidden />
           <span className="ui-text-menu4 text-neutral-900 dark:text-neutral-400 font-semibold">All examples</span>
         </Link>
         <h1 className="ui-text-title mb-4">{example.name}</h1>

@@ -1,4 +1,4 @@
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import {
   inlineGridParagraph,
   inlineContentContainer,
@@ -11,6 +11,7 @@ import {
   tipTitleElement,
 } from './dividers.module.css';
 import { PropsWithChildren } from 'react';
+import { DocumentTextIcon, ExclamationTriangleIcon } from '@heroicons/react/16/solid';
 
 const versioningColors: { [key: string]: { bg: string; text: string } } = {
   new: { bg: '#FFF0BA', text: '#AC8600' },
@@ -32,7 +33,7 @@ const Aside = ({ children, attribs }: AsideProps) => {
         <>
           <span className={`${leftSideElement} ${pitfallElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
-            <Icon name="icon-gui-exclamation-triangle-micro" size="1rem" additionalCSS="mr-3" />
+            <ExclamationTriangleIcon className="size-[1rem] mr-3" aria-hidden />
             <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Important</span>
           </strong>
         </>
@@ -60,7 +61,7 @@ const Aside = ({ children, attribs }: AsideProps) => {
         <>
           <span className={`${leftSideElement} ${noteElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
-            <Icon name="icon-gui-document-text-micro" size="1rem" additionalCSS="mr-3" />
+            <DocumentTextIcon className="size-[1rem] mr-3" aria-hidden />
             <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Note</span>
           </strong>
         </>

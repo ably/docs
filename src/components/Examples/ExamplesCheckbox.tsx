@@ -1,6 +1,6 @@
 import React from 'react';
-import Icon from '@ably/ui/core/Icon';
 import cn from 'src/utilities/cn';
+import { CheckIcon } from '@heroicons/react/24/outline';
 
 const ExamplesCheckbox = ({
   label,
@@ -35,10 +35,9 @@ const ExamplesCheckbox = ({
         data-ui-checkbox-styled=""
         className={cn(['ui-checkbox-styled', disabled && '!border-neutral-800 !bg-orange-600'])}
       >
-        <Icon
-          size="1rem"
-          name="icon-gui-check-outline"
-          additionalCSS={cn(['ui-checkbox-styled-tick cursor-pointer', disabled && 'text-neutral-000'])}
+        <CheckIcon
+          className={cn('size-[1rem]', cn(['ui-checkbox-styled-tick cursor-pointer', disabled && 'text-neutral-000']))}
+          aria-hidden
         />
       </div>
       <label htmlFor={name} className="ui-text-p4 text-neutral-900">

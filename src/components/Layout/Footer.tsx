@@ -1,12 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { ComponentType, SVGProps, useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 import Status, { StatusUrl } from '@ably/ui/core/Status';
 import cn from 'src/utilities/cn';
 import type { PageContextType } from './Layout';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Button from '@ably/ui/core/Button';
+import { HandRaisedIcon, HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline';
+import {
+  HandRaisedIcon as HandRaisedSolidIcon,
+  HandThumbDownIcon as HandThumbDownSolidIcon,
+  HandThumbUpIcon as HandThumbUpSolidIcon,
+} from '@heroicons/react/24/solid';
 
 const ENABLE_FEEDBACK = false;
 
@@ -14,8 +20,8 @@ type FeedbackMode = 'yes' | 'no' | 'feedback';
 
 type FeedbackButton = {
   label: string;
-  monoIcon: IconName;
-  colorIcon: IconName;
+  monoIcon: ComponentType<SVGProps<SVGSVGElement>>;
+  colorIcon: ComponentType<SVGProps<SVGSVGElement>>;
   placeholder: string;
   description?: string;
 };
@@ -65,22 +71,22 @@ const socialLinks: { key: string; icon: IconName; link: string }[] = [
 const feedbackButtons: Record<FeedbackMode, FeedbackButton> = {
   yes: {
     label: 'Yes',
-    monoIcon: 'icon-gui-hand-thumb-up-outline',
-    colorIcon: 'icon-gui-hand-thumb-up-solid',
+    monoIcon: HandThumbUpIcon,
+    colorIcon: HandThumbUpSolidIcon,
     description: 'Great! Thanks for letting us know, what are we doing well?',
     placeholder: 'Optional feedback.',
   },
   no: {
     label: 'No',
-    monoIcon: 'icon-gui-hand-thumb-down-outline',
-    colorIcon: 'icon-gui-hand-thumb-down-solid',
+    monoIcon: HandThumbDownIcon,
+    colorIcon: HandThumbDownSolidIcon,
     description: 'Yikes! Thanks for letting us know, what can we do better?',
     placeholder: 'Optional feedback.',
   },
   feedback: {
     label: 'I have feedback',
-    monoIcon: 'icon-gui-hand-raised-outline',
-    colorIcon: 'icon-gui-hand-raised-solid',
+    monoIcon: HandRaisedIcon,
+    colorIcon: HandRaisedSolidIcon,
     placeholder: 'What would you like to say?',
   },
 };
@@ -189,6 +195,8 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
             <div className="flex items-center gap-6">
               {Object.entries(feedbackButtons).map(([key, button]) => {
                 const isActive = feedbackMode === key;
+                const ColorIcon = button.colorIcon;
+                const MonoIcon = button.monoIcon;
 
                 return (
                   <button
@@ -198,22 +206,19 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
                       setFeedbackMode(key as FeedbackMode);
                     }}
                   >
-                    <Icon
-                      name={button.colorIcon}
-                      size="20px"
-                      additionalCSS="transition-colors"
-                      color={
+                    <ColorIcon
+                      aria-hidden
+                      className={cn(
+                        'size-5 transition-colors',
                         isActive
                           ? 'text-orange-600'
-                          : 'hidden group-hover/feedback-button:block text-neutral-1300 dark:text-neutral-000'
-                      }
+                          : 'hidden group-hover/feedback-button:block text-neutral-1300 dark:text-neutral-000',
+                      )}
                     />
                     {!isActive && (
-                      <Icon
-                        name={button.monoIcon}
-                        size="20px"
-                        additionalCSS="transition-colors"
-                        color="text-neutral-900 dark:text-neutral-400 group-hover/feedback-button:hidden"
+                      <MonoIcon
+                        aria-hidden
+                        className="size-5 transition-colors text-neutral-900 dark:text-neutral-400 group-hover/feedback-button:hidden"
                       />
                     )}
                     <span

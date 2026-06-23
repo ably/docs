@@ -1,6 +1,5 @@
 import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import Icon from '@ably/ui/core/Icon';
 import { Input } from 'src/components/ui/Input';
 import { products } from '../../data/examples';
 import Button from '@ably/ui/core/Button';
@@ -11,6 +10,7 @@ import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks/use-on-click-outside';
 import { navigate } from 'gatsby';
 import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const ExamplesFilter = ({
   selected,
@@ -113,10 +113,9 @@ const ExamplesFilter = ({
   return (
     <>
       <div className="relative w-full">
-        <Icon
-          name="icon-gui-magnifying-glass-outline"
-          size="16px"
-          additionalCSS="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-neutral-600 dark:text-neutral-700 pointer-events-none"
+        <MagnifyingGlassIcon
+          className="size-[16px] absolute left-3 top-1/2 -translate-y-1/2 z-10 text-neutral-600 dark:text-neutral-700 pointer-events-none"
+          aria-hidden
         />
         <Input
           type="search"
@@ -154,7 +153,7 @@ const ExamplesFilter = ({
         <div className="flex justify-between items-center sm:hidden h-16 px-4 py-2 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-t-2xl sm:rounded-none">
           <p className="ui-text-p1 font-bold text-neutral-1300 dark:text-neutral-000">Filters</p>
           <button onClick={closeFilterMenu} aria-label="Close filter menu">
-            <Icon name="icon-gui-x-mark-outline" size="24px" />
+            <XMarkIcon className="size-[24px]" aria-hidden />
           </button>
         </div>
         {filters.map(({ key, selected, handleSelect, data }) => (

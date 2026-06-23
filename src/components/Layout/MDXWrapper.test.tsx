@@ -38,7 +38,7 @@ jest.mock('src/hooks/use-site-metadata', () => ({
 }));
 
 // We need to mock minimal implementation of other dependencies that CodeSnippet might use
-jest.mock('@ably/ui/core/Icon', () => {
+jest.mock('src/components/Icon', () => {
   return {
     __esModule: true,
     default: ({ name, size, additionalCSS, color }: any) => (

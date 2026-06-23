@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
 import Badge from '@ably/ui/core/Badge';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 import cn from 'src/utilities/cn';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';
 import { track } from '@ably/ui/core/insights';
@@ -14,6 +14,8 @@ import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heig
 import { secondaryButtonClassName } from './utils/styles';
 import * as Select from '../ui/Select';
 import { Skeleton } from '../ui/Skeleton';
+import { CheckIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon } from '@heroicons/react/24/solid';
 
 type LanguageSelectorOptionData = {
   label: LanguageKey;
@@ -101,7 +103,7 @@ const SingleLanguageSelector = () => {
             </Badge>
             {options.length > 1 && (
               <Select.Icon className="flex items-center ml-auto">
-                <Icon name="icon-gui-chevron-down-solid" size="12px" />
+                <ChevronDownIcon className="size-[12px]" aria-hidden />
               </Select.Icon>
             )}
           </button>
@@ -149,11 +151,7 @@ const SingleLanguageSelector = () => {
                     </Badge>
                     {option.value === value ? (
                       <Select.ItemIndicator className="w-4 h-4 flex items-center justify-center">
-                        <Icon
-                          name="icon-gui-check-outline"
-                          size="16px"
-                          color="text-neutral-1000 dark:text-neutral-300"
-                        />
+                        <CheckIcon className="size-[16px] text-neutral-1000 dark:text-neutral-300" aria-hidden />
                       </Select.ItemIndicator>
                     ) : (
                       <div className="w-4 h-4" aria-hidden={option.value === value} />
@@ -263,7 +261,7 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
             </Badge>
             {options.length > 1 && (
               <Select.Icon className="flex items-center">
-                <Icon name="icon-gui-chevron-down-solid" size="12px" />
+                <ChevronDownIcon className="size-[12px]" aria-hidden />
               </Select.Icon>
             )}
           </button>
@@ -312,11 +310,7 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
                     </Badge>
                     {option.value === value ? (
                       <Select.ItemIndicator className="w-4 h-4 flex items-center justify-center">
-                        <Icon
-                          name="icon-gui-check-outline"
-                          size="16px"
-                          color="text-neutral-1000 dark:text-neutral-300"
-                        />
+                        <CheckIcon className="size-[16px] text-neutral-1000 dark:text-neutral-300" aria-hidden />
                       </Select.ItemIndicator>
                     ) : (
                       <div className="w-4 h-4" aria-hidden={option.value === value} />

@@ -5,12 +5,11 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { throttle } from 'es-toolkit/compat';
 import cn from 'src/utilities/cn';
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
 import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
 import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';
-import { IconName } from '@ably/ui/core/Icon/types';
 import LeftSidebar from './LeftSidebar';
 import ProductBar from './ProductBar';
 import UserContext from 'src/contexts/user-context';
@@ -20,6 +19,17 @@ import { InkeepSearchBar } from '../SearchBar/InkeepSearchBar';
 import { secondaryButtonClassName, iconButtonClassName, tooltipContentClassName } from './utils/styles';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { ProductKey } from 'src/data/types';
+import {
+  ArrowRightStartOnRectangleIcon,
+  ArrowTopRightOnSquareIcon,
+  Bars3Icon,
+  CommandLineIcon,
+  CubeIcon,
+  LifebuoyIcon,
+  MagnifyingGlassIcon,
+  QuestionMarkCircleIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
 
 // Tailwind 'md' breakpoint from tailwind.config.js
 const MD_BREAKPOINT = 1040;
@@ -37,17 +47,17 @@ const mobileTabs = ['Platform', 'Products', 'Examples'];
 const helpResourcesItems = [
   {
     href: '/support',
-    icon: 'icon-gui-lifebuoy-outline' as IconName,
+    icon: <LifebuoyIcon className="size-5" aria-hidden />,
     label: 'Support',
   },
   {
     href: '/docs/sdks',
-    icon: 'icon-gui-cube-outline' as IconName,
+    icon: <CubeIcon className="size-5" aria-hidden />,
     label: 'SDKs',
   },
   {
     href: 'https://ably.com',
-    icon: 'icon-gui-ably-badge' as IconName,
+    icon: <Icon name="icon-gui-ably-badge" size="20px" />,
     label: 'ably.com',
     external: true,
   },
@@ -252,7 +262,7 @@ const Header: React.FC = () => {
                 }}
               >
                 <span className="flex items-center gap-2">
-                  <Icon name="icon-gui-magnifying-glass-outline" size="16px" />
+                  <MagnifyingGlassIcon className="size-[16px]" aria-hidden />
                   <span>Search docs...</span>
                 </span>
                 <span className="flex items-center gap-0.5">
@@ -283,7 +293,7 @@ const Header: React.FC = () => {
                   }
                 }}
               >
-                <Icon name="icon-gui-sparkles-outline" size="20px" />
+                <SparklesIcon className="size-[20px]" aria-hidden />
                 <span>Ask AI</span>
               </button>
             )}
@@ -292,7 +302,7 @@ const Header: React.FC = () => {
                 <DropdownMenu.Trigger asChild>
                   <Tooltip.Trigger asChild>
                     <button className={iconButtonClassName} onClick={() => track('docs_help_resources_button_clicked')}>
-                      <Icon name="icon-gui-question-mark-circle-outline" size="20px" />
+                      <QuestionMarkCircleIcon className="size-[20px]" aria-hidden />
                     </button>
                   </Tooltip.Trigger>
                 </DropdownMenu.Trigger>
@@ -318,10 +328,10 @@ const Header: React.FC = () => {
                         className={item.external ? 'justify-between' : undefined}
                       >
                         <div className="flex items-center gap-2">
-                          <Icon name={item.icon} size="20px" />
+                          {item.icon}
                           <span>{item.label}</span>
                         </div>
-                        {item.external && <Icon name="icon-gui-arrow-top-right-on-square-outline" size="16px" />}
+                        {item.external && <ArrowTopRightOnSquareIcon className="size-[16px]" aria-hidden />}
                       </a>
                     </DropdownMenu.Item>
                   ))}
@@ -332,7 +342,7 @@ const Header: React.FC = () => {
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
                   <button className={iconButtonClassName} onClick={() => track('docs_cli_button_clicked')}>
-                    <Icon name="icon-gui-command-line-outline" size="20px" />
+                    <CommandLineIcon className="size-[20px]" aria-hidden />
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
@@ -363,7 +373,7 @@ const Header: React.FC = () => {
                 <Tooltip.Root>
                   <Tooltip.Trigger asChild>
                     <button className={iconButtonClassName} onClick={handleLogout}>
-                      <Icon name="icon-gui-arrow-right-start-on-rectangle-outline" size="20px" />
+                      <ArrowRightStartOnRectangleIcon className="size-[20px]" aria-hidden />
                     </button>
                   </Tooltip.Trigger>
                   <Tooltip.Portal>
@@ -384,8 +394,13 @@ const Header: React.FC = () => {
           </div>
         </Tooltip.Provider>
         <div ref={burgerButtonRef} className="flex md:hidden">
-          <button className={iconButtonClassName} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            <Icon name="icon-gui-bars-3-outline" size="20px" />
+          <button
+            className={iconButtonClassName}
+            aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <Bars3Icon className="size-[20px]" aria-hidden />
           </button>
         </div>
 

@@ -4,7 +4,6 @@ import { useLocation } from '@reach/router';
 import * as Accordion from '@radix-ui/react-accordion';
 import cn from 'src/utilities/cn';
 import { HEADER_HEIGHT } from 'src/utilities/heights';
-import Icon from '@ably/ui/core/Icon';
 
 import { productData } from 'src/data';
 import { ProductKey } from 'src/data/types';
@@ -13,6 +12,8 @@ import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { interactiveButtonClassName } from './utils/styles';
 import { PRODUCT_BAR_HEIGHT } from './utils/heights';
+import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon } from '@heroicons/react/24/solid';
 
 // Build link preserving all language params across navigation
 const buildLinkWithParams = (targetLink: string, searchParams: URLSearchParams): string => {
@@ -168,18 +169,15 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
                   >
                     <span>{page.name}</span>
                     {page.external && (
-                      <Icon
-                        name="icon-gui-arrow-top-right-on-square-outline"
-                        additionalCSS={cn(iconClassName, '-mr-[22px]')}
-                        size="16px"
+                      <ArrowTopRightOnSquareIcon
+                        className={cn('size-[16px]', cn(iconClassName, '-mr-[22px]'))}
+                        aria-hidden
                       />
                     )}
                   </Link>
                 )
               )}
-              {hasDeeperLayer ? (
-                <Icon name="icon-gui-chevron-right-solid" additionalCSS={iconClassName} size="12px" />
-              ) : null}
+              {hasDeeperLayer ? <ChevronRightIcon className={cn('size-[12px]', iconClassName)} aria-hidden /> : null}
             </Accordion.Trigger>
             {hasDeeperLayer && (
               <Accordion.Content className={cn(accordionContentClassName, layer === 0 && 'pt-1')}>
@@ -226,9 +224,7 @@ const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductCo
               })}
             >
               <span>{page.name}</span>
-              {page.external && (
-                <Icon name="icon-gui-arrow-top-right-on-square-outline" additionalCSS={iconClassName} size="16px" />
-              )}
+              {page.external && <ArrowTopRightOnSquareIcon className={cn('size-[16px]', iconClassName)} aria-hidden />}
             </Link>
           );
         }

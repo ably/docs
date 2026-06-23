@@ -1,4 +1,4 @@
-import { IconName } from '@ably/ui/core/Icon/types';
+import { IconName } from 'src/components/Icon/types';
 import { LanguageKey } from 'src/data/languages/types';
 
 export type NavProduct = {
