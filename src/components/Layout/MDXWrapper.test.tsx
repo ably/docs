@@ -3,7 +3,7 @@ import { WindowLocation } from '@reach/router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Helmet } from 'react-helmet';
 import If from './mdx/If';
-import CodeSnippet from '@ably/ui/core/CodeSnippet';
+import CodeSnippet from 'src/components/ui/CodeSnippet';
 import UserContext from 'src/contexts/user-context';
 import MDXWrapper from './MDXWrapper';
 
@@ -54,7 +54,7 @@ jest.mock('src/components/Icon', () => {
 });
 
 // Mock Code component used by CodeSnippet
-jest.mock('@ably/ui/core/Code', () => {
+jest.mock('src/components/ui/Code', () => {
   return {
     __esModule: true,
     default: ({ language, snippet }: any) => (

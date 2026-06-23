@@ -1,6 +1,6 @@
 import React, { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 import { useLocation } from '@reach/router';
-import { stripSdkType } from '@ably/ui/core/CodeSnippet/languages';
+import { stripSdkType } from 'src/components/ui/CodeSnippet/languages';
 import { ActivePage, determineActivePage, PageTemplate } from 'src/components/Layout/utils/nav';
 import { productData } from 'src/data';
 import { LanguageKey } from 'src/data/languages/types';
