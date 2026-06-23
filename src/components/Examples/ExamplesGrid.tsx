@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import Badge from 'src/components/ui/Badge';
 import Icon from 'src/components/Icon';
 import { IconName } from 'src/components/Icon/types';
-import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
+import { ProductName, products as dataProducts } from 'src/components/ui/ProductTile/data';
 import cn from 'src/utilities/cn';
 import { Image, ImageProps } from '../Image';
 import { DEFAULT_EXAMPLE_LANGUAGES } from '../../data/examples/';
