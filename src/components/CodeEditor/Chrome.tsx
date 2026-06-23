@@ -1,4 +1,4 @@
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import React from 'react';
 import { SmallMenuLabel } from 'src/components/Menu/Label';
 import APIKeyIndicator from 'src/components/blocks/software/Code/ApiKeyIndicator';

@@ -1,6 +1,6 @@
 import React from 'react';
 import Icon from '@ably/ui/core/Icon';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 
 const ExamplesCheckbox = ({
   label,

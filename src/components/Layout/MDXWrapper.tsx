@@ -11,7 +11,7 @@ import React, {
 import { navigate, PageProps } from 'gatsby';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 

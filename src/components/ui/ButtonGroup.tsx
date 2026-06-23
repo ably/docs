@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { Separator } from './Separator';
 
 const buttonGroupVariants = cva(

@@ -1,7 +1,7 @@
 import Icon from '@ably/ui/core/Icon';
 import Link from 'src/components/Link';
 import { btn_sdks } from '../sdks.module.css';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 
 type ImagesSDK = {
   src: string;

@@ -1,5 +1,5 @@
 import React, { useRef, useLayoutEffect, useState } from 'react';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 
 interface MethodSignatureProps {
   children: React.ReactNode;

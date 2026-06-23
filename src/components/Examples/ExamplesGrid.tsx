@@ -3,7 +3,7 @@ import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { Image, ImageProps } from '../Image';
 import { DEFAULT_EXAMPLE_LANGUAGES } from '../../data/examples/';
 import { Example } from '../../data/examples/types';
