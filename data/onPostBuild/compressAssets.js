@@ -23,7 +23,12 @@ const piscina_1 = __importDefault(require("piscina"));
  */
 const onPostBuild = async ({ reporter }) => {
     const cwd = path_1.default.join(process.cwd(), 'public');
-    const globResult = await (0, fast_glob_1.default)('**/*.{css,js,json,svg}', { cwd });
+    // JSON (mostly Gatsby's page-data.json) is excluded: nginx is configured with
+    // `gzip on; gzip_types application/json; gzip_static on;` so JSON is
+    // live-gzipped on the way out. Pre-compressing it with zopfli was the bulk of
+    // onPostBuild time for ~5-10% extra ratio over nginx's live gzip-6. Following
+    // Voltaire, which dropped JSON pre-compression for the same reason.
+    const globResult = await (0, fast_glob_1.default)('**/*.{css,js,svg}', { cwd });
     const files = globResult.map((file) => {
         return {
             from: path_1.default.join(cwd, file),
