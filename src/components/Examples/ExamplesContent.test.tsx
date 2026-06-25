@@ -75,8 +75,23 @@ describe('ExamplesContent', () => {
   });
 
   it('filters examples based on product filter selection', () => {
-    // Make the screen wider than the default of 1024px as desktop filtering only works >= 1040px
+    // Desktop filter auto-commits at the `sm` breakpoint (768px) and above
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1600 });
+    window.dispatchEvent(new Event('resize'));
+
+    render(<ExamplesContent exampleImages={exampleImages} />);
+    const productFilterInput = screen.getByTestId('product-spaces');
+    fireEvent.click(productFilterInput);
+
+    expect(screen.queryByText('Online status')).not.toBeInTheDocument();
+    expect(screen.getByText('Member location')).toBeInTheDocument();
+  });
+
+  // DX-1449: between the `sm` (768px) and `md` (1040px) breakpoints the inline
+  // desktop filter renders without an Apply button, but selections previously
+  // only committed at >= 1040px, leaving the filter inert in that range.
+  it('filters examples at widths between the sm and md breakpoints', () => {
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 818 });
     window.dispatchEvent(new Event('resize'));
 
     render(<ExamplesContent exampleImages={exampleImages} />);
