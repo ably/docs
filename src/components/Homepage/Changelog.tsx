@@ -1,8 +1,8 @@
 import { useStaticQuery } from 'gatsby';
 import { graphql } from 'gatsby';
 import { Key } from 'react';
-import Badge from '@ably/ui/core/Badge';
-import FeaturedLink from '@ably/ui/core/FeaturedLink';
+import Badge from 'src/components/ui/Badge';
+import FeaturedLink from 'src/components/ui/FeaturedLink';
 import Link from '../Link';
 
 interface ChangelogFeedItemNode {

@@ -2,11 +2,11 @@ import React, { ComponentType, SVGProps, useEffect, useMemo, useState } from 're
 import { useLocation } from '@reach/router';
 import Icon from 'src/components/Icon';
 import { IconName } from 'src/components/Icon/types';
-import Status, { StatusUrl } from '@ably/ui/core/Status';
+import Status, { StatusUrl } from 'src/components/ui/Status';
 import cn from 'src/utilities/cn';
 import type { PageContextType } from './Layout';
 import { useLayoutContext } from 'src/contexts/layout-context';
-import Button from '@ably/ui/core/Button';
+import Button from 'src/components/ui/Button';
 import { HandRaisedIcon, HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline';
 import {
   HandRaisedIcon as HandRaisedSolidIcon,

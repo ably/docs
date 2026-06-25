@@ -1,5 +1,5 @@
 import React from 'react';
-import Badge from '@ably/ui/core/Badge';
+import Badge from 'src/components/ui/Badge';
 
 // The wrapping div with data-toc-exclude prevents this badge's text from
 // appearing in the "On this page" sidebar when rendered inside a heading.

@@ -23,7 +23,7 @@ jest.mock('src/components/Icon', () => {
   return MockIcon;
 });
 
-jest.mock('@ably/ui/core/LinkButton', () => {
+jest.mock('src/components/ui/LinkButton', () => {
   const MockButton: React.FC<{ children: React.ReactNode }> = ({ children }) => <button>{children}</button>;
   MockButton.displayName = 'MockButton';
   return MockButton;

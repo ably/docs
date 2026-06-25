@@ -2,15 +2,15 @@ import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, u
 import ReactDOM from 'react-dom';
 import { Input } from 'src/components/ui/Input';
 import { products } from '../../data/examples';
-import Button from '@ably/ui/core/Button';
+import Button from 'src/components/ui/Button';
 import cn from 'src/utilities/cn';
-import Badge from '@ably/ui/core/Badge';
+import Badge from 'src/components/ui/Badge';
 import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks/use-on-click-outside';
 import { navigate } from 'gatsby';
 import { ProductName } from '@ably/ui/core/ProductTile/data';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Matches Tailwind's `sm` screen (768px), where the filter switches from the
 // mobile drawer (with an Apply button) to the inline desktop sidebar. Above
@@ -135,7 +135,7 @@ const ExamplesFilter = ({
       <Button
         className="flex sm:hidden mt-4 w-full"
         variant="secondary"
-        leftIcon="icon-gui-adjustments-horizontal-outline"
+        leftIcon={<AdjustmentsHorizontalIcon aria-hidden />}
         onClick={() => setExpandFilterMenu(true)}
       >
         Filter
