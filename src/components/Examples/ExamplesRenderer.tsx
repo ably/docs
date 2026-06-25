@@ -52,6 +52,7 @@ const getDependencies = (id: string, products: string[], activeLanguage: Languag
       : {}),
     ...(products.includes('spaces') ? { '@ably/spaces': '~0.4.0' } : {}),
     ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
+    ...(id === 'pub-sub-live-voting' ? { qrcode: '^1.5.4' } : {}),
     ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
       ? {
           react: '^18',
@@ -200,8 +201,17 @@ const ExamplesRenderer = ({
                 showRefreshButton
                 {...(id === 'pub-sub-message-encryption' && { startRoute: '?encrypted=true' })}
                 {...(id === 'pub-sub-message-annotations' && { startRoute: '?clientId=user1' })}
+                {...(id === 'pub-sub-live-voting' && { startRoute: '?role=voter' })}
               />
-              <UserIndicator user={id === 'pub-sub-message-encryption' ? 'user 1 - encrypted' : 'user 1'} />
+              <UserIndicator
+                user={
+                  id === 'pub-sub-live-voting'
+                    ? 'Voter'
+                    : id === 'pub-sub-message-encryption'
+                      ? 'user 1 - encrypted'
+                      : 'user 1'
+                }
+              />
             </div>
             {isDoubleLayout && (
               <div className="relative flex-1">
@@ -210,8 +220,9 @@ const ExamplesRenderer = ({
                   showOpenInCodeSandbox={false}
                   startRoute="/?publisher=false"
                   {...(id === 'pub-sub-message-annotations' && { startRoute: '?publisher=false&clientId=user2' })}
+                  {...(id === 'pub-sub-live-voting' && { startRoute: '?role=presenter&demo=1' })}
                 />
-                <UserIndicator user="user 2" />
+                <UserIndicator user={id === 'pub-sub-live-voting' ? 'Presenter' : 'user 2'} />
               </div>
             )}
           </div>
