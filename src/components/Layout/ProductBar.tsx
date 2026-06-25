@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import cn from 'src/utilities/cn';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 
 import { productData } from 'src/data';
 import { ProductKey } from 'src/data/types';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
+import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
 type ProductBarItem = {
   type: 'product';
@@ -127,7 +128,7 @@ const ProductBar = ({ className, onSelectProduct, selectedProduct }: ProductBarP
               )}
               <span>{item.name}</span>
               {!isProduct && (item as CustomBarItem).external && (
-                <Icon name="icon-gui-arrow-top-right-on-square-outline" size="12px" />
+                <ArrowTopRightOnSquareIcon className="size-[12px]" aria-hidden />
               )}
             </>
           );

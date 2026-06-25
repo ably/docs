@@ -1,8 +1,8 @@
 import { Link, withAssetPrefix } from 'gatsby';
-import Icon from '@ably/ui/core/Icon';
 import { useSiteMetadata } from '../../../hooks/use-site-metadata';
 import { Head } from '../../../components/Head';
 import { Loader } from '../../../components/Redoc';
+import { ArrowLongRightIcon } from '@heroicons/react/16/solid';
 
 const ControlApi = () => {
   const { canonicalUrl } = useSiteMetadata();
@@ -18,10 +18,9 @@ const ControlApi = () => {
       <div className="ml-2 mt-8 mb-6">
         <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
           <Link to="/docs/api">
-            <Icon
-              name="icon-gui-arrow-long-right-micro"
-              size="1rem"
-              additionalCSS="align-middle transform rotate-180 mr-1 h-4 w-4 ui-link"
+            <ArrowLongRightIcon
+              className="size-[1rem] align-middle transform rotate-180 mr-1 h-4 w-4 ui-link"
+              aria-hidden
             />
             API Reference
           </Link>

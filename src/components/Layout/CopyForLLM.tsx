@@ -2,14 +2,16 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from '@reach/router';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import cn from 'src/utilities/cn';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 import { track } from '@ably/ui/core/insights';
 import { productData } from 'src/data';
 import { languageInfo } from 'src/data/languages';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { ButtonGroup, ButtonGroupSeparator } from 'src/components/ui/ButtonGroup';
 import { secondaryButtonClassName } from './utils/styles';
+import { ArrowTopRightOnSquareIcon, EyeIcon, Square2StackIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon } from '@heroicons/react/24/solid';
 
 const menuItemClassName =
   'flex items-center gap-2 px-3 py-2 text-sm text-neutral-1300 dark:text-neutral-000 hover:bg-neutral-100 dark:hover:bg-neutral-1200 rounded cursor-pointer outline-none';
@@ -142,13 +144,13 @@ const CopyForLLM: React.FC = () => {
           onClick={handleCopyMarkdown}
           disabled={!markdownContent}
         >
-          <Icon name="icon-gui-square-2-stack-outline" size="16px" />
+          <Square2StackIcon className="size-[16px]" aria-hidden />
           <span>{copyFeedback ?? 'Copy for LLM'}</span>
         </button>
         <ButtonGroupSeparator />
         <DropdownMenu.Trigger asChild>
           <button className={cn(secondaryButtonClassName, 'px-2')}>
-            <Icon name="icon-gui-chevron-down-solid" size="12px" />
+            <ChevronDownIcon className="size-[12px]" aria-hidden />
           </button>
         </DropdownMenu.Trigger>
       </ButtonGroup>
@@ -169,7 +171,7 @@ const CopyForLLM: React.FC = () => {
                 });
               }}
             >
-              <Icon name="icon-gui-eye-outline" size="20px" />
+              <EyeIcon className="size-[20px]" aria-hidden />
               <span>View as markdown</span>
             </a>
           </DropdownMenu.Item>
@@ -180,7 +182,7 @@ const CopyForLLM: React.FC = () => {
               handleCopyMarkdown();
             }}
           >
-            <Icon name="icon-gui-square-2-stack-outline" size="20px" />
+            <Square2StackIcon className="size-[20px]" aria-hidden />
             <span>{copyFeedback ?? 'Copy as markdown'}</span>
           </DropdownMenu.Item>
           <DropdownMenu.Separator className="h-px bg-neutral-300 dark:bg-neutral-1000 my-1" />
@@ -203,7 +205,7 @@ const CopyForLLM: React.FC = () => {
                   <Icon name={icon as IconName} size="20px" />
                   <span>{label}</span>
                 </div>
-                <Icon name="icon-gui-arrow-top-right-on-square-outline" size="16px" />
+                <ArrowTopRightOnSquareIcon className="size-[16px]" aria-hidden />
               </a>
             </DropdownMenu.Item>
           ))}

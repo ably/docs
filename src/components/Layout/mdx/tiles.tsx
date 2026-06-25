@@ -1,6 +1,6 @@
 import Link from 'src/components/Link';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
 
 type TileProps = {
   title?: string;

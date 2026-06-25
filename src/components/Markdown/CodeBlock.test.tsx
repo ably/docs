@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { CodeBlock } from './CodeBlock';
 
-jest.mock('@ably/ui/core/Icon', () => {
+jest.mock('src/components/Icon', () => {
   return function MockIcon() {
     return <span data-testid="mock-icon" />;
   };

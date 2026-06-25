@@ -9,7 +9,7 @@ jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: jest.fn(),
 }));
 
-jest.mock('@ably/ui/core/Icon', () => ({
+jest.mock('src/components/Icon', () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <div>{name}</div>,
 }));
@@ -72,7 +72,7 @@ describe('LanguageSelector', () => {
 
   it('renders the LanguageSelector component with default language (JS)', () => {
     render(<LanguageSelector />);
-    expect(screen.getByText('icon-gui-chevron-down-solid')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /select code language/i })).toBeInTheDocument();
     expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
   });
@@ -156,8 +156,7 @@ describe('LanguageSelector', () => {
 
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
     expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
-    // No dropdown chevron and no combobox trigger when there is nothing to choose between.
-    expect(screen.queryByText('icon-gui-chevron-down-solid')).not.toBeInTheDocument();
+    // No combobox trigger (and so no dropdown chevron) when there is nothing to choose between.
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
