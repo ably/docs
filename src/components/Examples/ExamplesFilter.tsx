@@ -12,6 +12,11 @@ import { navigate } from 'gatsby';
 import { ProductName } from '@ably/ui/core/ProductTile/data';
 import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
+// Matches Tailwind's `sm` screen (768px), where the filter switches from the
+// mobile drawer (with an Apply button) to the inline desktop sidebar. Above
+// this width selections must auto-commit, since no Apply button is rendered.
+const SM_BREAKPOINT = 768;
+
 const ExamplesFilter = ({
   selected,
   setSelected,
@@ -85,7 +90,7 @@ const ExamplesFilter = ({
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1040) {
+      if (window.innerWidth >= SM_BREAKPOINT) {
         setExpandFilterMenu(false);
       }
     };
@@ -95,7 +100,7 @@ const ExamplesFilter = ({
   }, []);
 
   useEffect(() => {
-    if (window.innerWidth >= 1040) {
+    if (window.innerWidth >= SM_BREAKPOINT) {
       setSelected(localSelected);
     }
   }, [expandFilterMenu, localSelected, setSelected]);

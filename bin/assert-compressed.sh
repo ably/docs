@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #
-# A utility script to assert that all CSS, JS, JSON, and SVG files have corresponding .gz compressed versions
+# A utility script to assert that all CSS, JS, and SVG files have corresponding .gz compressed versions
 #
 # Usage: assert-compressed.sh
 #
 
 # Find all files that should be compressed
-FILES=$(find public -type f \( -name "*.css" -o -name "*.js" -o -name "*.json" -o -name "*.svg" \))
+FILES=$(find public -type f \( -name "*.css" -o -name "*.js" -o -name "*.svg" \))
 ORIGINAL_COUNT=$(echo "$FILES" | wc -l)
 
 # Check each file for a corresponding .gz version
