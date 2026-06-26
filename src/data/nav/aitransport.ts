@@ -320,6 +320,16 @@ export default {
         },
       ],
     },
+    {
+      name: 'Roadmap',
+      pages: [
+        {
+          name: 'Roadmap',
+          link: '/docs/ai-transport/roadmap',
+          index: true,
+        },
+      ],
+    },
   ],
   api: [],
 } satisfies NavProduct;
