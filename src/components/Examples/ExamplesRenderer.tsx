@@ -5,8 +5,9 @@ import { CodeEditor } from 'src/components/CodeEditor';
 import { LanguageKey } from 'src/data/languages/types';
 import { ExampleFiles, ExampleWithContent } from 'src/data/examples/types';
 import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
+import Icon from 'src/components/Icon';
 import { IconName } from 'src/components/Icon/types';
-import SegmentedControl from '@ably/ui/core/SegmentedControl';
+import SegmentedControl from 'src/components/ui/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
 import cn from 'src/utilities/cn';
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
@@ -164,7 +165,7 @@ const ExamplesRenderer = ({
               variant="subtle"
               active={activeLanguage === languageKey}
               rounded
-              leftIcon={`icon-tech-${languageKey}` as IconName}
+              leftIcon={<Icon name={`icon-tech-${languageKey}` as IconName} />}
               onClick={() => setActiveLanguage(languageKey as LanguageKey)}
             >
               {languageKey.charAt(0).toUpperCase() + languageKey.slice(1)}
