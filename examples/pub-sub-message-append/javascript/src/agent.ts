@@ -1,6 +1,8 @@
 // Agent Service
-// This consumes LLM streams and publishes tokens using the message-per-response pattern
-// All tokens are appended to a single message, which appears as one entry in channel history
+// This consumes a stream and appends each chunk to a single Pub/Sub message,
+// which appears as one entry in channel history.
+// For AI token streaming, the AI Transport SDK handles this for you. See the
+// AI Transport token streaming example.
 
 import * as Ably from 'ably';
 import { MockLLM } from './llm';

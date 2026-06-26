@@ -52,6 +52,7 @@ const getDependencies = (id: string, products: string[], activeLanguage: Languag
       ? { '@ably/chat': '~1.3.1', '@ably/chat-react-ui-kit': '~0.3.0', clsx: '^2.1.1' }
       : {}),
     ...(products.includes('spaces') ? { '@ably/spaces': '~0.4.0' } : {}),
+    ...(products.includes('ai_transport') ? { ably: '~2.23.0', '@ably/ai-transport': '~0.3.0', ai: '^6' } : {}),
     ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
     ...(id === 'pub-sub-live-voting' ? { qrcode: '^1.5.4' } : {}),
     ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
