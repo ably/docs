@@ -173,7 +173,9 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
             ) : null}
             <div className="flex flex-col gap-2 w-full md:w-[16.25rem] order-1 md:order-2 md:sticky md:top-20 self-start">
               <LinkButton
-                href={`https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`}
+                href={
+                  example.githubUrl ?? `https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`
+                }
                 target="_blank"
                 variant="secondary"
                 rightIcon={<Icon name="icon-social-github" />}
