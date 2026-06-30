@@ -7,7 +7,7 @@ redirect_from:
   - /docs/ai-transport/api/javascript/server-transport
 ---
 
-The `AgentSession` is the server-side counterpart to [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session). It subscribes to the channel for cancel signals and creates `Run` instances that publish lifecycle events, user messages, and streamed assistant output.
+The `AgentSession` is the server-side counterpart to [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session). It subscribes to the channel for cancel signals and creates `AgentRun` instances that publish lifecycle events, user messages, and streamed assistant output.
 
 Construct one with `createAgentSession` from the core entry point. For Vercel `UIMessage` channels, use the pre-bound factory from [`@ably/ai-transport/vercel`](/docs/ai-transport/api/javascript/vercel/chat-transport) instead.
 
@@ -76,13 +76,12 @@ const session = createAgentSession({
 | channelName | required | The channel to publish to. The session owns this channel; do not also resolve it elsewhere with conflicting options. | String |
 | codec | required | The codec used to encode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
 | channelModes | optional | Extra channel modes to request on top of the modes AI Transport always needs. Pass `OBJECT_MODES` to use Ably LiveObjects via [`object`](#properties). Omit to attach with the default mode set. The session requests the union, so extra modes never drop the modes AI Transport relies on. See [LiveObjects State](/docs/ai-transport/features/liveobjects). | `Ably.ChannelMode[]` |
+| historyPageSize | optional | Wire-message limit fetched per channel-history round trip, used by every `run.view` pagination on this session. Independent of `loadOlder`'s reveal `limit`: it tunes fetch cost, not reveal granularity. Defaults to 100. | Number |
 | logger | optional | Logger instance for diagnostic output. | `Logger` |
-| onError | optional | Called with non-fatal session-level errors not scoped to any run (cancel listener failures, channel continuity loss). | `(error: Ably.ErrorInfo) => void` |
-| inputEventLookupTimeoutMs | optional | How long `Run.start()` waits for the run's input event(s) to arrive on the channel before rejecting with `InputEventNotFound`. Defaults to 30000. | Number |
-| inputEventBufferLimit | optional | Maximum number of distinct input events that may be buffered while waiting for `Run.start()` to register a lookup listener. FIFO-evicted when exceeded. Defaults to 200. | Number |
-| rewindWindow | optional | Channel rewind applied when the agent attaches. Passed verbatim to Ably's `params.rewind`. Accepts duration strings (`"2m"`, `"30s"`) or message counts as strings (`"50"`). Defaults to `"2m"`. | String |
 
 </Table>
+
+Subscribe to non-fatal session errors with [`on('error')`](#on) rather than a constructor option.
 
 ### Returns <a id="constructor-returns"/>
 
@@ -92,7 +91,7 @@ const session = createAgentSession({
 
 <MethodSignature>{`connect(): Promise<void>`}</MethodSignature>
 
-Subscribe to the cancel channel and implicitly attach. Idempotent: subsequent calls return the same promise. All `Run` methods (`start`, `addEvents`, `pipe`, `suspend`, `end`) throw `InvalidArgument` until `connect()` resolves.
+Subscribe to the channel and implicitly attach. The subscribe is unfiltered so channel-history-replayed input events fold into the tree, where each run's input-event watcher can match its trigger. Idempotent: subsequent calls return the same promise. All `AgentRun` methods (`start`, `pipe`, `suspend`, `end`) throw `InvalidArgument` until `connect()` has been called.
 
 <Code>
 ```javascript
@@ -106,9 +105,9 @@ await session.connect();
 
 ## Create a run <a id="create-run"/>
 
-<MethodSignature>{`createRun(invocation: Invocation, runtime?: RunRuntime<TOutput>): Run<TOutput, TProjection, TMessage>`}</MethodSignature>
+<MethodSignature>{`createRun(invocation: Invocation, runtime?: RunRuntime<TOutput>): AgentRun<TOutput, TProjection, TMessage>`}</MethodSignature>
 
-Create a new `Run` from an `Invocation`. Synchronous: no channel activity until [`Run.start`](#run-start) is called. The Run is registered for cancel routing immediately so early cancels fire the `abortSignal`.
+Create a new `AgentRun` from an `Invocation`. Returns synchronously and arms the run's input-event watcher (a passive pre-scan of the tree plus a listener for the trigger's arrival); it publishes nothing to the channel until [`AgentRun.start`](#run-start) is called. The run is registered for cancel routing immediately so early cancels fire the `abortSignal`.
 
 <Code>
 ```javascript
@@ -153,11 +152,11 @@ const run = session.createRun(invocation, { signal: req.signal });
 
 ### Returns <a id="create-run-returns"/>
 
-A `Run<TOutput, TProjection, TMessage>` handle for publishing lifecycle events, user messages, and streamed output. See [Run interface](#run) below.
+An `AgentRun<TOutput, TProjection, TMessage>` handle for publishing lifecycle events, user messages, and streamed output. See [AgentRun interface](#run) below.
 
-## Run <a id="run"/>
+## AgentRun <a id="run"/>
 
-The handle returned by [`createRun`](#create-run).
+The handle returned by [`createRun`](#create-run). It extends the shared `BaseRun` read-model (`runId`, `status`, `error`, `messages`) with the agent's lifecycle surface.
 
 ### Properties
 
@@ -165,19 +164,14 @@ The handle returned by [`createRun`](#create-run).
 
 | Property | Description | Type |
 | --- | --- | --- |
-| runId | The Run's unique identifier. | String |
+| runId | The Run's unique identifier. Known synchronously on the agent (it mints the id for a fresh run, or reads it off the triggering input event for a continuation). | String |
+| status | The Run's lifecycle status, read live off the tree. | `RunStatus` |
+| error | The terminal error, present exactly when `status` is `'error'`. | `Ably.ErrorInfo` or Undefined |
+| messages | This Run's whole turn: its triggering input message followed by its own streamed output, deduplicated by `codecMessageId`. The unit to persist. See [Hydrate the conversation](#conversation-hydration). | `TMessage[]` |
 | invocationId | The invocation id minted by the agent for this `createRun` call (one per HTTP request). Readable synchronously; the application returns it on the HTTP response. The agent stamps it on every event it publishes for this invocation. | String |
 | abortSignal | `AbortSignal` scoped to this Run. Fires when a cancel event arrives. | `AbortSignal` |
-| view | Read-only view of the conversation messages associated with this Run. | <Table id='RunView'/> |
-| messages | The conversation messages this Run should feed to the model. See [Conversation hydration](#conversation-hydration). | `TMessage[]` |
-
-</Table>
-
-<Table id='RunView' hidden>
-
-| Property | Description | Type |
-| --- | --- | --- |
-| messages | Invocation input messages handed to this Run. No branch awareness today. | `MessageNode<TMessage>[]` |
+| view | Read-only, leaf-pinned `View<TMessage>` of this Run's branch, from its triggering input back to the conversation root. Drain it with `loadOlder()` for ancestor context to feed the model. Empty until the trigger folds into the tree. See [Hydrate the conversation](#conversation-hydration). | `View<TMessage>` |
+| located | Resolves when this Run's triggering input folds into the tree (live or via a `view.loadOlder()` page). [`start`](#run-start) awaits it internally; await it directly only to read the trigger before deciding how to start. | `Promise<void>` |
 
 </Table>
 
@@ -185,9 +179,9 @@ The handle returned by [`createRun`](#create-run).
 
 <MethodSignature>{`start(): Promise<void>`}</MethodSignature>
 
-Publish the `ai-run-start` event to the channel and wait for the Run's input event to arrive (rewind + live wait). Must be called before `pipe`, `addEvents`, `suspend`, or `end`.
+Await [`located`](#run) (the run's input-event watcher resolves the trigger, whether it arrives live or already sits in channel history), then read the trigger's wire headers and publish the opening lifecycle event (`ai-run-start`, or `ai-run-resume` for a continuation). Must be called before `pipe`, `suspend`, or `end`.
 
-Rejects with `InputEventNotFound` (code `104010`) if the input event for this invocation does not arrive within `inputEventLookupTimeoutMs`. Surface the rejection as a non-2xx response so the client's pending send fails.
+There is no built-in deadline: `start()` does not time out waiting for the trigger. It rejects only if the run is cancelled or the session is closed before the trigger folds in. Race it against your own timeout if you need one.
 
 ### Pipe the response stream <a id="pipe"/>
 
@@ -229,69 +223,6 @@ Pipe a `ReadableStream` of outputs through the encoder to the channel. Returns w
 
 </Table>
 
-### Add events to existing messages <a id="add-events"/>
-
-<MethodSignature>{`addEvents(nodes: EventsNode<TOutput>[]): Promise<void>`}</MethodSignature>
-
-Publish events targeting existing messages. Each node specifies a `codecMessageId` and the events to apply. Used for cross-Run updates such as tool result delivery after approval.
-
-#### Parameters <a id="add-events-params"/>
-
-<Table id='AddEventsParameters'>
-
-| Parameter | Required | Description | Type |
-| --- | --- | --- | --- |
-| nodes | required | Events to apply, each tagged with the codec-message-id of the message to update. | <Table id='EventsNode'/> |
-
-</Table>
-
-<Table id='EventsNode' hidden>
-
-| Property | Description | Type |
-| --- | --- | --- |
-| kind | Discriminator: `'event'`. | `'event'` |
-| codecMessageId | The codec-message-id of the existing message to update. | String |
-| events | Outputs to apply to the target message. | `TOutput[]` |
-
-</Table>
-
-### Load a Run's projection <a id="load-projection"/>
-
-<MethodSignature>{`loadProjection(): Promise<TProjection>`}</MethodSignature>
-
-Fetch every channel message bound to this Run and fold them through the codec into a single projection. Use this to reconstruct a single Run's full state (including client-published tool-output amends the agent did not observe live) when resuming a suspended Run before piping fresh output. The companion to [`loadConversation`](#load-conversation), which walks ancestors; `loadProjection` covers only the current Run.
-
-The caller extracts what they need via [`Codec.getMessages`](/docs/ai-transport/api/javascript/core/codec).
-
-#### Returns <a id="load-projection-returns"/>
-
-`Promise<TProjection>`. The codec projection produced by folding every event for this Run in serial order.
-
-### Load the full conversation <a id="load-conversation"/>
-
-<MethodSignature>{`loadConversation(options?: LoadConversationOptions): Promise<TMessage[]>`}</MethodSignature>
-
-Reconstruct the full multi-turn conversation by walking the ancestor Run chain and concatenating each Run's messages, oldest turn first. After this call, `Run.messages` returns the complete conversation, ready to pass to the LLM.
-
-#### Parameters <a id="load-conversation-params"/>
-
-<Table id='LoadConversationParameters'>
-
-| Parameter | Required | Description | Type |
-| --- | --- | --- | --- |
-| options | optional | History pagination tuning. | <Table id='LoadConversationOptions'/> |
-
-</Table>
-
-<Table id='LoadConversationOptions' hidden>
-
-| Property | Description | Type |
-| --- | --- | --- |
-| pageLimit | Wire messages per history page. Defaults to 200. | Number |
-| maxMessages | Maximum wire messages collected across all pages. Defaults to 2000. | Number |
-
-</Table>
-
 ### Suspend the run <a id="run-suspend"/>
 
 <MethodSignature>{`suspend(): Promise<void>`}</MethodSignature>
@@ -310,8 +241,8 @@ Publish the `ai-run-end` event to the channel terminally and clean up. `params` 
 
 `RunEndParams` is discriminated on `reason`:
 
-- `{ reason: 'complete' | 'cancelled' }` — a non-error terminal reason; carries no `error`.
-- `{ reason: 'error', error? }` — the run ended in error; `error` is an optional `Ably.ErrorInfo` to surface to clients. Omit it to end in error without detail.
+- `{ reason: 'complete' | 'cancelled' }`: a non-error terminal reason that carries no `error`.
+- `{ reason: 'error', error? }`: the run ended in error. `error` is an optional `Ably.ErrorInfo` to surface to clients. Omit it to end in error without detail.
 
 <Table id='RunEndParams'>
 
@@ -322,11 +253,43 @@ Publish the `ai-run-end` event to the channel terminally and clean up. `params` 
 
 </Table>
 
+## Subscribe to session errors <a id="on"/>
+
+<MethodSignature>{`on(event: 'error', handler: (error: Ably.ErrorInfo) => void): () => void`}</MethodSignature>
+
+Subscribe to non-fatal session-level errors not scoped to any run: channel continuity loss (a re-attach with `resumed: false`, or `FAILED` / `SUSPENDED` / `DETACHED`), cancel-listener or attach failures, and any run-scoped error whose run supplied no `onError`. Returns an unsubscribe function. Once the session is closed this is a no-op.
+
+<Code>
+```javascript
+const unsubscribe = session.on('error', (error) => {
+  console.error('Session error:', error.code, error.message);
+});
+
+// later, when the listener is no longer needed
+unsubscribe();
+```
+</Code>
+
+### Parameters <a id="on-params"/>
+
+<Table id='OnParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | required | The event to subscribe to. Currently only `'error'`. | `'error'` |
+| handler | required | Called with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) for every non-fatal session error. | Function |
+
+</Table>
+
+### Returns <a id="on-returns"/>
+
+`() => void`. An unsubscribe function. Call it to remove the listener.
+
 ## Close the session <a id="close"/>
 
-<MethodSignature>{`close(): void`}</MethodSignature>
+<MethodSignature>{`close(): Promise<void>`}</MethodSignature>
 
-Unsubscribe from the channel and clear handlers. Local-state-only; does not end in-progress Runs. End each Run explicitly before closing the session.
+Cancel active runs, detach the channel the session attached, and clear handlers. Local-state-only for run lifecycle; it does not end in-progress Runs on the wire. End each Run explicitly before closing the session.
 
 ## Invocation <a id="invocation"/>
 
@@ -366,15 +329,28 @@ const invocation = Invocation.fromJSON(data);
 
 </Table>
 
-## Conversation hydration <a id="conversation-hydration"/>
+## Hydrate the conversation <a id="conversation-hydration"/>
 
-`Run.messages` returns different content depending on lifecycle stage:
+Two accessors expose conversation content, at different scopes:
 
-- Before [`start`](#run-start) resolves: empty array.
-- After `start`: the user-prompt messages looked up on the channel for this invocation.
-- After [`loadConversation`](#load-conversation): the full multi-turn conversation, with ancestor Run messages followed by the current Run's messages, oldest turn first.
+- `run.messages` is this Run's own turn: its triggering input plus its streamed output. This is the unit to persist, not the value to feed the model in a multi-turn conversation.
+- `run.view` is a read-only, leaf-pinned `View` of this Run's full branch, from its triggering input back to the conversation root. This is the value to feed the model.
 
-Use [`loadConversation`](#load-conversation) before piping to the LLM in any conversation past the first turn.
+To rebuild the prior conversation for the model, drain `run.view` with `loadOlder()` (the sole history driver) for as much ancestor context as you want, then read `getMessages()`:
+
+<Code>
+```javascript
+await run.start();
+
+// Drain the branch back to the root for full context.
+while (run.view.hasOlder()) {
+  await run.view.loadOlder();
+}
+const conversation = run.view.getMessages().map(({ message }) => message);
+```
+</Code>
+
+For database-backed hydration, page `run.view` back only to the newest stored message with [`loadUntil`](/docs/ai-transport/features/database-hydration) instead of draining to the root.
 
 ## RunEndReason <a id="run-end-reason"/>
 
@@ -384,7 +360,7 @@ A Run that pauses for external input (tool approval, human-in-the-loop) uses [`R
 
 ## Example <a id="example"/>
 
-An HTTP handler that sets up the session, creates a Run, loads the conversation, pipes the LLM stream, and ends the Run.
+An HTTP handler that sets up the session, creates a Run, rebuilds the conversation from `run.view`, pipes the LLM stream, and ends the Run.
 
 <Code>
 ```javascript
@@ -409,16 +385,21 @@ export async function POST(req: Request) {
 
   try {
     await run.start();
-    await run.loadConversation();
 
-    const llmStream = await callMyLLM(run.messages);
+    // Drain the run's branch back to the root for the model context.
+    while (run.view.hasOlder()) {
+      await run.view.loadOlder();
+    }
+    const conversation = run.view.getMessages().map(({ message }) => message);
+
+    const llmStream = await callMyLLM(conversation);
     const result = await run.pipe(llmStream);
     await run.end({ reason: result.reason });
   } catch (err) {
     await run.end({ reason: 'error' });
     throw err;
   } finally {
-    session.close();
+    await session.close();
   }
 
   return Response.json({ runId: run.runId, invocationId: run.invocationId });

@@ -61,13 +61,13 @@ await session.connect();
 | runs | `() => RunInfo[]`. Visible Runs along the selected branch. | Function |
 | runOf | `(codecMessageId: string) => RunInfo \| undefined`. Run that owns the message. | Function |
 | run | `(runId: string) => RunInfo \| undefined`. Direct Run lookup by id. | Function |
-| branchSelection | `(codecMessageId: string) => BranchSelection`. Branch siblings at the anchor. | Function |
-| selectSibling | `(codecMessageId: string, index: number) => void`. Select a sibling at the anchor. | Function |
-| hasOlder | `() => boolean`. Whether older Runs can be loaded. | Function |
-| loadOlder | `(limit?: number) => Promise<void>`. Reveal older Runs. | Function |
-| send | `(events, options?) => Promise<ActiveRun>`. Send one or more `TInput`s on the channel and fire a POST. Wrap a domain message via `codec.createUserMessage` to send a fresh user message. | Function |
-| regenerate | `(messageId, options?) => Promise<ActiveRun>`. Regenerate an assistant message. | Function |
-| edit | `(messageId, inputs, options?) => Promise<ActiveRun>`. Edit a user message. | Function |
+| branchSelection | `(codecMessageId: string) => BranchHandle`. The branch siblings at the anchor, plus a `select(index)` verb to switch between them. | Function |
+| hasOlder | `() => boolean`. Whether older messages can be revealed. | Function |
+| loadOlder | `(limit?: number) => Promise<CodecMessage<TMessage>[]>`. Reveal older messages, resolving to the revealed page (oldest-first); `[]` when nothing older was revealed. | Function |
+| loadUntil | `(predicate, signal?) => Promise<CodecMessage<TMessage>[]>`. Page older history back until `predicate` matches a message (the seam), then resolve to the messages newer than it. Drives database-backed hydration. | Function |
+| send | `(events, options?) => Promise<ClientRun<TMessage>>`. Send an input on the channel and fire a POST. At most one new message per send (it mints a fresh Run); the array form carries only wire-only inputs (tool results, approvals) for a continuation. Wrap a domain message via `codec.createUserMessage` to send a fresh user message. | Function |
+| regenerate | `(messageId, options?) => Promise<ClientRun<TMessage>>`. Regenerate an assistant message. | Function |
+| edit | `(messageId, inputs, options?) => Promise<ClientRun<TMessage>>`. Edit a user message. | Function |
 | on | `(event: 'update' \| 'ably-message' \| 'run', handler) => () => void`. Subscribe to view updates, raw Ably messages for visible nodes, or run lifecycle events. Returns an unsubscribe function. | Function |
 | close | `() => void`. Tear down the view. | Function |
 
@@ -104,8 +104,8 @@ const session = createClientSession({
 | client | required | The Ably Realtime client. The caller owns its lifecycle; `session.close()` does not close the client. The session's identity is read from this client's `auth.clientId` at publish time, stamped on the wire as the run-owner / input-owner id so other clients can attribute messages. A connection with no concrete clientId (anonymous, or a wildcard `*` token) publishes without one. | `Ably.Realtime` |
 | channelName | required | The channel to subscribe to and publish cancel signals on. The session owns this channel; do not also resolve it elsewhere with conflicting options. | String |
 | codec | required | The codec used to encode and decode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
-| messages | optional | Initial messages to seed the conversation tree with. Forms a linear chain. | `TMessage[]` |
 | channelModes | optional | Extra channel modes to request on top of the modes AI Transport always needs. Pass `OBJECT_MODES` to use Ably LiveObjects via [`object`](#properties). Omit to attach with the default mode set. The session requests the union, so extra modes never drop the modes AI Transport relies on. See [LiveObjects State](/docs/ai-transport/features/liveobjects). | `Ably.ChannelMode[]` |
+| historyPageSize | optional | Wire-message limit fetched per channel-history round trip when paging older history through `view.loadOlder()`, shared by every view on the session. Independent of `loadOlder`'s reveal `limit`: it tunes fetch cost, not reveal granularity. Defaults to 100. | Number |
 | logger | optional | Logger instance for diagnostic output. | `Logger` |
 
 </Table>
@@ -134,7 +134,7 @@ await session.connect();
 
 ## Create an additional view <a id="create-view"/>
 
-<MethodSignature>{`createView(): View<TInput, TMessage>`}</MethodSignature>
+<MethodSignature>{`createView(): ClientView<TInput, TMessage>`}</MethodSignature>
 
 Create an additional view over the same conversation tree. Each view has independent branch selections and pagination state.
 
@@ -143,7 +143,7 @@ The caller owns the returned view's lifecycle: call its `close()` when it is no 
 <Code>
 ```javascript
 const secondaryView = session.createView();
-secondaryView.selectSibling(messageId, 1);
+secondaryView.branchSelection(messageId).select(1);
 
 // the default view is unaffected
 session.view.branchSelection(messageId).index; // 0
@@ -152,7 +152,7 @@ session.view.branchSelection(messageId).index; // 0
 
 ### Returns <a id="create-view-returns"/>
 
-`View<TInput, TMessage>`. A new view with its own pagination window and branch selection state.
+`ClientView<TInput, TMessage>`. A new view with its own pagination window and branch selection state.
 
 ## Cancel a run <a id="cancel"/>
 
@@ -162,7 +162,7 @@ Publish a cancel signal for the specified Run. The agent receives the cancel thr
 
 <Code>
 ```javascript
-const activeRun = await session.view.send({
+const clientRun = await session.view.send({
   kind: 'user-message',
   message: {
     id: crypto.randomUUID(),
@@ -172,9 +172,9 @@ const activeRun = await session.view.send({
 });
 
 // later, cancel from the UI.
-// activeRun.cancel() works immediately, even before the runId
-// promise on activeRun has resolved.
-await activeRun.cancel();
+// clientRun.cancel() works immediately, even before the agent's
+// run-start has been observed (so clientRun.runId is still empty).
+await clientRun.cancel();
 
 // Or, when you already have a resolved runId (for example from a
 // RunInfo in view.runs()):
@@ -188,7 +188,7 @@ await activeRun.cancel();
 
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
-| runId | required | The Run to cancel. Typically obtained from `ActiveRun.runId` returned by a send. | String |
+| runId | required | The Run to cancel. Typically obtained from `ClientRun.runId` (after awaiting `clientRun.started`), or from a `RunInfo.runId` in `view.runs()`. | String |
 
 </Table>
 
@@ -275,7 +275,7 @@ session.view.on('update', () => {
   render(session.view.getMessages().map(({ message }) => message));
 });
 
-const activeRun = await session.view.send(UIMessageCodec.createUserMessage({
+const clientRun = await session.view.send(UIMessageCodec.createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'Plan a 3-day trip to Lisbon.' }],
@@ -285,12 +285,13 @@ const activeRun = await session.view.send(UIMessageCodec.createUserMessage({
 await fetch('/api/chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(activeRun.toInvocation().toJSON()),
+  body: JSON.stringify(clientRun.toInvocation().toJSON()),
 });
 
-// The agent assigns the runId on the server, so activeRun.runId is a
-// Promise. Await it to read the id.
-const runId = await activeRun.runId;
+// The agent mints the runId on the server, so clientRun.runId is empty
+// until run-start is observed. Await `started`, then read it.
+await clientRun.started;
+const runId = clientRun.runId;
 
 await session.close();
 ably.close();
