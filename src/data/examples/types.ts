@@ -10,6 +10,10 @@ export type Example = {
   visibleFiles?: string[];
   metaTitle?: string;
   metaDescription?: string;
+  // Override for the "View on GitHub" button. Defaults to this example's folder
+  // in the ably/docs repo; set it when the canonical source lives elsewhere
+  // (e.g. a standalone ably-demos repo).
+  githubUrl?: string;
 };
 
 export type ExampleWithContent = Example & {
