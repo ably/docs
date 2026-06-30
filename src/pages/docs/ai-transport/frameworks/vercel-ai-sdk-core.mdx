@@ -79,11 +79,16 @@ export async function POST(req) {
 
   after(async () => {
     await run.start();
-    await run.loadConversation();
+
+    // Drain run.view for the prior conversation to feed the model.
+    while (run.view.hasOlder()) {
+      await run.view.loadOlder();
+    }
+    const conversation = run.view.getMessages().map(({ message }) => message);
 
     const result = streamText({
       model: anthropic('claude-sonnet-4-20250514'),
-      messages: await convertToModelMessages(run.messages),
+      messages: await convertToModelMessages(conversation),
       abortSignal: run.abortSignal,
     });
 
@@ -94,7 +99,7 @@ export async function POST(req) {
     } else {
       await run.end(outcome);
     }
-    session.close();
+    await session.close();
   });
 
   return Response.json({ runId: run.runId, invocationId: run.invocationId });
