@@ -42,6 +42,53 @@ const activeHeaderLinkClassName = 'text-neutral-1300 dark:text-neutral-000 bg-or
 const inactiveHeaderLinkClassName =
   'text-neutral-900 dark:text-neutral-500 hover:text-neutral-1300 dark:hover:text-neutral-000 hover:bg-neutral-100 dark:hover:bg-neutral-1200';
 
+// Opens an Inkeep widget (search or chat) by reaching into its shadow DOM. The Inkeep
+// instances stay mounted but hidden (see #inkeep-search-holder), so these are our own
+// triggers for them. No-ops where the widget isn't loaded (e.g. local dev) or its
+// internal trigger isn't a top-level button.
+const openInkeepWidget = (hostSelector: string, eventName: string) => {
+  const trigger = document.querySelector(`${hostSelector} > div`)?.shadowRoot?.querySelector('button');
+  if (!trigger) {
+    return;
+  }
+  track(eventName);
+  trigger.click();
+};
+
+const openInkeepSearch = () => openInkeepWidget('#inkeep-search', 'docs_search_button_clicked');
+const openInkeepChat = () => openInkeepWidget('#inkeep-ai-chat', 'docs_ask_ai_button_clicked');
+
+// Custom search trigger rendered in both local and production so the header bar is a
+// single, design-controlled element. In production it opens the Inkeep modal; locally
+// it is inert. The modal itself is unchanged.
+const SearchTrigger: React.FC = () => (
+  <button
+    type="button"
+    aria-label="Search"
+    onClick={openInkeepSearch}
+    className={cn(
+      'focus-base flex items-center justify-between gap-2 w-[200px] h-9 px-3 rounded-lg transition-colors',
+      'bg-neutral-100 dark:bg-neutral-1200 border border-neutral-400 dark:border-neutral-900',
+      'hover:border-neutral-600 dark:hover:border-neutral-700',
+    )}
+  >
+    <span className="flex items-center gap-2 text-neutral-600 dark:text-neutral-700">
+      <MagnifyingGlassIcon className="size-[16px]" aria-hidden />
+      <span className="ui-text-label4 font-normal">Search</span>
+    </span>
+    <span className="flex items-center gap-0.5">
+      {['⌘', 'K'].map((key) => (
+        <kbd
+          key={key}
+          className="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded border border-neutral-300 dark:border-neutral-900 bg-neutral-000 dark:bg-neutral-1100 text-[11px] font-medium text-neutral-700 dark:text-neutral-500"
+        >
+          {key}
+        </kbd>
+      ))}
+    </span>
+  </button>
+);
+
 const mobileTabs = ['Platform', 'Products', 'Examples'];
 
 const helpResourcesItems = [
@@ -116,8 +163,10 @@ const Header: React.FC = () => {
       }
     }, 150);
 
-    // Physically shift the inkeep search bar around given that it's initialised once
-    const targetId = isMobileMenuOpen ? 'inkeep-search-mobile-mount' : 'inkeep-search-mount';
+    // The Inkeep search bar is initialised once. On mobile we surface it inside the open
+    // menu; otherwise it lives in a hidden holder (the visible desktop trigger is our own
+    // SearchTrigger button, which opens this instance's modal).
+    const targetId = isMobileMenuOpen ? 'inkeep-search-mobile-mount' : 'inkeep-search-holder';
     const targetElement = document.getElementById(targetId);
     const searchBar = searchBarRef.current;
 
@@ -244,59 +293,14 @@ const Header: React.FC = () => {
           )}
         </div>
         <div id="inkeep-search-mount" className="hidden md:flex items-center justify-end flex-1 min-w-0 ml-4 mr-2">
-          {!externalScriptsData.inkeepSearchEnabled && (
-            <div className="w-full max-w-[280px]">
-              <button
-                className={cn(
-                  secondaryButtonClassName,
-                  'w-full justify-between gap-2 bg-neutral-100 dark:bg-neutral-1200 hover:border-neutral-500 dark:hover:border-neutral-800 text-neutral-600 dark:text-neutral-700 font-normal',
-                )}
-                onClick={() => {
-                  // Inkeep renders its chat widget inside a shadow DOM; this reaches in to
-                  // programmatically open it. Will silently no-op if the widget structure changes.
-                  const chatContainer = document.querySelector('#inkeep-ai-chat > div');
-                  const chatButton = chatContainer?.shadowRoot?.querySelector('button');
-                  if (chatButton) {
-                    chatButton.click();
-                  }
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <MagnifyingGlassIcon className="size-[16px]" aria-hidden />
-                  <span>Search docs...</span>
-                </span>
-                <span className="flex items-center gap-0.5">
-                  <kbd className="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded border border-neutral-400 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-1200 text-[11px] font-medium text-neutral-700 dark:text-neutral-500">
-                    ⌘
-                  </kbd>
-                  <kbd className="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded border border-neutral-400 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-1200 text-[11px] font-medium text-neutral-700 dark:text-neutral-500">
-                    K
-                  </kbd>
-                </span>
-              </button>
-            </div>
-          )}
+          <SearchTrigger />
         </div>
         <Tooltip.Provider delayDuration={0} disableHoverableContent>
           <div className="hidden md:flex gap-2 pt-3 md:py-0 px-4 md:px-0 shrink-0">
-            {externalScriptsData.inkeepChatEnabled && (
-              <button
-                className={secondaryButtonClassName}
-                onClick={() => {
-                  const chatContainer = document.querySelector('#inkeep-ai-chat > div');
-                  const chatButton = chatContainer?.shadowRoot?.querySelector('button');
-
-                  track('docs_ask_ai_button_clicked');
-
-                  if (chatButton) {
-                    chatButton.click();
-                  }
-                }}
-              >
-                <SparklesIcon className="size-[20px]" aria-hidden />
-                <span>Ask AI</span>
-              </button>
-            )}
+            <button className={secondaryButtonClassName} onClick={openInkeepChat}>
+              <SparklesIcon className="size-[20px]" aria-hidden />
+              <span>Ask AI</span>
+            </button>
             <DropdownMenu.Root>
               <Tooltip.Root>
                 <DropdownMenu.Trigger asChild>
@@ -404,7 +408,7 @@ const Header: React.FC = () => {
           </button>
         </div>
 
-        <div className="hidden">
+        <div id="inkeep-search-holder" className="hidden">
           {externalScriptsData.inkeepSearchEnabled && (
             <InkeepSearchBar ref={searchBarRef} instanceType="search" extraInputStyle={{ backgroundColor: 'white' }} />
           )}
