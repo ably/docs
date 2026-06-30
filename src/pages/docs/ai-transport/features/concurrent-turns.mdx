@@ -45,17 +45,22 @@ app.post('/api/chat', async (req, res) => {
   const run = session.createRun(invocation, { signal: req.signal });
 
   await run.start();
-  await run.loadConversation();
+
+  // Drain run.view for the prior conversation to feed the model.
+  while (run.view.hasOlder()) {
+    await run.view.loadOlder();
+  }
+  const conversation = run.view.getMessages().map(({ message }) => message);
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
-    messages: run.messages,
+    messages: conversation,
     abortSignal: run.abortSignal,
   });
 
   const { reason } = await run.pipe(result.toUIMessageStream());
   await run.end({ reason });
-  session.close();
+  await session.close();
   res.json({ ok: true });
 });
 ```
@@ -105,7 +110,7 @@ See [cancellation](/docs/ai-transport/features/cancellation) for the full cancel
 
 ## Wait for runs to complete <a id="waiting-for-runs"/>
 
-Each `ActiveRun` exposes `runId: Promise<string>` (resolves with the agent-minted id once `ai-run-start` is observed). To wait for a Run to terminate, await the id and then subscribe to the session tree's `run` events:
+Each `ClientRun` exposes a synchronous `runId` (empty until `ai-run-start` is observed) and a `started` promise that resolves once it is. To wait for a Run to terminate, await `started`, read `runId`, then subscribe to the session tree's `run` events:
 
 <Code>
 ```javascript
@@ -125,7 +130,8 @@ const run1 = await view.send(UIMessageCodec.createUserMessage({
   role: 'user',
   parts: [{ type: 'text', text: 'Hello' }],
 }));
-const run1Id = await run1.runId;
+await run1.started;
+const run1Id = run1.runId;
 await whenRunEnds(session, run1Id);
 ```
 </Code>
@@ -215,7 +221,7 @@ There is no hard limit on the channel side. Practical limits come from your appl
 
 ### Does the client need to track run IDs? <a id="faq-track-ids"/>
 
-The session tracks Run identity internally. Hold onto the `ActiveRun` returned by `view.send()` only if you need to cancel it specifically or wait for it specifically.
+The session tracks Run identity internally. Hold onto the `ClientRun` returned by `view.send()` only if you need to cancel it specifically or wait for it specifically.
 
 ### How do I tell which run a message belongs to? <a id="faq-message-turn"/>
 
