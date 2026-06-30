@@ -77,12 +77,17 @@ export async function POST(req) {
   after(async () => {
     try {
       await run.start();
-      await run.loadConversation();
+
+      // Drain run.view for the prior conversation to feed the model.
+      while (run.view.hasOlder()) {
+        await run.view.loadOlder();
+      }
+      const conversation = run.view.getMessages().map(({ message }) => message);
 
       const result = streamText({
         model: anthropic('claude-sonnet-4-20250514'),
         system: 'You are a helpful assistant.',
-        messages: await convertToModelMessages(run.messages),
+        messages: await convertToModelMessages(conversation),
         abortSignal: run.abortSignal,
       });
 
@@ -229,18 +234,18 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 
 ## What is happening <a id="whats-happening"/>
 
-1. The user types a message. `view.send(...)` mints `inputEventId` and the message's `codecMessageId`, publishes the user input on the channel with those ids stamped under `extras.ai.transport`, and returns an `ActiveRun` carrying the `inputCodecMessageId` the client owns synchronously. The SDK does not POST to your agent endpoint itself.
-2. Your client code calls `activeRun.toInvocation().toJSON()` to get an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ inputEventId, sessionName }`), and POSTs it to your agent endpoint.
+1. The user types a message. `view.send(...)` mints `inputEventId` and the message's `codecMessageId`, publishes the user input on the channel with those ids stamped under `extras.ai.transport`, and returns a `ClientRun` carrying the `inputCodecMessageId` the client owns synchronously. The SDK does not POST to your agent endpoint itself.
+2. Your client code calls `clientRun.toInvocation().toJSON()` to get an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ inputEventId, sessionName }`), and POSTs it to your agent endpoint.
 3. The agent endpoint receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a `Run` from the Invocation. `session.createRun(invocation)` mints a fresh `runId` (for a fresh run) and a fresh `invocationId`; the agent returns both on the response so callers can observe them. `Run.start()` waits for the trigger input event on the channel (rewind + live).
 4. The agent streams the LLM response through `run.pipe(...)` to the channel. Every output carries `input-codec-message-id` so the client can correlate by an id it owned at send time.
 5. Every client subscribed to the channel receives the streamed messages in real time. `useView` re-renders as the visible Run's projection updates.
 6. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the SDK rehydrates the view automatically.
 
-`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. The hook exposes `messages`, `hasOlder`, `loading`, `loadError`, `loadOlder`, `runOf`, `run`, `runs`, `branchSelection`, `selectSibling`, `send`, `regenerate`, and `edit`. It is the reactive mirror of the [`View` interface](/docs/ai-transport/api/javascript/core/client-session#view).
+`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. The hook exposes `messages`, `hasOlder`, `loading`, `loadError`, `loadOlder`, `runOf`, `run`, `runs`, `branchSelection`, `send`, `regenerate`, and `edit`. Switch siblings through the `branchSelection` handle's `select`. It is the reactive mirror of the [`ClientView` interface](/docs/ai-transport/api/javascript/core/client-session#view).
 
 ## Explore next <a id="next"/>
 
-- [Branching, edit, and regenerate](/docs/ai-transport/features/branching): fork the conversation and navigate alternative branches with `view.regenerate`, `view.edit`, and `view.selectSibling`.
+- [Branching, edit, and regenerate](/docs/ai-transport/features/branching): fork the conversation and navigate alternative branches with `view.regenerate`, `view.edit`, and the `view.branchSelection` handle's `select`.
 - [History and replay](/docs/ai-transport/features/history): `useView` loads history on mount via the `limit` option.
 - [Cancellation](/docs/ai-transport/features/cancellation): the Stop button pattern and the agent-side `onCancel` authorisation hook.
 - [Concepts: Runs](/docs/ai-transport/concepts/runs): the SDK primitive each turn becomes.
