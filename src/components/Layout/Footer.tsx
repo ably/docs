@@ -21,7 +21,7 @@ type FeedbackButton = {
 };
 
 const leftFooterLinks = [
-  { label: 'Changelog', link: 'https://changelog.ably.com/' },
+  { label: 'Changelog', link: '/docs/changelog' },
   { label: 'About Ably', link: '/about' },
   { label: 'Blog', link: '/blog' },
 ];

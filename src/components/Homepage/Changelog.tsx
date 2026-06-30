@@ -1,187 +1,72 @@
-import { useStaticQuery } from 'gatsby';
-import { graphql } from 'gatsby';
-import { Key } from 'react';
-import Badge from '@ably/ui/core/Badge';
+import { useStaticQuery, graphql } from 'gatsby';
 import FeaturedLink from '@ably/ui/core/FeaturedLink';
 import Link from '../Link';
+import ChangelogTag from '../Changelog/ChangelogTag';
+import { sortByDateDesc } from '../Changelog/filter-changelog';
+import { formatShortDate } from '../Changelog/format-date';
+import { ChangelogEntry } from '../Changelog/types';
+import { ChangelogFileNode, nodesToEntries } from '../Changelog/entries';
 
-interface ChangelogFeedItemNode {
-  title: string;
-  link: string;
-  content: string;
-  isoDate: string;
-}
-
-interface ChangelogFeedEdge {
-  node: ChangelogFeedItemNode;
-}
-
-interface ChangelogQueryData {
-  allFeedAblyChangelog: {
-    edges: ChangelogFeedEdge[];
-  };
-  feedAblyChangelogMeta: {
-    link: string;
+interface HomepageChangelogData {
+  entries: {
+    nodes: ChangelogFileNode[];
   };
 }
 
-const ChangelogEntry = ({
-  date,
-  href,
-  title,
-  description,
-  tags,
-}: {
-  date: string;
-  href: string;
-  title: string;
-  description: string;
-  tags?: string[];
-}) => {
-  const getTagStyle = (tag: string) => {
-    const tagLower = tag.toLowerCase();
-
-    if (tagLower.includes('fix')) {
-      return 'blue';
-    }
-    if (tagLower.includes('improvement')) {
-      return 'green';
-    }
-    if (tagLower.includes('new')) {
-      return 'red';
-    }
-    return 'neutral';
-  };
-
-  return (
-    <li>
-      <Link to={href} target="_blank" className="flex gap-4 group p-1 -m-1 rounded">
-        <div className="ui-text-p3 flex-shrink-0 text-neutral-800 dark:text-neutral-500">{date}</div>
-        <div className="grid gap-1">
-          <div className="text-neutral-1300 dark:text-neutral-000 font-bold group-hover:underline block mb-0.5">
-            {title}
-          </div>
-          {tags && tags.length > 0 && (
-            <div className="flex gap-0.5 flex-wrap mb-0.5">
-              {tags.map((tag: string) => (
-                <Badge key={tag} color={getTagStyle(tag)}>
-                  {tag.toUpperCase()}
-                </Badge>
-              ))}
-            </div>
-          )}
-          <p className="ui-text-p3 text-neutral-800 group-hover:text-neutral-1000 dark:text-neutral-500 dark:group-hover:text-neutral-300 line-clamp-2">
-            {description}
-          </p>
+const ChangelogRow = ({ entry }: { entry: ChangelogEntry }) => (
+  <li>
+    <Link to={entry.link} className="flex gap-4 group p-1 -m-1 rounded">
+      <div className="ui-text-p3 flex-shrink-0 text-neutral-800 dark:text-neutral-500">
+        {formatShortDate(entry.date)}
+      </div>
+      <div className="grid gap-1">
+        <div className="text-neutral-1300 dark:text-neutral-000 font-bold group-hover:underline block mb-0.5">
+          {entry.title}
         </div>
-      </Link>
-    </li>
-  );
-};
-
-const stripHtml = (html: string | null | undefined): string => {
-  if (!html) {
-    return '';
-  }
-
-  // Check if we're in a browser environment
-  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
-    // During SSR/build, use cheerio (loaded dynamically to avoid browser bundle)
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const cheerio = require('cheerio');
-    const $ = cheerio.load(html);
-    return $.text();
-  }
-
-  // In the browser, use DOMParser
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  const firstBodyChild = doc.body.firstChild;
-  if (firstBodyChild?.nodeName?.toLowerCase() === 'parsererror') {
-    return '';
-  }
-
-  return doc.body.textContent || '';
-};
-
-const parseChangelogContent = (htmlContent: string): { tags: string[]; description: string } => {
-  const extractedTags: string[] = [];
-  let descriptionText = '';
-
-  try {
-    if (htmlContent) {
-      const tagRegex = /<h3 class='category category_\d+'>(.*?)<\/h3>/gi;
-      let tagMatch;
-      while ((tagMatch = tagRegex.exec(htmlContent)) !== null) {
-        if (tagMatch[1]) {
-          extractedTags.push(tagMatch[1]);
-        }
-      }
-
-      const afterCategoriesMarker = '<span class="afterCategories">&nbsp;</span>';
-      const markerEndIndex = htmlContent.indexOf(afterCategoriesMarker);
-      const paragraphTexts: string[] = [];
-
-      if (markerEndIndex !== -1) {
-        let searchStartIndex = markerEndIndex + afterCategoriesMarker.length;
-
-        for (let i = 0; i < 2; i++) {
-          const pStartIndex = htmlContent.indexOf('<p>', searchStartIndex);
-          if (pStartIndex === -1) {
-            break;
-          }
-
-          const pEndIndex = htmlContent.indexOf('</p>', pStartIndex);
-          if (pEndIndex === -1) {
-            break;
-          }
-
-          const paragraphHtml = htmlContent.substring(pStartIndex + 3, pEndIndex);
-          const strippedText = stripHtml(paragraphHtml).trim();
-
-          if (strippedText) {
-            paragraphTexts.push(strippedText);
-          }
-
-          searchStartIndex = pEndIndex + 4;
-        }
-
-        descriptionText = paragraphTexts.join(' ').trim();
-      }
-    }
-  } catch (error) {
-    console.error('Error parsing changelog content:', error);
-    descriptionText = stripHtml(htmlContent).substring(0, 200);
-    return { tags: [], description: descriptionText };
-  }
-
-  return { tags: extractedTags, description: descriptionText };
-};
-
-const formatChangelogDate = (isoDate: string): string => {
-  const date = new Date(isoDate);
-  return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
-};
+        {entry.products.length > 0 && (
+          <div className="flex gap-0.5 flex-wrap mb-0.5">
+            {entry.products.map((product) => (
+              <ChangelogTag key={product} product={product} />
+            ))}
+          </div>
+        )}
+        <p className="ui-text-p3 text-neutral-800 group-hover:text-neutral-1000 dark:text-neutral-500 dark:group-hover:text-neutral-300 line-clamp-2">
+          {entry.description}
+        </p>
+      </div>
+    </Link>
+  </li>
+);
 
 export const ChangelogSection = () => {
-  const data = useStaticQuery<ChangelogQueryData>(graphql`
-    query ChangelogFeedQuery {
-      allFeedAblyChangelog(sort: { isoDate: DESC }, limit: 3) {
-        edges {
-          node {
-            title
-            link
-            content
-            isoDate
+  const data = useStaticQuery<HomepageChangelogData>(graphql`
+    query HomepageChangelogQuery {
+      entries: allFile(
+        filter: {
+          sourceInstanceName: { eq: "pages" }
+          extension: { eq: "mdx" }
+          relativeDirectory: { regex: "/^docs/changelog(/|$)/" }
+        }
+      ) {
+        nodes {
+          name
+          relativeDirectory
+          childMdx {
+            frontmatter {
+              title
+              meta_description
+              date
+              products
+            }
           }
         }
-      }
-      feedAblyChangelogMeta {
-        link
       }
     }
   `);
+
+  // Pull the three most recent changelog entries straight from the MDX collection
+  // (no external RSS feed), ordered by the `date` frontmatter.
+  const entries: ChangelogEntry[] = sortByDateDesc(nodesToEntries(data.entries.nodes)).slice(0, 3);
 
   return (
     <div className="rounded-lg border border-neutral-300 dark:border-neutral-1000 p-6 lg:p-8 mt-6 md:mt-0">
@@ -190,31 +75,15 @@ export const ChangelogSection = () => {
         <FeaturedLink
           iconColor="text-orange-600"
           additionalCSS="ui-text-p3 text-neutral-1300 dark:text-neutral-000 hover:text-neutral-1300 dark:hover:text-neutral-000"
-          url={data.feedAblyChangelogMeta.link}
+          url="/docs/changelog"
         >
           View all
         </FeaturedLink>
       </div>
       <ul className="grid grid-cols-1 gap-y-6">
-        {data.allFeedAblyChangelog.edges.map(({ node }: ChangelogFeedEdge, index: Key) => {
-          try {
-            const { tags, description } = parseChangelogContent(node.content);
-
-            return (
-              <ChangelogEntry
-                key={node.link || index}
-                date={formatChangelogDate(node.isoDate)}
-                href={node.link}
-                title={node.title}
-                description={description}
-                tags={tags}
-              />
-            );
-          } catch (error) {
-            console.error('Error parsing changelog content:', error);
-            return null;
-          }
-        })}
+        {entries.map((entry) => (
+          <ChangelogRow key={entry.link} entry={entry} />
+        ))}
       </ul>
     </div>
   );
