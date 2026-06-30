@@ -25,7 +25,7 @@ Every node on the channel carries `parent` and (optionally) `fork-of` or `msg-re
 
 Branches are message-anchored: the branch decision lives on a `codecMessageId`, not on a `runId`. UIs render navigation arrows next to the bubble: the user's prompt for edit forks, the assistant slot for regenerate groups.
 
-The View resolves the branch state on demand. Call `view.branchSelection(codecMessageId)` for any message and get back `{ hasSiblings, siblings, index, selected }`. Call `view.selectSibling(codecMessageId, index)` to switch.
+The View resolves the branch state on demand. Call `view.branchSelection(codecMessageId)` for any message and get back a handle: `{ hasSiblings, siblings, index, selected, select }`. Call the handle's `select(index)` to switch.
 
 ## Regenerate <a id="regenerate"/>
 
@@ -78,14 +78,15 @@ When a message has siblings, render arrows that switch between them. `branchSele
 <Code>
 ```javascript
 function BranchNav({ codecMessageId, view }) {
-  const { hasSiblings, siblings, index } = view.branchSelection(codecMessageId);
-  if (!hasSiblings) return null;
+  const branch = view.branchSelection(codecMessageId);
+  if (!branch.hasSiblings) return null;
+  const { siblings, index } = branch;
 
   return (
     <div>
-      <button onClick={() => view.selectSibling(codecMessageId, index - 1)} disabled={index === 0}>←</button>
+      <button onClick={() => branch.select(index - 1)} disabled={index === 0}>←</button>
       <span>{index + 1} of {siblings.length}</span>
-      <button onClick={() => view.selectSibling(codecMessageId, index + 1)} disabled={index === siblings.length - 1}>→</button>
+      <button onClick={() => branch.select(index + 1)} disabled={index === siblings.length - 1}>→</button>
     </div>
   );
 }
@@ -113,7 +114,7 @@ This is the pattern for comparison UIs where the user wants to see two regenerat
 
 ## Agent-side handling <a id="agent-side"/>
 
-The agent doesn't usually need bespoke branching logic. The Invocation arrives, `createRun` returns a Run with the right identity, and `loadConversation` walks the ancestor chain along the selected branch automatically:
+The agent doesn't usually need bespoke branching logic. The Invocation arrives, `createRun` returns a Run pinned to the right branch, and draining `run.view` walks the ancestor chain along the selected branch automatically:
 
 <Code>
 ```javascript
@@ -122,11 +123,16 @@ const run = session.createRun(invocation, { signal: req.signal });
 
 try {
   await run.start();
-  await run.loadConversation(); // walks ancestor chain along this branch
+
+  // Drain run.view along this branch back to the root.
+  while (run.view.hasOlder()) {
+    await run.view.loadOlder();
+  }
+  const conversation = run.view.getMessages().map(({ message }) => message);
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
-    messages: run.messages,
+    messages: conversation,
     abortSignal: run.abortSignal,
   });
 
@@ -136,12 +142,12 @@ try {
   await run.end({ reason: 'error' });
   throw err;
 } finally {
-  session.close();
+  await session.close();
 }
 ```
 </Code>
 
-`run.messages` after `loadConversation()` returns the complete branch (ancestor turns and the current user input) in order. Pass it straight to the LLM.
+`run.view` is pinned to this Run's branch, so draining it yields the complete branch (ancestor turns and the current user input) in order. Pass it straight to the LLM.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
@@ -149,14 +155,14 @@ try {
 - Branch selection is per-view. Two devices on the same session can see different branches simultaneously; the tree is shared, the selection is per-view.
 - Deeply branched trees can have many siblings. A user can navigate forever; cap or hide branch navigation in your UI if your app has a preferred branch.
 - A regenerate against an edited prompt still works. The new branch attaches at the same anchor regardless of what siblings exist.
-- The visible branch recomputes when `selectSibling` is called. Avoid heavy work in the render path; updates are frequent during streaming.
+- The visible branch recomputes when a sibling is selected through the branch handle's `select`. Avoid heavy work in the render path; updates are frequent during streaming.
 - An optimistic edit is folded with the published edit. See [optimistic updates](/docs/ai-transport/features/optimistic-updates) for how the SDK reconciles the local insertion with the wire confirmation.
 
 ## FAQ <a id="faq"/>
 
 ### Does edit overwrite the original message?
 
-No. The original stays in the tree. A new sibling branch is created with the edited content. Users navigate between branches with `view.selectSibling()`.
+No. The original stays in the tree. A new sibling branch is created with the edited content. Users navigate between branches with the `view.branchSelection(codecMessageId)` handle's `select()`.
 
 ### How is regenerate different from sending a new prompt?
 

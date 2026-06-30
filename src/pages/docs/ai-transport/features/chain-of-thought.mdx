@@ -26,17 +26,22 @@ app.post('/api/chat', async (req, res) => {
   const run = session.createRun(invocation, { signal: req.signal });
 
   await run.start();
-  await run.loadConversation();
+
+  // Drain run.view for the prior conversation to feed the model.
+  while (run.view.hasOlder()) {
+    await run.view.loadOlder();
+  }
+  const conversation = run.view.getMessages().map(({ message }) => message);
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
-    messages: run.messages,
+    messages: conversation,
     abortSignal: run.abortSignal,
   });
 
   const { reason } = await run.pipe(result.toUIMessageStream());
   await run.end({ reason });
-  session.close();
+  await session.close();
   res.json({ ok: true });
 });
 ```
