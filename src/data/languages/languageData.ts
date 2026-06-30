@@ -44,7 +44,7 @@ export default {
     android: '1.2',
   },
   aiTransport: {
-    javascript: '0.2',
+    javascript: '0.3',
   },
   spaces: {
     javascript: '0.5',
