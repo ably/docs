@@ -122,30 +122,6 @@ if (pending) {
 
 The result is addressed to the suspended assistant message by `codecMessageId`. Reusing the original `runId` keeps the resume on the same run instead of starting a fresh one.
 
-## Cross-run events with addEvents <a id="add-events"/>
-
-The agent uses `Run.addEvents` to push events to a message owned by an earlier run. The common case is delivering a late tool result on a continuation run without starting a new assistant message:
-
-<Code>
-```javascript
-await run.addEvents([
-  {
-    kind: 'event',
-    codecMessageId: pendingAssistantCodecMessageId,
-    events: [
-      {
-        type: 'tool-output-available',
-        toolCallId,
-        output: { temperature: 22, conditions: 'sunny' },
-      },
-    ],
-  },
-]);
-```
-</Code>
-
-Events published through `addEvents` update the target message in the view. Because they target an existing message by its `codecMessageId`, late joiners and reconnecting clients see the correct state when the conversation replays from history.
-
 ## History persistence <a id="history"/>
 
 Tool invocations and results are part of the channel's message history. When a client reconnects or a late joiner loads the conversation, tool activity is replayed along with text messages. The view reconstructs tool state so the UI shows the correct status: pending, complete, or failed.
@@ -155,7 +131,7 @@ A user who starts a tool-assisted workflow on a laptop continues it on a phone w
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
 - A client-executed tool that the user denies (for example a geolocation permission prompt) leaves the tool call pending. Submit a failure with `codec.createToolResultError(codecMessageId, { toolCallId, message })` (or the literal `{ kind: 'tool-result-error', ... }`) to unblock the LLM, or end the turn explicitly.
-- A tool that takes longer than the agent's runtime budget runs past `run.end()`. The continuation run picks up the result through `addEvents` on the original message; do not start a new run just to deliver a late result.
+- A tool that takes longer than the agent's runtime budget should suspend the run rather than end it. When the result is ready, publish it as a `tool-result` input addressed to the original message on a continuation (the pattern shown above), which resumes the same run; do not start a new run just to deliver a late result.
 - A server-executed tool that does not honour `run.abortSignal` keeps running after a cancel. Wire the signal into your tool implementation.
 - Two clients submitting the same client-executed tool concurrently produce two continuation turns. Guard against double-submit at the application layer.
 - A failed tool call is delivered with an error result. The view exposes the failure; render it in place rather than silently retrying.
