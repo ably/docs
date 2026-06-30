@@ -132,6 +132,10 @@ export default {
           link: '/docs/ai-transport/features/history',
         },
         {
+          name: 'Database hydration',
+          link: '/docs/ai-transport/features/database-hydration',
+        },
+        {
           name: 'Branching, edit, and regenerate',
           link: '/docs/ai-transport/features/branching',
         },
@@ -258,6 +262,10 @@ export default {
                 {
                   name: 'useCreateView',
                   link: '/docs/ai-transport/api/react/core/use-create-view',
+                },
+                {
+                  name: 'useMessagesWithSeed',
+                  link: '/docs/ai-transport/api/react/core/use-messages-with-seed',
                 },
                 {
                   name: 'useTree',

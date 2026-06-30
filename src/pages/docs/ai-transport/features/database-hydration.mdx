@@ -1,0 +1,130 @@
+---
+title: "Database hydration"
+meta_description: "Hydrate an AI conversation from your own database with AI Transport and reconcile it with the live Ably channel, with no gap and no duplicate."
+meta_keywords: "database hydration, conversation history, AI Transport, Ably, retention, seam, loadUntil, persistence"
+intro: "Store AI conversation history in your own database. Database hydration reconciles the history you have stored with the live AI Transport session."
+---
+
+Database hydration is the pattern of treating your own database as the durable record of a conversation and reconciling it with the live session each time the conversation loads. Use it when your application already stores conversation history for its own features, such as search, analytics, or audit, or when conversations need to stay available longer than the channel [retention period](/docs/storage-history/storage).
+
+You keep the full AI Transport session for everything live. Resumable token streaming, multi-device continuity, automatic reconnection, and bidirectional control all still run over the session; database hydration changes only where long-term history lives. The session carries live activity, and your own database becomes the durable, queryable record of the conversation.
+
+<Aside data-type='note'>
+Database hydration currently supports linear conversations only. Messages you have persisted cannot be edited or regenerated, because branch-aware hydration is not yet available. Support for branching conversations is coming soon.
+</Aside>
+
+Your agent persists the messages for each completed run to your database when the run completes. When a client or the agent later loads the conversation, it seeds from the database and then loads from the session only the messages newer than the last one it stored (the seam), joining the two into a single conversation with no gaps or duplicates.
+
+On the client, hydration is a single call. Give `useMessagesWithSeed` your session view and the stored seed, and it reconciles them with the live session:
+
+<Code>
+```javascript
+const messages = useMessagesWithSeed({ view: session.view, seed, getMessageId: (m) => m.id });
+```
+</Code>
+
+Hydration has two mirrored sides: the agent rebuilds the model context, and the client rebuilds the UI. Wire up the agent first, then the client.
+
+## Hydrate the agent <a id="server"/>
+
+The agent rebuilds the model context from your store and the live session. Seed the prior conversation from your store, take the newest stored id as the seam, and call `run.view.loadUntil` to fetch the not-yet-stored tail. The view drives the paging itself, which also folds in this invocation's triggering input message from channel history:
+
+<Code>
+```javascript
+const session = createAgentSession({ client: ably, channelName: invocation.sessionName });
+await session.connect();
+const run = session.createRun(invocation, { signal: req.signal });
+
+// Seed the prior conversation from your store; the newest stored message is the seam.
+const seed = loadMessages(invocation.sessionName);
+const seamId = seed.at(-1)?.id;
+
+// loadUntil pages run.view back to the seam and returns only the messages newer
+// than it (the not-yet-stored tail). It drives the paging itself, which also
+// folds in this invocation's triggering input from channel history.
+const tail = await run.view.loadUntil((m) => m.message.id === seamId);
+await run.start();
+
+const conversation = [...seed, ...tail.map((m) => m.message)];
+// ...stream the model response with `conversation` as the message history...
+```
+</Code>
+
+## Persist the completed run <a id="persist"/>
+
+Persist a run once it completes, because a completed run is immutable. While a run is in flight its messages are still changing: tokens append, tool calls resolve, an assistant message grows. Once the run reaches a terminal state its messages can no longer be mutated, so it is the natural atomic unit to write to your store, and a write keyed by `message.id` is safe to repeat.
+
+After the model response streams, persist the run's messages. `run.messages` is a `BaseRun` accessor that returns the run's entire contribution: its triggering input plus all of its streamed output across any suspend and resume. A turn that suspends for a client-side tool result and resumes under the same run therefore still persists as one lossless unit. Persist only completed runs.
+
+<Code>
+```javascript
+const runMessages = run.messages;
+await run.end(outcome);
+if (outcome.reason === 'complete') await appendMessages(invocation.sessionName, runMessages);
+```
+</Code>
+
+Every send introduces at most one new message and triggers exactly one run, so the union of all completed runs' messages reconstructs the conversation with no gaps and no duplicates.
+
+## Hydrate the client <a id="client"/>
+
+The client reconciles the same way as the agent, over its own session view. Seed from your store, then drive `session.view.loadUntil` to fetch the tail newer than the seam and compose the two:
+
+<Code>
+```javascript
+const seed = loadStoredMessages(conversationId);
+const seamId = seed.at(-1)?.id;
+
+const tail = await session.view.loadUntil((m) => m.message.id === seamId);
+const conversation = [...seed, ...tail.map((m) => m.message)];
+```
+</Code>
+
+In React, `useMessagesWithSeed` wraps that walk. Pass your `session.view` and the stored seed, and it returns the composed conversation, kept current as new messages stream in:
+
+<Code>
+```javascript
+const messages = useMessagesWithSeed({ view: session.view, seed, getMessageId: (m) => m.id });
+```
+</Code>
+
+If you use the Vercel AI SDK's `useChat`, [`useMessageSync`](/docs/ai-transport/api/react/vercel/use-message-sync) runs the same reconciliation against `useChat`'s message state from a `messages` seed, so you keep hydration without leaving `useChat`.
+
+## How reconciliation works <a id="how-it-works"/>
+
+Both sides reconcile against the same point, the seam: the newest message your store already holds. Its domain `message.id` is the only id shared by both sides. It is the last thing you persisted, and the same id rides on the channel, because the transport's internal `codecMessageId` never leaves the channel. That makes the domain id the one stable join key.
+
+`View.loadUntil(predicate, signal?)` pages the view backward (through `loadOlder` under the hood) until a message matches the predicate, then returns only the messages strictly newer than it. The seam is an exclusive floor: the matched message is not returned, because your store already holds it, so composing `[...seed, ...tail]` drops exactly one overlap and leaves no gap.
+
+When the store is empty there is no seam. The predicate never matches, so `loadUntil` pages the whole conversation, and hydration behaves exactly like loading history from the channel.
+
+Reconciliation relies on the conversation being linear: each run is persisted whole before the next is sent, and a concurrent send cancels the active run, so there are never two unpersisted runs at once.
+
+## FAQ <a id="faq"/>
+
+### Do I need a database? <a id="faq-database"/>
+
+Only to retain conversations beyond your Ably retention window. Within retention, the channel is the source of truth and [history and replay](/docs/ai-transport/features/history) loads everything from the channel with no store. Add a database when you need conversations to outlive the retention policy.
+
+### What do I persist, the whole conversation or just the latest run? <a id="faq-what-to-persist"/>
+
+Persist each completed run's messages, which is `run.messages`: the run's triggering input plus its streamed output. The union of all runs reconstructs the whole conversation, so you never re-serialise the entire conversation on each run.
+
+### What if the store is behind the channel? <a id="faq-store-behind"/>
+
+That is the expected state on reload. The seam is the newest message your store holds, and `loadUntil` returns the channel messages strictly newer than it. Composing the seed with that tail fills the gap, so a store that lags the channel by several runs still produces a gapless conversation.
+
+### How does this differ from scroll-back history? <a id="faq-vs-scrollback"/>
+
+Scroll-back through [history and replay](/docs/ai-transport/features/history) pages the channel backward within retention and never touches a database. Database hydration seeds the conversation from your own store and reconciles the store with the channel at the seam, so it covers the messages retention has already dropped.
+
+### Why is the domain id the seam and not `codecMessageId`? <a id="faq-seam-id"/>
+
+`codecMessageId` is the transport's internal id and never leaves the channel, so it is not available in your store. The domain `message.id` is the id you control and persist, and the same id appears on the channel, which makes it the only stable join key between the two sides.
+
+## Related features <a id="related"/>
+
+- [History and replay](/docs/ai-transport/features/history): load and paginate conversation history from the channel within retention.
+- [Multi-device sessions](/docs/ai-transport/features/multi-device): how the same hydrated conversation appears across a user's devices.
+- [`useMessagesWithSeed`](/docs/ai-transport/api/react/core/use-messages-with-seed): the core React hook that composes a seed with the live view.
+- [`useMessageSync`](/docs/ai-transport/api/react/vercel/use-message-sync): the Vercel hook that reconciles a `useChat` seed with the channel.
