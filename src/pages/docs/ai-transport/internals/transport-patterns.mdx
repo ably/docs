@@ -31,7 +31,7 @@ Tree emits:  'update'      structural change (node insert / sort / lifecycle)
       │
       ▼
 View ── walks the selected branch, emits 'update' on visible changes
-ActiveRun ── runId Promise resolves on the matching ai-run-start
+ClientRun ── runId populated (started resolves) on the matching ai-run-start
 ```
 
 Outbound data flow on the agent:
@@ -58,50 +58,48 @@ Run.abortSignal ◄── cancel routing fires on matching ai-cancel
 
 The stream router lives on the client. It routes inbound channel events to the correct per-Run state, turning a flat channel subscription into per-Run projections that the View exposes as visible messages.
 
-The router keys on the triggering input's `codec-message-id`, the synchronous handle the client owns from send time (the agent has not minted the `runId` yet). When the client calls a write method on the View (`send`, `regenerate`, `edit`), the View mints the input's `codec-message-id`, publishes the input on the channel, and registers an optimistic input node in the Tree. The returned `ActiveRun` carries the synchronous `inputCodecMessageId`, the `inputEventId`, and a `runId: Promise<string>` that resolves when the agent's `ai-run-start` for this send lands.
+The router keys on the triggering input's `codec-message-id`, the synchronous handle the client owns from send time (the agent has not minted the `runId` yet). When the client calls a write method on the View (`send`, `regenerate`, `edit`), the View mints the input's `codec-message-id`, publishes the input on the channel, and registers an optimistic input node in the Tree. The returned `ClientRun` carries the synchronous `inputCodecMessageId`, the `inputEventId`, and a `started` promise that resolves (populating `runId`) when the agent's `ai-run-start` for this send lands.
 
 When inbound `ai-output` messages decode to `TOutput` events, the router folds them into the matching Run's per-Run projection by reading the output's `input-codec-message-id` header (the agent echoes the triggering input's id on every event it publishes). When `ai-run-end` arrives for the Run, the router marks the Run terminal. The View's `update` event fires; consumers re-read `getMessages()` / `runs()`.
 
 If the channel loses continuity (`ChannelContinuityLost`), the router surfaces the error via the session's `on('error', ...)` and active Runs are marked accordingly.
 
-## Input-event lookup <a id="input-event-lookup"/>
+## Input-event watcher <a id="input-event-lookup"/>
 
-The input-event lookup lives on the agent. When `Run.start()` is called, the agent attaches the channel with `rewind` and waits for the triggering `event-id` carried in the invocation body to arrive on the channel.
+The input-event watcher lives on the agent. `createRun` arms it: a passive pre-scan of the Tree plus a listener for the trigger's arrival. `AgentRun.start()` awaits `run.located`, which resolves when the triggering `event-id` carried in the invocation body folds into the Tree, whether it is already present or arrives live.
 
 The sequence:
 
 ```text
 1. Client publishes ai-input with event-id=E1 on the channel.
    Fresh send: no run-id on the input.
-   Continuation: existing run-id stamped on the input from ActiveRun.runId.
+   Continuation: existing run-id stamped on the input from clientRun.runId.
 2. Client POSTs InvocationData ({ inputEventId=E1, sessionName }) to the agent.
 3. Agent route receives the POST.
 4. Agent calls session.createRun(invocation, runtime). createRun mints the
-   invocationId and registers the run for cancel routing immediately so
-   early cancels fire.
-5. Agent calls run.start(). The session attaches the channel with the
-   configured rewindWindow and waits for E1 to arrive.
-6. Either:
-   - E1 is already on the channel (rewind) ──► resolves immediately.
-   - E1 arrives live within inputEventLookupTimeoutMs ──► resolves.
-   - inputEventLookupTimeoutMs lapses ──► rejects with InputEventNotFound.
-7. The input event tells the agent which run-id to use: it mints a fresh
+   invocationId, arms the input-event watcher (a passive Tree pre-scan plus a
+   listener), and registers the run for cancel routing so early cancels fire.
+5. Agent calls run.start(). It awaits run.located: the watcher matches E1
+   whether it is already folded into the Tree (a history page the agent paged
+   in, for example via run.view.loadOlder() on a cold start) or folds in live
+   after attach. There is no lookup timeout; located rejects only on cancel or
+   session close.
+6. The input event tells the agent which run-id to use: it mints a fresh
    run-id when the input event omits one, or reuses the run-id stamped on
    the input event for a continuation.
-8. run.start() resolves, the agent fetches conversation history and pipes
-   the LLM stream. The agent route returns { runId: run.runId,
-   invocationId: run.invocationId } on the HTTP response.
+7. run.start() resolves and publishes ai-run-start (or ai-run-resume). The
+   agent drains run.view for context and pipes the LLM stream. The agent route
+   returns { runId: run.runId, invocationId: run.invocationId } on the HTTP
+   response.
 ```
 
-The buffer that holds pre-`start` events is sized by `inputEventBufferLimit` (default 200 input events). When the buffer is full, the oldest input event is FIFO-evicted; the client whose input was dropped fails its lookup with `InputEventNotFound`.
-
-This is the mechanism that lets a serverless agent publish a Run reliably even when the channel publish and the HTTP POST race: the agent waits on the channel until the input event lands, then proceeds. Without it, an agent that attaches after the client published would never see the triggering event.
+This is the mechanism that lets a serverless agent publish a Run reliably even when the channel publish and the HTTP POST race: the watcher resolves the trigger from the Tree whether it arrived before or after the agent attached. Without it, an agent that attached after the client published would never see the triggering event.
 
 ## Cancel routing <a id="cancel-routing"/>
 
 Cancel routing connects client cancel signals to the correct agent-side Runs. The flow:
 
-1. The client calls `session.cancel(runId)` (when it has the resolved run id from `ActiveRun.runId`) or `activeRun.cancel()` (which keys on the triggering input's `codec-message-id`, the synchronous handle). The session publishes an `ai-cancel` message under `extras.ai.transport`, carrying whichever key the caller used.
+1. The client calls `session.cancel(runId)` (when it has the resolved run id from `clientRun.runId`, after `clientRun.started`) or `clientRun.cancel()` (which keys on the triggering input's `codec-message-id`, the synchronous handle). The session publishes an `ai-cancel` message under `extras.ai.transport`, carrying whichever key the caller used.
 2. The agent session receives the cancel message through its channel subscription.
 3. The agent matches the cancel against its registered Runs. If the cancel arrives before run-start (the client cancelled before the agent minted the run id), the agent buffers it and fires once its input-event lookup resolves the input to the run.
 4. The matched Run's `onCancel` hook (if configured) is invoked. If the hook returns `false`, the cancel is rejected silently and the Run continues.
