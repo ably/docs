@@ -24,7 +24,7 @@ const mockHighlightSnippet = jest.fn();
 const mockParseLineHighlights = jest.fn();
 const mockSplitHtmlLines = jest.fn();
 
-jest.mock('@ably/ui/core/utils/syntax-highlighter', () => ({
+jest.mock('src/utilities/syntax-highlighter', () => ({
   highlightSnippet: (...args: any[]) => mockHighlightSnippet(...args),
   LINE_HIGHLIGHT_CLASSES: {
     addition: 'code-line-addition',
@@ -36,7 +36,7 @@ jest.mock('@ably/ui/core/utils/syntax-highlighter', () => ({
   registerDefaultLanguages: jest.fn(),
 }));
 
-jest.mock('@ably/ui/core/utils/syntax-highlighter-registry', () => ({
+jest.mock('src/utilities/syntax-highlighter-registry', () => ({
   __esModule: true,
   default: [],
 }));
