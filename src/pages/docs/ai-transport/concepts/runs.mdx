@@ -24,7 +24,7 @@ A Run has four invariants that the SDK enforces on every channel:
 - A unique `runId`.
 - A bracketing pair of lifecycle events on the channel: `ai-run-start` and `ai-run-end`.
 - An owner: the `clientId` of the Ably client that published `ai-run-start`.
-- A terminal `RunEndReason` once it ends: `'complete'`, `'cancelled'`, or `'error'`. (A Run that pauses awaiting input takes `RunInfo.status === 'suspended'` via `Run.suspend()`, which is non-terminal.)
+- A terminal `RunEndReason` once it ends: `'complete'`, `'cancelled'`, or `'error'`. (A Run that pauses awaiting input takes `RunInfo.status === 'suspended'` via `AgentRun.suspend()`, which is non-terminal.)
 
 Within those brackets, the Run owns a window of channel messages: the user input that triggered it, the agent's streamed outputs, any tool-call or tool-result messages. The conversation [Tree](/docs/ai-transport/concepts/conversation-tree) groups those messages into a `RunNode`; the [View](/docs/ai-transport/api/javascript/core/client-session#view) surfaces projection-free [`RunInfo`](/docs/ai-transport/api/javascript/core/client-session#view) snapshots for the UI.
 
@@ -37,7 +37,7 @@ A Run is triggered by an [`Invocation`](/docs/ai-transport/concepts/invocations)
 | Stable identity | The same `runId` must be readable to every participant: the client that started the Run, every other connected client, the agent process. Without it, cancellation has no target and observation has no scope. |
 | Lifecycle brackets | `ai-run-start`, `ai-run-suspend`, `ai-run-resume`, and `ai-run-end` mark the Run on the wire. A view filtering "active Runs" reads `RunInfo.status === 'active'`; `'suspended'` and the terminal `RunEndReason` values cover the other states. |
 | Cancel routing | A cancel message names a `runId`. The agent's [`Run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run) fires only for matching cancels, so unrelated Runs on the same session continue. |
-| Durable execution | An agent can restart its process mid-Run (serverless cold start, container redeploy). The Run's identity plus the channel's persistence let the new agent rehydrate via [`Run.loadConversation`](/docs/ai-transport/api/javascript/core/agent-session#load-conversation) and continue without the client noticing. |
+| Durable execution | An agent can restart its process mid-Run (serverless cold start, container redeploy). The Run's identity plus the channel's persistence let the new agent rehydrate by draining its leaf-pinned [`run.view`](/docs/ai-transport/api/javascript/core/agent-session#run) from channel history and continue without the client noticing. |
 | Multiple participants | Several clients may observe the same Run (multi-device, support handover). They all see the lifecycle events; they all hold the same `RunInfo`. |
 
 ## Understand the Run lifecycle <a id="lifecycle"/>
@@ -53,30 +53,41 @@ A Run progresses from start to terminal end. Along the way it can pause to wait 
 
 A Run is the unit of cancellation. There is no user-facing cancel below the Run level. Internal failures (a stream dying, a model call retrying, a serverless cold start) fail the *execution attempt*, not the Run; the Run stays active and the SDK retries underneath.
 
+## Read a Run from either side <a id="read-model"/>
+
+Both sides of a Run expose the same read-model, so the same accessor means the same thing on the client and the agent. A client's `view.send()` returns a `ClientRun`; an agent's `createRun()` returns an `AgentRun`. Each carries:
+
+- `runId`: the Run's identifier. Known synchronously on the agent; on the client it is empty until the agent's run-start is observed (await `clientRun.started` first).
+- `status`: the lifecycle status, one of `'active'`, `'suspended'`, `'complete'`, `'cancelled'`, or `'error'`, read live off the [conversation tree](/docs/ai-transport/concepts/conversation-tree).
+- `error`: the terminal error, present exactly when `status` is `'error'`.
+- `messages`: the Run's whole turn, the triggering input message followed by its streamed output. This is the unit to persist; see [database hydration](/docs/ai-transport/features/database-hydration).
+
+Each side then adds its own verbs. The client's `ClientRun` adds `started` and `cancel()`; the agent's `AgentRun` adds `located` (resolves once the triggering input folds into the tree) and the lifecycle methods `start()`, `pipe()`, `suspend()`, and `end()`.
+
 ## Trigger a Run <a id="trigger"/>
 
-A minimal client-side send returns an `ActiveRun` that exposes the Run's identity and a per-Run cancel. The application then POSTs `activeRun.toInvocation().toJSON()` to its agent endpoint to wake the agent; see [Invocations](/docs/ai-transport/concepts/invocations).
+A minimal client-side send returns a `ClientRun` that exposes the Run's identity and a per-Run cancel. Each send introduces at most one new message and triggers exactly one Run. The application then POSTs `clientRun.toInvocation().toJSON()` to its agent endpoint to wake the agent; see [Invocations](/docs/ai-transport/concepts/invocations).
 
 <Code>
 ```javascript
-const activeRun = await session.view.send(UIMessageCodec.createUserMessage({
+const clientRun = await session.view.send(UIMessageCodec.createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'Plan a 3-day trip to Lisbon.' }],
 }));
 
-// The agent assigns the runId on the server, so activeRun.runId is a
-// Promise. Await it to read the id.
-const runId = await activeRun.runId;
-console.log('Run started:', runId);
+// The agent mints the runId on the server, so clientRun.runId is empty until
+// the agent's run-start is observed. Await `started`, then read the id.
+await clientRun.started;
+console.log('Run started:', clientRun.runId);
 
-// Stop button: activeRun.cancel() works immediately, even before
-// the runId promise resolves.
-await activeRun.cancel();
+// Stop button: clientRun.cancel() works immediately, even before
+// the run-start has been observed.
+await clientRun.cancel();
 ```
 </Code>
 
-On the agent side, the symmetric primitive is [`AgentSession.createRun(invocation, runtime?)`](/docs/ai-transport/api/javascript/core/agent-session#create-run). The agent mints `runId` (for a fresh run) or reads the existing `runId` off the triggering input event (for a continuation), and stamps it on every event it publishes; the client observes it via `ActiveRun.runId`.
+On the agent side, the symmetric primitive is [`AgentSession.createRun(invocation, runtime?)`](/docs/ai-transport/api/javascript/core/agent-session#create-run). The agent mints `runId` (for a fresh run) or reads the existing `runId` off the triggering input event (for a continuation), and stamps it on every event it publishes; the client reads it from `clientRun.runId` once `clientRun.started` resolves.
 
 ## Run concurrent Runs <a id="concurrent"/>
 
