@@ -9,8 +9,8 @@ import React, {
   ReactElement,
 } from 'react';
 import { navigate, PageProps } from 'gatsby';
-import CodeSnippet from '@ably/ui/core/CodeSnippet';
-import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
+import CodeSnippet from 'src/components/ui/CodeSnippet';
+import type { CodeSnippetProps, SDKType } from 'src/components/ui/CodeSnippet';
 import cn from 'src/utilities/cn';
 
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
