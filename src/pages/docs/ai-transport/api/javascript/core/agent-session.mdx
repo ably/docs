@@ -91,7 +91,7 @@ Subscribe to non-fatal session errors with [`on('error')`](#on) rather than a co
 
 <MethodSignature>{`connect(): Promise<void>`}</MethodSignature>
 
-Subscribe to the channel and implicitly attach. The subscribe is unfiltered so channel-history-replayed input events fold into the tree, where each run's input-event watcher can match its trigger. Idempotent: subsequent calls return the same promise. All `AgentRun` methods (`start`, `pipe`, `suspend`, `end`) throw `InvalidArgument` until `connect()` has been called.
+Attaches and subscribes to the channel backing the session. Idempotent: subsequent calls return the same promise. All `AgentRun` methods (`start`, `pipe`, `suspend`, `end`) throw `InvalidArgument` until `connect()` has been called.
 
 <Code>
 ```javascript
@@ -107,7 +107,7 @@ await session.connect();
 
 <MethodSignature>{`createRun(invocation: Invocation, runtime?: RunRuntime<TOutput>): AgentRun<TOutput, TProjection, TMessage>`}</MethodSignature>
 
-Create a new `AgentRun` from an `Invocation`. Returns synchronously and arms the run's input-event watcher (a passive pre-scan of the tree plus a listener for the trigger's arrival); it publishes nothing to the channel until [`AgentRun.start`](#run-start) is called. The run is registered for cancel routing immediately so early cancels fire the `abortSignal`.
+Create a new `AgentRun` for the input event named in the `Invocation`. Returns synchronously and publishes nothing to the channel until [`AgentRun.start`](#run-start) is called. The run is registered for cancel routing immediately so early cancels fire the `abortSignal`.
 
 <Code>
 ```javascript
@@ -167,11 +167,11 @@ The handle returned by [`createRun`](#create-run). It extends the shared `BaseRu
 | runId | The Run's unique identifier. Known synchronously on the agent (it mints the id for a fresh run, or reads it off the triggering input event for a continuation). | String |
 | status | The Run's lifecycle status, read live off the tree. | `RunStatus` |
 | error | The terminal error, present exactly when `status` is `'error'`. | `Ably.ErrorInfo` or Undefined |
-| messages | This Run's whole turn: its triggering input message followed by its own streamed output, deduplicated by `codecMessageId`. The unit to persist. See [Hydrate the conversation](#conversation-hydration). | `TMessage[]` |
+| messages | All of this Run's messages: its triggering input followed by its streamed output (across any suspend and resume), deduplicated by `codecMessageId`. The unit to persist. See [Hydrate the conversation](#conversation-hydration). | `TMessage[]` |
 | invocationId | The invocation id minted by the agent for this `createRun` call (one per HTTP request). Readable synchronously; the application returns it on the HTTP response. The agent stamps it on every event it publishes for this invocation. | String |
 | abortSignal | `AbortSignal` scoped to this Run. Fires when a cancel event arrives. | `AbortSignal` |
-| view | Read-only, leaf-pinned `View<TMessage>` of this Run's branch, from its triggering input back to the conversation root. Drain it with `loadOlder()` for ancestor context to feed the model. Empty until the trigger folds into the tree. See [Hydrate the conversation](#conversation-hydration). | `View<TMessage>` |
-| located | Resolves when this Run's triggering input folds into the tree (live or via a `view.loadOlder()` page). [`start`](#run-start) awaits it internally; await it directly only to read the trigger before deciding how to start. | `Promise<void>` |
+| view | A read-only `View<TMessage>` of the conversation branch this Run belongs to, from its triggering input back to the conversation root. Use it to reconstruct the conversation to feed the model. See [Hydrate the conversation](#conversation-hydration). | `View<TMessage>` |
+| located | Resolves once the Run's triggering input (named in its invocation) has been observed on the channel, whether through the live subscription or by paging history with `view.loadOlder()`. [`start`](#run-start) awaits it internally; await it directly only to read the trigger before deciding how to start. | `Promise<void>` |
 
 </Table>
 
@@ -179,9 +179,9 @@ The handle returned by [`createRun`](#create-run). It extends the shared `BaseRu
 
 <MethodSignature>{`start(): Promise<void>`}</MethodSignature>
 
-Await [`located`](#run) (the run's input-event watcher resolves the trigger, whether it arrives live or already sits in channel history), then read the trigger's wire headers and publish the opening lifecycle event (`ai-run-start`, or `ai-run-resume` for a continuation). Must be called before `pipe`, `suspend`, or `end`.
+Wait until the Run's triggering input has been observed on the channel (see [`located`](#run)), then publish the opening lifecycle event (`ai-run-start`, or `ai-run-resume` for a continuation). Must be called before `pipe`, `suspend`, or `end`.
 
-There is no built-in deadline: `start()` does not time out waiting for the trigger. It rejects only if the run is cancelled or the session is closed before the trigger folds in. Race it against your own timeout if you need one.
+There is no built-in deadline: `start()` does not time out waiting for the trigger. It rejects only if the run is cancelled or the session is closed before the trigger is observed. Race it against your own timeout if you need one.
 
 ### Pipe the response stream <a id="pipe"/>
 
@@ -333,20 +333,23 @@ const invocation = Invocation.fromJSON(data);
 
 Two accessors expose conversation content, at different scopes:
 
-- `run.messages` is this Run's own turn: its triggering input plus its streamed output. This is the unit to persist, not the value to feed the model in a multi-turn conversation.
+- `run.messages` is all of this Run's own messages: its triggering input plus its streamed output (across any suspend and resume). This is the unit to persist, not the value to feed the model in a multi-turn conversation.
 - `run.view` is a read-only, leaf-pinned `View` of this Run's full branch, from its triggering input back to the conversation root. This is the value to feed the model.
 
-To rebuild the prior conversation for the model, drain `run.view` with `loadOlder()` (the sole history driver) for as much ancestor context as you want, then read `getMessages()`:
+`run.view` includes an ancestor turn only once its run has completed. An ancestor that is still active, suspended, cancelled, or errored is omitted, along with the input it replied to, so a dangling tool call from a concurrent or interrupted turn can't invalidate the prompt. The current run is always included, and an omitted ancestor reappears once it completes.
+
+To rebuild the prior conversation for the model, drain `run.view` with `loadOlder()` for as much ancestor context as you want, then read `getMessages()`:
 
 <Code>
 ```javascript
-await run.start();
-
-// Drain the branch back to the root for full context.
+// Rebuild the conversation from run.view before run.start(): draining pages in
+// this run's triggering input (otherwise run.start() awaits it arriving live).
 while (run.view.hasOlder()) {
   await run.view.loadOlder();
 }
 const conversation = run.view.getMessages().map(({ message }) => message);
+
+await run.start();
 ```
 </Code>
 
@@ -384,13 +387,14 @@ export async function POST(req: Request) {
   const run = session.createRun(invocation, { signal: req.signal });
 
   try {
-    await run.start();
-
-    // Drain the run's branch back to the root for the model context.
+    // Rebuild the conversation from run.view before run.start(): draining pages
+    // in this run's triggering input (otherwise run.start() awaits it live).
     while (run.view.hasOlder()) {
       await run.view.loadOlder();
     }
     const conversation = run.view.getMessages().map(({ message }) => message);
+
+    await run.start();
 
     const llmStream = await callMyLLM(conversation);
     const result = await run.pipe(llmStream);
