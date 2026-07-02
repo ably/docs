@@ -1,0 +1,760 @@
+---
+title: RealtimeChannel
+meta_description: "API reference for the Channel (RealtimeChannel) interface in the Ably Pub/Sub JavaScript Realtime SDK."
+meta_keywords: "Ably Pub/Sub SDK, JavaScript, RealtimeChannel API, attach, detach, publish, subscribe, history, on, once, off, setOptions, ChannelState, ChannelEvent, PaginatedResult"
+---
+
+A `RealtimeChannel` represents a single channel, obtained via the [`channels.get()`](/docs/pub-sub/api/javascript/realtime/channels#get) method. Use it to publish and subscribe to messages, manage channel state, and access channel features such as presence, push notifications, and annotations.
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+## Properties
+
+The `RealtimeChannel` interface has the following properties:
+
+<Table id='RealtimeChannelProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| name | The name of this channel. | String |
+| state | The current [channel state](/docs/channels/states). | <Table id='ChannelState'/> |
+| errorReason | When a channel failure occurs, this property contains the error. | [ErrorInfo](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) or Undefined |
+| presence | Access the [`RealtimePresence`](/docs/pub-sub/api/javascript/realtime/realtime-presence) object for this channel. | [RealtimePresence](/docs/pub-sub/api/javascript/realtime/realtime-presence) |
+| push | Access the [`PushChannel`](/docs/pub-sub/api/javascript/realtime/push) object for this channel. | [PushChannel](/docs/pub-sub/api/javascript/realtime/push) |
+| annotations | Access the `RealtimeAnnotations` object for this channel, used to publish, delete, retrieve, and subscribe to [annotations](/docs/messages/annotations) on messages. | [RealtimeAnnotations](/docs/pub-sub/api/javascript/realtime/realtime-annotations) |
+| params | The current [channel parameters](/docs/channels/options#params) in effect for this channel. | `Record<String, String>` |
+| modes | The current [channel modes](/docs/channels/options#modes) in effect for this channel. | `ResolvedChannelMode[]` |
+
+</Table>
+
+<Table id='ChannelState' hidden>
+
+| Value | Description |
+| --- | --- |
+| initialized | The channel has been initialized but no attach has yet been attempted. |
+| attaching | An attach has been initiated by sending a request to Ably. This is a transient state and will be followed by `attached` or `failed`. |
+| attached | The attach has succeeded. In the `attached` state, a client may publish, subscribe to, and be present in the channel. |
+| detaching | A detach has been initiated on an `attached` channel by sending a request to Ably. |
+| detached | The channel has been detached or the channel has not been attached. |
+| suspended | The channel was previously attached, but the client is now disconnected and the SDK is unable to communicate with the Ably service. Any messages published while in this state are buffered for delivery once the channel becomes attached again. |
+| failed | An indefinite failure condition. This state is entered if a channel error has been received from the Ably service, such as an attempt to attach without the necessary access rights. |
+
+</Table>
+
+## Subscribe to messages <a id="subscribe"/>
+
+<MethodSignature>{`channel.subscribe(listener: messageCallback): Promise<ChannelStateChange | null>`}</MethodSignature>
+
+Subscribe to all messages on this channel. The listener is called for every message received.
+
+<MethodSignature>{`channel.subscribe(event: string, listener?: messageCallback): Promise<ChannelStateChange | null>`}</MethodSignature>
+
+Subscribe only to messages with a specific event name (client-side filter).
+
+<MethodSignature>{`channel.subscribe(events: string[], listener?: messageCallback): Promise<ChannelStateChange | null>`}</MethodSignature>
+
+Subscribe to messages matching any event name in the array (client-side filter).
+
+<MethodSignature>{`channel.subscribe(filter: MessageFilter, listener?: messageCallback): Promise<ChannelStateChange | null>`}</MethodSignature>
+
+Register a listener for messages on this channel that match the supplied filter. Filtering happens server-side as part of [filtered subscriptions](/docs/pub-sub/advanced#subscription-filters).
+
+<Code>
+```javascript
+// All messages
+await channel.subscribe((message) => {
+  console.log(message.name, message.data);
+});
+
+// Specific event
+await channel.subscribe('greeting', (message) => {
+  console.log('Hi:', message.data);
+});
+
+// Server-side filter (filtered subscription)
+await channel.subscribe({ name: 'click', clientId: 'user-123' }, (message) => {
+  console.log('Filtered:', message.data);
+});
+```
+</Code>
+
+If the channel is `initialized`, calling `subscribe()` implicitly attaches the channel.
+
+Calling `subscribe()` with an event name is a client-side filter. All messages are still sent over the wire, regardless of name. To filter messages server-side, use [filtered subscriptions](/docs/pub-sub/advanced#subscription-filters) with a `filter` argument.
+
+When subscribing, keep the following behaviours in mind:
+
+* If `subscribe()` is called more than once with the same listener, duplicates are registered. If you subscribe twice with the same listener and a message is later received, that listener is invoked twice.
+* A registered listener remains active on the channel regardless of the current channel state. If you subscribe when a channel is `attached` and it later becomes `detached` or `failed`, the listener is still invoked when the channel reattaches and a message is received. Listeners are only removed by calling [`unsubscribe()`](#unsubscribe) or when the channel is released using [`channels.release()`](/docs/pub-sub/api/javascript/realtime/channels#release).
+* If an exception is thrown in a listener and bubbles up to the event emitter, it is caught and logged at `error` level, so as not to affect other listeners for the same event.
+
+### Parameters <a id="subscribe-params"/>
+
+The `subscribe()` method takes the following parameters:
+
+<Table id='SubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | Optional | The event name to subscribe to. | String |
+| events | Optional | An array of event names to subscribe to. | `String[]` |
+| filter | Optional | A filter object used to filter messages server-side. | <Table id='MessageFilter'/> |
+| listener | Optional | A function called with each matching [`Message`](/docs/pub-sub/api/javascript/realtime/message). Required when subscribing to all messages; with an `event`, `events`, or `filter` argument it may be omitted to attach the channel without registering a listener. | Function |
+
+</Table>
+
+<Table id='MessageFilter' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| name | Optional | A regular expression to match against the message name. | String |
+| refTimeserial | Optional | A reference timeserial to match against. Useful for filtering message updates or annotations against the original message. | String |
+| refType | Optional | A reference type to match against (for example `com.ably.reaction` for reactions). | String |
+| isRef | Optional | Whether to match only messages that have a ref (`true`), only those that don't (`false`), or both (omitted). | Boolean |
+| clientId | Optional | A `clientId` to match against. | String |
+
+</Table>
+
+### Returns <a id="subscribe-returns"/>
+
+`Promise<ChannelStateChange | null>`
+
+Returns a promise. On successful channel attachment, the promise is fulfilled with a `ChannelStateChange`. If the channel was already attached, the promise resolves with `null`. On failure, the promise is rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Publish a message <a id="publish"/>
+
+<MethodSignature>{`channel.publish(name: string, data: any, options?: PublishOptions): Promise<PublishResult>`}</MethodSignature>
+
+Publish a single message on the channel based on a given event name and payload.
+
+<MethodSignature>{`channel.publish(message: Message, options?: PublishOptions): Promise<PublishResult>`}</MethodSignature>
+
+Publish a single message object on the channel.
+
+<MethodSignature>{`channel.publish(messages: Message[], options?: PublishOptions): Promise<PublishResult>`}</MethodSignature>
+
+Publish multiple messages atomically on the channel. This means that:
+
+* Either all messages will be successfully published or none of them will.
+* The [max message size](/docs/platform/pricing/limits#message) limit applies to the total size of all messages in the array.
+* The publish counts as a single message for the purpose of [per-channel rate limit](/docs/platform/pricing/limits#message).
+* If you are using client-specified message IDs, they must conform to certain restrictions.
+
+When `publish()` is called, the SDK will not implicitly attach to the channel so long as [transient publishing](/docs/pub-sub/advanced#transient-publish) is available. Otherwise, it will implicitly attach.
+
+<Code>
+```javascript
+await channel.publish('greeting', 'Hello, World!');
+
+// Or with a Message object
+await channel.publish({ name: 'greeting', data: 'Hello' });
+
+// Or atomic batch
+await channel.publish([
+  { name: 'event1', data: 'one' },
+  { name: 'event2', data: 'two' }
+]);
+```
+</Code>
+
+### Parameters <a id="publish-params"/>
+
+The `publish()` method takes the following parameters:
+
+<Table id='PublishParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| name | Required | The event name. | String |
+| data | Required | The data payload for the message. Supported payload types are strings, JSON-serializable objects and arrays, buffers containing arbitrary binary data, and `null`. If sending binary data, that binary should be the entire payload; an object with a binary field within it may not be correctly encoded. | Any |
+| message | Required | A single [`Message`](/docs/pub-sub/api/javascript/realtime/message) object to publish. | [Message](/docs/pub-sub/api/javascript/realtime/message) |
+| messages | Required | An array of [`Message`](/docs/pub-sub/api/javascript/realtime/message) objects to publish atomically. | [Message](/docs/pub-sub/api/javascript/realtime/message)[] |
+| options | Optional | Options affecting the publish, such as `quickAck`. | <Table id='PublishOptions'/> |
+
+</Table>
+
+<Table id='PublishOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| quickAck | Optional | Whether to wait for an early acknowledgement of the publish, rather than the standard acknowledgement that the message has been processed and persisted. Default: `false`. | Boolean |
+
+</Table>
+
+### Returns <a id="publish-returns"/>
+
+`Promise<PublishResult>`
+
+Returns a promise. The promise is fulfilled with a `PublishResult` when the message(s) have been delivered to Ably, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+<Table id='PublishResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| serials | An array of message serials corresponding 1:1 to the messages that were published. A serial may be `null` if the message was discarded due to a [message conflation](/docs/messages#conflation). | Array of String or Null |
+
+</Table>
+
+## Update a message <a id="update-message"/>
+
+<MethodSignature>{`channel.updateMessage(message: Message, operation?: MessageOperation, options?: PublishOptions): Promise<UpdateDeleteResult>`}</MethodSignature>
+
+Publish an [update](/docs/messages/updates-deletes#update) to an existing message using shallow mixin semantics. Non-null `name`, `data`, and `extras` fields in the provided message replace the corresponding fields in the existing message; null fields are left unchanged. Requires the `message-update-own` or `message-update-any` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="update-message-params"/>
+
+The `updateMessage()` method takes the following parameters:
+
+<Table id='UpdateMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| message | Required | The message to update. Must include the `serial` of the message being updated. | [Message](/docs/pub-sub/api/javascript/realtime/message) |
+| operation | Optional | Metadata about the update operation. | <Table id='MessageOperation'/> |
+| options | Optional | Options affecting the publish of the update. | <Table id='PublishOptions'/> |
+
+</Table>
+
+<Table id='MessageOperation' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| clientId | Optional | The client ID performing the operation. | String |
+| description | Optional | A human-readable description of why the operation was performed. | String |
+| metadata | Optional | Additional metadata associated with the operation. | `Record<String, String>` |
+
+</Table>
+
+### Returns <a id="update-message-returns"/>
+
+`Promise<UpdateDeleteResult>`
+
+Returns a promise. The promise is fulfilled with an `UpdateDeleteResult` containing the updated version metadata, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+<Table id='UpdateDeleteResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| versionSerial | The serial of the new version of the message produced by the update, delete, or append operation. `null` if the message was superseded by a subsequent update before it could be published. | String or Null |
+
+</Table>
+
+## Append to a message <a id="append-message"/>
+
+<MethodSignature>{`channel.appendMessage(message: Message, operation?: MessageOperation, options?: PublishOptions): Promise<UpdateDeleteResult>`}</MethodSignature>
+
+[Append](/docs/messages/updates-deletes#append) data to an existing message on the channel. The supplied `data` is appended to the previous message's data, while `name` and `extras` replace the previous values if provided. Subscribers receive a `message.append` action. Requires the `message-update-own` or `message-update-any` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="append-message-params"/>
+
+The `appendMessage()` method takes the following parameters:
+
+<Table id='AppendMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| message | Required | The message to append data to. Must include the `serial` of the target message. | [Message](/docs/pub-sub/api/javascript/realtime/message) |
+| operation | Optional | Metadata about the append operation. | <Table id='MessageOperation'/> |
+| options | Optional | Options affecting the publish of the append. | <Table id='PublishOptions'/> |
+
+</Table>
+
+### Returns <a id="append-message-returns"/>
+
+`Promise<UpdateDeleteResult>`
+
+Returns a promise. The promise is fulfilled with an `UpdateDeleteResult`, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Delete a message <a id="delete-message"/>
+
+<MethodSignature>{`channel.deleteMessage(message: Message, operation?: MessageOperation, options?: PublishOptions): Promise<UpdateDeleteResult>`}</MethodSignature>
+
+Mark a message as [deleted](/docs/messages/updates-deletes#delete) by publishing an update with an action of `MESSAGE_DELETE`. This does not remove the message from the server, and the full message history remains accessible. Uses shallow mixin semantics: non-null `name`, `data`, and `extras` fields in the provided message replace the corresponding fields in the existing message; null fields are left unchanged. Subscribers receive a `message.delete` action. Requires the `message-delete-own` or `message-delete-any` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="delete-message-params"/>
+
+The `deleteMessage()` method takes the following parameters:
+
+<Table id='DeleteMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| message | Required | The message to delete. Must include the `serial` of the message being deleted. | [Message](/docs/pub-sub/api/javascript/realtime/message) |
+| operation | Optional | Metadata about the delete operation. | <Table id='MessageOperation'/> |
+| options | Optional | Options affecting the publish of the delete. | <Table id='PublishOptions'/> |
+
+</Table>
+
+### Returns <a id="delete-message-returns"/>
+
+`Promise<UpdateDeleteResult>`
+
+Returns a promise. The promise is fulfilled with an `UpdateDeleteResult`, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Get a single message by serial <a id="get-message"/>
+
+<MethodSignature>{`channel.getMessage(serialOrMessage: string | Message): Promise<Message>`}</MethodSignature>
+
+Retrieve the [latest version](/docs/messages/updates-deletes#get) of a message by its serial. Requires the `history` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="get-message-params"/>
+
+The `getMessage()` method takes the following parameters:
+
+<Table id='GetMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serialOrMessage | Required | Either the serial identifier string of the message to retrieve, or a [`Message`](/docs/pub-sub/api/javascript/realtime/message) object containing a populated `serial` field. | String or [Message](/docs/pub-sub/api/javascript/realtime/message) |
+
+</Table>
+
+### Returns <a id="get-message-returns"/>
+
+`Promise<Message>`
+
+Returns a promise. The promise is fulfilled with the [`Message`](/docs/pub-sub/api/javascript/realtime/message), or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Unsubscribe from messages <a id="unsubscribe"/>
+
+<MethodSignature>{`channel.unsubscribe(event: string, listener: messageCallback): void`}</MethodSignature>
+
+Remove the given listener for the specified event.
+
+<MethodSignature>{`channel.unsubscribe(events: string[], listener: messageCallback): void`}</MethodSignature>
+
+Remove the given listener from all events in the array.
+
+<MethodSignature>{`channel.unsubscribe(event: string): void`}</MethodSignature>
+
+Remove all listeners registered for the specified event.
+
+<MethodSignature>{`channel.unsubscribe(events: string[]): void`}</MethodSignature>
+
+Remove all listeners registered for any event in the array.
+
+<MethodSignature>{`channel.unsubscribe(filter: MessageFilter, listener?: messageCallback): void`}</MethodSignature>
+
+Remove the listener registered for the specified filter, or all listeners for the filter if `listener` is omitted.
+
+<MethodSignature>{`channel.unsubscribe(listener: messageCallback): void`}</MethodSignature>
+
+Remove the given listener from all events.
+
+<MethodSignature>{`channel.unsubscribe(): void`}</MethodSignature>
+
+Remove all message listeners on this channel.
+
+<Code>
+```javascript
+channel.unsubscribe();
+```
+</Code>
+
+### Parameters <a id="unsubscribe-params"/>
+
+The `unsubscribe()` method takes the following parameters:
+
+<Table id='UnsubscribeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | Optional | A single event name to stop listening to. | String |
+| events | Optional | An array of event names to stop listening to. | `String[]` |
+| filter | Optional | The message filter whose listener should be removed. | <Table id='MessageFilter'/> |
+| listener | Optional | The listener to remove. If omitted, all listeners matching the supplied event(s) or filter are removed; if no arguments are given, all message listeners on the channel are removed. | Function |
+
+</Table>
+
+## Attach to the channel <a id="attach"/>
+
+<MethodSignature>{`channel.attach(): Promise<ChannelStateChange | null>`}</MethodSignature>
+
+Attach to the channel. This first attempts to connect to Ably if not already connected, then sends an attach message for this channel. If the channel is already attached, this is a no-op and the promise resolves with `null`.
+
+As a convenience, `attach()` is called implicitly if [`subscribe()`](#subscribe) is called on the channel, or if [`presence.enter()`](/docs/pub-sub/api/javascript/realtime/realtime-presence#enter) or [`presence.subscribe()`](/docs/pub-sub/api/javascript/realtime/realtime-presence#subscribe) is called on the channel's presence.
+
+<Code>
+```javascript
+await channel.attach();
+```
+</Code>
+
+### Returns <a id="attach-returns"/>
+
+`Promise<ChannelStateChange | null>`
+
+Returns a promise. The promise is fulfilled with a `ChannelStateChange` describing the transition to `attached`, or `null` if the channel was already attached. Rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object if the attach fails.
+
+## Detach from the channel <a id="detach"/>
+
+<MethodSignature>{`channel.detach(): Promise<void>`}</MethodSignature>
+
+Detach from the channel. Any resulting channel state change is emitted to listeners registered using [`on()`](#on) or [`once()`](#once). Once all clients globally have detached from the channel, the channel is released in the Ably service within two minutes.
+
+<Code>
+```javascript
+await channel.detach();
+```
+</Code>
+
+### Returns <a id="detach-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled when the channel has been detached, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Set channel options <a id="set-options"/>
+
+<MethodSignature>{`channel.setOptions(options: ChannelOptions): Promise<void>`}</MethodSignature>
+
+Configure the channel with new `ChannelOptions`. If the channel is already attached and the new options require a re-attach (for example, new channel modes or new params), the channel will be re-attached with the new options.
+
+<Code>
+```javascript
+await channel.setOptions({ cipher: { key } });
+```
+</Code>
+
+### Parameters <a id="set-options-params"/>
+
+The `setOptions()` method takes the following parameters:
+
+<Table id='SetOptionsParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| options | Required | The new channel options. | <Table id='ChannelOptions'/> |
+
+</Table>
+
+<Table id='ChannelOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| cipher | Optional | Requests [encryption](/docs/channels/options/encryption) for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length, and key). | <Table id='CipherParams'/> or <Table id='CipherParamOptions'/> |
+| params | Optional | [Channel parameters](/docs/channels/options) that configure the behavior of the channel. | `Record<String, String>` |
+| modes | Optional | An array of channel mode values that restrict the operations a client can perform on a channel. | Array of <Table id='ChannelMode'/> |
+| attachOnSubscribe | Optional | Whether calling [`subscribe()`](#subscribe) on a channel or presence object should trigger an implicit attach. Default: `true`. | Boolean |
+
+</Table>
+
+<Table id='CipherParams' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| key | The private key used for encryption and decryption. Can be binary or base64-encoded. | `ArrayBuffer`, `Uint8Array`, `Buffer`, or String |
+| algorithm | The name of the algorithm. Default: `AES`. | String |
+| keyLength | The key length in bits of the cipher. Either 128 or 256. Default: 256. | Number |
+| mode | The cipher mode. Default: `CBC`. | String |
+
+</Table>
+
+<Table id='CipherParamOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| key | Required | The private key used for encryption and decryption. Can be binary or base64-encoded. | `ArrayBuffer`, `Uint8Array`, `Buffer`, or String |
+| algorithm | Optional | The name of the algorithm. Default: `AES`. | String |
+| keyLength | Optional | The key length in bits. Either 128 or 256. Default: 256. | Number |
+| mode | Optional | The cipher mode. Default: `CBC`. | String |
+
+</Table>
+
+<Table id='ChannelMode' hidden>
+
+| Value | Description |
+| --- | --- |
+| PUBLISH | The client can publish messages to the channel. |
+| SUBSCRIBE | The client can subscribe to messages on the channel. |
+| PRESENCE | The client can enter the presence set on the channel. |
+| PRESENCE_SUBSCRIBE | The client can subscribe to presence events on the channel. |
+| OBJECT_PUBLISH | The client can publish LiveObjects messages on the channel. |
+| OBJECT_SUBSCRIBE | The client can subscribe to LiveObjects messages on the channel. |
+| ANNOTATION_PUBLISH | The client can publish annotations on the channel. |
+| ANNOTATION_SUBSCRIBE | The client can subscribe to annotations on the channel. |
+
+</Table>
+
+### Returns <a id="set-options-returns"/>
+
+`Promise<void>`
+
+Returns a promise. The promise is fulfilled once the options have been applied (and the channel re-attached if required), or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Register a channel state listener <a id="on"/>
+
+<MethodSignature>{`channel.on(event: ChannelEvent, listener: channelEventCallback): void`}</MethodSignature>
+
+Register a listener for a single channel event.
+
+<MethodSignature>{`channel.on(events: ChannelEvent[], listener: channelEventCallback): void`}</MethodSignature>
+
+Register a listener for any of an array of channel events.
+
+<MethodSignature>{`channel.on(listener: channelEventCallback): void`}</MethodSignature>
+
+Register a listener for all channel events.
+
+In every form the listener receives a `ChannelStateChange` object describing the transition.
+
+If an exception is thrown in the listener and bubbles up to the event emitter, it is caught and logged at `error` level, so as not to affect other listeners.
+
+<Code>
+```javascript
+channel.on('attached', (stateChange) => {
+  console.log('Now attached');
+});
+```
+</Code>
+
+### Parameters <a id="on-params"/>
+
+The `on()` method takes the following parameters:
+
+<Table id='OnParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | Optional | A single channel event to listen for. | <Table id='ChannelEvent'/> |
+| events | Optional | An array of channel events to listen for. | <Table id='ChannelEvent'/>[] |
+| listener | Required | A function invoked for each matching event. If neither `event` nor `events` is supplied, it fires for every event. | <Table id='channelEventCallback'/> |
+
+</Table>
+
+<Table id='ChannelEvent' hidden>
+
+| Value | Description |
+| --- | --- |
+| initialized | The channel has been initialized but no attach has yet been attempted. |
+| attaching | An attach has been initiated by sending a request to Ably. |
+| attached | The attach has succeeded. |
+| detaching | A detach has been initiated. |
+| detached | The channel has been detached. |
+| suspended | The channel has been suspended. |
+| failed | The channel has entered a failed state. |
+| update | An update to the channel has occurred (typically a re-attach with updated capability or channel options) while the channel state remains `attached`. |
+
+</Table>
+
+<Table id='channelEventCallback' hidden>
+
+| Parameter | Description | Type |
+| --- | --- | --- |
+| stateChange | The channel state change that occurred. | <Table id='ChannelStateChange'/> |
+
+</Table>
+
+<Table id='ChannelStateChange' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| current | The new channel state. | <Table id='ChannelState'/> |
+| previous | The previous channel state. For the `update` event, this will be equal to the `current` state. | <Table id='ChannelState'/> |
+| event | The event that triggered this state change. | <Table id='ChannelEvent'/> |
+| reason | An `ErrorInfo` containing any information relating to the transition. | [ErrorInfo](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) or Undefined |
+| resumed | When the channel has reattached after a loss of connection, `resumed` is `true` if message continuity is preserved (no missed messages), or `false` if it was not. | Boolean |
+| hasBacklog | Indicates whether the client can expect a backlog of messages from a [rewind](/docs/channels/options/rewind) or resume. | Boolean or Undefined |
+
+</Table>
+
+## Register a one-time channel state listener <a id="once"/>
+
+<MethodSignature>{`channel.once(event: ChannelEvent, listener: channelEventCallback): void`}</MethodSignature>
+
+Register a one-time listener for a single channel event. It is invoked the next time that event occurs, then removed.
+
+<MethodSignature>{`channel.once(listener: channelEventCallback): void`}</MethodSignature>
+
+Register a one-time listener for the next channel event of any type.
+
+<MethodSignature>{`channel.once(event: ChannelEvent): Promise<ChannelStateChange>`}</MethodSignature>
+
+Return a promise that resolves the next time the specified event occurs.
+
+<MethodSignature>{`channel.once(): Promise<ChannelStateChange>`}</MethodSignature>
+
+Return a promise that resolves the next time any event occurs.
+
+The callback-based forms return `void`; the promise-based forms return a promise that resolves with the next matching `ChannelStateChange`.
+
+If an exception is thrown in the listener and bubbles up to the event emitter, it is caught and logged at `error` level, so as not to affect other listeners.
+
+<Code>
+```javascript
+await channel.once('attached');
+```
+</Code>
+
+### Parameters <a id="once-params"/>
+
+The `once()` method takes the following parameters:
+
+<Table id='OnceParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | Optional | The channel event to listen for. If omitted, the listener fires for any event. | <Table id='ChannelEvent'/> |
+| listener | Optional | A function invoked once with the next matching event. Omit to return a promise instead. | <Table id='channelEventCallback'/> |
+
+</Table>
+
+### Returns <a id="once-returns"/>
+
+The callback-based overloads return `void`.
+
+The promise-based overloads return `Promise<ChannelStateChange>`, fulfilled with a `ChannelStateChange` the next time a matching event occurs.
+
+## Remove a channel state listener <a id="off"/>
+
+<MethodSignature>{`channel.off(event: ChannelEvent, listener: channelEventCallback): void`}</MethodSignature>
+
+Remove the given listener for a specific channel event.
+
+<MethodSignature>{`channel.off(listener: channelEventCallback): void`}</MethodSignature>
+
+Remove the given listener from all channel events.
+
+<MethodSignature>{`channel.off(): void`}</MethodSignature>
+
+Remove all channel state listeners.
+
+<Code>
+```javascript
+channel.off();
+```
+</Code>
+
+### Parameters <a id="off-params"/>
+
+The `off()` method takes the following parameters:
+
+<Table id='OffParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | Optional | The channel event to stop listening to. If omitted, the listener is removed from all events. | <Table id='ChannelEvent'/> |
+| listener | Optional | The listener to remove. If omitted, all listeners (for the given event, or for the whole channel) are removed. | <Table id='channelEventCallback'/> |
+
+</Table>
+
+## Get registered listeners <a id="listeners"/>
+
+<MethodSignature>{`channel.listeners(eventName?: ChannelEvent): null | channelEventCallback[]`}</MethodSignature>
+
+Returns the channel state listeners registered for the specified `ChannelEvent`. If `eventName` is omitted, returns all registered listeners. Returns `null` if there are no matching listeners.
+
+### Parameters <a id="listeners-params"/>
+
+The `listeners()` method takes the following parameters:
+
+<Table id='ListenersParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| eventName | Optional | The channel event to filter listeners by. | <Table id='ChannelEvent'/> |
+
+</Table>
+
+### Returns <a id="listeners-returns"/>
+
+`null | channelEventCallback[]`
+
+Returns an array of the registered listener functions, or `null` if there are none.
+
+## Wait for a channel state <a id="when-state"/>
+
+<MethodSignature>{`channel.whenState(targetState: ChannelState): Promise<ChannelStateChange | null>`}</MethodSignature>
+
+If the channel is already in the given state, returns a promise which immediately resolves to `null`. Otherwise calls [`once()`](#once) to return a promise which resolves the next time the channel transitions to the given state.
+
+### Parameters <a id="when-state-params"/>
+
+The `whenState()` method takes the following parameters:
+
+<Table id='WhenStateParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| targetState | Required | The channel state to wait for. | <Table id='ChannelState'/> |
+
+</Table>
+
+### Returns <a id="when-state-returns"/>
+
+`Promise<ChannelStateChange | null>`
+
+Returns a promise. If the channel is already in the given state, resolves to `null`. Otherwise resolves with the `ChannelStateChange` when the channel next transitions to that state.
+
+## Get message history <a id="history"/>
+
+<MethodSignature>{`channel.history(params?: RealtimeHistoryParams): Promise<PaginatedResult<InboundMessage>>`}</MethodSignature>
+
+Retrieve a [`PaginatedResult`](/docs/pub-sub/api/javascript/realtime/realtime-client#PaginatedResult) of historical messages for this channel. If the channel is [configured to persist messages](/docs/storage-history/storage), message history is available for the persistence duration configured for your account. If not, messages are only retained in memory by the Ably service for two minutes.
+
+<Code>
+```javascript
+const page = await channel.history({ limit: 50, direction: 'backwards' });
+page.items.forEach((message) => console.log(message.data));
+```
+</Code>
+
+### Parameters <a id="history-params"/>
+
+The `history()` method takes the following parameters:
+
+<Table id='HistoryParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Optional | Query parameters to filter and control retrieval. | <Table id='RealtimeHistoryParams'/> |
+
+</Table>
+
+<Table id='RealtimeHistoryParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| start | Optional | The time from which messages are retrieved, as milliseconds since the Unix epoch. Default: the beginning of time. | Number |
+| end | Optional | The time until which messages are retrieved, as milliseconds since the Unix epoch. Default: current time. | Number |
+| direction | Optional | The order of returned messages. `'backwards'` orders from most recent to oldest; `'forwards'` orders from oldest to most recent. Default: `'backwards'`. | String |
+| limit | Optional | An upper limit on the number of messages returned. Default: 100. Maximum: 1000. | Number |
+| untilAttach | Optional | When `true`, retrieves [continuous history](/docs/storage-history/history#continuous-history) up until the point of the channel being attached. Requires `direction` to be `'backwards'` (the default). If the channel is not attached, or if `direction` is set to `'forwards'`, this option results in an error. Default: `false`. | Boolean |
+
+</Table>
+
+### Returns <a id="history-returns"/>
+
+`Promise<PaginatedResult<InboundMessage>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](/docs/pub-sub/api/javascript/realtime/realtime-client#PaginatedResult) containing an array of [`Message`](/docs/pub-sub/api/javascript/realtime/message) objects, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
+## Get all versions of a message <a id="get-message-versions"/>
+
+<MethodSignature>{`channel.getMessageVersions(serialOrMessage: string | Message, params?: RealtimeHistoryParams): Promise<PaginatedResult<Message>>`}</MethodSignature>
+
+Retrieve all historical [versions](/docs/messages/updates-deletes#versions) of a message identified by its serial, ordered by version. This includes the original message and all subsequent updates and delete operations. Requires the `history` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="get-message-versions-params"/>
+
+The `getMessageVersions()` method takes the following parameters:
+
+<Table id='GetMessageVersionsParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serialOrMessage | Required | Either the serial identifier string of the message whose versions are to be retrieved, or a [`Message`](/docs/pub-sub/api/javascript/realtime/message) object containing a populated `serial` field. | String or [Message](/docs/pub-sub/api/javascript/realtime/message) |
+| params | Optional | Query parameters to filter and control retrieval. | <Table id='RealtimeHistoryParams'/> |
+
+</Table>
+
+### Returns <a id="get-message-versions-returns"/>
+
+`Promise<PaginatedResult<Message>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](/docs/pub-sub/api/javascript/realtime/realtime-client#PaginatedResult) of message versions, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/realtime/realtime-client#errorinfo) object.
+
