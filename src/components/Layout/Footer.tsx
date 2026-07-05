@@ -172,6 +172,17 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
     let path = '#';
     const pathName = location.pathname.replace('docs/', '');
 
+    // Error-code pages are generated from the ably-common registry, not authored
+    // in this repo. Point edits at the source file there; hide the link for the
+    // generated aggregate index (no single source file).
+    const errorCodeMatch = pathName.match(/^\/platform\/errors\/codes\/(\d+)\/?$/);
+    if (errorCodeMatch) {
+      return `https://github.com/ably/ably-common/blob/main/errors/codes/${errorCodeMatch[1]}.md`;
+    }
+    if (pathName === '/platform/errors/codes' || pathName === '/platform/errors/codes/') {
+      return null;
+    }
+
     if (customGithubPaths[pathName]) {
       path = customGithubPaths[pathName];
     } else if (activePage.template === 'mdx') {
