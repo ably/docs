@@ -91,6 +91,37 @@ await clientRun.cancel();
 
 On the agent side, the symmetric primitive is [`AgentSession.createRun(invocation, runtime?)`](/docs/ai-transport/api/javascript/core/agent-session#create-run). The agent mints `runId` (for a fresh run) or reads the existing `runId` off the triggering input event (for a continuation), and stamps it on every event it publishes; the client reads it from `clientRun.runId` once `clientRun.started` resolves.
 
+## Steer a Run <a id="steer"/>
+
+While a Run is active, a client can send a follow-up message into it. This is called *steering* the Run. The agent picks up the new message on the next loop iteration; no new Run starts.
+
+The follow-up has the same shape as the input that started the Run. It joins the conversation tree under the same `RunNode` and every connected client sees it. Unlike a fresh `view.send`, it carries the active Run's `runId`, which tells the agent to add it to the existing Run.
+
+Steering messages don't change how a Run ends. The terminal `RunEndReason` reports how the Run finished. Each steering message also gets its own outcome, so the client can tell which ones the agent saw before the Run ended and which it didn't.
+
+<Code>
+```javascript
+const activeRun = await session.view.send(UIMessageCodec.createUserMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Plan a 3-day trip to Lisbon.' }],
+}));
+
+const { published, outcome } = activeRun.steer(UIMessageCodec.createUserMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Make it 5 days, and keep it under £800.' }],
+}));
+
+await published; // The steering message has been published to the channel.
+
+const { consumed } = await outcome; // Resolves when the Run ends.
+console.log('Reached the agent:', consumed);
+```
+</Code>
+
+See [interruption and steering](/docs/ai-transport/features/interruption-and-steering#steer) for how to call `steer()`, what `outcome` contains, and how to write the agent's loop.
+
 ## Run concurrent Runs <a id="concurrent"/>
 
 A session can hold multiple Runs in flight at the same time. They share the channel; they don't share state. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for the patterns that arise when more than one Run is `'active'`.
