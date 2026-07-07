@@ -189,6 +189,10 @@ export default {
           link: '/docs/ai-transport/going-to-production',
         },
         {
+          name: 'Roadmap',
+          link: '/docs/ai-transport/roadmap',
+        },
+        {
           name: 'Troubleshooting',
           link: '/docs/ai-transport/troubleshooting',
         },
