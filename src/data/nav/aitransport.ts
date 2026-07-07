@@ -27,6 +27,10 @@ export default {
               name: 'Vercel AI SDK',
               link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
             },
+            {
+              name: 'Temporal',
+              link: '/docs/ai-transport/getting-started/temporal',
+            },
           ],
         },
         {
@@ -74,6 +78,10 @@ export default {
           link: '/docs/ai-transport/concepts/runs',
         },
         {
+          name: 'Steps',
+          link: '/docs/ai-transport/concepts/steps',
+        },
+        {
           name: 'Invocations',
           link: '/docs/ai-transport/concepts/invocations',
         },
@@ -105,6 +113,10 @@ export default {
         {
           name: 'Vercel AI SDK Core',
           link: '/docs/ai-transport/frameworks/vercel-ai-sdk-core',
+        },
+        {
+          name: 'Temporal',
+          link: '/docs/ai-transport/frameworks/temporal',
         },
       ],
     },
@@ -150,6 +162,10 @@ export default {
         {
           name: 'Tool calling',
           link: '/docs/ai-transport/features/tool-calling',
+        },
+        {
+          name: 'Durable execution',
+          link: '/docs/ai-transport/features/durable-execution',
         },
         {
           name: 'Human-in-the-loop',
@@ -240,6 +256,15 @@ export default {
                 {
                   name: 'Run outcome',
                   link: '/docs/ai-transport/api/javascript/vercel/run-outcome',
+                },
+              ],
+            },
+            {
+              name: 'Temporal',
+              pages: [
+                {
+                  name: 'stepIdFor',
+                  link: '/docs/ai-transport/api/javascript/temporal',
                 },
               ],
             },

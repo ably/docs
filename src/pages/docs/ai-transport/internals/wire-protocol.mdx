@@ -19,9 +19,13 @@ Agent publishes run-start (run-id and invocation-id minted by createRun)
   name: ai-run-start
   extras.ai.transport: { run-id=R1, invocation-id=I1, run-client-id=user-abc, input-client-id=user-abc, input-codec-message-id=M1 }
 
+Agent publishes step-start
+  name: ai-step-start
+  extras.ai.transport: { run-id=R1, invocation-id=I1, step-id=SP1, step-client-id=agent-1 }
+
 Agent publishes assistant stream create
   name: ai-output
-  extras.ai.transport: { run-id=R1, invocation-id=I1, codec-message-id=M2, role=assistant, parent=M1, input-codec-message-id=M1 }
+  extras.ai.transport: { run-id=R1, invocation-id=I1, codec-message-id=M2, role=assistant, parent=M1, input-codec-message-id=M1, step-id=SP1, start-serial=<step-start serial> }
   extras.ai.codec:     { stream=true, stream-id=S1, status=streaming }
 
 Agent appends text deltas to M2
@@ -31,6 +35,10 @@ Agent appends text deltas to M2
 Agent closes the stream
   name: ai-output  (channel.appendMessage with status=complete)
   extras.ai.codec:     { stream-id=S1, status=complete }
+
+Agent publishes step-end
+  name: ai-step-end
+  extras.ai.transport: { run-id=R1, invocation-id=I1, step-id=SP1, step-reason=complete }
 
 Agent publishes run-end
   name: ai-run-end
@@ -62,6 +70,10 @@ Transport headers carry the routing and identity that the transport layer reads.
 | `fork-of` | The `codec-message-id` this message replaces. Present on edits. |
 | `msg-regenerate` | The `codec-message-id` of the assistant message this Run regenerates. Stamped on the regenerate input and echoed on `ai-run-start`. |
 | `run-reason` | The reason a Run ended. Present on `ai-run-end`. One of `complete`, `cancelled`, `error`. A suspended Run uses the `ai-run-suspend` event instead and is not terminal. |
+| `step-id` | Step correlation. Stable across retry attempts of the same [Step](/docs/ai-transport/concepts/steps): a retry publishes `ai-step-start` under the same `step-id` and the retry's output supersedes the failed attempt. Set on `ai-step-start`, `ai-step-end`, and every `ai-output` published inside the Step. |
+| `step-client-id` | The Ably `clientId` attributed to a Step. Sticky across Steps in a Run by default; a mid-run steer that incorporates a fresh input mid-run overrides it. |
+| `start-serial` | The Ably serial of the Step's own `ai-step-start`. Stamped on every `ai-output` inside the Step so the tree can elect the latest attempt when two attempts share a `step-id`. |
+| `step-reason` | The reason a Step ended. Present on `ai-step-end`. One of `complete`, `failed`. |
 | `error-code` | Numeric error code on `ai-run-end` with `run-reason: error`. |
 | `error-message` | Human-readable error message on `ai-run-end` with `run-reason: error`. |
 
@@ -89,6 +101,10 @@ The following header constants are exported from `@ably/ai-transport` as `HEADER
 | `HEADER_FORK_OF` | `'fork-of'` |
 | `HEADER_MSG_REGENERATE` | `'msg-regenerate'` |
 | `HEADER_RUN_REASON` | `'run-reason'` |
+| `HEADER_STEP_ID` | `'step-id'` |
+| `HEADER_STEP_CLIENT_ID` | `'step-client-id'` |
+| `HEADER_START_SERIAL` | `'start-serial'` |
+| `HEADER_STEP_REASON` | `'step-reason'` |
 | `HEADER_ERROR_CODE` | `'error-code'` |
 | `HEADER_ERROR_MESSAGE` | `'error-message'` |
 | `HEADER_STREAM` | `'stream'` |
@@ -99,7 +115,7 @@ The remaining wire headers (`invocation-id`, `event-id`, `input-codec-message-id
 
 ## Event names <a id="event-names"/>
 
-AI Transport uses seven Ably message names. The decoder dispatches on the Ably message `name` (and the `stream` header to distinguish discrete from streamed content), not on a separate codec-type header.
+AI Transport uses nine Ably message names. The decoder dispatches on the Ably message `name` (and the `stream` header to distinguish discrete from streamed content), not on a separate codec-type header.
 
 | Event | Direction | Description |
 | --- | --- | --- |
@@ -109,6 +125,8 @@ AI Transport uses seven Ably message names. The decoder dispatches on the Ably m
 | `ai-run-suspend` | Agent | Run lifecycle. The agent pauses the Run pending external input (a tool approval, a human-in-the-loop response). The Run is not terminal; a continuation Invocation resumes it. |
 | `ai-run-resume` | Agent | Run lifecycle. The agent publishes this when a continuation Invocation re-activates a Run (tool-result follow-up, suspended-Run resume), instead of a second `ai-run-start`. The agent detects the continuation by reading the existing `run-id` off the triggering input event's wire headers; a fresh input event omits `run-id` and produces `ai-run-start`. |
 | `ai-run-end` | Agent | Run lifecycle. Closes the Run terminally with one of `complete`, `cancelled`, `error`. |
+| `ai-step-start` | Agent | [Step](/docs/ai-transport/concepts/steps) lifecycle. Opens a bracket for one re-attemptable unit of output. A fresh `ai-step-start` under an existing `step-id` supersedes the prior attempt. |
+| `ai-step-end` | Agent | Step lifecycle. Closes the Step with `step-reason: complete` or `step-reason: failed`. A Step terminal is not a Run terminal; the Run stays active for the next Step or for its own `ai-run-end` / `ai-run-suspend`. |
 | `ai-cancel` | Client | Cancel intent, targeting a specific `run-id`. The agent matches against its registered Runs and fires the matching `AbortSignal`. |
 
 ## Content messages <a id="content-messages"/>
