@@ -160,8 +160,8 @@ export default {
           link: '/docs/ai-transport/features/branching',
         },
         {
-          name: 'Interruption',
-          link: '/docs/ai-transport/features/interruption',
+          name: 'Interruption and steering',
+          link: '/docs/ai-transport/features/interruption-and-steering',
         },
         {
           name: 'Concurrent turns',
