@@ -28,6 +28,8 @@ A Run has four invariants that the SDK enforces on every channel:
 
 Within those brackets, the Run owns a window of channel messages: the user input that triggered it, the agent's streamed outputs, any tool-call or tool-result messages. The conversation [Tree](/docs/ai-transport/concepts/conversation-tree) groups those messages into a `RunNode`; the [View](/docs/ai-transport/api/javascript/core/client-session#properties) surfaces projection-free [`RunInfo`](/docs/ai-transport/api/javascript/core/client-session#properties) snapshots for the UI.
 
+Inside those brackets, the Run is composed of one or more [Steps](/docs/ai-transport/concepts/steps). Each Step is a re-attemptable unit of work with its own `ai-step-start` / `ai-step-end` bracket. A retry of a Step under the same `stepId` supersedes the failed attempt on the channel rather than appending, which is what makes a Run safe to run inside a durable workflow engine.
+
 A Run is triggered by an [`Invocation`](/docs/ai-transport/concepts/invocations): the trigger the client posts to the agent endpoint that says "create or continue a Run with these identifiers." The Invocation is a separate concept because the same Run can be re-triggered (a tool result, a regenerate request); each trigger is one Invocation.
 
 ## What the Run layer requires <a id="requires"/>
@@ -37,7 +39,7 @@ A Run is triggered by an [`Invocation`](/docs/ai-transport/concepts/invocations)
 | Stable identity | The same `runId` must be readable to every participant: the client that started the Run, every other connected client, the agent process. Without it, cancellation has no target and observation has no scope. |
 | Lifecycle brackets | `ai-run-start`, `ai-run-suspend`, `ai-run-resume`, and `ai-run-end` mark the Run on the wire. A view filtering "active Runs" reads `RunInfo.status === 'active'`; `'suspended'` and the terminal `RunEndReason` values cover the other states. |
 | Cancel routing | A cancel message names a `runId`. The agent's [`Run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run) fires only for matching cancels, so unrelated Runs on the same session continue. |
-| Durable execution | An agent can restart its process mid-Run (serverless cold start, container redeploy). The Run's identity plus the channel's persistence let the new agent rehydrate by draining its leaf-pinned [`run.view`](/docs/ai-transport/api/javascript/core/agent-session#run) from channel history and continue without the client noticing. |
+| Durable execution | An agent can restart its process mid-Run (serverless cold start, container redeploy). The new process rehydrates by calling [`session.adoptRun`](/docs/ai-transport/api/javascript/core/agent-session#adopt-run), publishing further output as a [Step](/docs/ai-transport/concepts/steps) with a stable `stepId` so a retry supersedes the failed attempt. See [Durable execution](/docs/ai-transport/features/durable-execution). |
 | Multiple participants | Several clients may observe the same Run (multi-device, support handover). They all see the lifecycle events; they all hold the same `RunInfo`. |
 
 ## Understand the Run lifecycle <a id="lifecycle"/>
@@ -96,7 +98,9 @@ A session can hold multiple Runs in flight at the same time. They share the chan
 ## Read next <a id="next"/>
 
 - [Sessions](/docs/ai-transport/concepts/sessions): the shared conversation state Runs live within.
+- [Steps](/docs/ai-transport/concepts/steps): the re-attemptable unit of work within a Run.
 - [Invocations](/docs/ai-transport/concepts/invocations): the trigger that creates or continues a Run.
 - [Connections](/docs/ai-transport/concepts/connections): how `ClientSession` and `AgentSession` connect to a session and publish Runs.
 - [Cancellation](/docs/ai-transport/features/cancellation): control who cancels Runs and how cancel signals are routed.
+- [Durable execution](/docs/ai-transport/features/durable-execution): run a Run across process boundaries and workflow-engine retries.
 - [Concurrent turns](/docs/ai-transport/features/concurrent-turns): multiple Runs in flight on the same session.
