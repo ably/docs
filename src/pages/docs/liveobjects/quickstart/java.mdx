@@ -86,6 +86,7 @@ import io.ably.lib.liveobjects.value.LiveCounter;
 import io.ably.lib.liveobjects.value.LiveMap;
 import io.ably.lib.liveobjects.value.LiveMapValue;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 ```
 
 ## Instantiate a client <a id="step-2"/>
@@ -126,24 +127,35 @@ Channel channel = realtime.channels.get("test-channel", opts);
 
 The [`channel.object`](/docs/api/realtime-sdk/channels#object) field gives access to the LiveObjects API for a channel.
 
-Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object), which provides a path-based API for accessing and manipulating the object hierarchy. The method returns a `CompletableFuture` that completes once the LiveObjects state is synchronized with the Ably system:
+Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object), which provides a path-based API for accessing and manipulating the object hierarchy.
+
+Every LiveObjects operation is asynchronous: `channel.object.get()` returns a `CompletableFuture<LiveMapPathObject>` that completes once the LiveObjects state is synchronized with the Ably system, and every read and mutation returns a `CompletableFuture` too. The **recommended** pattern is to compose these futures rather than block on them — hold the future returned by `get()` and chain each step onto it:
 
 <Code>
 ```java
-// Get the root PathObject for the channel's objects.
-// The future completes once the channel object data is synchronized.
-LiveMapPathObject myObject = channel.object.get().join();
+// Recommended: keep the future reference explicit and compose it
+CompletableFuture<LiveMapPathObject> objectFuture = channel.object.get();
+
+// Get the object, then create your first object - without blocking.
+// thenCompose sequences dependent operations (each returns its own future);
+// finish with thenRun/exceptionally.
+objectFuture
+    .thenCompose(myObject -> myObject.set("visits", LiveMapValue.of(LiveCounter.create(0))))
+    .thenRun(() -> System.out.println("Channel object ready and counter created"))
+    .exceptionally(err -> { System.err.println("Failed to set up objects: " + err); return null; });
 ```
 </Code>
 
-If you prefer not to block the current thread, use the future's asynchronous combinators instead:
+<Aside data-type='important'>
+`.join()` blocks the calling thread until the future completes. It is fine for scripts, tests, and learning, but **must not** be called on a UI thread — in particular Android's main thread, where it causes an [ANR](https://developer.android.com/topic/performance/vitals/anr) — or inside an Ably event listener callback, where it can deadlock. In production code, compose the future with `thenApply`/`thenCompose`/`thenAccept`/`exceptionally` as shown above.
+</Aside>
+
+The remaining steps in this guide call `.join()` to keep each example short and focused on the LiveObjects API — it blocks until the operation completes and returns the result directly:
 
 <Code>
 ```java
-// Non-blocking alternative
-channel.object.get()
-    .thenAccept(obj -> System.out.println("Channel object ready: " + obj.compactJson()))
-    .exceptionally(err -> { System.err.println("Failed to get channel object: " + err); return null; });
+// For brevity, the rest of this guide blocks with join()
+LiveMapPathObject myObject = channel.object.get().join();
 ```
 </Code>
 
