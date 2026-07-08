@@ -1,0 +1,246 @@
+---
+title: iOS Live Activities
+meta_description: "Start, update, and end iOS Live Activities with Ably using APNs broadcast channels, without managing per-activity push tokens."
+meta_keywords: "Live Activity, Live Activities, ActivityKit, push-to-start, APNs broadcast channel, Dynamic Island, iOS push notifications"
+---
+
+Live Activities are realtime widgets that appear on your iOS Lock Screen. They are continuously updated so that you can display an app's live state as changes happen. Examples include showing sports scoreboard updates, delivery trackers, and the progress of long-running tasks.
+
+Live Activities are updated through APNs rather than through an app itself. Rather than having to collect and refresh a push token for every activity on every device, Ably holds your APNs credentials and manages [APNs broadcast channels](https://developer.apple.com/documentation/activitykit/starting-and-updating-live-activities-with-activitykit-push-notifications) on your behalf.
+
+Your server creates a broadcast channel once, then starts, updates, and ends Live Activities with three lifecycle calls; each state change is a single publish that APNs fans out to every activity subscribed to on the broadcast channel.
+
+Devices register themselves using the same [push activation](/docs/push/configure/device?lang=swift#activate) flow used for ordinary push notifications.
+
+<Aside data-type='experimental'>
+Live Activities are currently Experimental. The APIs may change before being made generally available.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+* An Ably app with [APNs configured](/docs/push/configure/device?lang=swift#apns): upload your APNs .p8 authentication key so Ably can push on your behalf.
+* An API key or token with the [`push-admin` capability](/docs/auth/capabilities) for the server-side calls on this page.
+* An iOS app with the `NSSupportsLiveActivities` Info.plist key, a Live Activity widget extension, and an `ActivityAttributes` model.
+* Devices running iOS 18 or later. Live Activities themselves are available from iOS 16.1 and push-to-start from iOS 17.2, but the broadcast channels that Ably uses to deliver updates require iOS 18.
+
+## Register the device <a id="register-device"/>
+
+Activate the device with Ably using the standard [push activation](/docs/push/configure/device?lang=swift#activate) flow, then add the Live Activity push-to-start token to the registration. iOS delivers push-to-start tokens through ActivityKit's `pushToStartTokenUpdates` stream:
+
+<Code>
+```swift
+let options = ARTClientOptions()
+options.authUrl = URL(string: "https://example.com/api/auth")
+options.pushRegistererDelegate = self
+let rest = ARTRest(options: options)
+
+// Standard activation: registers the device and its APNs device token.
+rest.push.activate()
+```
+</Code>
+
+Forward the APNs device token from your `UIApplicationDelegate` as usual:
+
+<Code>
+```swift
+func application(_ application: UIApplication,
+                 didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    ARTPush.didRegisterForRemoteNotifications(withDeviceToken: deviceToken, rest: rest)
+}
+```
+</Code>
+
+Once activation completes (`didActivateAblyPush`), register the push-to-start token. The token is raw `Data`, exactly as delivered by ActivityKit; completion is reported through the `didUpdateAblyPush` delegate callback:
+
+<Code>
+```swift
+Task {
+    for await token in Activity<GameAttributes>.pushToStartTokenUpdates {
+        rest.push.registerPushToStartToken(token)
+    }
+}
+```
+</Code>
+
+Finally, make the device targetable for push-to-start. Either subscribe it to an Ably channel, which is only used to select which devices receive push-to-start and is unrelated to the APNs broadcast channel that carries updates:
+
+<Code>
+```swift
+rest.channels.get("games:lal-bos").push.subscribeDevice { error in
+    // Subscribed: the server can now target this channel
+}
+```
+</Code>
+
+or use the device's Ably `deviceId` (available as `rest.device.id` after activation) to target it directly.
+
+## Create a broadcast channel <a id="create-broadcast"/>
+
+On the server, create the APNs broadcast channel through Ably's push admin API:
+
+<Code>
+```javascript
+const rest = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+const { id, apnsChannelId } = await rest.push.admin.createApnsBroadcast({
+  messageStoragePolicy: 1,
+});
+```
+</Code>
+
+Keep both identifiers: `id` drives every later server call, and `apnsChannelId` is what devices subscribe to. `messageStoragePolicy: 1` tells APNs to cache the most recent broadcast for late joiners.
+
+## Start a Live Activity <a id="start"/>
+
+There are two ways to start a Live Activity. Use [push-to-start](#push-to-start) to start it remotely from your server on devices that have registered a push-to-start token, for example when a game kicks off or an order is dispatched. Alternatively, [start it locally](#start-locally) in the app when the activity begins with a user action, such as placing an order. In both cases the activity subscribes to the broadcast channel, so subsequent [updates](#update) are delivered the same way regardless of how it was started.
+
+### Push-to-start from the server <a id="push-to-start"/>
+
+Start a Live Activity on every device subscribed to the given Ably channels, or on a specific device by `deviceId`. Ably uses each matched device's registered push-to-start token, and `input-push-channel` subscribes the new activity to the broadcast channel:
+
+<Code>
+```javascript
+await rest.push.admin.liveActivity.start({
+  recipient: { channels: ['games:lal-bos'] }, // or { deviceId: '...' }
+  apnsBroadcast: id,
+  apns: {
+    aps: {
+      timestamp: Math.floor(Date.now() / 1000),
+      event: 'start',
+      'input-push-channel': apnsChannelId,
+      'content-state': {
+        homeScore: 0,
+        awayScore: 0,
+        gameStatus: 'scheduled',
+        period: 'Q1',
+        clock: '12:00',
+        lastPlay: 'Tip-off soon',
+      },
+      'attributes-type': 'GameAttributes',
+      attributes: { homeTeam: 'Lakers', awayTeam: 'Celtics' },
+      alert: {
+        title: 'Lakers vs Celtics',
+        body: 'Game starting!',
+      },
+    },
+  },
+  headers: { 'apns-priority': '10' },
+});
+```
+</Code>
+
+<Aside data-type='note'>
+  Two wire-format details matter when building payloads:
+
+  * The `attributes-type` field must exactly match the name of your Swift `ActivityAttributes` struct, and the `content-state` keys must match its `ContentState` properties.
+  * `Date` properties in attributes or content state travel as Unix epoch **seconds**, which is how ActivityKit decodes JSON dates by default.
+</Aside>
+
+### Start locally in the app <a id="start-locally"/>
+
+Alternatively, the app starts the activity itself and subscribes it to the broadcast channel with `pushType: .channel`:
+
+<Code>
+```swift
+let activity = try Activity.request(
+    attributes: GameAttributes(homeTeam: "Lakers", awayTeam: "Celtics"),
+    content: ActivityContent(state: initialState, staleDate: nil),
+    pushType: .channel(apnsChannelId)
+)
+```
+</Code>
+
+## Update a Live Activity  <a id="update"/>
+
+Each update is one broadcast against the Ably broadcast `id`; APNs delivers it to every subscribed activity:
+
+<Code>
+```javascript
+await rest.push.admin.liveActivity.update({
+  apnsBroadcast: id,
+  apns: {
+    aps: {
+      timestamp: Math.floor(Date.now() / 1000),
+      event: 'update',
+      'content-state': {
+        homeScore: 102,
+        awayScore: 98,
+        gameStatus: 'live',
+        period: 'Q4',
+        clock: '2:14',
+        lastPlay: 'Curry 3PT (25 PTS)',
+      },
+    },
+  },
+  headers: {
+    'apns-priority': '10',
+    'apns-expiration': String(Math.floor(Date.now() / 1000) + 3600),
+  },
+});
+```
+</Code>
+
+## End a Live Activity <a id="end"/>
+
+Ending works the same way with `event: 'end'`. An optional `dismissal-date` controls when iOS removes the activity from the lock screen:
+
+<Code>
+```javascript
+await rest.push.admin.liveActivity.end({
+  apnsBroadcast: id,
+  apns: {
+    aps: {
+      timestamp: Math.floor(Date.now() / 1000),
+      event: 'end',
+      'content-state': {
+        homeScore: 112,
+        awayScore: 104,
+        gameStatus: 'finished',
+        period: 'Final',
+        clock: '',
+        lastPlay: 'Final',
+      },
+      'dismissal-date': Math.floor(Date.now() / 1000) + 3600,
+    },
+  },
+  headers: { 'apns-priority': '10' },
+});
+```
+</Code>
+
+The underlying REST endpoint is `POST /push/apnsBroadcastChannels/{id}/end`.
+
+## How it works <a id="how-it-works"/>
+
+A Live Activity integration has three moving parts:
+
+1. Create a broadcast channel: your server asks Ably to create an APNs broadcast channel. Ably returns a pair of identifiers: an opaque broadcast `id`, which your server uses in every subsequent start, update, and end call, and an `apnsChannelId`, which iOS devices use to subscribe an activity to the channel.
+
+2. Start the Live Activity, either:
+* From the server with push-to-start: devices that have registered a Live Activity push-to-start token with Ably can have activities started remotely. The start payload includes the `apnsChannelId` (as `input-push-channel`), so the started activity is subscribed to the broadcast channel immediately.
+* Locally in the app: the app starts the activity itself with `pushType: .channel(apnsChannelId)`, subscribing it to the broadcast channel.
+
+3. Update and end by broadcast: each state change is a single publish against the broadcast `id`. APNs fans it out to every subscribed activity on every device, with no per-activity tokens involved. Creating the channel with `messageStoragePolicy: 1` caches the most recent update so late-joining activities receive the current state as soon as they subscribe.
+
+
+## Payload reference <a id="payload"/>
+
+Ably passes the `apns` payload to APNs as-is. The following `aps` fields are used by Live Activities:
+
+| Field | Used in | Description |
+| --- | --- | --- |
+| `timestamp` | all | Unix epoch seconds; APNs discards updates older than the activity's current state. |
+| `event` | all | `start`, `update`, or `end`. |
+| `content-state` | all | The activity's dynamic state; keys must match the Swift `ContentState` properties. |
+| `attributes-type` | start | The exact name of the Swift `ActivityAttributes` struct. |
+| `attributes` | start | The activity's fixed attributes; `Date` values as Unix epoch seconds. |
+| `input-push-channel` | start | The `apnsChannelId` the started activity subscribes to for broadcast updates. |
+| `alert` | start, update | The user-visible notification shown when the activity starts, or when an update is significant enough to alert the user. |
+| `dismissal-date` | end | Unix epoch seconds after which iOS removes the ended activity from the lock screen. |
+
+Supported request `headers`:
+
+| Header | Description |
+| --- | --- |
+| `apns-priority` | `10` for immediate delivery, `5` for opportunistic delivery. |
+| `apns-expiration` | Unix epoch seconds until which APNs stores the broadcast for delivery. |
