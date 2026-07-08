@@ -63,11 +63,9 @@ try await map.remove(key: "username")
 ```
 
 ```java
-// Set a value for a key
-map.set("username", LiveMapValue.of("alice"));
-
-// Remove a key
-map.remove("username");
+// myObject obtained from channel.object.get()
+myObject.get("user").asLiveMap().set("username", LiveMapValue.of("alice")).join();
+myObject.get("user").asLiveMap().remove("status").join();
 ```
 </Code>
 
@@ -99,11 +97,8 @@ try await counter.decrement(amount: 2)
 ```
 
 ```java
-// Increment counter by 5
-counter.increment(5);
-
-// Decrement counter by 2
-counter.decrement(2);
+myObject.get("visits").asLiveCounter().increment(5).join();
+myObject.get("score").asLiveCounter().decrement(2).join();
 ```
 </Code>
 
@@ -111,7 +106,7 @@ counter.decrement(2);
 
 Create operations are used to instantiate new objects of a given type.
 
-<If lang="javascript">
+<If lang="javascript,java">
 Use `LiveMap.create()` and `LiveCounter.create()` to create new objects. These methods create special value types that can be assigned directly to paths:
 
 <Code>
@@ -135,6 +130,24 @@ await myObject.set('profile', LiveMap.create({
   })
 }));
 ```
+
+```java
+// Create and assign a map with initial values
+myObject.set("user", LiveMapValue.of(LiveMap.create(Map.of(
+    "username", LiveMapValue.of("alice"),
+    "status", LiveMapValue.of("online"))))).join();
+
+// Create and assign a counter with initial value
+myObject.set("score", LiveMapValue.of(LiveCounter.create(100))).join();
+
+// Create nested structures
+myObject.set("profile", LiveMapValue.of(LiveMap.create(Map.of(
+    "name", LiveMapValue.of("Alice"),
+    "score", LiveMapValue.of(LiveCounter.create(0)),
+    "settings", LiveMapValue.of(LiveMap.create(Map.of(
+        "theme", LiveMapValue.of("dark"),
+        "notifications", LiveMapValue.of(true)))))))).join();
+```
 </Code>
 
 When a create operation is processed, an [object ID](/docs/liveobjects/concepts/objects#object-ids) is automatically generated for the new object instance.
@@ -144,7 +157,7 @@ Objects created with `LiveMap.create()` and `LiveCounter.create()` are automatic
 </Aside>
 </If>
 
-<If lang="swift,java">
+<If lang="swift">
 A create operation can optionally specify an initial value for the object.
 
 <Code>
@@ -158,24 +171,12 @@ let userMap = try await channel.objects.createMap(entries: [
 // Create a counter with initial value
 let scoreCounter = try await channel.objects.createCounter(count: 100)
 ```
-
-```java
-// Create a map with initial values
-Map<String, LiveMapValue> entries = Map.of(
-    "username", LiveMapValue.of("alice"),
-    "status", LiveMapValue.of("online")
-);
-LiveMap userMap = channel.getObjects().createMap(entries);
-
-// Create a counter with initial value
-LiveCounter scoreCounter = channel.getObjects().createCounter(100);
-```
 </Code>
 
 When a create operation is processed, an [object ID](/docs/liveobjects/concepts/objects#object-ids) for the new object instance is automatically generated for the object.
 
 <Aside data-type='important'>
-Newly created objects are not automatically [reachable](/docs/liveobjects/concepts/objects#reachability) from the <If lang="javascript">channel object</If><If lang="swift,java">root object</If>. You must explicitly add them to the object tree to prevent garbage collection.
+Newly created objects are not automatically [reachable](/docs/liveobjects/concepts/objects#reachability) from the <If lang="javascript">channel object</If><If lang="swift">root object</If>. You must explicitly add them to the object tree to prevent garbage collection.
 </Aside>
 </If>
 
@@ -183,7 +184,7 @@ Newly created objects are not automatically [reachable](/docs/liveobjects/concep
 
 Every operation is expressed relative to a specific object instance, identified by its [object ID](/docs/liveobjects/concepts/objects#object-ids), which determines which object the operation is applied to.
 
-<If lang="javascript">
+<If lang="javascript,java">
 When using a `PathObject`, the specific object instance at the given path is evaluated at the time a method is called that updates the object. The client library will then publish an operation targeting the resolved object.
 </If>
 
@@ -208,12 +209,20 @@ try await userMap.set(key: "username", "alice")
 ```
 
 ```java
-// The published operation targets the object ID of the `userMap` object instance
-userMap.set("username", LiveMapValue.of("alice"));
+// The operation targets the object ID of whatever is at 'user' right now
+myObject.get("user").asLiveMap().set("username", LiveMapValue.of("alice")).join();
+
+// Inspect the specific instance and its ID
+Instance userInstance = myObject.get("user").instance();
+if (userInstance != null) {
+    LiveMapInstance userMap = userInstance.asLiveMap();
+    System.out.println("Object ID: " + userMap.getId());
+    userMap.set("username", LiveMapValue.of("alice")).join();
+}
 ```
 </Code>
 
-<If lang="swift,java">
+<If lang="swift">
 Therefore it is important that you obtain an up-to-date object instance before performing operations on an object. For example, you can [subscribe](/docs/liveobjects/map#subscribe-data) to a `LiveMap` instance to ensure you always have an up-to-date reference to any child objects in the map:
 
 <Code>
@@ -252,24 +261,6 @@ struct MyView: View {
     }
 }
 ```
-
-```java
-LiveMap root = channel.getObjects().getRoot();
-
-// Keep a reference to the counter object
-LiveCounter myCounter = root.get("myCounter").asLiveCounter();
-
-// Subscribe to root changes to keep counter reference up-to-date
-root.subscribe((mapUpdate) -> {
-    if (mapUpdate.getUpdate().containsKey("myCounter")) {
-        myCounter = root.get("myCounter").asLiveCounter();
-    }
-});
-
-// Before incrementing, ensure we have an up-to-date object reference if
-// the counter instance at the 'myCounter' key in the root map changes
-myCounter.increment(1);
-```
 </Code>
 </If>
 
@@ -300,6 +291,10 @@ curl -X POST https://main.realtime.ably.net/channels/my-channel/objects \
 * Operations in a batch are sent as a single message
 * No operations from other clients can be interleaved within a batch
 
+</If>
+
+<If lang="javascript,java">
+
 ## Object message properties <a id="properties"/>
 
 Each operation is carried by an `ObjectMessage`, which is surfaced in [subscriptions](/docs/liveobjects/concepts/path-object#subscribe) and provides metadata about the operation and who performed it.
@@ -307,6 +302,10 @@ Each operation is carried by an `ObjectMessage`, which is surfaced in [subscript
 ### ObjectMessage <a id="object-message"/>
 
 The following are the properties of an `ObjectMessage`:
+
+<If lang="java">
+In the Java SDK these properties are exposed as getters on `ObjectMessage` (`getId()`, `getClientId()`, `getConnectionId()`, `getTimestamp()`, `getChannel()`, `getOperation()`, `getSerial()`, `getSerialTimestamp()`, `getSiteCode()`, `getExtras()`).
+</If>
 
 | Property | Description |
 |----------|-------------|
@@ -327,9 +326,9 @@ The `operation` field of an `ObjectMessage` contains an `ObjectOperation` with t
 
 | Property | Description |
 |----------|-------------|
-| **action** | The operation action. One of: `'map.create'`, `'map.set'`, `'map.remove'`, `'counter.create'`, `'counter.inc'`, or `'object.delete'` |
+| **action** | The operation action. <If lang="javascript">One of: `'map.create'`, `'map.set'`, `'map.remove'`, `'counter.create'`, `'counter.inc'`, or `'object.delete'`</If><If lang="java">An `ObjectOperationAction` enum value: `MAP_CREATE`, `MAP_SET`, `MAP_REMOVE`, `MAP_CLEAR`, `COUNTER_CREATE`, `COUNTER_INC`, `OBJECT_DELETE`, or `UNKNOWN` (future-compatibility fallback)</If> |
 | **objectId** | The ID of the object the operation was applied to |
-| **mapCreate** | Present for `'map.create'` operations. Defines the initial value of the map object with `semantics` (conflict-resolution strategy, one of: `'lww'`) and `entries` (initial key-value pairs, where each value is an [`ObjectsMapEntry`](#objects-map-entry)) |
+| **mapCreate** | Present for <If lang="javascript">`'map.create'`</If><If lang="java">`MAP_CREATE`</If> operations. Defines the initial value of the map object with `semantics` (conflict-resolution strategy, <If lang="javascript">one of: `'lww'`</If><If lang="java">an `ObjectsMapSemantics` enum value: `LWW`, or `UNKNOWN` as a future-compatibility fallback</If>) and `entries` (initial key-value pairs, where each value is an [`ObjectsMapEntry`](#objects-map-entry)) |
 | **mapSet** | Present for `'map.set'` operations. Contains `key` (the key that was set) and `value` (an [`ObjectData`](#object-data) representing the value assigned to the key) |
 | **mapRemove** | Present for `'map.remove'` operations. Contains `key` (the key that was removed) |
 | **counterCreate** | Present for `'counter.create'` operations. Defines the initial value of the counter object with `count` (initial counter value) |
@@ -355,7 +354,7 @@ An `ObjectData` object represents a value assigned to a map key. It is used as t
 |----------|-------------|
 | **objectId** | A reference to another object (such as a `LiveMap` or `LiveCounter`) by its object ID |
 | **boolean** | A boolean leaf value |
-| **bytes** | A binary leaf value (`ArrayBuffer` in browser environments, or `Buffer` in Node.js) |
+| **bytes** | A binary leaf value (<If lang="javascript">`ArrayBuffer` in browser environments, or `Buffer` in Node.js</If><If lang="java">`byte[]`</If>) |
 | **number** | A numeric leaf value |
 | **string** | A string leaf value |
 | **json** | A parsed JSON object or array leaf value |

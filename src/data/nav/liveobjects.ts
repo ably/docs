@@ -81,6 +81,7 @@ export default {
         {
           name: 'Batch operations',
           link: '/docs/liveobjects/batch',
+          languages: ['javascript', 'swift', 'java'],
         },
         {
           name: 'Lifecycle events',
@@ -97,6 +98,7 @@ export default {
         {
           name: 'Object storage',
           link: '/docs/liveobjects/storage',
+          languages: ['javascript', 'swift', 'java'],
         },
         {
           name: 'Using the REST SDK',
@@ -128,7 +130,8 @@ export default {
           external: true,
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-java/main/javadoc/io/ably/lib/objects/RealtimeObjects.html',
+          // TODO: verify this URL resolves once the path-based API javadoc is published
+          link: 'https://sdk.ably.com/builds/ably/ably-java/main/javadoc/io/ably/lib/liveobjects/RealtimeObject.html',
           name: 'Java SDK',
           external: true,
         },

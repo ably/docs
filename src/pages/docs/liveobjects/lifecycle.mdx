@@ -25,7 +25,7 @@ meta_description: "Understand lifecycle events for Objects, LiveMap and LiveCoun
 
 ## Handle synchronization events <a id="synchronization"/>
 
-The <If lang="javascript">[channel.object](/docs/liveobjects/concepts/objects#channel-object)</If><If lang="swift,java">[channel.objects](/docs/liveobjects/concepts/objects#root-object)</If> instance emits synchronization events that indicate when the local state on the client is being synchronized with the Ably service. These events can be useful for displaying loading indicators, preventing user interactions during synchronization, or triggering application logic when data is first loaded.
+The <If lang="javascript,java">[channel.object](/docs/liveobjects/concepts/objects#channel-object)</If><If lang="swift">[channel.objects](/docs/liveobjects/concepts/objects#root-object)</If> instance emits synchronization events that indicate when the local state on the client is being synchronized with the Ably service. These events can be useful for displaying loading indicators, preventing user interactions during synchronization, or triggering application logic when data is first loaded.
 
 | Event | Description |
 | ----- | ----------- |
@@ -58,17 +58,21 @@ channel.objects.on(event: .synced) { _ in
 ```
 
 ```java
-channel.getObjects().on(ObjectsStateEvent.SYNCING, (stateEvent) -> {
+channel.object.on(ObjectStateEvent.SYNCING, stateEvent -> {
     System.out.println("Objects are syncing...");
     // Show a loading indicator and disable edits in the application
 });
 
-channel.getObjects().on(ObjectsStateEvent.SYNCED, (stateEvent) -> {
+channel.object.on(ObjectStateEvent.SYNCED, stateEvent -> {
     System.out.println("Objects have been synced.");
     // Hide loading indicator
 });
 ```
 </Code>
+
+<If lang="java">
+`on(...)` returns a `Subscription`; use `channel.object.off(listener)` or `channel.object.offAll()` to deregister listeners. (`ObjectStateEvent` lives in `io.ably.lib.liveobjects.state`.)
+</If>
 
 <Aside data-type='important'>
 LiveObjects synchronization events do not replace [connection](/docs/connect/states) or [channel](/docs/channels/states) states. You should still monitor these states and handle [connection](/docs/connect/states#handling-failures) and [channel](/docs/channels/states#failure) failures to ensure your application behaves as expected. LiveObjects synchronization events specifically inform you about the progress of LiveObjects data synchronization and should be used alongside other state management mechanisms.
@@ -76,7 +80,7 @@ LiveObjects synchronization events do not replace [connection](/docs/connect/sta
 
 ## Handle object lifecycle events <a id="objects-lifecycle"/>
 
-<If lang="javascript">
+<If lang="javascript,java">
 
 ### Detect object deletion <a id="objects-deleted"/>
 
@@ -100,6 +104,24 @@ if (counterInstance) {
   });
 }
 ```
+
+```java
+// myObject obtained from channel.object.get()
+Instance instance = myObject.get("visits").instance();
+if (instance != null) {
+    LiveCounterInstance counter = instance.asLiveCounter();
+    counter.subscribe(event -> {
+        ObjectMessage message = event.getMessage();
+        if (message != null && message.getOperation().getAction() == ObjectOperationAction.OBJECT_DELETE) {
+            System.out.println("Counter instance was deleted");
+            // The client automatically unsubscribes the subscription after this notification
+            // Remove references to this object from your application
+        } else {
+            System.out.println("Counter updated: " + counter.value());
+        }
+    });
+}
+```
 </Code>
 
 In most cases, you don't need to explicitly handle object deletion. Your application should have already reacted to object removal when a corresponding [`LiveMap.remove()`](/docs/liveobjects/map#remove) operation was received. However, if your application separately stores references to object instances and does not properly clear them when objects are orphaned, any later interactions with those objects after they are deleted will result in an error. In such cases, handling deletion events via Instance subscriptions helps ensure that those references are cleaned up and runtime errors are avoided.
@@ -109,7 +131,7 @@ The [channel object](/docs/liveobjects/concepts/objects#channel-object) cannot b
 </Aside>
 </If>
 
-<If lang="swift,java">
+<If lang="swift">
 
 Lifecycle events enable you to monitor changes in an object's lifecycle.
 
@@ -134,14 +156,6 @@ counter.on(event: .deleted) { _ in
     // Remove references to this object from your application
     // as it can no longer be interacted with
 }
-```
-
-```java
-ObjectsSubscription subscription = counter.on(ObjectLifecycleEvent.DELETED, (lifecycleEvent) -> {
-    System.out.println("LiveCounter has been deleted.");
-    // Remove references to this object from your application
-    // as it can no longer be interacted with
-});
 ```
 </Code>
 
