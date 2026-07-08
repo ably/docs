@@ -222,6 +222,23 @@ export const data = {
         },
       ],
     },
+    aitransport: {
+      text: "Choose an SDK to start building realtime AI features with the AI Transport product. Use the Core SDK for direct access to sessions, runs, and the conversation tree, or the Vercel AI SDK integration to add durable streaming to an existing Vercel AI SDK app. Click 'Get started' for setup instructions.",
+      cards: [
+        {
+          title: 'Core SDK',
+          text: 'Ably AI Transport SDK for JavaScript.',
+          image: { src: js, isWide: false },
+          setupLink: 'ai-transport/getting-started/core-sdk',
+        },
+        {
+          title: 'Vercel AI SDK',
+          text: 'AI Transport integration for the Vercel AI SDK.',
+          image: { src: js, isWide: false },
+          setupLink: 'ai-transport/getting-started/vercel-ai-sdk',
+        },
+      ],
+    },
     liveobjects: {
       text: "LiveObjects is a plugin to the existing Pub/Sub SDKs. Choose from the following platforms to synchronize your shared state across clients at scale. Click 'Setup' for instructions on getting started, or view its source repository for a full list of the platforms it supports.",
       cards: [

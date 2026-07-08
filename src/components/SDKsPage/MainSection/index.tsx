@@ -9,6 +9,7 @@ export enum Tab {
   CHANNELS = 'channels',
   SPACES = 'spaces',
   CHAT = 'chat',
+  AITRANSPORT = 'aitransport',
   LIVEOBJECTS = 'liveobjects',
   LIVESYNC = 'livesync',
 }
@@ -40,6 +41,15 @@ const MainSection = ({ tab }: { tab: Tab }) => {
             )}
           >
             Chat
+          </Link>
+          <Link
+            to="/docs/sdks?tab=aitransport"
+            className={cn(
+              'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
+              activeTab === Tab.AITRANSPORT && activeTabClasses,
+            )}
+          >
+            AI Transport
           </Link>
           <Link
             to="/docs/sdks?tab=liveobjects"
