@@ -20,8 +20,8 @@ const APIKeyIndicator = ({ tooltip }: ApiKeyIndicatorProps) => {
       {tooltipHover ? (
         <aside
           className="w-60 max-w-60 absolute -mt-[8.75rem] box-border
-          whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
-          text-cool-black font-sans p-4 text-center text-p3 leading-5 cursor-default"
+          whitespace-pre-wrap bg-white dark:bg-neutral-1200 shadow-tooltip rounded border border-light-grey dark:border-neutral-1000
+          text-cool-black dark:text-neutral-000 font-sans p-4 text-center text-p3 leading-5 cursor-default"
         >
           {tooltip}
         </aside>
