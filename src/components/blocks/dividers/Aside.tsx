@@ -34,7 +34,7 @@ const Aside = ({ children, attribs }: AsideProps) => {
           <span className={`${leftSideElement} ${pitfallElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
             <ExclamationTriangleIcon className="size-[1rem] mr-3" aria-hidden />
-            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Important</span>
+            <span className="ui-text-p2 font-bold text-neutral-1300 dark:text-neutral-000 mb-12">Important</span>
           </strong>
         </>
       ) : attribs && attribs[`data-type`] === `further-reading` ? (
@@ -42,7 +42,7 @@ const Aside = ({ children, attribs }: AsideProps) => {
           <span className={`${leftSideElement} ${furtherReadingElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
             <Icon name="icon-gui-resources" size="1rem" additionalCSS="mr-3" />
-            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Further Reading</span>
+            <span className="ui-text-p2 font-bold text-neutral-1300 dark:text-neutral-000 mb-12">Further Reading</span>
           </strong>
         </>
       ) : attribs && isVersioningInfo ? (
@@ -62,7 +62,7 @@ const Aside = ({ children, attribs }: AsideProps) => {
           <span className={`${leftSideElement} ${noteElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
             <DocumentTextIcon className="size-[1rem] mr-3" aria-hidden />
-            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Note</span>
+            <span className="ui-text-p2 font-bold text-neutral-1300 dark:text-neutral-000 mb-12">Note</span>
           </strong>
         </>
       )}
