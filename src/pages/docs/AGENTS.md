@@ -1,59 +1,116 @@
+# Writing and reviewing Ably docs pages
+
+Guidance for any agent creating, refreshing, or reviewing documentation pages
+under `src/pages/docs/`. This file is auto-loaded when you edit pages here. For
+MDX mechanics, navigation, and SDK versions see the repo-root `CLAUDE.md`; for
+prose style see `writing-style-guide.md`. The `docs-execute-plan`, `docs-plan-pr`,
+and `docs-review-*` skills apply and check this guidance.
+
+
+## Docs Structure Guidance
+
+## Why structure matters
+
+Developers use docs to answer three questions, roughly in this order:
+
+1. **Should I use this?** They need to understand what the product does and why it matters to them -- from the docs alone, without a landing page or sales conversation.
+2. **How do I do the thing I came here to do?** They're looking for a page that matches their intent ("cancel a stream", "set up auth"), not one that matches our internal feature taxonomy.
+3. **How do I handle this specific detail?** They need to go deep on one topic without wading through others.
+
+Docs structure should serve all three. Navigation organised by developer intent, pages scoped to a single focus, and variant handling that doesn't multiply pages are the main tools for doing that.
+
 ---
-name: write-docs
-description: Write or refresh an Ably documentation page in this repo. Use when creating a new MDX page, rewriting an existing one, or applying the page-design principles to docs work. Captures the principles, page-type templates, writing standards, and code-accuracy checks distilled from the April 2026 wireframe workings used for the AI Transport refresh.
+
+## Principles
+
+### 1. Docs stand alone for the buying decision
+
+A developer arriving anywhere in the docs should understand why the product exists, what it enables, and be able to decide to use it. Don't assume they've seen a landing page, blog post, or demo. Technical explanation and value proposition are the same thing -- showing how something works IS the sales pitch.
+
+### 2. Lead with what Ably guarantees
+
+Ably's core value is infrastructure-level guarantees that developers would otherwise have to build themselves: low-latency delivery, guaranteed delivery (no silent message loss), and guaranteed ordering. These aren't background features -- they're the reason developers choose Ably over rolling their own. Every product page should make clear which of these guarantees apply and how the product upholds them. Don't bury them in a footnote or assume the reader already knows.
+
+### 3. Simplicity is the product
+
+Every page should reinforce that the product makes things simpler. The framing is always "you have this problem, and it disappears." The guarantees above are a key part of that: complexity the developer no longer has to handle.
+
+### 4. One focus per page, structured by developer intent
+
+Each page answers one question a developer actually asks: "how do I do X?", "how does Y work?", "what happens when Z?". Keep pages atomic -- don't bundle multiple concepts with conditional logic ("if you want X then do Y"). Separate pages are simpler, more findable, and easier to maintain.
+
+A flat list of focused, atomic pages is a feature of the IA, not a problem to be solved by grouping. Resist the urge to nest pages into deep hierarchies -- if pages are well-titled and scoped to a single intent, a long flat list is more navigable than a deep tree. Some duplication across atomic pages is fine and expected; don't try to eliminate it by bundling or replacing content with cross-references.
+
+At every decision point, default to the most common choice. Never present two equal options where one should be the default.
+
+### 5. Variants are toggles, not navigation splits
+
+Feature pages are variant-agnostic. Code examples adapt via client-side language, server-side language, and framework toggles. Don't create per-variant copies of feature pages -- this causes duplication and drift.
+
+### 6. Self-contained product sections
+
+Docs for a product should work without constantly navigating to other sections. Developers should be able to learn about pricing, limits, authentication, and key concepts within the product's docs section. Link out for deep dives where appropriate, but don't require it for core understanding.
+
+### 7. Concepts before action, internals at the end
+
+Developers need a mental model to make sense of features. Foundational concepts (how sessions work, what a turn is, how auth fits in) sit above getting-started and feature pages in the nav. Implementation internals (wire protocols, transport patterns) sit at the bottom for curious engineers. The ordering is: concepts → getting started → features → deep internals.
+
+### 8. Inbound through excellence, not pollution
+
+Docs serve the developer who has arrived. Don't distort page structure to rank for search terms. Problem-first inbound content (blog posts, tutorials) lives outside docs and drives developers to them.
+
+### 9. Ship and iterate
+
+Publishing and showing direction is more important than polish. Be explicit about what's shipped, what's partial, and what's planned. Stub pages are fine if they're honest about being stubs.
+
 ---
 
-## How to use this skill
+## Page structure for feature pages
 
-This skill is the distilled rulebook for writing Ably docs in this repo. Read it before starting a draft. Apply the per-page-type template to your draft. Run the verification checks before review.
+The organising principle is **result first, code fast, detail later**. Pages use progressive disclosure in three tiers: understand → implement → detail. Developers who just need to see what the feature does and how to use it shouldn't have to scroll past implementation detail or edge cases.
 
-The principles are aimed at the human reader first and the AI agent second. The writing standards are aimed at not sounding like AI.
+### Tier 1: Understand (above the fold)
 
-## Required reading
+1. **Benefit statement with problem framing** -- one or two sentences. Lead with what the feature gives you; weave in what breaks or what's hard without it. This replaces a standalone "problem framing" section.
+2. **Visual / demo** -- embedded GIF, interactive sandbox, or diagram showing the feature in action. Place it prominently -- at or near the top, not tucked below the code.
+3. **Minimal code snippet** -- the "this is all you write" TL;DR. 3-10 lines with framework/language toggles. This serves evaluators ("is this simple?") and returning developers ("remind me of the API").
 
-Read these in-repo references before you draft. The skill **does not duplicate them**.
+### Tier 2: Implement (one scroll down)
 
-- [`CLAUDE.md`](../../../CLAUDE.md) — repository conventions: MDX components, frontmatter, code blocks, `<Aside>`, `<Tiles>`, `<Table>`, language toggles, nav files. The "Content Formatting (MDX)" and "Writing Style" sections are load-bearing.
-- [`writing-style-guide.md`](../../../writing-style-guide.md) — Ably house style: International English, present tense, active voice, second person, imperative headings, sentence case, no em dashes, no bold-prefix bullets, no Latin abbreviations, no subjective phrases, no vague modals, no slang, no pricing detail in technical docs.
+4. **Full implementation guide** -- server setup, client setup, and any integration steps. Working code for each supported language/framework with variant toggles.
+5. **Customisation options** -- optional configuration, modes, and parameters.
 
-When this skill conflicts with `CLAUDE.md` or `writing-style-guide.md`, those win. Flag the conflict.
+### Tier 3: Detail (progressive disclosure)
 
-## Principles (read these once; apply them every time)
+6. **How it works** -- brief explanation of underlying mechanics. If a feature depends on another concept (e.g. turns, sessions), give a 1-2 sentence inline explanation with a link -- don't treat it as a prerequisite the reader must go and read first.
+7. **Edge cases and FAQ** -- what happens in unusual scenarios, collapsible where possible.
+8. **Related features** -- 1-2 line comparisons with links to similar or complementary features.
+9. **API reference link**
 
-Eighteen principles govern Ably docs pages, distilled from the AI Transport wireframe workings (April 2026). Three groups: general (apply to every page), page-specific (depend on page type), and mechanical (binary checks).
+### Template flexibility
 
-### General
+This is the default structure. Some features are best explained by a demo (visual-first -- lead with the demo above the benefit statement) and others by a one-liner code sample (code-first -- lead with the snippet). Use the default unless the content clearly calls for a different lead. The three tiers and their ordering should stay consistent regardless of which element leads.
 
-1. **Humans first, agents second.** Narrative and outcome up top; technical detail and API specifics lower on the page where agents still find them.
-2. **Progressive disclosure.** Each page has clear tiers — Understand → See it → Build it → Go deep. A reader can stop at any tier and have gotten value.
-3. **Minimal first code sample.** Contrived, no setup boilerplate, no auth scaffolding. Demonstrate the one capability. Runnable implementation comes later.
-4. **Link to concepts, don't require them.** Reference concepts inline with one or two lines of explanation plus a "learn more" link. A reader should not need to leave the page to understand it.
-5. **Primary audience: developers and senior engineers.** Product readers are secondary — accessible enough to evaluate, written for engineers.
-6. **We enable user experience.** Show what the API makes possible for end users, not just what the API exposes. Avoid pure feature-listing.
-7. **Visual type matches page type.** Feature pages use UX interaction sketches. Concept, positioning, and infrastructure pages use architectural/flow/state diagrams. UX visuals on a concept page read as marketing and undermine credibility.
+Problem framing is woven into each feature page. There is no separate "Problems" section in the docs.
 
-### Page-specific
+---
 
-8. **Feature pages lead with the mechanism.** The first heading is "How it works", not "the problem with X". Lead with how Ably solves the job; problem framing is a lightweight aside or lives on the concept page.
-9. **Concept pages convey what the layer requires.** The pattern is *problem → model → what this layer requires → code proof*. Name the technical properties (ordering, persistence, accumulation, fan-out, presence) and why each matters.
-10. **Concept pages do not teach features.** One minimal code-proof sample max. No API surface walkthrough. If a concept page drifts into method-by-method content, it stops being a concept page and the feature pages around it feel thin.
-11. **Features map to jobs to be done.** Each feature page maps to what a developer is trying to accomplish ("barge-in" = "let my users change direction mid-response"). Page names and intros use the JTBD framing.
-12. **Framework pages: intentional design framing, not "missing features".** Frame the framework's scope as a deliberate boundary the framework chose, and Ably as the layer that fills the gap. Never "the framework can't do X" — always "the framework intentionally doesn't do X". Sibling framework pages (for example UI vs Core) use verbatim-aligned capability bullets.
-13. **Positioning pages: open problem-first, turn positive.** "Why X" pages may lead with the problem, but must pivot to the capability section by mid-page. Pages that stay defensive end-to-end become gripe lists, not pitches.
+## Developer journeys to keep in mind
 
-### Mechanical (binary, agent-checkable)
+When writing a page, consider which journey the reader is on:
 
-14. **Layer 0 hook in the first 5 seconds.** Every page opens with a hook that answers "what is this, why should I care?". The `intro:` frontmatter feeds the auto-generated PageHeader; the body's first paragraph reinforces it. On feature pages, the hook is two sentences: outcome first ("Your users can change direction mid-response"), mechanism second ("AI Transport's session layer lets a client cancel and re-prompt without breaking the stream"). **Per-interface API reference pages are the one exception**: they drop `intro:` and let the opening paragraph carry the hook. Navigational API pages (the API reference hub, the errors page) keep `intro:` like every other page type. See the `## API reference pages` section for the full standard.
-15. **Cover unhappy paths.** Every feature page has an edge-cases section. Race conditions, timeouts, network drops, capability-missing failures, what happens when the LLM errors. This is what separates trusted docs from marketing.
-16. **FAQ with three to five real entries on feature pages.** Surface what developers actually ask. Do not pad to meet a count.
-17. **No API keys in client code.** Ever. Use `authUrl: '/auth'` as the placeholder and link out to `concepts/authentication` (or the equivalent setup page) once.
-18. **Visual rhythm.** Diagram, code block, card layout, or icon table every few paragraphs. No walls of text.
+| Journey | Typical path |
+|---------|-------------|
+| Evaluating ("What is this?") | Overview -> Why this product -> How it works -> Get started |
+| Stack-first ("I use framework X, why do I need this?") | Framework guide -> Get started with that framework -> Features |
+| Problem-first ("My X keeps breaking") | Why this product -> How it works -> Relevant feature page -> Get started |
+| Use-case-first ("I'm building X") | Use case guide -> Relevant feature pages -> Get started |
+| Returning developer ("I need to add feature Y") | Feature page -> API reference -> done |
 
-### Cross-product orientation
-
-AI Transport is the testbed for the new principles. Other Ably products will align over time. Diverge from Chat / LiveObjects / Pub-Sub patterns where these principles demand it; do not contort an AIT page to match an older Pub-Sub convention. Note the divergence in the PR description so the wider docs can track.
 
 ## Page-type templates
+
+Pick the template that matches the page you are writing. Templates describe *structure*, not literal headings — adapt each section heading to the specific page (see the writing-style guidance). These are distilled from the April 2026 wireframe workings used for the AI Transport refresh.
 
 Pick the template that matches the page you are writing.
 
@@ -154,7 +211,7 @@ A single checklist page. Items inline. Cross-cutting only.
 
 ### API reference page
 
-API reference pages have their own complete standard — they do not follow the other page-type templates. See the `## API reference pages` section below for the full rules: frontmatter, page structure, anchor convention, visible-vs-hidden type tables, React hook sub-template, and verification.
+API reference pages have their own complete standard — they do not follow the other page-type templates. See the "API reference standard" section below for the full rules: frontmatter, page structure, anchor convention, visible-vs-hidden type tables, React hook sub-template, and verification.
 
 ### Internals page
 
@@ -165,7 +222,138 @@ For curious senior engineers. Register: precise, technical, no hand-holding. Dia
 3. **Mechanism walkthrough.**
 4. **Cross-references** to the wire-protocol or codec reference where applicable.
 
-## API reference pages
+
+
+## Code accuracy: verify against the SDK, not prior docs
+
+Prior docs drift. The SDK is the source of truth.
+
+### Workflow before writing any code snippet
+
+1. Find the SDK version this docs page targets in `src/data/languages/languageData.ts`. That file is the canonical version registry, keyed by product and language. Use that exact version, not whatever npm currently labels `latest`. The page header reads from the same registry, so the code samples and the version badge stay aligned.
+2. Pull the package at that version: `npm pack <package>@<version>` into a temp dir, extract, read the `.d.ts` files.
+3. Cross-check the signatures, option shapes, and return types your snippet uses.
+4. Where the SDK exposes both a core and a framework-bound entry point (for example `@ably/ai-transport` and `@ably/ai-transport/vercel`), pick the entry point your snippet's audience uses and follow its option shape.
+5. After drafting, re-grep your file for any old patterns the SDK no longer supports.
+
+### Documenting a pre-release SDK
+
+If the docs page targets an SDK version that is not yet on npm:
+
+1. Bump the version in `src/data/languages/languageData.ts` to the upcoming release.
+2. Read the `.d.ts` files straight from the SDK repo. Check out the matching git tag or release branch (or use a local checkout if one is on disk), then read `dist/` or `src/`.
+3. Write the docs against that source.
+4. Flag the PR as gated on the SDK release. Merge only once the SDK version exists on npm and `languageData.ts` matches.
+
+### Common drift patterns to check
+
+Whenever an SDK has had a major refactor, sweep the docs for these patterns:
+
+- Renamed factories (for example `createTransport` → `createClientTransport`).
+- Hooks that changed from factory to context reader (for example `useClientTransport` going from `(options) => Transport` to `(options) => { transport, transportError }`).
+- Methods that moved between objects (for example `transport.send` → `view.send`).
+- Removed convenience hooks (for example `useEdit`/`useRegenerate`/`useSend` consolidated into methods on a `ViewHandle` returned by `useView`).
+- Renamed option keys (for example `id` → `chatId`).
+- Renamed enum/literal values (for example `TurnEndReason` going from `'completed' | 'failed' | 'cancelled'` to `'complete' | 'error' | 'cancelled'`).
+
+
+
+## Verification checks
+
+Run these from the repo root against the page(s) you changed before review. Expected result is zero hits on each. The review concern skills run the subset relevant to their dimension.
+
+These greps cover the standards. Replace `<your-path>` with the page or section you wrote. The expected result is zero hits on each.
+
+```bash
+P=<your-path>  # e.g. src/pages/docs/ai-transport/features/
+
+# Frontmatter completeness (no output = clean)
+for field in title meta_description meta_keywords intro; do
+  echo "Pages missing $field:"
+  find "$P" -name "*.mdx" -exec grep -L "^$field:" {} \;
+done
+
+# No API keys in client code (excluding authUrl)
+grep -rn -E "key\s*:\s*['\"][^'\"]+['\"]" "$P" | grep -v authUrl
+
+# No "docs under construction" / WIP markers
+grep -rni "under construction\|coming soon\|todo:\|wip\b" "$P"
+
+# Every H2 carries an inline anchor (CLAUDE.md convention: `## Heading <a id="slug"/>`)
+for f in "$P"/*.mdx; do
+  total=$(grep -c "^## " "$f")
+  anchored=$(grep -cE '^## .* <a id="[^"]+"' "$f")
+  [ "$total" != "$anchored" ] && echo "$f: $anchored/$total H2s anchored"
+done
+
+# No em dashes (style guide forbids)
+grep -rn "—" "$P"
+
+# No bold-prefix bullets
+grep -rnE "^\s*[\*\-]\s+\*\*[^*]+:\*\*" "$P"
+
+# No "we" pronoun in prose
+grep -rnE "\bwe\b" "$P" | grep -v "code\|//"
+
+# No Latin abbreviations
+grep -rnE "\b(e\.g\.|i\.e\.|etc\.)" "$P"
+
+# No subjective phrases or vague modals
+grep -rniE "easily|simple to|it's as easy|fire up" "$P"
+
+# Internal link integrity (catches stale paths if you renamed any pages)
+# Replace OLD_PATH with the old URL you replaced; expect zero hits outside redirect_from frontmatter.
+grep -rn "OLD_PATH" "$P" | grep -v redirect_from
+
+# FAQ count on feature pages (each should report 3-5)
+for f in "$P"/*.mdx; do
+  count=$(awk '/^## FAQ/,/^## /' "$f" | grep -c "^### ")
+  echo "$f: $count FAQ entries"
+done
+```
+
+For **API reference pages only**, run these additional checks:
+
+```bash
+A=<api-ref-path>  # e.g. src/pages/docs/ai-transport/api-reference/
+
+# Per-interface API ref pages must NOT have intro: (navigational pages can)
+# Edit the exclusion list to match the navigational pages in your product.
+for f in "$A"/*.mdx; do
+  case "$(basename $f)" in
+    index.mdx|errors.mdx) continue ;;  # navigational pages
+  esac
+  if grep -q "^intro:" "$f"; then
+    echo "$f: per-interface API ref page should not have intro:"
+  fi
+done
+
+# Every hidden table must be referenced; every reference must have a definition
+node -e "
+const fs = require('fs'), path = require('path');
+const dir = process.env.A;
+for (const f of fs.readdirSync(dir)) {
+  if (!f.endsWith('.mdx')) continue;
+  const content = fs.readFileSync(path.join(dir, f), 'utf8');
+  const hidden = [...content.matchAll(/<Table id='([^']+)' hidden>/g)].map(m => m[1]);
+  const visible = [...content.matchAll(/<Table id='([^']+)'>/g)].map(m => m[1]);
+  const refs = [...content.matchAll(/<Table id='([^']+)'\\/>/g)].map(m => m[1]);
+  for (const h of hidden) if (!refs.includes(h)) console.log(f + ': hidden ' + h + ' unreferenced');
+  for (const r of refs) if (!hidden.includes(r) && !visible.includes(r)) console.log(f + ': ' + r + ' undefined');
+}" 2>/dev/null
+
+# Method headings should be verb phrases, not bare names like "## methodName"
+# Flag suspiciously bare H2s (single camelCase or lowercase token):
+grep -rnE "^## [a-z][a-zA-Z0-9]*\s*<" "$A"
+
+# Returns sections that mention ErrorInfo without linking to its canonical home
+# (replace 'errors#errorinfo' with the actual canonical anchor for your product)
+grep -rn "ErrorInfo" "$A" | grep -v "errors#errorinfo" | grep -v errors.mdx
+```
+
+
+
+## API reference standard
 
 API reference pages have their own complete standard, distinct from every other page type. The rules in this section apply **only** to API reference pages — they do not modify feature, concept, framework, positioning, getting-started, guide, troubleshooting, or internals pages. Those page types keep their templates exactly as written above.
 
@@ -316,191 +504,3 @@ Expected: zero output. A hidden table with no inline reference renders nothing. 
 
 Multi-language API references use a per-language sub-tree in the nav (`JavaScript`, `React`, `Kotlin`) with plain `{ name, link }` entries. Do not add a `languages: [...]` array — those are only used by the legacy multi-language section. For products with multiple SDK variants (Realtime vs REST), the nav uses `JavaScript (Realtime)`, `JavaScript (REST)`, etc. as the sub-tree labels.
 
-## Code accuracy: verify against the SDK, not against prior docs
-
-Prior docs drift. The SDK is the source of truth.
-
-### Workflow before writing any code snippet
-
-1. Find the SDK version this docs page targets in `src/data/languages/languageData.ts`. That file is the canonical version registry, keyed by product and language. Use that exact version, not whatever npm currently labels `latest`. The page header reads from the same registry, so the code samples and the version badge stay aligned.
-2. Pull the package at that version: `npm pack <package>@<version>` into a temp dir, extract, read the `.d.ts` files.
-3. Cross-check the signatures, option shapes, and return types your snippet uses.
-4. Where the SDK exposes both a core and a framework-bound entry point (for example `@ably/ai-transport` and `@ably/ai-transport/vercel`), pick the entry point your snippet's audience uses and follow its option shape.
-5. After drafting, re-grep your file for any old patterns the SDK no longer supports.
-
-### Documenting a pre-release SDK
-
-If the docs page targets an SDK version that is not yet on npm:
-
-1. Bump the version in `src/data/languages/languageData.ts` to the upcoming release.
-2. Read the `.d.ts` files straight from the SDK repo. Check out the matching git tag or release branch (or use a local checkout if one is on disk), then read `dist/` or `src/`.
-3. Write the docs against that source.
-4. Flag the PR as gated on the SDK release. Merge only once the SDK version exists on npm and `languageData.ts` matches.
-
-### Common drift patterns to check
-
-Whenever an SDK has had a major refactor, sweep the docs for these patterns:
-
-- Renamed factories (for example `createTransport` → `createClientTransport`).
-- Hooks that changed from factory to context reader (for example `useClientTransport` going from `(options) => Transport` to `(options) => { transport, transportError }`).
-- Methods that moved between objects (for example `transport.send` → `view.send`).
-- Removed convenience hooks (for example `useEdit`/`useRegenerate`/`useSend` consolidated into methods on a `ViewHandle` returned by `useView`).
-- Renamed option keys (for example `id` → `chatId`).
-- Renamed enum/literal values (for example `TurnEndReason` going from `'completed' | 'failed' | 'cancelled'` to `'complete' | 'error' | 'cancelled'`).
-
-## Writing standards
-
-The canonical source is [`writing-style-guide.md`](../../../writing-style-guide.md). **You must read it before making any changes to the docs.** It covers International English, present tense, active voice, second person, imperative headings, sentence case, banned patterns (em dashes, bold-prefix bullets, Latin abbreviations, subjective phrases, vague modals, slang, "we" as subject, pricing detail, API keys in client code), the Layer-0 hook pattern, MDX asides, AI-fingerprint patterns to strip from drafts, and the counter-rules to keep.
-
-The style guide takes precedence over anything else in this skill. If a rule here ever conflicts with the style guide, the style guide wins.
-
-## Per-page workflow
-
-1. **Identify the page type.** Pick the matching template above.
-2. **Draft the prose against the template.** Keep it tight.
-3. **Verify every code snippet against the actual SDK.** See the code-accuracy section.
-4. **Strip AI-writing patterns.** Re-read against the "Avoid AI-generated content fingerprints" section of [`writing-style-guide.md`](../../../writing-style-guide.md).
-5. **Self-check against the verification greps below.**
-6. **Open the PR.** Reviewer (not the writer) reviews against this skill and the writing-style guide.
-
-## Verification (run from the repo root before review)
-
-These greps cover the standards. Replace `<your-path>` with the page or section you wrote. The expected result is zero hits on each.
-
-```bash
-P=<your-path>  # e.g. src/pages/docs/ai-transport/features/
-
-# Frontmatter completeness (no output = clean)
-for field in title meta_description meta_keywords intro; do
-  echo "Pages missing $field:"
-  find "$P" -name "*.mdx" -exec grep -L "^$field:" {} \;
-done
-
-# No API keys in client code (excluding authUrl)
-grep -rn -E "key\s*:\s*['\"][^'\"]+['\"]" "$P" | grep -v authUrl
-
-# No "docs under construction" / WIP markers
-grep -rni "under construction\|coming soon\|todo:\|wip\b" "$P"
-
-# Every H2 carries an inline anchor (CLAUDE.md convention: `## Heading <a id="slug"/>`)
-for f in "$P"/*.mdx; do
-  total=$(grep -c "^## " "$f")
-  anchored=$(grep -cE '^## .* <a id="[^"]+"' "$f")
-  [ "$total" != "$anchored" ] && echo "$f: $anchored/$total H2s anchored"
-done
-
-# No em dashes (style guide forbids)
-grep -rn "—" "$P"
-
-# No bold-prefix bullets
-grep -rnE "^\s*[\*\-]\s+\*\*[^*]+:\*\*" "$P"
-
-# No "we" pronoun in prose
-grep -rnE "\bwe\b" "$P" | grep -v "code\|//"
-
-# No Latin abbreviations
-grep -rnE "\b(e\.g\.|i\.e\.|etc\.)" "$P"
-
-# No subjective phrases or vague modals
-grep -rniE "easily|simple to|it's as easy|fire up" "$P"
-
-# Internal link integrity (catches stale paths if you renamed any pages)
-# Replace OLD_PATH with the old URL you replaced; expect zero hits outside redirect_from frontmatter.
-grep -rn "OLD_PATH" "$P" | grep -v redirect_from
-
-# FAQ count on feature pages (each should report 3-5)
-for f in "$P"/*.mdx; do
-  count=$(awk '/^## FAQ/,/^## /' "$f" | grep -c "^### ")
-  echo "$f: $count FAQ entries"
-done
-```
-
-For **API reference pages only**, run these additional checks:
-
-```bash
-A=<api-ref-path>  # e.g. src/pages/docs/ai-transport/api-reference/
-
-# Per-interface API ref pages must NOT have intro: (navigational pages can)
-# Edit the exclusion list to match the navigational pages in your product.
-for f in "$A"/*.mdx; do
-  case "$(basename $f)" in
-    index.mdx|errors.mdx) continue ;;  # navigational pages
-  esac
-  if grep -q "^intro:" "$f"; then
-    echo "$f: per-interface API ref page should not have intro:"
-  fi
-done
-
-# Every hidden table must be referenced; every reference must have a definition
-node -e "
-const fs = require('fs'), path = require('path');
-const dir = process.env.A;
-for (const f of fs.readdirSync(dir)) {
-  if (!f.endsWith('.mdx')) continue;
-  const content = fs.readFileSync(path.join(dir, f), 'utf8');
-  const hidden = [...content.matchAll(/<Table id='([^']+)' hidden>/g)].map(m => m[1]);
-  const visible = [...content.matchAll(/<Table id='([^']+)'>/g)].map(m => m[1]);
-  const refs = [...content.matchAll(/<Table id='([^']+)'\\/>/g)].map(m => m[1]);
-  for (const h of hidden) if (!refs.includes(h)) console.log(f + ': hidden ' + h + ' unreferenced');
-  for (const r of refs) if (!hidden.includes(r) && !visible.includes(r)) console.log(f + ': ' + r + ' undefined');
-}" 2>/dev/null
-
-# Method headings should be verb phrases, not bare names like "## methodName"
-# Flag suspiciously bare H2s (single camelCase or lowercase token):
-grep -rnE "^## [a-z][a-zA-Z0-9]*\s*<" "$A"
-
-# Returns sections that mention ErrorInfo without linking to its canonical home
-# (replace 'errors#errorinfo' with the actual canonical anchor for your product)
-grep -rn "ErrorInfo" "$A" | grep -v "errors#errorinfo" | grep -v errors.mdx
-```
-
-## Reviewer checklist
-
-When reviewing someone else's docs PR (or your own at PR time), walk this list. Each item is a yes/no check.
-
-**Page shape**
-
-1. The page type is identifiable from the structure (feature / concept / framework / positioning / getting-started / guide / troubleshooting / API reference / internals).
-2. Layer-0 hook present and not Mad Libs.
-3. `intro` frontmatter present and matches the page-header sentence — except on per-interface API reference pages, which drop `intro:`.
-4. Section order matches the template for this page type.
-5. Edge cases / unhappy paths section present (feature pages).
-6. FAQ has three to five real questions (feature pages).
-7. Concept page shows at most one code-proof sample and does not drift into API teaching.
-8. Visual rhythm — diagram, code, or card every few paragraphs. No walls of text.
-
-**Writing standards**
-
-9. Page complies with the rules in [`writing-style-guide.md`](../../../writing-style-guide.md). Use the verification greps above to spot the common violations (em dashes, bold-prefix bullets, Latin abbreviations, subjective phrases, vague modals, "we" as the subject, AI-fingerprint patterns).
-10. Author ran `/deslop` (or equivalent AI-pattern check).
-
-**Code accuracy**
-
-11. Every code snippet matches the actual SDK at the latest tagged release (factory names, option shapes, return shapes, method locations, enum values).
-12. No API keys in client code.
-13. `authUrl: '/auth'` used for the placeholder where auth is referenced.
-
-**Mechanics**
-
-14. Frontmatter complete: `title`, `meta_description`, `meta_keywords`, `intro`, `redirect_from` where the page moved or merged. (Per-interface API reference pages omit `intro`.)
-15. Every H2 carries an inline anchor — `## Heading <a id="slug"/>`, per the CLAUDE.md convention. Use the H2-anchor grep above.
-16. Section headings are descriptive imperatives or noun phrases tied to the specific content, not template labels copied verbatim (no `## The model`, `## The problem X solves`, `## Code proof`).
-17. New page added to the relevant nav file under `src/data/nav/`.
-18. `<Aside>` used sparingly and load-bearing. No decorative asides.
-19. Internal links resolve. No references to URLs that only exist in `redirect_from` frontmatter.
-
-**API reference pages only** (additional checks)
-
-20. Method H2s use descriptive verb phrases (`## Create a client transport`), not bare method names. Anchor is JS-canonical kebab-case.
-21. Every method H2 is followed by `<MethodSignature>{` … `}</MethodSignature>` (template-literal form for signatures with `<` or `>`).
-22. Every method with parameters has `### Parameters <a id="{slug}-params"/>` with a 4-column `Parameter | Required | Description | Type` table.
-23. Every method has `### Returns <a id="{slug}-returns"/>` unless it returns `void`/`Unit`.
-24. Type tables default to hidden (`<Table id='X' hidden>`) referenced via `<Table id='X'/>`. Visible types only when they meet one of the four promotion criteria.
-25. Hidden table audit passes. Every hidden has at least one inline reference; every reference has a definition.
-26. Error type referenced via cross-page link to its canonical home (lowercase `#errorinfo` anchor).
-27. Page ends with `## Example` showing end-to-end usage.
-28. No same-page markdown anchor links to type anchors (`[X](#X)`). Type names in prose are backticked; cross-page references go to the type's own page.
-
-## When the SDK or product changes shape
-
-When a major SDK change lands (renamed factories, moved methods, removed hooks, changed enum values), do a sweep across the relevant docs section using the patterns in the code-accuracy section above. Drift is the single biggest source of incorrect docs.
