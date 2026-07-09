@@ -122,9 +122,16 @@ const onPreRenderHTML: GatsbySSR['onPreRenderHTML'] = ({ getHeadComponents, repl
 };
 
 /**
- * Load our user state
+ * Load our user state, wrapped in the theme provider so useTheme is available
+ * everywhere (including pages that don't use the docs Layout).
  */
 import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
-const wrapRootElement = UserContextWrapper;
+import { ThemeProvider } from './src/contexts/theme-context';
+
+const wrapRootElement: GatsbySSR['wrapRootElement'] = ({ element }) => (
+  <ThemeProvider>
+    <UserContextWrapper element={element} />
+  </ThemeProvider>
+);
 
 export { onRenderBody, onPreRenderHTML, wrapRootElement };

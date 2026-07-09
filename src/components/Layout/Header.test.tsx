@@ -22,6 +22,10 @@ jest.mock('@ably/ui/core/insights', () => ({
   track: jest.fn(),
 }));
 
+jest.mock('src/contexts/theme-context', () => ({
+  useTheme: jest.fn().mockReturnValue({ theme: 'light', resolvedTheme: 'light', setTheme: jest.fn() }),
+}));
+
 jest.mock('src/components/Icon', () => {
   const MockIcon: React.FC<{ name: string }> = ({ name }) => <div>{name}</div>;
   MockIcon.displayName = 'MockIcon';
@@ -81,7 +85,8 @@ describe('Header', () => {
 
   it('renders the header with logo and links', () => {
     render(<Header />);
-    expect(screen.getByAltText('Ably')).toBeInTheDocument();
+    // Two logo variants render (light + dark, CSS-toggled); both carry the alt.
+    expect(screen.getAllByAltText('Ably').length).toBeGreaterThan(0);
 
     expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Platform')).toBeInTheDocument();

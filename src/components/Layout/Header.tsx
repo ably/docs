@@ -8,10 +8,12 @@ import cn from 'src/utilities/cn';
 import Icon from 'src/components/Icon';
 import TabMenu from 'src/components/ui/TabMenu';
 import Logo from 'src/images/ably-logo.svg';
+import LogoDark from 'src/images/ably-logo-dark.svg';
 import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';
 import LeftSidebar from './LeftSidebar';
 import ProductBar from './ProductBar';
+import ThemeSwitcher from './ThemeSwitcher';
 import UserContext from 'src/contexts/user-context';
 import ExamplesList from '../Examples/ExamplesList';
 import Link from '../Link';
@@ -228,7 +230,8 @@ const Header: React.FC = () => {
       <div className="flex items-center justify-between h-16 px-5 max-w-[1600px] mx-auto">
         <div className="flex items-center shrink-0">
           <a href="/docs" className="flex items-center gap-2 focus-base px-5 py-2 rounded -ml-5">
-            <img src={Logo} width="96px" alt="Ably" />
+            <img src={Logo} width="96px" alt="Ably" className="dark:hidden" />
+            <img src={LogoDark} width="96px" alt="Ably" className="hidden dark:block" />
             <span className="bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 text-[10px] font-bold text-neutral-1000 dark:text-neutral-400 px-1.5 py-[3px] rounded-md uppercase">
               Docs
             </span>
@@ -301,6 +304,7 @@ const Header: React.FC = () => {
               <SparklesIcon className="size-[20px]" aria-hidden />
               <span>Ask AI</span>
             </button>
+            <ThemeSwitcher />
             <DropdownMenu.Root>
               <Tooltip.Root>
                 <DropdownMenu.Trigger asChild>
@@ -397,15 +401,18 @@ const Header: React.FC = () => {
             )}
           </div>
         </Tooltip.Provider>
-        <div ref={burgerButtonRef} className="flex md:hidden">
-          <button
-            className={iconButtonClassName}
-            aria-label="Toggle navigation menu"
-            aria-expanded={isMobileMenuOpen}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <Bars3Icon className="size-[20px]" aria-hidden />
-          </button>
+        <div className="flex md:hidden items-center gap-1">
+          <ThemeSwitcher />
+          <div ref={burgerButtonRef}>
+            <button
+              className={iconButtonClassName}
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <Bars3Icon className="size-[20px]" aria-hidden />
+            </button>
+          </div>
         </div>
 
         <div id="inkeep-search-holder" className="hidden">
