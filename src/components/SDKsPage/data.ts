@@ -233,7 +233,7 @@ export const data = {
         },
         {
           title: 'Vercel AI SDK',
-          text: 'AI Transport integration for the Vercel AI SDK.',
+          text: 'Ably AI Transport with the Vercel AI SDK.',
           image: { src: js, isWide: false },
           setupLink: 'ai-transport/getting-started/vercel-ai-sdk',
         },
