@@ -15,7 +15,7 @@ Both Vercel WDK and AI Transport use the word step. This page writes WDK step fo
 
 ## What Vercel WDK brings <a id="wdk-brings"/>
 
-Vercel WDK owns the execution half of the job: it persists a workflow's progress, retries a failed WDK step, and runs the whole thing inside your Next.js app.
+Vercel WDK handles execution: it persists a workflow's progress, retries a failed WDK step, and runs it all inside your Next.js app.
 
 | Capability | Description |
 | --- | --- |
@@ -26,12 +26,12 @@ Vercel WDK owns the execution half of the job: it persists a workflow's progress
 
 ## What AI Transport adds <a id="ait-adds"/>
 
-AI Transport owns the conversation half, layering a durable session over that execution:
+AI Transport layers a durable session over that execution:
 
 | Capability | Description |
 | --- | --- |
 | Durable sessions | Tokens flow through an Ably channel that outlives any single connection. A client reconnects and resumes from where it left off. |
-| Multi-device sync | Every device subscribed to the session sees the same conversation in real time. |
+| Multi-device sync | Every device subscribed to the session sees the same conversation in realtime. |
 | Bidirectional control | Cancel, steer, and interrupt the agent from any client. No separate control channel. |
 | Retry supersede | When WDK retries a step, [`AgentRun.createStep({ stepId })`](/docs/ai-transport/api/javascript/core/agent-session#create-step) causes the retry's channel output to supersede the failed attempt's rather than append beside it. |
 | Cancel routing on the channel | Cancels published to the Ably channel reach every step's session directly, so a stop button in the browser aborts the LLM call inside the in-flight WDK step. |
@@ -88,7 +88,7 @@ export async function runInference(invocation, ids) {
 ```
 </Code>
 
-Open the Step before reading the view. A retry re-enters this WDK step with the same `stepId`, so its `step.start()` re-emits `ai-step-start` and supersedes the failed attempt. Build the prompt from `run.view` only once that supersede has folded back into the session's read model. The publish ack does not guarantee that ordering on its own, so the retry waits for its own attempt to reflect before reading, otherwise the half-streamed response it is replacing trails the prompt as an assistant prefill, which real providers reject. The [getting-started guide](/docs/ai-transport/getting-started/vercel-wdk#define-steps) shows the short wait that guarantees this.
+Open the Step before reading the view. A retry re-enters this WDK step with the same `stepId`, so its `step.start()` re-emits `ai-step-start` under a higher channel serial that supersedes the failed attempt. `step.start()` folds that superseding start into the read model behind `run.view` before it resolves, so once you have awaited it the view already reflects the supersede and you build the prompt from the winning attempt alone. Read `run.view` before opening the Step and the half-streamed response the retry is replacing trails the prompt as an assistant prefill, which real providers reject. The [getting-started guide](/docs/ai-transport/getting-started/vercel-wdk#define-steps) opens the Step before reading the view for this reason.
 
 `stopWhen: stepCountIs(1)` prevents the Vercel AI SDK from running its own multi-step tool loop inside the WDK step. The workflow drives the loop instead: a step that opens the Run, a step for the first inference, then one step per server tool call and one per follow-up inference. This is what makes each unit retryable in isolation, and it shapes how tool calls route.
 
@@ -125,7 +125,7 @@ Cancels do not travel through a workflow-level signal. Mid-flight control betwee
 
 ![Diagram of a cancel flowing over the Ably channel. A browser client's cancel publishes ai-cancel on the channel. The in-flight WDK inference step's AgentSession, subscribed to the channel, receives it, matched by run id, and fires run.abortSignal into the model call. The model call aborts, and the step publishes ai-step-end and ai-run-end with reason cancelled.](../../../../images/content/diagrams/ait-frameworks-vercel-wdk-cancel.png)
 
-Because each WDK step constructs its own session and routes its own cancels, the abort signal fires in whichever step is subscribed when the cancel lands. An inference step aborts its model call and publishes the `cancelled` terminal inline, and the workflow stops scheduling further steps. A cancel that instead lands during a tool step, or in the gap between steps, is not lost: the tool finishes, the next step to adopt the Run replays the cancel from channel history when `load()` resolves, and the following inference ends the Run `cancelled`.
+Because each WDK step constructs its own session and routes its own cancels, `run.abortSignal` fires in whichever step is subscribed when the cancel lands. An inference step passes that signal into its model call, aborts, and publishes the `cancelled` terminal inline, and the workflow stops scheduling further steps. A cancel that lands while a tool step is in flight fires that step's `run.abortSignal` too; wire it into any long-running tool work so the tool stops rather than running to completion.
 
 ## Suspend and resume across workflows <a id="suspend-resume"/>
 
