@@ -169,7 +169,7 @@ const TabMenu: React.FC<TabMenuProps> = ({
               <Tabs.Trigger
                 key={`tab-${index}`}
                 className={cn(
-                  'lg:px-6 md:px-5 px-4 py-4 ui-text-label1 font-bold data-[state=active]:text-neutral-1300 text-neutral-1000 dark:data-[state=active]:text-neutral-000 dark:text-neutral-300 focus:outline-none focus-visible:outline-gui-focus transition-colors hover:text-neutral-1300 dark:hover:text-neutral-000 active:text-neutral-900 dark:active:text-neutral-400 disabled:text-gui-disabled-light dark:disabled:text-gui-disabled-dark disabled:cursor-not-allowed',
+                  'lg:px-6 md:px-5 px-4 py-4 ui-text-label1 font-semibold data-[state=active]:text-neutral-1300 text-neutral-1000 dark:data-[state=active]:text-neutral-000 dark:text-neutral-300 focus:outline-none focus-visible:outline-gui-focus transition-colors hover:text-neutral-1300 dark:hover:text-neutral-000 active:text-neutral-900 dark:active:text-neutral-400 disabled:text-gui-disabled-light dark:disabled:text-gui-disabled-dark disabled:cursor-not-allowed',
                   { 'flex-1': flexibleTabWidth },
                   { 'h-full': flexibleTabHeight },
                   tabClassName,
