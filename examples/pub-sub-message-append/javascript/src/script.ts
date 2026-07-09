@@ -1,31 +1,32 @@
 import * as Ably from 'ably';
-import { Agent } from './agent';
+import { Publisher } from './publisher';
 import { config } from './config';
 
-// Generate unique channel name for this session
-const CHANNEL_NAME = `ai:response-${crypto.randomUUID()}`;
+// Generate a unique channel name for this session. It must be in a namespace with
+// message append support enabled, see /docs/messages/updates-deletes#enable
+const CHANNEL_NAME = `ai:stream-${crypto.randomUUID()}`;
 const client = new Ably.Realtime({
   key: config.ABLY_KEY,
 });
 
 const channel = client.channels.get(CHANNEL_NAME);
 
-// Agent for processing prompts
-const agent = new Agent(config.ABLY_KEY, CHANNEL_NAME);
+// Publisher for the text stream
+const publisher = new Publisher(config.ABLY_KEY, CHANNEL_NAME);
 
 // DOM elements
-const responseTextElement = document.getElementById('response-text') as HTMLDivElement;
+const streamTextElement = document.getElementById('stream-text') as HTMLDivElement;
 const connectionToggle = document.getElementById('connection-toggle') as HTMLButtonElement;
-const promptButton = document.getElementById('prompt-button') as HTMLButtonElement;
+const startButton = document.getElementById('start-button') as HTMLButtonElement;
 const processingStatus = document.getElementById('processing-status') as HTMLSpanElement;
 
-// Track responses by message serial
-const responses = new Map<string, string>();
+// Track streamed text by message serial
+const streams = new Map<string, string>();
 let currentSerial: string | null = null;
 
 const updateDisplay = () => {
   if (currentSerial) {
-    responseTextElement.innerText = responses.get(currentSerial) || '';
+    streamTextElement.innerText = streams.get(currentSerial) || '';
   }
 };
 
@@ -39,33 +40,33 @@ channel.subscribe((message: Ably.Message) => {
 
   switch (message.action) {
     case 'message.create':
-      responses.set(serial, message.data || '');
+      streams.set(serial, message.data || '');
       currentSerial = serial;
       processingStatus.innerText = 'Streaming';
       break;
     case 'message.append': {
-      // Only append if this is for the current response
+      // Only append if this is for the current stream
       if (currentSerial === serial) {
-        const current = responses.get(serial) || '';
-        responses.set(serial, current + (message.data || ''));
+        const current = streams.get(serial) || '';
+        streams.set(serial, current + (message.data || ''));
       }
       break;
     }
     case 'message.update':
       // Full state from history or resync - always use it
-      responses.set(serial, message.data || '');
+      streams.set(serial, message.data || '');
       currentSerial = serial;
       break;
   }
   updateDisplay();
 });
 
-const handlePromptClick = () => {
+const handleStartClick = () => {
   currentSerial = null;
-  responseTextElement.innerText = '';
+  streamTextElement.innerText = '';
   processingStatus.innerText = 'Streaming';
 
-  agent.processPrompt('What is Ably AI Transport?');
+  publisher.startStream();
 };
 
 const handleConnect = async () => {
@@ -91,6 +92,6 @@ const handleConnectionToggle = () => {
 };
 
 connectionToggle.onclick = handleConnectionToggle;
-promptButton.onclick = handlePromptClick;
+startButton.onclick = handleStartClick;
 
 handleConnect();

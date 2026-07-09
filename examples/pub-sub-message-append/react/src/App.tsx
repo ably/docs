@@ -1,27 +1,28 @@
 import React, { useState } from 'react';
 import { AblyProvider, ChannelProvider, useChannel, useConnectionStateListener } from 'ably/react';
 import { Realtime, Message } from 'ably';
-import { Agent } from './agent';
+import { Publisher } from './publisher';
 import { config } from './config';
 import './styles/styles.css';
 
-// Generate unique channel name for this session
-const CHANNEL_NAME = `ai:response-${crypto.randomUUID()}`;
+// Generate a unique channel name for this session. It must be in a namespace with
+// message append support enabled, see /docs/messages/updates-deletes#enable
+const CHANNEL_NAME = `ai:stream-${crypto.randomUUID()}`;
 
 const client = new Realtime({
   key: config.ABLY_KEY,
 });
 
-const AITransportDemo: React.FC = () => {
-  const [responses, setResponses] = useState<Map<string, string>>(new Map());
+const MessageAppendDemo: React.FC = () => {
+  const [streams, setStreams] = useState<Map<string, string>>(new Map());
   const [currentSerial, setCurrentSerial] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<string>('disconnected');
   const [isChannelDetached, setIsChannelDetached] = useState<boolean>(false);
 
-  // Agent persists across renders to avoid creating new connections
-  const agentRef = React.useRef<Agent | null>(null);
-  if (!agentRef.current) {
-    agentRef.current = new Agent(config.ABLY_KEY, CHANNEL_NAME);
+  // The publisher persists across renders to avoid creating new connections
+  const publisherRef = React.useRef<Publisher | null>(null);
+  if (!publisherRef.current) {
+    publisherRef.current = new Publisher(config.ABLY_KEY, CHANNEL_NAME);
   }
 
   // Subscribe to messages on the channel
@@ -34,14 +35,14 @@ const AITransportDemo: React.FC = () => {
     switch (message.action) {
       case 'message.create':
         // Initial message creation
-        setResponses((prev) => new Map(prev).set(serial, message.data || ''));
+        setStreams((prev) => new Map(prev).set(serial, message.data || ''));
         setCurrentSerial(serial);
         break;
       case 'message.append':
-        // Only append if this is for the current response
+        // Only append if this is for the current stream
         setCurrentSerial((current) => {
           if (current === serial) {
-            setResponses((prev) => {
+            setStreams((prev) => {
               const newMap = new Map(prev);
               const existing = newMap.get(serial) || '';
               return newMap.set(serial, existing + (message.data || ''));
@@ -52,7 +53,7 @@ const AITransportDemo: React.FC = () => {
         break;
       case 'message.update':
         // Full state from history (rewind) - replace existing data
-        setResponses((prev) => new Map(prev).set(serial, message.data || ''));
+        setStreams((prev) => new Map(prev).set(serial, message.data || ''));
         setCurrentSerial(serial);
         break;
     }
@@ -62,17 +63,17 @@ const AITransportDemo: React.FC = () => {
     setConnectionState(stateChange.current);
   });
 
-  const currentResponse = currentSerial ? responses.get(currentSerial) || '' : '';
+  const currentText = currentSerial ? streams.get(currentSerial) || '' : '';
 
-  const handlePromptClick = () => {
+  const handleStartClick = () => {
     if (connectionState !== 'connected' || isChannelDetached) {
       return;
     }
 
-    setResponses(new Map());
+    setStreams(new Map());
     setCurrentSerial(null);
 
-    agentRef.current?.processPrompt('What is Ably AI Transport?');
+    publisherRef.current?.startStream();
   };
 
   const handleDisconnect = () => {
@@ -112,16 +113,16 @@ const AITransportDemo: React.FC = () => {
             </div>
           </div>
           <div className="p-4 border border-gray-300 rounded-lg bg-gray-50 h-48 overflow-y-auto whitespace-pre-wrap text-base leading-relaxed">
-            {currentResponse || 'Select a prompt below to get started'}
+            {currentText || 'Start the stream to get started'}
           </div>
         </div>
       </div>
 
-      {/* Prompt selection */}
+      {/* Stream controls */}
       <div className="mb-5">
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => handlePromptClick()}
+            onClick={() => handleStartClick()}
             disabled={connectionState !== 'connected' || isChannelDetached}
             className={`px-3 py-2 text-sm border rounded-md transition-colors ${
               connectionState !== 'connected' || isChannelDetached
@@ -129,7 +130,7 @@ const AITransportDemo: React.FC = () => {
                 : 'bg-white hover:bg-blue-50 border-gray-300 hover:border-blue-300 cursor-pointer'
             }`}
           >
-            What is Ably AI Transport?
+            Start streaming
           </button>
         </div>
       </div>
@@ -142,7 +143,7 @@ const App: React.FC = () => {
   return (
     <AblyProvider client={client}>
       <ChannelProvider channelName={CHANNEL_NAME}>
-        <AITransportDemo />
+        <MessageAppendDemo />
       </ChannelProvider>
     </AblyProvider>
   );
