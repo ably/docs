@@ -1,9 +1,14 @@
 import React from 'react';
 import type { GatsbySSR } from 'gatsby';
 import { getSandpackCssText } from '@codesandbox/sandpack-react';
+import { THEME_NO_FLASH_SCRIPT } from './src/utilities/theme';
 
 const onRenderBody: GatsbySSR['onRenderBody'] = ({ setHeadComponents }) => {
   const inlineScripts: React.ReactNode[] = [];
+
+  // Set the theme class on <html> before first paint to avoid a flash of the
+  // wrong theme. Runs first so the class is present before any styles apply.
+  inlineScripts.push(<script key="theme-no-flash" dangerouslySetInnerHTML={{ __html: THEME_NO_FLASH_SCRIPT }} />);
 
   // OneTrust consent management, inspiration taken from gatsby-google-tagmanager implementation
   if (process.env.ONE_TRUST_ENABLED === 'true' && !!process.env.ONE_TRUST_DOMAIN) {
