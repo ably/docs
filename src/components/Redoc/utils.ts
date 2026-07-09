@@ -68,7 +68,15 @@ export const overrideMenuItemNavigation = () => {
     targetItem.addEventListener('click', clickHandler);
   });
 
-  // Clean up function to remove all event listeners
+  // Watch for URL changes so the listeners get torn down on navigation. The
+  // callback references cleanup (defined below); both exist by the time it fires.
+  const observer = new MutationObserver(() => {
+    if (window.location.pathname !== '/docs/api/control-api') {
+      cleanup();
+    }
+  });
+
+  // Clean up function: remove all event listeners and stop observing.
   const cleanup = () => {
     document.removeEventListener('scroll', scrollHandler);
     menuItems.forEach((item) => {
@@ -78,14 +86,8 @@ export const overrideMenuItemNavigation = () => {
       }
     });
     clickHandlers.clear();
+    observer.disconnect();
   };
-
-  // Watch for URL changes
-  const observer = new MutationObserver(() => {
-    if (window.location.pathname !== '/docs/api/control-api') {
-      cleanup();
-    }
-  });
 
   const body = document.querySelector('body');
   if (body) {
