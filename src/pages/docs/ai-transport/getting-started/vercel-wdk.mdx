@@ -1,0 +1,403 @@
+---
+title: "Get started with Vercel Workflow Development Kit"
+meta_description: "Build a streaming AI chat app whose agent side runs as a Vercel Workflow inside your Next.js app. Each model call and tool is its own retryable WDK step; a retry supersedes the failed attempt on the channel, and the user's stream never breaks."
+meta_keywords: "AI Transport, Vercel Workflow Development Kit, Vercel WDK, WDK, durable execution, workflow, use step, getStepMetadata, adoptRun, createStep, Next.js, Ably"
+intro: "Build a Next.js chat app whose agent side runs as a Vercel Workflow in the same deployment. The workflow opens the Run and runs each model call as its own durable WDK step; a retry supersedes the failed attempt on the channel, and the user's stream never breaks."
+---
+
+## What you build <a id="what-you-build"/>
+
+A Next.js chat app where:
+
+- Every user turn starts a [Vercel Workflow Development Kit](https://useworkflow.dev/) (WDK) workflow inside the same Next.js deployment. The workflow drives the agent loop as a sequence of WDK steps, each running as its own process.
+- The workflow opens the Run in one step, then runs each model call and each tool as its own step. Every model response and tool result is published as an AI Transport [Step](/docs/ai-transport/concepts/steps), identified by the WDK step id.
+- A crashed step is retried by WDK as a fresh process under the same step id, so the retry's channel output supersedes the failed attempt's.
+- The client experience is identical to the [Vercel AI SDK getting-started](/docs/ai-transport/getting-started/vercel-ai-sdk); only the server-side execution model changes.
+
+<Aside data-type='note'>
+Both Vercel WDK and AI Transport use the word step. This guide writes WDK step for a Vercel `'use step'` function, and Step for the AI Transport primitive it publishes.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+- Node.js 22 or later.
+- An [Ably account](https://ably.com/sign-up) with an API key.
+- An Anthropic API key, or any other model provider supported by Vercel AI SDK.
+
+No separate workflow server or CLI install is needed. The workflow runtime ships in the `workflow` package and runs inside `next dev`.
+
+## Install dependencies <a id="install-dependencies"/>
+
+Install the AI Transport SDK, the Vercel AI SDK, the workflow runtime, and Next.js:
+
+<Code>
+```shell
+npm install @ably/ai-transport ably ai @ai-sdk/react @ai-sdk/anthropic workflow zod \
+  next react react-dom
+```
+</Code>
+
+## Set up authentication <a id="set-up-authentication"/>
+
+Create an auth endpoint at `/api/auth/token` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
+
+The client below uses `authUrl: '/api/auth/token'` to fetch tokens from this endpoint.
+
+## Configure the channel rule <a id="configure-the-channel-rule"/>
+
+AI Transport streams each response by appending tokens to a single channel message. That requires the **Message annotations, updates, deletes, and appends** channel rule (`mutableMessages`) on the namespace your conversations live on.
+
+In your Ably dashboard, enable **Message annotations, updates, deletes, and appends** on the `conversations` namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+
+<Aside data-type='important'>
+This is a one-time setup per Ably app. Without the rule, the first token append fails with error `93002` and no tokens stream. The `channelName` you set below must live in a namespace with this rule enabled.
+</Aside>
+
+## Configure Next.js for workflows <a id="configure-workflows"/>
+
+Wrap your Next.js config with `withWorkflow`. It installs the bundler transforms for the `'use workflow'` and `'use step'` directives and serves the workflow runtime's handler endpoints under `/.well-known/workflow/v1/*`.
+
+<Code>
+```typescript
+import type { NextConfig } from 'next';
+import { withWorkflow } from 'workflow/next';
+
+const nextConfig: NextConfig = {};
+
+export default withWorkflow(nextConfig);
+```
+</Code>
+
+In local development the runtime stores run state in `.workflow-data/`; add that directory to `.gitignore`.
+
+## Build the agent <a id="build-agent"/>
+
+The agent side is three files under `app/workflows/`: the workflow that orchestrates the turn, the server tool it calls, and the steps that publish to the channel. Create them next.
+
+### Workflow <a id="define-workflow"/>
+
+Create `app/workflows/turn.ts`. The workflow is the deterministic orchestrator: it holds the Run's identity and does no channel I/O. `openRun` opens the Run; `runInference` runs each model call, the first and every follow-up. While an inference reports fresh server-tool calls, the workflow dispatches one `runTool` per call, then loops a follow-up `runInference`. Every terminal outcome has already been published on the wire by the step that produced it; the workflow only decides whether to schedule more steps.
+
+<Code>
+```typescript
+import { getWorkflowMetadata } from 'workflow';
+import type { InvocationData } from '@ably/ai-transport';
+import { failRun, openRun, runInference, runTool, type TurnIds } from './steps';
+
+export async function chatWorkflow(invocation: InvocationData): Promise<void> {
+  'use workflow';
+  const { workflowRunId } = getWorkflowMetadata();
+
+  let ids: TurnIds | undefined;
+  try {
+    ids = await openRun(invocation, workflowRunId);
+    let outcome = await runInference(invocation, ids);
+
+    while (outcome.kind === 'server-tools') {
+      for (const toolCall of outcome.serverToolCalls) {
+        await runTool(invocation, ids, toolCall);
+      }
+      outcome = await runInference(invocation, ids);
+    }
+  } catch (error) {
+    // Retries exhausted: if a Run was opened, end it in error so observers unstick.
+    if (ids) {
+      const message = error instanceof Error ? error.message : String(error);
+      try {
+        await failRun(invocation, ids, message);
+      } catch {
+        /* best-effort */
+      }
+    }
+    throw error;
+  }
+}
+```
+</Code>
+
+A `'use workflow'` function must stay deterministic. WDK re-executes it on every wake-up, replaying each awaited step's recorded result instead of re-running it, so anything nondeterministic, and all channel I/O, belongs inside the steps. Reading `getWorkflowMetadata()` here is safe because `workflowRunId` is stable across replays.
+
+### Tool <a id="define-tool"/>
+
+Create `app/workflows/tools.ts` with one server tool. It generates a whole-dollar price and throws when the price is odd, about half the time, so you can watch WDK retry the tool step in the inspector and watch the retry's re-rolled output supersede the failed attempt on the Ably channel.
+
+<Code>
+```typescript
+import { z } from 'zod';
+import type { Tool } from 'ai';
+
+export const tools: Record<string, Tool> = {
+  getStockPrice: {
+    description: 'Get the current stock price for a ticker symbol.',
+    inputSchema: z.object({
+      symbol: z.string().describe('The ticker symbol, for example "AAPL"'),
+    }),
+    execute: async ({ symbol }: { symbol: string }) => {
+      // Intentionally flaky: throws on an odd price so you can watch the retry re-roll it.
+      const priceUSD = Math.round(50 + Math.random() * 500);
+      if (priceUSD % 2 !== 0) {
+        throw new Error(`stock price service returned an odd price (${priceUSD}), retry me`);
+      }
+      return { symbol, priceUSD };
+    },
+  },
+};
+```
+</Code>
+
+### Steps <a id="define-steps"/>
+
+Create `app/workflows/steps.ts`. Each `'use step'` function runs as a separate process, a fresh invocation with no shared memory, so every step constructs its own Ably client and `AgentSession` and reconstructs Run state from the channel. Only serializable values cross the workflow-to-step boundary; the client and session never do.
+
+Two structural rules keep the cross-process lifecycle sound. The step that produces an outcome publishes the matching Run lifecycle event in the same session it streamed with. And failure paths detach rather than end, leaving the Run open on the wire so a WDK retry can adopt it and publish a superseding attempt under the same `stepId`.
+
+<Code>
+```typescript
+import * as Ably from 'ably';
+import { convertToModelMessages, stepCountIs, streamText } from 'ai';
+import { getStepMetadata } from 'workflow';
+import { anthropic } from '@ai-sdk/anthropic';
+import { Invocation, type InvocationData } from '@ably/ai-transport';
+import {
+  createAgentSession,
+  pendingToolCalls,
+  stripToolExecutes,
+  vercelRunOutcome,
+} from '@ably/ai-transport/vercel';
+import { tools } from './tools';
+
+export interface TurnIds {
+  runId: string;
+  invocationId: string;
+  triggerEventId: string;
+}
+
+export interface ToolCallInfo {
+  toolCallId: string;
+  toolName: string;
+  input: unknown;
+}
+
+// server-tools is the only non-terminal kind; the other kinds are already published.
+export type InferenceOutcome =
+  | { kind: 'complete' }
+  | { kind: 'suspend' }
+  | { kind: 'cancelled' }
+  | { kind: 'error'; errorMessage: string }
+  | { kind: 'server-tools'; serverToolCalls: ToolCallInfo[] };
+
+type AgentSession = ReturnType<typeof createAgentSession>;
+type AgentRun = ReturnType<AgentSession['adoptRun']> | ReturnType<AgentSession['createRun']>;
+
+// A fresh session per step. detach (not end) leaves any open Run on the channel
+// for the next step, or for a retry to adopt.
+async function withAgentSession<T>(
+  channelName: string,
+  body: (session: AgentSession) => Promise<T>,
+): Promise<T> {
+  const client = new Ably.Realtime({ key: process.env.ABLY_API_KEY! });
+  const session = createAgentSession({ client, channelName });
+  try {
+    await session.connect();
+    return await body(session);
+  } finally {
+    try {
+      await session.detach();
+    } catch {
+      /* best-effort */
+    }
+    client.close();
+  }
+}
+
+// Open the Run and return its ids. No model call here; the first inference is its own step.
+export async function openRun(invocationData: InvocationData, workflowRunId: string): Promise<TurnIds> {
+  'use step';
+  const invocation = Invocation.fromJSON(invocationData);
+  const invocationId = `inv:${workflowRunId}`;
+  return withAgentSession(invocation.sessionName, async (session) => {
+    // Pin the ids to the replay-stable workflow run id so a retry re-enters the same Run.
+    const run = session.createRun(invocation, { runId: `run:${workflowRunId}`, invocationId });
+
+    // Drain history so the trigger folds in, then open (or resume) the Run.
+    while (run.view.hasOlder()) await run.view.loadOlder();
+    await run.start();
+
+    return { runId: run.runId, invocationId, triggerEventId: invocation.inputEventId };
+  });
+}
+
+// Adopt the open Run, run one model call as a Step, and publish its terminal.
+export async function runInference(invocationData: InvocationData, ids: TurnIds): Promise<InferenceOutcome> {
+  'use step';
+  const invocation = Invocation.fromJSON(invocationData);
+  return withAgentSession(invocation.sessionName, async (session) => {
+    const { stepId } = getStepMetadata();
+    const run = session.adoptRun(ids);
+    await run.load({ timeoutMs: 15_000 });
+    while (run.view.hasOlder()) await run.view.loadOlder();
+
+    const step = run.createStep({ stepId });
+    await step.start();
+
+    const conversation = run.view.getMessages().map((entry) => entry.message);
+    const result = streamText({
+      model: anthropic('claude-sonnet-4-20250514'),
+      messages: await convertToModelMessages(conversation),
+      tools: stripToolExecutes(tools),
+      abortSignal: run.abortSignal,
+      // The workflow drives the loop; this call runs one step only.
+      stopWhen: stepCountIs(1),
+    });
+
+    const pipeResult = await step.pipe(result.toUIMessageStream());
+    const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+    await step.end(outcome.reason === 'error' ? { reason: 'failed' } : undefined);
+
+    let inference: InferenceOutcome;
+    if (outcome.reason === 'error') {
+      inference = { kind: 'error', errorMessage: outcome.error.message };
+    } else if (outcome.reason === 'cancelled') {
+      inference = { kind: 'cancelled' };
+    } else if (outcome.reason === 'complete') {
+      inference = { kind: 'complete' };
+    } else {
+      // Server tools (execute in the registry) run as steps; anything else suspends.
+      const serverToolCalls = pendingToolCalls(run.messages)
+        .filter((call) => typeof tools[call.toolName]?.execute === 'function')
+        .map((call) => ({ toolCallId: call.toolCallId, toolName: call.toolName, input: call.input }));
+      inference = serverToolCalls.length > 0 ? { kind: 'server-tools', serverToolCalls } : { kind: 'suspend' };
+    }
+
+    await publishTerminal(run, inference);
+    return inference;
+  });
+}
+
+// Execute one server tool and publish its result as a Step. A throw retries under the same stepId.
+export async function runTool(invocationData: InvocationData, ids: TurnIds, toolCall: ToolCallInfo): Promise<void> {
+  'use step';
+  const invocation = Invocation.fromJSON(invocationData);
+  await withAgentSession(invocation.sessionName, async (session) => {
+    const run = session.adoptRun(ids);
+    await run.load({ timeoutMs: 15_000 });
+
+    const step = run.createStep({ stepId: getStepMetadata().stepId });
+    await step.start();
+    // Look the tool up by the model-provided name and narrow it to the callable shape.
+    const tool = tools[toolCall.toolName] as { execute?: (input: unknown) => Promise<unknown> };
+    if (!tool?.execute) throw new Error(`tool '${toolCall.toolName}' has no execute`);
+    const output = await tool.execute(toolCall.input);
+    await step.send({ type: 'tool-output-available', toolCallId: toolCall.toolCallId, output });
+    await step.end();
+  });
+}
+
+// The workflow's failure terminal, run from its catch when a step exhausts retries.
+// A load() rejection means the Run is already gone; nothing to clean up.
+export async function failRun(invocationData: InvocationData, ids: TurnIds, errorMessage: string): Promise<void> {
+  'use step';
+  const invocation = Invocation.fromJSON(invocationData);
+  await withAgentSession(invocation.sessionName, async (session) => {
+    const run = session.adoptRun(ids);
+    try {
+      await run.load({ timeoutMs: 15_000 });
+    } catch {
+      return;
+    }
+    await run.end({ reason: 'error', error: new Ably.ErrorInfo(errorMessage, 104000, 500) });
+  });
+}
+
+// Cleanup is best-effort and must not cascade: one attempt, no retries.
+failRun.maxRetries = 0;
+
+// Publish the lifecycle event the outcome implies; server-tools publishes nothing.
+async function publishTerminal(run: AgentRun, outcome: InferenceOutcome): Promise<void> {
+  switch (outcome.kind) {
+    case 'server-tools':
+      return;
+    case 'suspend':
+      await run.suspend();
+      return;
+    case 'error':
+      await run.end({ reason: 'error', error: new Ably.ErrorInfo(outcome.errorMessage, 104000, 500) });
+      return;
+    default:
+      await run.end({ reason: outcome.kind });
+  }
+}
+```
+</Code>
+
+`openRun` opens the Run and returns its ids without calling the model. Splitting it from the first inference keeps each retryable on its own: an inference retry never re-opens the Run, and the ids reach the workflow before any inference, so `failRun` can still end the Run if an inference later exhausts its retries.
+
+`runInference` adopts the Run and runs one model call. `stripToolExecutes` and `stopWhen: stepCountIs(1)` keep the Vercel AI SDK from running its own tool loop, so the model emits its tool-call parts and stops; the workflow drives the loop. `runInference` then routes the pending calls: a tool with a server `execute` becomes a `runTool` step; anything else suspends the Run for the client to answer. This guide uses a single server tool; the [framework page](/docs/ai-transport/frameworks/vercel-wdk#tool-calls) and [tool calling](/docs/ai-transport/features/tool-calling) cover client-executed and approval-gated tools.
+
+## Create the agent route <a id="create-agent-route"/>
+
+Create `app/api/chat/route.ts`. The route starts a workflow and returns immediately; the reply reaches the client over the channel, so the response body is informational only.
+
+<Code>
+```typescript
+import { start } from 'workflow/api';
+import type { InvocationData } from '@ably/ai-transport';
+import { chatWorkflow } from '../../workflows/turn';
+
+export async function POST(req: Request): Promise<Response> {
+  const invocation = (await req.json()) as InvocationData;
+  const run = await start(chatWorkflow, [invocation]);
+  return Response.json({ workflowRunId: run.runId });
+}
+```
+</Code>
+
+`run.runId` here is the WDK workflow run id, not the AI Transport `runId`; `openRun` mints that on the channel. A continuation POST (a tool result, a regenerate, a suspend resume) starts a fresh workflow the same way, and its `openRun` step resumes the existing Run.
+
+## Create the chat component <a id="chat-component"/>
+
+The client is identical to the [Vercel AI SDK getting-started](/docs/ai-transport/getting-started/vercel-ai-sdk#create-the-chat-component). The `ChatTransport` POSTs to `/api/chat`; whether the server side is a single `streamText` call or a WDK workflow is invisible to the client.
+
+## Wire it together <a id="wire-it-together"/>
+
+The page wrapper is identical to the [Vercel AI SDK getting-started](/docs/ai-transport/getting-started/vercel-ai-sdk#wire-it-together). Use the same `Providers` and `ChatTransportProvider` setup.
+
+## Run the app <a id="run"/>
+
+One process runs everything. Next.js serves the app, and the workflow runtime executes workflows and steps inside it:
+
+<Code>
+```shell
+npm run dev
+```
+</Code>
+
+To watch workflows execute, open the inspector in a second terminal:
+
+<Code>
+```shell
+npx workflow web
+```
+</Code>
+
+Open the app at `http://localhost:3000`. Every user turn appears as a new workflow run in the inspector; each step's output is a Step on the Ably channel. Ask for a stock price a few times: about half the tool steps fail and retry, re-rolling the price, and the conversation settles on the retried output with no duplicate.
+
+## What is happening <a id="what-is-happening"/>
+
+1. `sendMessage({ text })` publishes the user input on the channel and POSTs an [Invocation](/docs/ai-transport/concepts/invocations) to `/api/chat`, which starts a WDK workflow.
+2. `openRun` calls [`session.createRun`](/docs/ai-transport/api/javascript/core/agent-session#create-run) with the Run id pinned to the workflow run id, drains history so the trigger folds in, and publishes `ai-run-start` with `run.start()`. It returns the Run's ids and runs no model. The workflow then calls `runInference`, which adopts the Run with [`session.adoptRun`](/docs/ai-transport/api/javascript/core/agent-session#adopt-run), opens a Step under `getStepMetadata().stepId`, streams the model response, and publishes the outcome's terminal inline. When the model asks for a server tool, the workflow schedules `runTool` per call (each adopts the Run and publishes the result as its own Step), then loops back into `runInference` for the follow-up, which publishes `ai-run-end`.
+3. If a step throws, WDK re-runs it as a fresh process under the same step id. `getStepMetadata().stepId` is stable across retries, so the retry's `ai-step-start` supersedes the failed attempt's channel output. The user sees only the retried Step's output. The `getStockPrice` tool throws on odd prices to make this visible on the tool step.
+4. Cancels arrive on the channel, not through a workflow API. The in-flight step's own session routes them to [`run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run), which flows into the LLM call.
+
+This guide's happy path publishes each Run terminal inside the step that produced it. When a step exhausts its retries instead, the workflow's catch schedules `failRun` to publish `run.end({ reason: 'error' })` so every observer's UI unsticks; `maxRetries = 0` keeps that final write to a single attempt. The catch holds the Run's ids only once `openRun` has returned them, so a turn whose `openRun` fails every attempt opened no Run to strand. See [Durable execution](/docs/ai-transport/features/durable-execution#close-once) for the pattern.
+
+## Understand the architecture <a id="architecture"/>
+
+Vercel WDK owns execution durability: process crashes, step retries, workflow progress. AI Transport owns conversation state: what appears on the channel, how retries reconcile, how clients observe. See [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk) for the composition model and [Durable execution](/docs/ai-transport/features/durable-execution) for the framework-agnostic pattern.
+
+## Explore next <a id="explore-next"/>
+
+- [Vercel WDK framework](/docs/ai-transport/frameworks/vercel-wdk): scope, cancel routing, suspend-and-resume across workflows.
+- [Durable execution](/docs/ai-transport/features/durable-execution): the pattern behind the code.
+- [Steps](/docs/ai-transport/concepts/steps): the unit a WDK step publishes.
+- [AgentSession API reference](/docs/ai-transport/api/javascript/core/agent-session): `adoptRun`, `createStep`, `detach`.
