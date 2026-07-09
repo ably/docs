@@ -80,7 +80,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         width={660}
         height={282}
         alt="Grid Pattern"
-        className="!absolute -z-10 right-0 top-16 !hidden sm:!block w-[60%] md:w-[40%]"
+        className="!absolute -z-10 right-0 top-16 !hidden sm:!block dark:!hidden w-[60%] md:w-[40%]"
       />
 
       <StaticImage
@@ -88,7 +88,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         placeholder="blurred"
         width={260}
         alt="Grid Pattern"
-        className="-z-10 right-0 top-16 !absolute !block sm:!hidden"
+        className="-z-10 right-0 top-16 !absolute !block sm:!hidden dark:!hidden"
       />
     </>
   );
