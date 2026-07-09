@@ -24,7 +24,7 @@ import { createAgentSession } from '@ably/ai-transport';
 import { UIMessageCodec } from '@ably/ai-transport/vercel';
 
 async function runToolStep({ runId, invocationId, triggerEventId, activityId, toolCall }) {
-  const ably = new Ably.Realtime({ authUrl: '/auth' });
+  const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
   const session = createAgentSession({
     client: ably,
     channelName: 'conversation-42',
@@ -72,7 +72,7 @@ Do not call [`session.end()`](/docs/ai-transport/api/javascript/core/agent-sessi
 
 Cancels arrive on the Ably channel, not through a workflow signal. Every `AgentSession` subscribes to the channel on connect, so a cancel published by the client fires [`run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run) inside the activity that currently holds the Run. Pass that signal into the LLM call as its `abortSignal` and the model call stops with the Step ending `'cancelled'`. No listener activity or workflow signal is required.
 
-Each activity constructs its own `Ably.Realtime` client and its own `AgentSession`. Sharing sessions across activities is not supported. Sharing a Realtime client across activities is supported provided no activity closes a channel that another Run still uses.
+Each activity constructs its own `Ably.Realtime` client and its own `AgentSession`. Sharing session objects (instances) across activities is not supported; each activity should connect to the underlying Ably AI Transport session through its own session object. Sharing a Realtime client is only possible when activities run in the same process; workflow engines that isolate each activity in its own process, such as Temporal and Vercel Workflow DevKit, give each activity a fresh client regardless. Where a client is shared, no activity may close a channel that another Run still uses.
 
 ## Edge cases <a id="edge-cases"/>
 
@@ -82,7 +82,7 @@ Each activity constructs its own `Ably.Realtime` client and its own `AgentSessio
 - `load` times out if the Run's `ai-run-start` is not observed within 30 seconds (`options.timeoutMs`). This is a workflow-ordering error: the adopting activity ran before the opener published. Retry with backoff, or raise the timeout when history pages back a long way.
 - A cancel arriving before `load()` returns fires `run.abortSignal` synchronously once load resolves. The cancel is not lost.
 - A turn that exhausts its retries with the Run still open leaves every observer's UI on `streaming`. Your failure path must adopt the Run and publish `run.end({ reason: 'error' })` so the client unsticks.
-- An empty pipe on retry publishes no output. The previous attempt's output stays in the conversation. This is by design: an aborted retry does not clear the successful bracket that came before it, only a completed retry supersedes.
+- A retry supersedes the previous attempt as soon as it calls `step.start()`, because supersede keys on the fresh, higher-serial `ai-step-start` published under the same `stepId`, not on any output the retry goes on to produce. A retry that starts and then emits nothing still replaces the earlier attempt's output with an empty Step.
 - `session.end()` on a still-active Run publishes `ai-run-end` with reason `'cancelled'`. Reserve it for teardown, not mid-workflow handoff.
 
 ## FAQ <a id="faq"/>
