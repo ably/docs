@@ -1,7 +1,8 @@
-import React, { PropsWithChildren, useMemo } from 'react';
+import React, { PropsWithChildren, useEffect, useMemo, useState } from 'react';
 import { SandpackProvider, SandpackPreview } from '@codesandbox/sandpack-react';
 import { githubLight } from '@codesandbox/sandpack-themes';
-import { CodeEditor } from 'src/components/CodeEditor';
+import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
+import { useTheme } from 'src/contexts/theme-context';
 import { LanguageKey } from 'src/data/languages/types';
 import { ExampleFiles, ExampleWithContent } from 'src/data/examples/types';
 import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
@@ -74,6 +75,14 @@ const ExamplesRenderer = ({
   children,
 }: PropsWithChildren<ExamplesRendererProps>) => {
   const { id, files, visibleFiles, layout, products } = example;
+  const { resolvedTheme } = useTheme();
+  // Sandpack/Chrome take the theme as JS values (not CSS `dark:` variants), so
+  // gate on mount: render light (matching the server) until hydrated, then
+  // follow the resolved theme. Avoids a hydration mismatch for dark-mode users
+  // when the editor is server-rendered.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const editorTheme = mounted ? resolvedTheme : 'light';
 
   const rewrittenFiles = useMemo<ExampleFiles>(() => {
     const result: ExampleFiles = {};
@@ -149,7 +158,7 @@ const ExamplesRenderer = ({
             : []),
         ],
       }}
-      theme={githubLight}
+      theme={editorTheme === 'dark' ? sandpackTheme : githubLight}
       template={determineSandpackTemplate(activeLanguage as LanguageKey)}
     >
       <div
@@ -181,7 +190,7 @@ const ExamplesRenderer = ({
         >
           <div className={cn('min-w-0 overflow-hidden', isVerticalLayout && 'md:flex-1')}>
             <CodeEditor
-              theme="light"
+              theme={editorTheme}
               editor={{
                 className: '',
                 showLineNumbers: true,
