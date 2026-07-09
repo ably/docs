@@ -7,6 +7,7 @@ import cn from 'src/utilities/cn';
 import type { PageContextType } from './Layout';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Button from 'src/components/ui/Button';
+import ThemeToggle from './ThemeToggle';
 import { HandRaisedIcon, HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline';
 import {
   HandRaisedIcon as HandRaisedSolidIcon,
@@ -329,11 +330,14 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
             </div>
           ))}
         </div>
-        <Status
-          additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
-          statusUrl={StatusUrl}
-          showDescription
-        />
+        <div className="flex flex-col items-end gap-3">
+          <Status
+            additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
+            statusUrl={StatusUrl}
+            showDescription
+          />
+          <ThemeToggle />
+        </div>
       </div>
     </footer>
   );

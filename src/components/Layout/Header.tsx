@@ -13,7 +13,6 @@ import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';
 import LeftSidebar from './LeftSidebar';
 import ProductBar from './ProductBar';
-import ThemeSwitcher from './ThemeSwitcher';
 import UserContext from 'src/contexts/user-context';
 import ExamplesList from '../Examples/ExamplesList';
 import Link from '../Link';
@@ -304,7 +303,6 @@ const Header: React.FC = () => {
               <SparklesIcon className="size-[20px]" aria-hidden />
               <span>Ask AI</span>
             </button>
-            <ThemeSwitcher />
             <DropdownMenu.Root>
               <Tooltip.Root>
                 <DropdownMenu.Trigger asChild>
@@ -401,18 +399,15 @@ const Header: React.FC = () => {
             )}
           </div>
         </Tooltip.Provider>
-        <div className="flex md:hidden items-center gap-1">
-          <ThemeSwitcher />
-          <div ref={burgerButtonRef}>
-            <button
-              className={iconButtonClassName}
-              aria-label="Toggle navigation menu"
-              aria-expanded={isMobileMenuOpen}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              <Bars3Icon className="size-[20px]" aria-hidden />
-            </button>
-          </div>
+        <div ref={burgerButtonRef} className="flex md:hidden">
+          <button
+            className={iconButtonClassName}
+            aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <Bars3Icon className="size-[20px]" aria-hidden />
+          </button>
         </div>
 
         <div id="inkeep-search-holder" className="hidden">

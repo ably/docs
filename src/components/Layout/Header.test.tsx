@@ -22,10 +22,6 @@ jest.mock('@ably/ui/core/insights', () => ({
   track: jest.fn(),
 }));
 
-jest.mock('src/contexts/theme-context', () => ({
-  useTheme: jest.fn().mockReturnValue({ theme: 'light', resolvedTheme: 'light', setTheme: jest.fn() }),
-}));
-
 jest.mock('src/components/Icon', () => {
   const MockIcon: React.FC<{ name: string }> = ({ name }) => <div>{name}</div>;
   MockIcon.displayName = 'MockIcon';
