@@ -28,6 +28,10 @@ export default {
               link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
             },
             {
+              name: 'Vercel WDK',
+              link: '/docs/ai-transport/getting-started/vercel-wdk',
+            },
+            {
               name: 'Temporal',
               link: '/docs/ai-transport/getting-started/temporal',
             },
@@ -113,6 +117,10 @@ export default {
         {
           name: 'Vercel AI SDK Core',
           link: '/docs/ai-transport/frameworks/vercel-ai-sdk-core',
+        },
+        {
+          name: 'Vercel WDK',
+          link: '/docs/ai-transport/frameworks/vercel-wdk',
         },
         {
           name: 'Temporal',
