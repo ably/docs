@@ -132,76 +132,76 @@ export default {
       name: 'Features',
       pages: [
         {
-          name: 'Token streaming',
-          link: '/docs/ai-transport/features/token-streaming',
-        },
-        {
-          name: 'Cancellation',
-          link: '/docs/ai-transport/features/cancellation',
-        },
-        {
-          name: 'Reconnection and recovery',
-          link: '/docs/ai-transport/features/reconnection-and-recovery',
-        },
-        {
-          name: 'Multi-device sessions',
-          link: '/docs/ai-transport/features/multi-device',
-        },
-        {
-          name: 'History and replay',
-          link: '/docs/ai-transport/features/history',
-        },
-        {
-          name: 'Database hydration',
-          link: '/docs/ai-transport/features/database-hydration',
+          name: 'Agent presence',
+          link: '/docs/ai-transport/features/agent-presence',
         },
         {
           name: 'Branching, edit, and regenerate',
           link: '/docs/ai-transport/features/branching',
         },
         {
-          name: 'Interruption',
-          link: '/docs/ai-transport/features/interruption',
-        },
-        {
-          name: 'Concurrent turns',
-          link: '/docs/ai-transport/features/concurrent-turns',
-        },
-        {
-          name: 'Tool calling',
-          link: '/docs/ai-transport/features/tool-calling',
-        },
-        {
-          name: 'Durable execution',
-          link: '/docs/ai-transport/features/durable-execution',
-        },
-        {
-          name: 'Human-in-the-loop',
-          link: '/docs/ai-transport/features/human-in-the-loop',
-        },
-        {
-          name: 'Optimistic updates',
-          link: '/docs/ai-transport/features/optimistic-updates',
-        },
-        {
-          name: 'Agent presence',
-          link: '/docs/ai-transport/features/agent-presence',
-        },
-        {
-          name: 'LiveObjects State',
-          link: '/docs/ai-transport/features/liveobjects',
-        },
-        {
-          name: 'Push notifications',
-          link: '/docs/ai-transport/features/push-notifications',
+          name: 'Cancellation',
+          link: '/docs/ai-transport/features/cancellation',
         },
         {
           name: 'Chain of thought',
           link: '/docs/ai-transport/features/chain-of-thought',
         },
         {
+          name: 'Concurrent turns',
+          link: '/docs/ai-transport/features/concurrent-turns',
+        },
+        {
+          name: 'Database hydration',
+          link: '/docs/ai-transport/features/database-hydration',
+        },
+        {
           name: 'Double texting',
           link: '/docs/ai-transport/features/double-texting',
+        },
+        {
+          name: 'Durable execution',
+          link: '/docs/ai-transport/features/durable-execution',
+        },
+        {
+          name: 'History and replay',
+          link: '/docs/ai-transport/features/history',
+        },
+        {
+          name: 'Human-in-the-loop',
+          link: '/docs/ai-transport/features/human-in-the-loop',
+        },
+        {
+          name: 'Interruption',
+          link: '/docs/ai-transport/features/interruption',
+        },
+        {
+          name: 'LiveObjects State',
+          link: '/docs/ai-transport/features/liveobjects',
+        },
+        {
+          name: 'Multi-device sessions',
+          link: '/docs/ai-transport/features/multi-device',
+        },
+        {
+          name: 'Optimistic updates',
+          link: '/docs/ai-transport/features/optimistic-updates',
+        },
+        {
+          name: 'Push notifications',
+          link: '/docs/ai-transport/features/push-notifications',
+        },
+        {
+          name: 'Reconnection and recovery',
+          link: '/docs/ai-transport/features/reconnection-and-recovery',
+        },
+        {
+          name: 'Token streaming',
+          link: '/docs/ai-transport/features/token-streaming',
+        },
+        {
+          name: 'Tool calling',
+          link: '/docs/ai-transport/features/tool-calling',
         },
       ],
     },
