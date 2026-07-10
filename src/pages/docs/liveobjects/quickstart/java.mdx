@@ -16,8 +16,8 @@ You will learn how to:
 * Create an Ably account and get an API key for authentication.
 * Install the Ably Pub/Sub SDK.
 * Create a channel with LiveObjects functionality enabled.
-* Use the [PathObject API](/docs/liveobjects/concepts/path-object) to access objects on a channel.
-* Create, update and subscribe to changes on LiveObjects data structures: [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/counter).
+* Use the [PathObject API](/docs/liveobjects/concepts/path-object?lang=java) to access objects on a channel.
+* Create, update and subscribe to changes on LiveObjects data structures: [LiveMap](/docs/liveobjects/map?lang=java) and [LiveCounter](/docs/liveobjects/counter?lang=java).
 
 ## Authentication <a id="step-0"/>
 
@@ -40,7 +40,7 @@ For the purposes of this guide, make sure your API key includes both `object-sub
 
 ## Install Ably Pub/Sub SDK <a id="step-1"/>
 
-LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objects plugin. The plugin is discovered from the classpath at runtime — no code registration is needed; adding the dependency is enough.
+LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objects plugin. The plugin is discovered from the classpath at runtime. No code registration is needed; adding the dependency is enough.
 
 ### Install for Maven <a id="maven"/>
 
@@ -48,12 +48,12 @@ LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objec
 <dependency>
     <groupId>io.ably</groupId>
     <artifactId>ably-java</artifactId>
-    <version>1.7.3</version>
+    <version>1.8.0</version>
 </dependency>
 <dependency>
     <groupId>io.ably</groupId>
     <artifactId>liveobjects</artifactId>
-    <version>1.7.3</version>
+    <version>1.8.0</version>
     <scope>runtime</scope>
 </dependency>
 ```
@@ -61,15 +61,15 @@ LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objec
 ### Install for Gradle <a id="gradle"/>
 
 ```java
-implementation 'io.ably:ably-java:1.7.3'
-runtimeOnly 'io.ably:liveobjects:1.7.3'
+implementation 'io.ably:ably-java:1.8.0'
+runtimeOnly 'io.ably:liveobjects:1.8.0'
 ```
 
 For `Android` platform, use `ably-android` instead of `ably-java`
 
 ```java
-implementation 'io.ably:ably-android:1.7.3'
-runtimeOnly 'io.ably:liveobjects:1.7.3'
+implementation 'io.ably:ably-android:1.8.0'
+runtimeOnly 'io.ably:liveobjects:1.8.0'
 ```
 
 ## Instantiate a client <a id="step-2"/>
@@ -108,11 +108,11 @@ Channel channel = realtime.channels.get("test-channel", opts);
 
 ## Get the channel object <a id="step-4"/>
 
-The [`channel.object`](/docs/api/realtime-sdk/channels#object) field gives access to the LiveObjects API for a channel.
+The [`channel.object`](/docs/api/realtime-sdk/channels?lang=java#object) field gives access to the LiveObjects API for a channel.
 
-Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object), which provides a path-based API for accessing and manipulating the object hierarchy.
+Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map?lang=java) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object?lang=java), which provides a path-based API for accessing and manipulating the object hierarchy.
 
-Every LiveObjects operation is asynchronous: `channel.object.get()` returns a `CompletableFuture<LiveMapPathObject>` that completes once the LiveObjects state is synchronized with the Ably system, and every read and mutation returns a `CompletableFuture` too. The **recommended** pattern is to compose these futures rather than block on them — hold the future returned by `get()` and chain each step onto it:
+Every LiveObjects mutation is asynchronous: `channel.object.get()` returns a `CompletableFuture<LiveMapPathObject>` that completes once the LiveObjects state is synchronized with the Ably system, and every mutation returns a `CompletableFuture` too; reads are synchronous and local. The **recommended** pattern is to compose these futures rather than block on them: hold the future returned by `get()` and chain each step onto it:
 
 <Code>
 ```java
@@ -123,7 +123,7 @@ CompletableFuture<LiveMapPathObject> objectFuture = channel.object.get();
 // thenCompose sequences dependent operations (each returns its own future);
 // finish with thenRun/exceptionally.
 objectFuture
-    .thenCompose(myObject -> myObject.set("visits", LiveMapValue.of(LiveCounter.create(0))))
+    .thenCompose(rootObject -> rootObject.set("visits", LiveMapValue.of(LiveCounter.create(0))))
     .thenRun(() -> System.out.println("Channel object ready and counter created"))
     .exceptionally(err -> { System.err.println("Failed to set up objects: " + err); return null; });
 ```
@@ -133,12 +133,12 @@ objectFuture
 `.join()` blocks the calling thread until the future completes. It is fine for scripts, tests, and learning, but blocking a UI thread (Android's main thread) causes an [ANR](https://developer.android.com/topic/performance/vitals/anr) and blocking inside an Ably event listener callback can deadlock; in production code, compose the future with `thenApply`/`thenCompose`/`thenAccept`/`exceptionally` as shown above.
 </Aside>
 
-The remaining steps in this guide call `.join()` to keep each example short and focused on the LiveObjects API — it blocks until the operation completes and returns the result directly:
+The remaining steps in this guide call `.join()` to keep each example short and focused on the LiveObjects API. It blocks until the operation completes and returns the result directly:
 
 <Code>
 ```java
 // For brevity, the rest of this guide blocks with join()
-LiveMapPathObject myObject = channel.object.get().join();
+LiveMapPathObject rootObject = channel.object.get().join();
 ```
 </Code>
 
@@ -152,22 +152,25 @@ You can create and assign objects using the `LiveMap.create()` and `LiveCounter.
 
 <Code>
 ```java
-// Create a LiveCounter with initial value 0 and assign it to the 'visits' key
-myObject.set("visits", LiveMapValue.of(LiveCounter.create(0))).join();
+// Create a LiveCounter with initial value 0
+LiveCounter visits = LiveCounter.create(0);
+// Assign it to the 'visits' key on the channel object
+rootObject.set("visits", LiveMapValue.of(visits)).join();
 
-// Create a LiveMap with initial entries and assign it to the 'reactions' key
+// Create a LiveMap with initial entries
 LiveMap reactions = LiveMap.create(Map.of(
     "likes", LiveMapValue.of(0),
     "hearts", LiveMapValue.of(0)));
-myObject.set("reactions", LiveMapValue.of(reactions)).join();
+// Assign it to the 'reactions' key on the channel object
+rootObject.set("reactions", LiveMapValue.of(reactions)).join();
 
 // Get typed views for the assigned objects
-LiveCounterPathObject visitsCounter = myObject.get("visits").asLiveCounter();
-LiveMapPathObject reactionsMap = myObject.get("reactions").asLiveMap();
+LiveCounterPathObject visitsCounter = rootObject.get("visits").asLiveCounter();
+LiveMapPathObject reactionsMap = rootObject.get("reactions").asLiveMap();
 ```
 </Code>
 
-`get(key)` returns an untyped [`PathObject`](/docs/liveobjects/concepts/path-object); the `as*` casts select the typed view and never throw.
+`get(key)` returns an untyped [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java); the `as*` casts select the typed view and never throw. Learn more about [Typed views](/docs/liveobjects/typing?lang=java#typed-views).
 
 <Aside data-type='note'>
 You can create deeply nested structures in a single operation by nesting `LiveMap.create()` and `LiveCounter.create()` calls.
@@ -216,7 +219,7 @@ Mutation methods send operations to the Ably system and apply changes locally as
 
 This quickstart introduced the basic concepts of LiveObjects and demonstrated how the path-based API works. The next steps are to:
 
-* Learn about the [PathObject](/docs/liveobjects/concepts/path-object) and [Instance](/docs/liveobjects/concepts/instance) APIs.
-* Read more about [LiveCounter](/docs/liveobjects/counter) and [LiveMap](/docs/liveobjects/map).
-* Learn about [Objects Lifecycle Events](/docs/liveobjects/lifecycle).
-* Learn about [Typed views](/docs/liveobjects/typing) for your LiveObjects.
+* Learn about the [PathObject](/docs/liveobjects/concepts/path-object?lang=java) and [Instance](/docs/liveobjects/concepts/instance?lang=java) APIs.
+* Read more about [LiveCounter](/docs/liveobjects/counter?lang=java) and [LiveMap](/docs/liveobjects/map?lang=java).
+* Learn about [Objects Lifecycle Events](/docs/liveobjects/lifecycle?lang=java).
+* Learn about [Typed views](/docs/liveobjects/typing?lang=java) for your LiveObjects.

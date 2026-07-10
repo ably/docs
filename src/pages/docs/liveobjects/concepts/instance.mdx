@@ -36,7 +36,7 @@ See the [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/cou
 </If>
 
 <If lang="java">
-In the Java SDK the base `Instance` type is type-agnostic; capabilities (`getId()`, `get()`, `value()`, `set()`, `subscribe()`) live on the typed instances — `LiveMapInstance`, `LiveCounterInstance` and the primitive instances — reached via throwing `as*` casts.
+In the Java SDK the base `Instance` type is type-agnostic; capabilities (`getId()`, `get()`, `value()`, `set()`, `subscribe()`) live on the typed instances (`LiveMapInstance`, `LiveCounterInstance` and the primitive instances), reached via throwing `as*` casts. Primitive instances (for example `StringInstance`, `NumberInstance`) are read-only and anonymous: they expose only `value()`, with no `getId()`, no mutation methods and no `subscribe()`.
 </If>
 
 ## Get an Instance <a id="get"/>
@@ -46,18 +46,18 @@ Obtain an `Instance` from a `PathObject` using the `instance()` method:
 <Code>
 ```javascript
 // Get a PathObject for the channel object
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // Get the specific Instance of a LiveCounter located at the 'visits' key
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 console.log(visits?.id); // e.g. counter:abc123@1234567890
 console.log(visits?.value()); // e.g. 5
 ```
 
 ```java
-LiveMapPathObject myObject = channel.object.get().join();
+LiveMapPathObject rootObject = channel.object.get().join();
 
-Instance instance = myObject.get("visits").instance(); // null if nothing at the path
+Instance instance = rootObject.get("visits").instance(); // null if no LiveMap or LiveCounter at the path
 if (instance != null) {
     LiveCounterInstance visits = instance.asLiveCounter(); // throws IllegalStateException on mismatch
     System.out.println(visits.getId());  // e.g. "counter:abc123@1234567890"
@@ -66,14 +66,14 @@ if (instance != null) {
 ```
 </Code>
 
-<If lang="javascript">The `instance()` method returns `undefined` if no object exists at that path.</If><If lang="java">The `instance()` method returns `null` if no object exists at that path.</If>
+<If lang="javascript">The `instance()` method returns `undefined` if no object exists at that path.</If><If lang="java">The `instance()` method returns `null` if the path doesn't resolve, or if the entry does not contain a `LiveMap` or `LiveCounter` object, because primitive values have no object ID. Primitive instances are instead obtained by navigating from a `LiveMapInstance` with `get(key)`.</If>
 
 Once you have an `Instance`, it references a specific object by its ID. This means operations target that exact object:
 
 <Code>
 ```javascript
 // Obtain an Instance for a LiveCounter
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 
 // Increment the specific LiveCounter instance
 await visits?.increment(5);
@@ -81,7 +81,7 @@ await visits?.increment(5);
 
 ```java
 // Obtain an Instance for a LiveCounter
-Instance visits = myObject.get("visits").instance();
+Instance visits = rootObject.get("visits").instance();
 
 // Increment the specific LiveCounter instance
 if (visits != null) {
@@ -106,21 +106,21 @@ type Settings = {
   notifications: boolean;
 };
 
-type MyObject = {
+type RootObject = {
   visits: LiveCounter;
   settings: LiveMap<Settings>;
 };
 
-const myObject = await channel.object.get<MyObject>();
+const rootObject = await channel.object.get<RootObject>();
 
 // TypeScript knows 'visits' is a LiveCounter
-const visits: Instance<LiveCounter> | undefined = myObject.get('visits').instance();
+const visits: Instance<LiveCounter> | undefined = rootObject.get('visits').instance();
 if (visits) {
   await visits.increment(1); // Type-safe
 }
 
 // TypeScript knows the shape of 'settings'
-const settings: Instance<LiveMap<Settings>> | undefined = myObject.get('settings').instance();
+const settings: Instance<LiveMap<Settings>> | undefined = rootObject.get('settings').instance();
 if (settings) {
   const theme = settings.get('theme');
   console.log(theme?.value()); // Returns string | undefined
@@ -134,18 +134,18 @@ See the [Typing documentation](/docs/liveobjects/typing) for more details on typ
 <If lang="java">
 ## Typed views <a id="typing"/>
 
-An `Instance` wraps an already-resolved value of known type, so its `as*` casts **throw** an `IllegalStateException` on mismatch — the opposite contract to the never-throwing `PathObject` casts. Check `getType()` first when the type isn't known; `getType()` on an `Instance` is non-null.
+An `Instance` wraps an already-resolved value of known type, so its `as*` casts **throw** an `IllegalStateException` on mismatch, the opposite contract to the never-throwing `PathObject` casts. In exchange, reads on a typed instance are non-null. Check `getType()` first when the type isn't known; `getType()` on an `Instance` is non-null.
 
 <Code>
 ```java
-Instance instance = myObject.get("visits").instance();
+Instance instance = rootObject.get("visits").instance();
 if (instance != null && instance.getType() == ValueType.LIVE_COUNTER) {
     instance.asLiveCounter().increment(1).join();
 }
 ```
 </Code>
 
-See the [Typing documentation](/docs/liveobjects/typing) for more details on type safety.
+See the [Typed views documentation](/docs/liveobjects/typing?lang=java#typed-views) for the full contract, including how the path-layer casts differ.
 </If>
 
 ## Navigate an Instance <a id="navigate"/>
@@ -159,16 +159,16 @@ Unlike `PathObject`, the `get(key)` method on an `Instance` can return `undefine
 </If>
 <If lang="java">
 <Aside data-type="note">
-Unlike `PathObject`, the `get(key)` method on a `LiveMapInstance` returns `null` if the entry doesn't exist or the object at that location has been deleted. "Not a `LiveMap`" cannot happen — `get()` only exists on `LiveMapInstance`.
+Unlike `PathObject`, the `get(key)` method on a `LiveMapInstance` returns `null` if the entry doesn't exist or the object at that location has been deleted. "Not a `LiveMap`" cannot happen, because `get()` only exists on `LiveMapInstance`.
 </Aside>
 </If>
 
 <Code>
 ```javascript
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // Obtain an instance
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 console.log(settings?.id); // e.g. "map:abc123@1234567890"
 
 // Chain get() calls for deeper navigation
@@ -179,7 +179,7 @@ console.log(color?.value()); // e.g. blue
 ```
 
 ```java
-Instance instance = myObject.get("settings").instance();
+Instance instance = rootObject.get("settings").instance();
 if (instance != null) {
     LiveMapInstance settings = instance.asLiveMap();
     System.out.println(settings.getId()); // e.g. "map:abc123@1234567890"
@@ -197,7 +197,7 @@ if (instance != null) {
 ```
 </Code>
 
-<If lang="javascript">The `id` getter returns the [object ID](/docs/liveobjects/concepts/objects#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).</If><If lang="java">The `getId()` method returns the [object ID](/docs/liveobjects/concepts/objects#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).</If>
+<If lang="javascript">The `id` getter returns the [object ID](/docs/liveobjects/concepts/objects#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).</If><If lang="java">The `getId()` method returns the [object ID](/docs/liveobjects/concepts/objects?lang=java#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).</If>
 
 ## Access data <a id="access"/>
 
@@ -210,7 +210,7 @@ When an entry contains a primitive value or `LiveCounter` stored directly in the
 <Code>
 ```javascript
 // Get an instance
-const user = myObject.get('user').instance();
+const user = rootObject.get('user').instance();
 
 // Get the value of an entry containing a primitive
 const username = user?.get('username');
@@ -223,7 +223,7 @@ console.log(visits?.value()); // e.g. 5
 
 ```java
 // Get an instance
-Instance userInstance = myObject.get("user").instance();
+Instance userInstance = rootObject.get("user").instance();
 if (userInstance != null) {
     LiveMapInstance user = userInstance.asLiveMap();
 
@@ -246,7 +246,7 @@ if (userInstance != null) {
 
 <Code>
 ```javascript
-const user = myObject.get('user').instance();
+const user = rootObject.get('user').instance();
 if (user) {
   // Get an entry that doesn't exist on the instance
   console.log(user.get('nonexistent')); // undefined
@@ -254,7 +254,7 @@ if (user) {
 ```
 
 ```java
-Instance user = myObject.get("user").instance();
+Instance user = rootObject.get("user").instance();
 if (user != null) {
     // Get an entry that doesn't exist on the instance
     System.out.println(user.asLiveMap().get("nonexistent")); // null
@@ -267,24 +267,24 @@ If the entry exists, but does not contain a primitive or a `LiveCounter` instanc
 
 <Code>
 ```javascript
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // Set an entry that contains a nested LiveMap
-await myObject.set('settings', LiveMap.create({ theme: 'dark' }));
+await rootObject.set('settings', LiveMap.create({ theme: 'dark' }));
 
 // Calling value() on a LiveMap returns undefined
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 console.log(settings?.value()); // undefined - it's a LiveMap, not a primitive or LiveCounter
 ```
 </Code>
 </If>
 
 <If lang="java">
-Where the JavaScript `Instance` degrades gracefully (an `undefined` value, empty iterators, an `undefined` size), Java prevents the call at compile time or fails fast in the cast — check `getType()` when the type isn't known:
+Where the JavaScript `Instance` degrades gracefully (an `undefined` value, empty iterators, an `undefined` size), Java prevents the call at compile time or fails fast in the cast. Check `getType()` when the type isn't known:
 
 <Code>
 ```java
-Instance settings = myObject.get("settings").instance(); // a LiveMap
+Instance settings = rootObject.get("settings").instance(); // a LiveMap
 if (settings != null) {
     System.out.println(settings.getType()); // LIVE_MAP
 
@@ -302,7 +302,7 @@ For `LiveMap` instances, you can iterate over the entries, keys, and values:
 
 <Code>
 ```javascript
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 
 if (settings) {
   // Iterate over key-value pairs.
@@ -324,7 +324,7 @@ if (settings) {
 ```
 
 ```java
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     LiveMapInstance settings = settingsInstance.asLiveMap();
 
@@ -348,7 +348,7 @@ Collection methods return empty iterators if the instance is not a `LiveMap`:
 
 <Code>
 ```javascript
-const visits = myObject.get('visits').instance(); // This is a LiveCounter, not a LiveMap
+const visits = rootObject.get('visits').instance(); // This is a LiveCounter, not a LiveMap
 
 if (visits) {
   for (const [key, value] of visits.entries()) {
@@ -365,14 +365,14 @@ Use the `size()` method to get the number of entries in a `LiveMap`:
 
 <Code>
 ```javascript
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 
 // Get the number of entries
 console.log(settings?.size());
 ```
 
 ```java
-Instance settings = myObject.get("settings").instance();
+Instance settings = rootObject.get("settings").instance();
 if (settings != null) {
     // Get the number of entries - non-null Long on an Instance
     System.out.println(settings.asLiveMap().size());
@@ -385,26 +385,26 @@ The `size()` method returns `undefined` if the instance is not a `LiveMap`:
 
 <Code>
 ```javascript
-const visits = myObject.get('visits').instance(); // This is a LiveCounter, not a LiveMap
+const visits = rootObject.get('visits').instance(); // This is a LiveCounter, not a LiveMap
 console.log(visits?.size()); // undefined
 ```
 </Code>
 </If>
 
 <If lang="java">
-### Get a compact object
+### Get a compact object <a id="get-a-compact-object"/>
 
-The Java SDK exposes `compactJson()` as the supported snapshot of an instance — there is no `compact()` equivalent. On an `Instance` the result is non-null; cyclic references are broken via `{"objectId": …}` markers and binary data is base64-encoded.
+The Java SDK exposes `compactJson()` as the supported snapshot of an instance; there is no `compact()` equivalent. On an `Instance` the result is non-null; cyclic references are broken via `{"objectId": …}` markers and binary data is base64-encoded.
 </If>
 
 <If lang="javascript">
-### Get a compact object
+### Get a compact object <a id="get-a-compact-object"/>
 
 The `compact()` method returns a JavaScript object representation of the instance:
 
 <Code>
 ```javascript
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 
 if (settingsInstance) {
   const compact = settingsInstance.compact();
@@ -415,7 +415,7 @@ if (settingsInstance) {
   // }
 }
 
-const counterInstance = myObject.get('visits').instance();
+const counterInstance = rootObject.get('visits').instance();
 if (counterInstance) {
   console.log(counterInstance.compact()); // Just the number, e.g., 42
 }
@@ -433,7 +433,7 @@ If the instance contains cyclic references, these are preserved in the returned 
 //   ├─ profile -> references user (creates cycle)
 //   └─ name: "Alice"
 
-const userInstance = myObject.get('user').instance();
+const userInstance = rootObject.get('user').instance();
 if (userInstance) {
   // When you call compact(), cyclic references are preserved as actual JS references
   const compacted = userInstance.compact();
@@ -460,7 +460,7 @@ It is possible for the value returned from `compact()` to contain cyclic referen
 //   ├─ profile -> references user (creates cycle)
 //   └─ name: "Alice"
 
-const userInstance = myObject.get('user').instance();
+const userInstance = rootObject.get('user').instance();
 if (userInstance) {
   // compactJson() breaks cycles, making it safe to serialize
   const compactJson = userInstance.compactJson();
@@ -477,7 +477,7 @@ if (userInstance) {
 ```
 
 ```java
-Instance userInstance = myObject.get("user").instance();
+Instance userInstance = rootObject.get("user").instance();
 if (userInstance != null) {
     System.out.println(userInstance.compactJson()); // non-null on an Instance
     // {"profile":{"objectId":"map:abc123@1234567890"},"name":"Alice"}
@@ -489,29 +489,29 @@ Binary data in the channel object are serialized as base64-encoded strings by `c
 
 <Code>
 ```javascript
-const mapInstance = myObject.instance();
+const rootInstance = rootObject.instance();
 
-if (mapInstance) {
+if (rootInstance) {
   // Store binary data in the LiveMap
   const binaryData = new TextEncoder().encode("world");
-  await mapInstance.set('hello', binaryData);
+  await rootInstance.set('hello', binaryData);
 
   // compactJson() converts binary data to base64 strings
-  const compactJson = mapInstance.compactJson();
+  const compactJson = rootInstance.compactJson();
   console.log(compactJson.hello); // "d29ybGQ=" (base64 encoded)
 }
 ```
 
 ```java
 // The root LiveMap always exists, so instance() is non-null here
-LiveMapInstance root = myObject.instance().asLiveMap();
+LiveMapInstance rootInstance = rootObject.instance().asLiveMap();
 
 // Store binary data in the LiveMap
-root.set("hello", LiveMapValue.of("world".getBytes(StandardCharsets.UTF_8))).join();
+rootInstance.set("hello", LiveMapValue.of("world".getBytes(StandardCharsets.UTF_8))).join();
 
 // compactJson() converts binary data to base64 strings;
 // LiveMapInstance narrows the return type to JsonObject
-JsonObject json = root.compactJson();
+JsonObject json = rootInstance.compactJson();
 System.out.println(json.get("hello").getAsString()); // "d29ybGQ="
 ```
 </Code>
@@ -528,19 +528,19 @@ When you call a method on an `Instance`, it directly updates that specific insta
 <Code>
 ```javascript
 // Update a LiveMap instance
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 await settings?.set('theme', 'dark');
 await settings?.remove('oldSetting');
 
 // Update a LiveCounter instance
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 await visits?.increment(5);
 await visits?.decrement(2);
 ```
 
 ```java
 // Update a LiveMap instance
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     LiveMapInstance settings = settingsInstance.asLiveMap();
     settings.set("theme", LiveMapValue.of("dark")).join();
@@ -548,7 +548,7 @@ if (settingsInstance != null) {
 }
 
 // Update a LiveCounter instance
-Instance visitsInstance = myObject.get("visits").instance();
+Instance visitsInstance = rootObject.get("visits").instance();
 if (visitsInstance != null) {
     LiveCounterInstance visits = visitsInstance.asLiveCounter();
     visits.increment(5).join();
@@ -564,7 +564,7 @@ If you call a method that doesn't match the type of the underlying instance, an 
 </If>
 <If lang="java">
 <Aside data-type='important'>
-In Java a type mismatch is either a compile error (the method doesn't exist on the typed instance) or a fast failure in the cast — `asLiveCounter()` on a `LiveMap` instance throws an `IllegalStateException`. Check `getType()` first when the type isn't known.
+In Java a type mismatch is either a compile error (the method doesn't exist on the typed instance) or a fast failure in the cast: `asLiveCounter()` on a `LiveMap` instance throws an `IllegalStateException`. Check `getType()` first when the type isn't known. See the [Typed views documentation](/docs/liveobjects/typing?lang=java#typed-views) for the full cast contract.
 </Aside>
 </If>
 
@@ -575,7 +575,7 @@ The `batch(callback)` method groups multiple mutations into a single message. Th
 
 <Code>
 ```javascript
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 await settings?.batch((ctx) => {
   ctx.set('theme', 'dark');
   ctx.get('preferences')?.set('language', 'en');
@@ -593,7 +593,7 @@ Use the `subscribe()` method to be notified when the instance is updated:
 
 <Code>
 ```javascript
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 
 if (visits) {
   const { unsubscribe } = visits.subscribe(() => {
@@ -606,7 +606,7 @@ if (visits) {
 ```
 
 ```java
-Instance visitsInstance = myObject.get("visits").instance();
+Instance visitsInstance = rootObject.get("visits").instance();
 if (visitsInstance != null) {
     Subscription subscription = visitsInstance.asLiveCounter().subscribe(event ->
         System.out.println("Visits updated"));
@@ -622,7 +622,7 @@ Alternatively, use the `subscribeIterator()` method for an async iterator syntax
 
 <Code>
 ```javascript
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 
 if (visits) {
   for await (const _ of visits.subscribeIterator()) {
@@ -644,7 +644,7 @@ The `subscribe()` and `subscribeIterator()` methods are only available on `LiveM
 </If>
 <If lang="java">
 <Aside data-type='important'>
-`subscribe()` is only available on `LiveMapInstance` and `LiveCounterInstance` — this is enforced at compile time, as the base `Instance` has no `subscribe` method. To subscribe to a specific entry in a `LiveMap`, regardless of the type of the entry's value, [subscribe](/docs/liveobjects/concepts/path-object#subscribe) through a `PathObject` instead.
+`subscribe()` is only available on `LiveMapInstance` and `LiveCounterInstance`; this is enforced at compile time, as the base `Instance` has no `subscribe` method. To subscribe to a specific entry in a `LiveMap`, regardless of the type of the entry's value, [subscribe](/docs/liveobjects/concepts/path-object?lang=java#subscribe) through a `PathObject` instead.
 </Aside>
 </If>
 
@@ -654,7 +654,7 @@ When an object instance is deleted after becoming [unreachable](/docs/liveobject
 
 <Code>
 ```javascript
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 
 if (visits) {
   visits.subscribe(({ object, message }) => {
@@ -666,12 +666,12 @@ if (visits) {
 
   // Make the LiveCounter stored in visits unreachable.
   // It will eventually be deleted.
-  await myObject.remove('visits');
+  await rootObject.remove('visits');
 }
 ```
 
 ```java
-Instance visitsInstance = myObject.get("visits").instance();
+Instance visitsInstance = rootObject.get("visits").instance();
 if (visitsInstance != null) {
     visitsInstance.asLiveCounter().subscribe(event -> {
         ObjectMessage message = event.getMessage();
@@ -683,7 +683,7 @@ if (visitsInstance != null) {
 
     // Make the LiveCounter stored in visits unreachable.
     // It will eventually be deleted.
-    myObject.remove("visits").join();
+    rootObject.remove("visits").join();
 }
 ```
 </Code>
@@ -697,13 +697,13 @@ The subscription receives an argument with information about the update:
 - The `message` field contains the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made.
 </If>
 <If lang="java">
-- `getObject()` returns an `Instance` representing the same object instance you called `subscribe()` on — it is the base `Instance` type, so cast it with the matching `as*` view
+- `getObject()` returns an `Instance` representing the same object instance you called `subscribe()` on. It is the base `Instance` type, so cast it with the matching `as*` view. The cast is safe here because you subscribed on a typed instance, so the type is already known; on an unknown `Instance` the `as*` cast throws on mismatch.
 - `getMessage()` returns the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made. It is nullable.
 </If>
 
 <Code>
 ```javascript
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 
 if (visits) {
   visits.subscribe(({ object, message }) => {
@@ -716,7 +716,7 @@ if (visits) {
 ```
 
 ```java
-Instance visitsInstance = myObject.get("visits").instance();
+Instance visitsInstance = rootObject.get("visits").instance();
 if (visitsInstance != null) {
     LiveCounterInstance visits = visitsInstance.asLiveCounter();
     visits.subscribe(event -> {
@@ -739,7 +739,7 @@ Instance subscriptions only observe changes to the specific instance that is sub
 
 <Code>
 ```javascript
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 
 if (settings) {
   // Subscribe to the settings LiveMap instance
@@ -756,7 +756,7 @@ if (settings) {
 ```
 
 ```java
-Instance instance = myObject.get("settings").instance();
+Instance instance = rootObject.get("settings").instance();
 if (instance != null) {
     LiveMapInstance settings = instance.asLiveMap();
 

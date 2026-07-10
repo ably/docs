@@ -42,36 +42,36 @@ Call `channel.object.get()` to obtain a `PathObject` for the root path `""`. Thi
 <Code>
 ```javascript
 // Get a PathObject for the channel object
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // This PathObject has an empty path
-console.log(myObject.path()); // ""
+console.log(rootObject.path()); // ""
 ```
 
 ```java
-LiveMapPathObject myObject = channel.object.get().join();
-System.out.println(myObject.path()); // ""
+LiveMapPathObject rootObject = channel.object.get().join();
+System.out.println(rootObject.path()); // ""
 ```
 </Code>
 
 <If lang="java">
-In the Java SDK the root is already the typed `LiveMapPathObject` view — no cast is needed at the root.
+In the Java SDK the root is already the typed `LiveMapPathObject` view; no cast is needed at the root.
 </If>
 
-<If lang="javascript">Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=javascript#attach) to the channel if not already attached. The returned promise resolves when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization) to the client.</If><If lang="java">Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=java#attach) to the channel if not already attached. The returned `CompletableFuture` completes when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization) to the client.</If>
+<If lang="javascript">Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=javascript#attach) to the channel if not already attached. The returned promise resolves when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization) to the client.</If><If lang="java">Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=java#attach) to the channel if not already attached. The returned `CompletableFuture` completes when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization?lang=java) to the client.</If>
 
 A `PathObject` doesn't hold actual data - it holds a reference to a location. This makes `PathObject` references stable and reusable, even if the underlying object instances change:
 
 <Code>
 ```javascript
 // Obtain a PathObject at the 'visits' key
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 
 // Increment the LiveCounter stored at this path
 await visits.increment(5);
 
 // Someone replaces the LiveCounter instance stored at 'visits'
-await myObject.set('visits', LiveCounter.create(0));
+await rootObject.set('visits', LiveCounter.create(0));
 
 // The same PathObject can be used to increment the LiveCounter instance
 // stored at the 'visits' key at the time the method is called
@@ -79,11 +79,12 @@ await visits.increment(1);
 ```
 
 ```java
-PathObject visits = myObject.get("visits");
+PathObject visits = rootObject.get("visits");
 visits.asLiveCounter().increment(5).join();
 
 // Replace the underlying object - the path reference stays valid
-myObject.set("visits", LiveMapValue.of(LiveCounter.create(0))).join();
+LiveCounter replacement = LiveCounter.create(0);
+rootObject.set("visits", LiveMapValue.of(replacement)).join();
 visits.asLiveCounter().increment(1).join(); // operates on the new counter
 ```
 </Code>
@@ -99,7 +100,7 @@ When using TypeScript, you can provide type parameters to `channel.object.get()`
 ```javascript
 import { type PathObject, LiveCounter, LiveMap } from 'ably/liveobjects';
 
-type MyObject = {
+type RootObject = {
   visits: LiveCounter;
   settings: LiveMap<{
     theme: string;
@@ -107,14 +108,14 @@ type MyObject = {
   }>;
 };
 
-const myObject = await channel.object.get<MyObject>();
+const rootObject = await channel.object.get<RootObject>();
 
 // TypeScript knows 'visits' is a LiveCounter
-const visits: PathObject<LiveCounter> = myObject.get('visits');
+const visits: PathObject<LiveCounter> = rootObject.get('visits');
 await visits.increment(1); // Type-safe
 
 // TypeScript knows the shape of 'settings'
-const theme: PathObject<string> = myObject.get('settings').get('theme');
+const theme: PathObject<string> = rootObject.get('settings').get('theme');
 const value = theme.value(); // Returns string | undefined
 ```
 </Code>
@@ -125,22 +126,22 @@ See the [Typing documentation](/docs/liveobjects/typing) for more details on typ
 <If lang="java">
 ## Typed views <a id="typing"/>
 
-Java expresses typing through a fixed view hierarchy instead of user-supplied type parameters. The `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()`, `asNumber()`, `asBoolean()`, `asBinary()`, `asJsonObject()`, `asJsonArray()`) re-wrap the same path without validating it and **never throw**; a wrong cast surfaces on use — reads return `null`/empty, writes fail with an `AblyException`. Discriminate with `getType()` (returns a `ValueType`, or `null` when nothing resolves).
+Java expresses typing through a fixed view hierarchy instead of user-supplied type parameters. On the path layer, the `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()` and so on) re-wrap the same path without validating it and **never throw**; a wrong cast surfaces on use: reads return `null`/empty, and the write's returned `CompletableFuture` completes exceptionally with an `AblyException`. Discriminate with `getType()` (returns a `ValueType`, or `null` when nothing resolves).
 
 <Code>
 ```java
-LiveCounterPathObject visits = myObject.get("visits").asLiveCounter();
+LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
 visits.increment(1).join();
 
-String theme = myObject.at("settings.theme").asString().value(); // String or null
+String theme = rootObject.at("settings.theme").asString().value(); // String or null
 
-if (myObject.get("score").getType() == ValueType.LIVE_COUNTER) {
+if (rootObject.get("score").getType() == ValueType.LIVE_COUNTER) {
     // safe to treat as a counter
 }
 ```
 </Code>
 
-See the [Typing documentation](/docs/liveobjects/typing) for more details on type safety.
+See the [Typed views documentation](/docs/liveobjects/typing?lang=java#typed-views) for the full contract, including how the instance-layer casts differ.
 </If>
 
 ## Navigate a PathObject <a id="navigate"/>
@@ -158,16 +159,16 @@ Unlike `Instance`, the `get()` method on a `PathObject` never returns `undefined
 </If>
 <If lang="java">
 <Aside data-type="note">
-Unlike `Instance`, the `get(key)` method always returns a `PathObject` and never `null`, because it references a location, not the actual value at that location. `get()` lives on `LiveMapPathObject` — use an `asLiveMap()` cast between navigation hops.
+Unlike `Instance`, the `get(key)` method always returns a `PathObject` and never `null`, because it references a location, not the actual value at that location. `get()` lives on `LiveMapPathObject`; use an `asLiveMap()` cast between navigation hops.
 </Aside>
 </If>
 
 <Code>
 ```javascript
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // Navigate to a child path
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 console.log(settings.path()); // "settings"
 
 // Chain get() calls for deeper navigation
@@ -179,7 +180,7 @@ console.log(color.value()); // e.g. blue
 ```
 
 ```java
-PathObject settings = myObject.get("settings");
+PathObject settings = rootObject.get("settings");
 System.out.println(settings.path()); // "settings"
 
 // Chain get() calls for deeper navigation - cast between hops
@@ -196,21 +197,21 @@ For deeply nested paths, use the `at(path)` method with a dot-separated path str
 <Code>
 ```javascript
 // Navigate using a path string
-const color = myObject.at('settings.theme.color');
+const color = rootObject.at('settings.theme.color');
 console.log(color.path()); // "settings.theme.color"
 
 // Equivalent to chained get() calls
-const color = myObject.get('settings').get('theme').get('color');
-console.log(color.path()); // "settings.theme.color"
+const same = rootObject.get('settings').get('theme').get('color');
+console.log(same.path()); // "settings.theme.color"
 ```
 
 ```java
 // Navigate using a path string
-PathObject color = myObject.at("settings.theme.color");
+PathObject color = rootObject.at("settings.theme.color");
 System.out.println(color.path()); // "settings.theme.color"
 
 // Equivalent to chained get() calls with casts between hops
-PathObject same = myObject.get("settings").asLiveMap().get("theme").asLiveMap().get("color");
+PathObject same = rootObject.get("settings").asLiveMap().get("theme").asLiveMap().get("color");
 System.out.println(same.path()); // "settings.theme.color"
 ```
 </Code>
@@ -222,7 +223,7 @@ When using TypeScript, navigating with `at()` loses rich type inference. Use cha
 </If>
 <If lang="java">
 <Aside data-type='note'>
-`at()` returns the base `PathObject`; finish with an `as*` cast to obtain a typed view.
+`at()` is only available on `LiveMapPathObject` and returns the base `PathObject`; finish with an `as*` cast to obtain a typed view.
 </Aside>
 </If>
 
@@ -231,21 +232,21 @@ When using `at()`, dots (`.`) are treated as path separators. To include a liter
 <Code>
 ```javascript
 // Key contains a dot
-const apiEndpoint = myObject.get('config').get('api.endpoint');
+const apiEndpoint = rootObject.get('config').get('api.endpoint');
 console.log(apiEndpoint.path()); // "config.api\.endpoint"
 
 // Use the escaped path with at()
-const apiEndpoint = myObject.at('config.api\\.endpoint');
-console.log(apiEndpoint.path()); // "config.api\.endpoint"
+const same = rootObject.at('config.api\\.endpoint');
+console.log(same.path()); // "config.api\.endpoint"
 ```
 
 ```java
 // Key contains a dot
-PathObject apiEndpoint = myObject.get("config").asLiveMap().get("api.endpoint");
+PathObject apiEndpoint = rootObject.get("config").asLiveMap().get("api.endpoint");
 System.out.println(apiEndpoint.path()); // "config.api\.endpoint"
 
 // Use the escaped path with at() - Java string literals double the backslash
-PathObject same = myObject.at("config.api\\.endpoint");
+PathObject same = rootObject.at("config.api\\.endpoint");
 ```
 </Code>
 
@@ -257,26 +258,26 @@ Use the `get(key)` method to navigate to a nested path within a `LiveMap`. The r
 
 ### Read values
 
-<If lang="javascript">When an entry contains a primitive value or `LiveCounter`, use the `value()` method to get the current value:</If><If lang="java">When an entry contains a primitive value or `LiveCounter`, read it through the matching typed view — `value()` lives on the typed views (`asString().value()`, `asLiveCounter().value()`, and so on):</If>
+<If lang="javascript">When an entry contains a primitive value or `LiveCounter`, use the `value()` method to get the current value:</If><If lang="java">When an entry contains a primitive value or `LiveCounter`, read it through the matching typed view; `value()` lives on the typed views (`asString().value()`, `asLiveCounter().value()`, and so on):</If>
 
 <Code>
 ```javascript
 // Get the value of an entry containing a primitive
-const username = myObject.get('username');
+const username = rootObject.get('username');
 console.log(username.value()); // e.g. "alice"
 
 // Get the value of the LiveCounter stored in 'visits'
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 console.log(visits.value()); // e.g. 5
 ```
 
 ```java
-System.out.println(myObject.get("username").asString().value());    // e.g. "alice"
-System.out.println(myObject.get("visits").asLiveCounter().value()); // e.g. 5.0
+System.out.println(rootObject.get("username").asString().value());    // e.g. "alice"
+System.out.println(rootObject.get("visits").asLiveCounter().value()); // e.g. 5.0
 
 // The same typed-read shape applies to every primitive view
-System.out.println(myObject.get("active").asBoolean().value());   // Boolean or null
-System.out.println(myObject.get("fontSize").asNumber().value());  // Number or null
+System.out.println(rootObject.get("active").asBoolean().value());   // Boolean or null
+System.out.println(rootObject.get("fontSize").asNumber().value());  // Number or null
 ```
 </Code>
 
@@ -285,29 +286,29 @@ System.out.println(myObject.get("fontSize").asNumber().value());  // Number or n
 <Code>
 ```javascript
 // Get the value of an entry that doesn't exist
-const missing = myObject.get('nonexistent');
+const missing = rootObject.get('nonexistent');
 console.log(missing.value()); // undefined
 
 // Set an entry that contains a nested LiveMap
-await myObject.set('settings', LiveMap.create({ theme: 'dark' }));
+await rootObject.set('settings', LiveMap.create({ theme: 'dark' }));
 
 // Calling value() on a LiveMap returns undefined
-console.log(myObject.get('settings').value()); // undefined - it's a LiveMap, not a primitive or LiveCounter
+console.log(rootObject.get('settings').value()); // undefined - it's a LiveMap, not a primitive or LiveCounter
 ```
 
 ```java
-System.out.println(myObject.get("nonexistent").asString().value()); // null
-System.out.println(myObject.get("settings").asString().value());    // null - it's a LiveMap
+System.out.println(rootObject.get("nonexistent").asString().value()); // null
+System.out.println(rootObject.get("settings").asString().value());    // null - it's a LiveMap
 
 // exists() distinguishes "no value at this path" from
 // "a value of a different type" without committing to a typed read
-System.out.println(myObject.get("nonexistent").exists()); // false
-System.out.println(myObject.get("settings").exists());    // true
+System.out.println(rootObject.get("nonexistent").exists()); // false
+System.out.println(rootObject.get("settings").exists());    // true
 ```
 </Code>
 
 <If lang="java">
-The Java SDK additionally offers `exists()` (a best-effort presence check) and `getType()` (returns a `ValueType`, or `null` when nothing resolves at the path) — use them to discriminate before committing to a typed read.
+The Java SDK additionally offers `exists()` (a best-effort presence check) and `getType()` (returns a `ValueType`, or `null` when nothing resolves at the path). Use them to discriminate before committing to a typed read.
 </If>
 
 ### Obtain object instances
@@ -316,15 +317,15 @@ To get the specific [`Instance`](/docs/liveobjects/concepts/instance) at a path,
 
 <Code>
 ```javascript
-// Get the LiveCounter instance stored in '
-const visits = myObject.get('visits').instance();
+// Get the LiveCounter instance stored in 'visits'
+const visits = rootObject.get('visits').instance();
 
 // Work with the specific LiveCounter instance
 console.log(visits?.id);
 await visits?.increment(1);
 
 // Get the LiveMap instance stored in 'settings'
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 
 // Work with the specific LiveMap instance
 console.log(settings?.id);
@@ -332,14 +333,14 @@ await settings?.set('theme', 'dark');
 ```
 
 ```java
-Instance visitsInstance = myObject.get("visits").instance();
+Instance visitsInstance = rootObject.get("visits").instance();
 if (visitsInstance != null) {
     LiveCounterInstance counter = visitsInstance.asLiveCounter(); // throws if not a counter
     System.out.println(counter.getId());
     counter.increment(1).join();
 }
 
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     LiveMapInstance settings = settingsInstance.asLiveMap();
     System.out.println(settings.getId());
@@ -353,13 +354,13 @@ if (settingsInstance != null) {
 <Code>
 ```javascript
 // The 'username' entry contains a primitive, not an object
-const username = myObject.get('username').instance();
+const username = rootObject.get('username').instance();
 console.log(username); // undefined
 ```
 
 ```java
 // The 'username' entry contains a primitive, not an object
-Instance username = myObject.get("username").instance();
+Instance username = rootObject.get("username").instance();
 System.out.println(username); // null
 ```
 </Code>
@@ -372,7 +373,7 @@ For paths that resolve to a `LiveMap`, you can iterate over the entries, keys, a
 
 <Code>
 ```javascript
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 
 // Iterate over key-value pairs.
 // Each key is a string, and the value is a PathObject for the entry.
@@ -392,7 +393,7 @@ for (const value of settings.values()) {
 ```
 
 ```java
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 
 // Iterate over key-value pairs.
 // Each key is a string, and the value is a PathObject for the entry.
@@ -412,7 +413,7 @@ Collection methods return empty iterators if the path doesn't resolve to a `Live
 
 <Code>
 ```javascript
-const visits = myObject.get('visits'); // This is a LiveCounter, not a LiveMap
+const visits = rootObject.get('visits'); // This is a LiveCounter, not a LiveMap
 
 for (const [key, value] of visits.entries()) {
   // This loop doesn't execute - entries() returns empty iterator
@@ -421,7 +422,7 @@ for (const [key, value] of visits.entries()) {
 
 ```java
 // entries() is empty when the path is not a LiveMap - the cast itself never throws
-for (Map.Entry<String, PathObject> e : myObject.get("visits").asLiveMap().entries()) {
+for (Map.Entry<String, PathObject> e : rootObject.get("visits").asLiveMap().entries()) {
     // never executes
 }
 ```
@@ -433,14 +434,14 @@ Use the `size()` method to get the number of entries in a `LiveMap`:
 
 <Code>
 ```javascript
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 
 // Get the number of entries
 console.log(settings.size());
 ```
 
 ```java
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 
 // Get the number of entries - returns a Long
 System.out.println(settings.size());
@@ -451,30 +452,30 @@ System.out.println(settings.size());
 
 <Code>
 ```javascript
-const visits = myObject.get('visits'); // This is a LiveCounter, not a LiveMap
+const visits = rootObject.get('visits'); // This is a LiveCounter, not a LiveMap
 console.log(visits.size()); // undefined
 ```
 
 ```java
-Long size = myObject.get("visits").asLiveMap().size(); // This is a LiveCounter, not a LiveMap
+Long size = rootObject.get("visits").asLiveMap().size(); // This is a LiveCounter, not a LiveMap
 System.out.println(size); // null
 ```
 </Code>
 
 <If lang="java">
-### Get a compact object
+### Get a compact object <a id="get-a-compact-object"/>
 
-The Java SDK exposes `compactJson()` as the supported snapshot of the data at a path — there is no `compact()` equivalent. `compactJson()` returns a `JsonElement` that is always safe to serialize: cyclic references are broken via `{"objectId": …}` markers and binary data is base64-encoded.
+The Java SDK exposes `compactJson()` as the supported snapshot of the data at a path; there is no `compact()` equivalent. `compactJson()` returns a `JsonElement` that is always safe to serialize: cyclic references are broken via `{"objectId": …}` markers and binary data is base64-encoded.
 </If>
 
 <If lang="javascript">
-### Get a compact object
+### Get a compact object <a id="get-a-compact-object"/>
 
 The `compact()` method returns a JavaScript object representation of the data at a path:
 
 <Code>
 ```javascript
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 const compact = settings.compact();
 console.log(compact);
 // {
@@ -482,7 +483,7 @@ console.log(compact);
 //   notifications: true
 // }
 
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 console.log(visits.compact()); // Just the number, e.g., 42
 ```
 </Code>
@@ -500,7 +501,7 @@ If the channel object contains cyclic references, these are preserved in the ret
 //   └─ name: "Alice"
 
 // When you call compact(), cyclic references are preserved as actual JS references
-const root = myObject.compact();
+const root = rootObject.compact();
 console.log(root.user.profile === root); // true - actual cyclic reference
 
 // You can navigate the cycle
@@ -525,7 +526,7 @@ It is possible for the value returned from `compact()` to contain cyclic referen
 //   └─ name: "Alice"
 
 // compactJson() breaks cycles, making it safe to serialize
-const compactJson = myObject.compactJson();
+const compactJson = rootObject.compactJson();
 console.log(compactJson);
 
 // This can be safely serialized as the
@@ -540,7 +541,7 @@ console.log(JSON.stringify(compactJson));
 ```
 
 ```java
-JsonElement compactJson = myObject.compactJson(); // null if the path doesn't resolve
+JsonElement compactJson = rootObject.compactJson(); // null if the path doesn't resolve
 System.out.println(compactJson);
 // {"user":{"profile":{"objectId":"root"}},"name":"Alice"}   <- cycle broken via objectId marker
 ```
@@ -552,20 +553,20 @@ Binary data in the channel object are serialized as base64-encoded strings by `c
 ```javascript
 // Store binary data in the channel object
 const binaryData = new TextEncoder().encode("world");
-await myObject.set('hello', binaryData);
+await rootObject.set('hello', binaryData);
 
 // compactJson() converts binary data to base64 strings
-const compactJson = myObject.compactJson();
+const compactJson = rootObject.compactJson();
 console.log(compactJson.hello); // "d29ybGQ=" (base64 encoded)
 ```
 
 ```java
 // Store binary data in the channel object
 byte[] binaryData = "world".getBytes(StandardCharsets.UTF_8);
-myObject.set("hello", LiveMapValue.of(binaryData)).join();
+rootObject.set("hello", LiveMapValue.of(binaryData)).join();
 
 // compactJson() converts binary data to base64 strings
-System.out.println(((JsonObject) myObject.compactJson()).get("hello").getAsString()); // "d29ybGQ="
+System.out.println(((JsonObject) rootObject.compactJson()).get("hello").getAsString()); // "d29ybGQ="
 ```
 </Code>
 
@@ -581,24 +582,24 @@ When you call a method on a `PathObject`, the path is resolved to a specific ins
 <Code>
 ```javascript
 // Update a LiveMap
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 await settings.set('theme', 'dark');
 await settings.remove('oldSetting');
 
 // Update a LiveCounter
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 await visits.increment(5);
 await visits.decrement(2);
 ```
 
 ```java
 // Update a LiveMap
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 settings.set("theme", LiveMapValue.of("dark")).join();
 settings.remove("oldSetting").join();
 
 // Update a LiveCounter
-LiveCounterPathObject visits = myObject.get("visits").asLiveCounter();
+LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
 visits.increment(5).join();
 visits.decrement(2).join();
 ```
@@ -611,10 +612,16 @@ If you call a method that doesn't match the type of object at the resolved path,
 </If>
 <If lang="java">
 <Aside data-type='important'>
-In Java you cannot call a wrong-typed method without an explicit cast, and the cast itself never throws — instead the *write* fails with an `AblyException`: code `92007` when the resolved object's type doesn't match the typed view, or `92005` when the path cannot be resolved to any object at the time the method is called. Wrong-typed *reads* return `null`/empty.
+In Java you cannot call a wrong-typed method without an explicit cast, and the cast itself never throws. Instead:
+
+- Wrong-typed *reads* return `null`/empty.
+- A *write* returns normally, but its `CompletableFuture` completes exceptionally with an `AblyException`: code `92007` when the resolved object's type doesn't match the typed view, or `92005` when the path cannot be resolved to any object at the time the method is called.
+- When blocking with `.join()`, the failure surfaces as a `CompletionException` whose cause is the `AblyException`.
+
+See the [Typed views documentation](/docs/liveobjects/typing?lang=java#typed-views) for the full cast contract.
 </Aside>
 <Aside data-type='note'>
-Mutation methods return a `CompletableFuture<Void>`. These examples call `.join()` for brevity, which blocks the calling thread. In production code — especially on a UI thread or inside an Ably callback — compose the future with `thenCompose`/`thenAccept`/`exceptionally` rather than blocking on it. See the [quickstart](/docs/liveobjects/quickstart/java#step-4) for details.
+Mutation methods return a `CompletableFuture<Void>`. These examples call `.join()` for brevity, which blocks the calling thread. In production code, especially on a UI thread or inside an Ably callback, compose the future with `thenCompose`/`thenAccept`/`exceptionally` rather than blocking on it. See the [quickstart](/docs/liveobjects/quickstart/java#step-4) for details.
 </Aside>
 </If>
 
@@ -625,7 +632,7 @@ The `batch(callback)` method groups multiple mutations into a single message. Th
 
 <Code>
 ```javascript
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 await settings.batch((ctx) => {
   ctx.set('theme', 'dark');
   ctx.get('preferences').set('language', 'en');
@@ -643,7 +650,7 @@ Use the `subscribe()` method to be notified when object data is updated:
 
 <Code>
 ```javascript
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 
 const { unsubscribe } = visits.subscribe(() => {
   console.log('Visits updated');
@@ -654,7 +661,7 @@ unsubscribe();
 ```
 
 ```java
-PathObject visits = myObject.get("visits");
+PathObject visits = rootObject.get("visits");
 
 Subscription subscription = visits.subscribe(event -> System.out.println("Visits updated"));
 
@@ -668,7 +675,7 @@ Alternatively, use the `subscribeIterator()` method for an async iterator syntax
 
 <Code>
 ```javascript
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 
 for await (const _ of visits.subscribeIterator()) {
   console.log('Visits updated');
@@ -681,11 +688,15 @@ for await (const _ of visits.subscribeIterator()) {
 </Code>
 </If>
 
+<If lang="java">
+The Java SDK has no `subscribeIterator()` equivalent; a listener plus the returned `Subscription` is the only subscription form.
+</If>
+
 `PathObject` subscriptions observe a location rather than a specific object instance. If the object at the specified path is replaced, the subscription automatically continues to observe the new instance:
 
 <Code>
 ```javascript
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 
 // Subscribe to the 'visits' path
 visits.subscribe(() => {
@@ -696,14 +707,14 @@ visits.subscribe(() => {
 await visits.increment(5);
 
 // Someone replaces the LiveCounter instance at 'visits'
-await myObject.set('visits', LiveCounter.create(100));
+await rootObject.set('visits', LiveCounter.create(100));
 
 // This triggers the subscription, which now observes the new LiveCounter
 await visits.increment(1);
 ```
 
 ```java
-PathObject visits = myObject.get("visits");
+PathObject visits = rootObject.get("visits");
 
 // Subscribe to the 'visits' path
 visits.subscribe(event -> System.out.println("Visits updated"));
@@ -712,7 +723,8 @@ visits.subscribe(event -> System.out.println("Visits updated"));
 visits.asLiveCounter().increment(5).join();
 
 // Someone replaces the LiveCounter instance at 'visits'
-myObject.set("visits", LiveMapValue.of(LiveCounter.create(100))).join();
+LiveCounter newCounter = LiveCounter.create(100);
+rootObject.set("visits", LiveMapValue.of(newCounter)).join();
 
 // This triggers the subscription, which now observes the new LiveCounter
 visits.asLiveCounter().increment(1).join();
@@ -723,22 +735,22 @@ You can subscribe to any path, including those containing primitive values:
 
 <Code>
 ```javascript
-const theme = myObject.get("settings").get('theme');
+const theme = rootObject.get("settings").get('theme');
 
 theme.subscribe(() => {
   console.log('Theme updated:', theme.value());
 });
 
-await myObject.get("settings").set("theme", "dark");
+await rootObject.get("settings").set("theme", "dark");
 ```
 
 ```java
-PathObject theme = myObject.get("settings").asLiveMap().get("theme");
+PathObject theme = rootObject.get("settings").asLiveMap().get("theme");
 
 theme.subscribe(event ->
     System.out.println("Theme updated: " + theme.asString().value()));
 
-myObject.get("settings").asLiveMap().set("theme", LiveMapValue.of("dark")).join();
+rootObject.get("settings").asLiveMap().set("theme", LiveMapValue.of("dark")).join();
 ```
 </Code>
 
@@ -752,13 +764,13 @@ The subscription receives an argument with information about the update:
 - The `message` field contains the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made.
 </If>
 <If lang="java">
-- `getObject()` returns a `PathObject` representing the location of the object instance that was updated.
+- `getObject()` returns a `PathObject` pointing to the path where the change occurred.
 - `getMessage()` returns the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made. It is nullable.
 </If>
 
 <Code>
 ```javascript
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 
 visits.subscribe(({ object, message }) => {
   console.log('New value:', object.value());
@@ -768,7 +780,7 @@ visits.subscribe(({ object, message }) => {
 ```
 
 ```java
-PathObject visits = myObject.get("visits");
+PathObject visits = rootObject.get("visits");
 
 visits.subscribe(event -> {
     System.out.println("New value: " + event.getObject().asLiveCounter().value());
@@ -785,7 +797,7 @@ When subscribed to a `LiveCounter`, the `object` passed to the subscription is a
 
 <Code>
 ```javascript
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 
 visits.subscribe(({ object }) => {
   console.log(object.path()); // always "visits"
@@ -795,7 +807,7 @@ await visits.increment(1);
 ```
 
 ```java
-PathObject visits = myObject.get("visits");
+PathObject visits = rootObject.get("visits");
 
 visits.subscribe(event ->
     System.out.println(event.getObject().path())); // always "visits"
@@ -809,7 +821,7 @@ When subscribed to a `LiveMap`, the `object` passed to the subscription is a `Pa
 <Code>
 ```javascript
 // Subscribe to a LiveCounter stored in 'visits'
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 visits.subscribe(({ object, message }) => {
   console.log('path:', object.path(), 'number:', message?.operation?.counterInc?.number);
 });
@@ -817,7 +829,7 @@ await visits.increment(5);
 // path: visits number: 5
 
 // Subscribe to a LiveMap stored in 'settings'
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 settings.subscribe(({ object, message }) => {
   console.log('path:', object.path(), 'key:', message?.operation?.mapSet?.key);
 });
@@ -827,7 +839,6 @@ await settings.get('preferences').set('language', 'en');
 // path: settings.preferences key: language
 
 // Subscribe to the 'theme' key in the LiveMap stored in 'settings'
-const settings = myObject.get('settings');
 const theme = settings.get('theme');
 theme.subscribe(({ object, message }) => {
   console.log('path:', object.path(), 'key:', message?.operation?.mapSet?.key);
@@ -838,7 +849,7 @@ await settings.set('theme', 'dark');
 
 ```java
 // Subscribe to a LiveCounter stored in 'visits'
-PathObject visits = myObject.get("visits");
+PathObject visits = rootObject.get("visits");
 visits.subscribe(event -> {
     ObjectMessage message = event.getMessage();
     if (message != null) {
@@ -850,7 +861,7 @@ visits.asLiveCounter().increment(5).join();
 // path: visits number: 5.0
 
 // Subscribe to a LiveMap stored in 'settings'
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 settings.subscribe(event -> {
     ObjectMessage message = event.getMessage();
     if (message != null) {
@@ -881,7 +892,7 @@ Since the path of the `object` is dynamic, read from a known `PathObject` inside
 
 <Code>
 ```javascript
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 
 settings.subscribe(() => {
   console.log("Theme:", settings.get("theme").value());
@@ -893,7 +904,7 @@ await settings.get('preferences').set('language', 'en');
 ```
 
 ```java
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 
 settings.subscribe(event -> {
     System.out.println("Theme: " + settings.get("theme").asString().value());
@@ -911,7 +922,7 @@ By default, subscriptions observe changes at all nested levels. Use the `depth` 
 
 <Code>
 ```javascript
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 
 // Only observe direct changes to the settings LiveMap
 // Changes to any nested objects are ignored
@@ -922,7 +933,7 @@ settings.subscribe(({ object }) => {
 ```
 
 ```java
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 
 // Only observe direct changes to the settings LiveMap
 // Changes to any nested objects are ignored

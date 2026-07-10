@@ -26,21 +26,51 @@ meta_description: "Type objects on a channel for type safety and code autocomple
 <If lang="java">
 ## Typed views <a id="typed-views"/>
 
-The Java SDK has no user-supplied type parameters; static typing comes from a fixed typed hierarchy instead.
+The Java SDK has no user-supplied type parameters; static typing comes from a fixed typed hierarchy instead. The `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()`, `asNumber()`, `asBoolean()`, `asBinary()`, `asJsonObject()`, `asJsonArray()`) select a typed view, and behave differently on the path and instance layers.
 
-On the path layer, the `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()`, `asNumber()`, `asBoolean()`, `asBinary()`, `asJsonObject()`, `asJsonArray()`) select a typed view of the same path without validating it and **never throw** — a wrong cast surfaces on use: reads return `null`/empty, and writes fail with an `AblyException` (error code `92007`). On the instance layer, the `as*` casts **throw** an `IllegalStateException` on mismatch — check `getType()` first when the type isn't known. The `ValueType` enum lists the nine value categories (`STRING`, `NUMBER`, `BOOLEAN`, `BINARY`, `JSON_OBJECT`, `JSON_ARRAY`, `LIVE_MAP`, `LIVE_COUNTER`, `UNKNOWN`).
+### Path layer: never-throwing casts <a id="path-layer-casts"/>
+
+On a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java), the `as*` casts re-wrap the same path without validating it and **never throw**. A wrong cast surfaces on use:
+
+- Reads return `null` or an empty result.
+- Writes return normally, but the returned `CompletableFuture` completes exceptionally with an `AblyException`: error code `92007` when the resolved value doesn't match the typed view, or `92005` when the path doesn't resolve at all. When blocking with `.join()`, this surfaces as a `CompletionException` whose cause is the `AblyException`.
 
 <Code>
 ```java
-LiveMapPathObject myObject = channel.object.get().join();
+LiveMapPathObject rootObject = channel.object.get().join();
 
-// Path layer: never-throwing casts, typed reads
-LiveCounterPathObject visits = myObject.get("visits").asLiveCounter();
+// Never-throwing casts, typed reads
+LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
 visits.increment(1).join();
-String theme = myObject.at("settings.theme").asString().value(); // String or null
+String theme = rootObject.at("settings.theme").asString().value(); // String or null
+```
+</Code>
 
-// Instance layer: throwing casts - discriminate with getType() first
-Instance instance = myObject.get("score").instance();
+### Instance layer: throwing casts <a id="instance-layer-casts"/>
+
+On an [`Instance`](/docs/liveobjects/concepts/instance?lang=java), the wrapped value is already resolved and its type is known, so the `as*` casts **throw** an `IllegalStateException` on mismatch. In exchange, reads on a typed instance are non-null:
+
+<Code>
+```java
+Instance instance = rootObject.get("score").instance();
+if (instance != null) {
+    LiveCounterInstance score = instance.asLiveCounter(); // throws IllegalStateException if not a counter
+    System.out.println(score.value()); // non-null Double
+}
+```
+</Code>
+
+### Discriminate with getType() <a id="get-type"/>
+
+Use `getType()` to inspect a value's type before committing to a cast. It returns a `ValueType`, which is one of `STRING`, `NUMBER`, `BOOLEAN`, `BINARY`, `JSON_OBJECT`, `JSON_ARRAY`, `LIVE_MAP`, `LIVE_COUNTER` or `UNKNOWN`:
+
+- On a `PathObject`, `getType()` returns `null` when nothing resolves at the path: `null` means "no value", while `UNKNOWN` means "a value of an unrecognized type".
+- On an `Instance`, `getType()` is non-null and never returns `UNKNOWN` in normal operation.
+- A `PathObject` also offers `exists()` as a lightweight, best-effort presence check.
+
+<Code>
+```java
+Instance instance = rootObject.get("score").instance();
 if (instance != null) {
     switch (instance.getType()) {
         case LIVE_COUNTER:
@@ -56,7 +86,7 @@ if (instance != null) {
 ```
 </Code>
 
-Learn more about the typed hierarchy on the [PathObject](/docs/liveobjects/concepts/path-object#typing) and [Instance](/docs/liveobjects/concepts/instance#typing) concept pages.
+Learn more about the typed hierarchy on the [PathObject](/docs/liveobjects/concepts/path-object?lang=java#typing) and [Instance](/docs/liveobjects/concepts/instance?lang=java#typing) concept pages.
 </If>
 
 <If lang="javascript">
@@ -71,7 +101,7 @@ You can provide a type parameter to the `channel.object.get<T>()` method to spec
 import { LiveCounter, LiveMap } from 'ably/liveobjects';
 
 // Define the expected structure of your channel object
-type MyObject = {
+type RootObject = {
   visits: LiveCounter;
   reactions: LiveMap<{
     likes: LiveCounter;
@@ -84,7 +114,7 @@ type MyObject = {
 };
 
 // Get a typed PathObject for the channel
-const myObject = await channel.object.get<MyObject>();
+const rootObject = await channel.object.get<RootObject>();
 ```
 </Code>
 
@@ -93,16 +123,16 @@ This enables TypeScript to infer the correct types when accessing and mutating o
 <Code>
 ```javascript
 // TypeScript knows 'visits' is a LiveCounter
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 await visits.increment(5);  // Type-safe
 
 // TypeScript knows the structure of 'reactions'
-const reactions = myObject.get('reactions');
+const reactions = rootObject.get('reactions');
 const likes = reactions.get('likes');
 await likes.increment(1);  // Type-safe
 
 // TypeScript knows 'theme' is a string
-const theme = myObject.get('settings').get('theme');
+const theme = rootObject.get('settings').get('theme');
 const themeValue: string | undefined = theme.value();
 
 // Type errors are caught at compile time
@@ -115,20 +145,20 @@ When obtaining [Instance](/docs/liveobjects/concepts/instance) objects, TypeScri
 
 <Code>
 ```javascript
-type MyObject = {
+type RootObject = {
   visits: LiveCounter;
   settings: LiveMap<{
     theme: string;
   }>;
 };
 
-const myObject = await channel.object.get<MyObject>();
+const rootObject = await channel.object.get<RootObject>();
 
-const visits = myObject.get('visits').instance();
+const visits = rootObject.get('visits').instance();
 await visits?.increment(1); // TypeScript knows visits is an Instance of a LiveCounter
 const value: number | undefined = visits?.value(); // TypeScript knows the LiveCounter has a number value
 
-const settings = myObject.get('settings').instance();
+const settings = rootObject.get('settings').instance();
 await settings?.set('theme', 'dark'); // TypeScript knows settings is an Instance of a LiveMap
 const theme: string | undefined = settings?.get('theme');
 ```
@@ -138,16 +168,16 @@ TypeScript also infers the correct instance type when using [batch operations](/
 
 <Code>
 ```javascript
-type MyObject = {
+type RootObject = {
   visits: LiveCounter;
   settings: LiveMap<{
     theme: string;
   }>;
 };
 
-const myObject = await channel.object.get<MyObject>();
+const rootObject = await channel.object.get<RootObject>();
 
-await myObject.batch((ctx) => {
+await rootObject.batch((ctx) => {
   const visits = ctx.get('visits');
   visits?.increment(1); // TypeScript knows visits is a LiveCounter
   const value: number | undefined = visits?.value(); // TypeScript knows the LiveCounter has a number value
@@ -198,10 +228,10 @@ Then import and use these types where needed:
 ```javascript
 import type { ChannelObjectType } from './types/liveobjects';
 
-const myObject = await channel.object.get<ChannelObjectType>();
+const rootObject = await channel.object.get<ChannelObjectType>();
 
 // Fully typed access
-const userScore = myObject
+const userScore = rootObject
   .get('users')
   .get('user123')
   .get('score');

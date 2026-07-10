@@ -31,7 +31,7 @@ You interact with `LiveMap` through a [PathObject](/docs/liveobjects/concepts/pa
 
 <If lang="java">
 <Aside data-type='note'>
-Mutation methods (`set`, `remove`) return a `CompletableFuture<Void>`. These examples call `.join()` for brevity, which blocks the calling thread. In production code — especially on a UI thread or inside an Ably callback — compose the future with `thenCompose`/`thenRun`/`exceptionally` rather than blocking on it. See the [quickstart](/docs/liveobjects/quickstart/java#step-4) for details.
+Mutation methods (`set`, `remove`) return a `CompletableFuture<Void>`. These examples call `.join()` for brevity, which blocks the calling thread. In production code, especially on a UI thread or inside an Ably callback, compose the future with `thenCompose`/`thenRun`/`exceptionally` rather than blocking on it. See the [quickstart](/docs/liveobjects/quickstart/java#step-4) for details.
 </Aside>
 </If>
 
@@ -44,17 +44,17 @@ Create a `LiveMap` using the `LiveMap.create()` static method and assign it to a
 import { LiveMap } from 'ably/liveobjects';
 
 // Create an empty map
-await myObject.set('settings', LiveMap.create());
+await rootObject.set('settings', LiveMap.create());
 
 // Create a map with initial data
-await myObject.set('user', LiveMap.create({
+await rootObject.set('user', LiveMap.create({
   name: 'Alice',
   score: 42,
   active: true
 }));
 
 // Create nested maps
-await myObject.set('config', LiveMap.create({
+await rootObject.set('config', LiveMap.create({
   theme: LiveMap.create({
     color: 'dark',
     fontSize: 14
@@ -63,17 +63,19 @@ await myObject.set('config', LiveMap.create({
 ```
 
 ```java
-// myObject obtained from channel.object.get()
+// rootObject obtained from channel.object.get()
 
 // Create an empty map
-myObject.set("settings", LiveMapValue.of(LiveMap.create())).join();
+rootObject.set("settings", LiveMapValue.of(LiveMap.create())).join();
 
 // Create a map with initial data
-LiveMap user = LiveMap.create(Map.of(
+Map<String, LiveMapValue> userData = Map.of(
     "name", LiveMapValue.of("Alice"),
     "score", LiveMapValue.of(42),
-    "active", LiveMapValue.of(true)));
-myObject.set("user", LiveMapValue.of(user)).join();
+    "active", LiveMapValue.of(true));
+LiveMap user = LiveMap.create(userData);
+// Assign the user map to the channel object
+rootObject.set("user", LiveMapValue.of(user)).join();
 
 // Create nested maps
 LiveMap theme = LiveMap.create(Map.of(
@@ -81,12 +83,13 @@ LiveMap theme = LiveMap.create(Map.of(
     "fontSize", LiveMapValue.of(14)));
 LiveMap config = LiveMap.create(Map.of(
     "theme", LiveMapValue.of(theme)));
-myObject.set("config", LiveMapValue.of(config)).join();
+// Assign the config map to the channel object
+rootObject.set("config", LiveMapValue.of(config)).join();
 ```
 </Code>
 
 <If lang="java">
-Unlike JavaScript, Java wraps every value passed to `set()` — blueprints included — in `LiveMapValue.of(...)`.
+Unlike JavaScript, Java wraps every value passed to `set()`, blueprints included, in `LiveMapValue.of(...)`.
 </If>
 
 `LiveMap.create()` returns a value type that describes the initial data for a new map. The actual object is created when assigned to a path. Each assignment creates a distinct object with its own unique ID:
@@ -96,12 +99,12 @@ Unlike JavaScript, Java wraps every value passed to `set()` — blueprints inclu
 const mapValue = LiveMap.create({ theme: 'dark' });
 
 // Each assignment creates a different object
-await myObject.set('map1', mapValue);
-await myObject.set('map2', mapValue);
+await rootObject.set('map1', mapValue);
+await rootObject.set('map2', mapValue);
 
 // map1 and map2 are different objects with different IDs
-const id1 = myObject.get('map1').instance()?.id();
-const id2 = myObject.get('map2').instance()?.id();
+const id1 = rootObject.get('map1').instance()?.id;
+const id2 = rootObject.get('map2').instance()?.id;
 console.log(id1 === id2); // false
 ```
 
@@ -109,12 +112,12 @@ console.log(id1 === id2); // false
 LiveMap mapValue = LiveMap.create(Map.of("theme", LiveMapValue.of("dark")));
 
 // Each assignment creates a different object
-myObject.set("map1", LiveMapValue.of(mapValue)).join();
-myObject.set("map2", LiveMapValue.of(mapValue)).join();
+rootObject.set("map1", LiveMapValue.of(mapValue)).join();
+rootObject.set("map2", LiveMapValue.of(mapValue)).join();
 
 // map1 and map2 are different objects with different IDs
-Instance map1 = myObject.get("map1").instance();
-Instance map2 = myObject.get("map2").instance();
+Instance map1 = rootObject.get("map1").instance();
+Instance map2 = rootObject.get("map2").instance();
 if (map1 != null && map2 != null) {
     System.out.println(map1.asLiveMap().getId().equals(map2.asLiveMap().getId())); // false
 }
@@ -138,29 +141,29 @@ What you can do with the result depends on the type of value stored in the entry
 
 <Code>
 ```javascript
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // PathObject access: path-based operations that resolve at runtime
-const theme = myObject.get('settings').get('theme'); // settings holds a LiveMap with a 'theme' key
+const theme = rootObject.get('settings').get('theme'); // settings holds a LiveMap with a 'theme' key
 console.log(theme.value()); // e.g. 'dark'
-const visits = myObject.get('visits'); // visits holds a LiveCounter
+const visits = rootObject.get('visits'); // visits holds a LiveCounter
 console.log(visits.value()); // e.g. 5
 
 // Instance access: reference to a specific map object
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 console.log(settingsInstance?.get('theme')?.value()); // e.g. 'dark' (primitive string)
 ```
 
 ```java
-LiveMapPathObject myObject = channel.object.get().join();
+LiveMapPathObject rootObject = channel.object.get().join();
 
 // PathObject access: path-based operations that resolve at runtime
-PathObject theme = myObject.get("settings").asLiveMap().get("theme");
+PathObject theme = rootObject.get("settings").asLiveMap().get("theme");
 System.out.println(theme.asString().value());                       // e.g. "dark"
-System.out.println(myObject.get("visits").asLiveCounter().value()); // e.g. 5.0
+System.out.println(rootObject.get("visits").asLiveCounter().value()); // e.g. 5.0
 
 // Instance access: reference to a specific map object
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     Instance themeInstance = settingsInstance.asLiveMap().get("theme");
     if (themeInstance != null) {
@@ -177,7 +180,7 @@ Calling `value()` on a `PathObject` may return `undefined` if a primitive value 
 </If>
 <If lang="java">
 <Aside data-type="note">
-Typed reads on a `PathObject` return `null` when the path is missing or holds a value of a different type. On an `Instance` the typed reads are non-null — the throwing `as*` cast catches mismatches earlier. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object#read-values) and [`Instance`](/docs/liveobjects/concepts/instance#read-values).
+Typed reads on a `PathObject` return `null` when the path is missing or holds a value of a different type. On an `Instance` the typed reads are non-null, because the throwing `as*` cast catches mismatches earlier. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java#read-values) and [`Instance`](/docs/liveobjects/concepts/instance?lang=java#read-values).
 </Aside>
 </If>
 
@@ -189,12 +192,12 @@ Get a JavaScript object representation of the map using the `compact()` or `comp
 <Code>
 ```javascript
 // Get a PathObject to a LiveMap stored in 'settings'
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 console.log(settings.compact());
 // e.g. { theme: 'dark', fontSize: 14, notifications: true }
 
 // Get the Instance of a LiveMap stored in 'settings'
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 console.log(settingsInstance?.compact());
 // e.g. { theme: 'dark', fontSize: 14, notifications: true }
 ```
@@ -207,11 +210,11 @@ Get a JSON representation of the map using the `compactJson()` method (the Java 
 <Code>
 ```java
 // Get a PathObject to a LiveMap stored in 'settings'
-System.out.println(myObject.get("settings").compactJson()); // JsonElement, null if unresolved
+System.out.println(rootObject.get("settings").compactJson()); // JsonElement, null if unresolved
 // e.g. {"theme":"dark","fontSize":14.0,"notifications":true}
 
 // Get the Instance of a LiveMap stored in 'settings'
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     System.out.println(settingsInstance.asLiveMap().compactJson()); // non-null JsonObject
 }
@@ -230,28 +233,28 @@ Set a value for a key in the map using the `set()` method. You can store primiti
 <Code>
 ```javascript
 // PathObject: set values at path
-await myObject.get('settings').set('theme', 'dark');
-await myObject.get('settings').set('fontSize', 14);
-await myObject.get('settings').set('notifications', true);
+await rootObject.get('settings').set('theme', 'dark');
+await rootObject.get('settings').set('fontSize', 14);
+await rootObject.get('settings').set('notifications', true);
 
 // Set a nested map
-await myObject.get('settings').set('advanced', LiveMap.create({
+await rootObject.get('settings').set('advanced', LiveMap.create({
   debugMode: false,
   logLevel: 'info'
 }));
 
 // Set a counter
-await myObject.get('settings').set('visits', LiveCounter.create(0));
+await rootObject.get('settings').set('visits', LiveCounter.create(0));
 
 // Instance: set values on specific map instance
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 await settingsInstance?.set('theme', 'dark');
 await settingsInstance?.set('fontSize', 14);
 ```
 
 ```java
 // PathObject: set values at path
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 settings.set("theme", LiveMapValue.of("dark")).join();
 settings.set("fontSize", LiveMapValue.of(14)).join();
 settings.set("notifications", LiveMapValue.of(true)).join();
@@ -263,10 +266,11 @@ LiveMap advanced = LiveMap.create(Map.of(
 settings.set("advanced", LiveMapValue.of(advanced)).join();
 
 // Set a counter
-settings.set("visits", LiveMapValue.of(LiveCounter.create(0))).join();
+LiveCounter visitsCounter = LiveCounter.create(0);
+settings.set("visits", LiveMapValue.of(visitsCounter)).join();
 
 // Instance: set values on specific map instance
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     settingsInstance.asLiveMap().set("theme", LiveMapValue.of("dark")).join();
     settingsInstance.asLiveMap().set("fontSize", LiveMapValue.of(14)).join();
@@ -285,19 +289,19 @@ Remove a key from the map using the `remove()` method:
 <Code>
 ```javascript
 // PathObject: remove key at path
-await myObject.get('settings').remove('oldSetting');
+await rootObject.get('settings').remove('oldSetting');
 
 // Instance: remove key on specific map instance
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 await settingsInstance?.remove('oldSetting');
 ```
 
 ```java
 // PathObject: remove key at path
-myObject.get("settings").asLiveMap().remove("oldSetting").join();
+rootObject.get("settings").asLiveMap().remove("oldSetting").join();
 
 // Instance: remove key on specific map instance
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     settingsInstance.asLiveMap().remove("oldSetting").join();
 }
@@ -311,21 +315,21 @@ Get the number of keys in the map using the `size()` method:
 <Code>
 ```javascript
 // PathObject: get size at path
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 console.log(settings.size()); // e.g. 5
 
 // Instance: get size of specific map instance
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 console.log(settingsInstance?.size()); // e.g. 5
 ```
 
 ```java
 // PathObject: get size at path - Long, or null when not a LiveMap
-Long size = myObject.get("settings").asLiveMap().size();
+Long size = rootObject.get("settings").asLiveMap().size();
 System.out.println(size); // e.g. 5
 
 // Instance: get size of specific map instance - non-null
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     System.out.println(settingsInstance.asLiveMap().size()); // e.g. 5
 }
@@ -350,7 +354,7 @@ Iterate over the map's keys, values, or entries. When iterating using a `PathObj
 <Code>
 ```javascript
 // PathObject: iterate with PathObject values
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 for (const [key, value] of settings.entries()) {
   console.log(`${key}:`, value.value());
 }
@@ -362,7 +366,7 @@ for (const value of settings.values()) {
 }
 
 // Instance: iterate with Instance values
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 if (settingsInstance) {
   for (const [key, valueInstance] of settingsInstance.entries()) {
     console.log(`${key}:`, valueInstance.value());
@@ -378,7 +382,7 @@ if (settingsInstance) {
 
 ```java
 // PathObject: iterate with PathObject values
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 for (Map.Entry<String, PathObject> entry : settings.entries()) {
     System.out.println(entry.getKey() + ": " + entry.getValue().compactJson());
 }
@@ -386,7 +390,7 @@ for (String key : settings.keys())         { System.out.println("Key: " + key); 
 for (PathObject value : settings.values()) { System.out.println("Value: " + value.compactJson()); }
 
 // Instance: iterate with Instance values
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     for (Map.Entry<String, Instance> entry : settingsInstance.asLiveMap().entries()) {
         System.out.println(entry.getKey() + ": " + entry.getValue().compactJson());
@@ -409,7 +413,7 @@ Group multiple map operations into a single atomic message using the `batch()` m
 <Code>
 ```javascript
 // PathObject: batch operations on map at path
-await myObject.get('settings').batch((ctx) => {
+await rootObject.get('settings').batch((ctx) => {
   ctx.set('theme', 'dark');
   ctx.set('fontSize', 14);
   ctx.set('notifications', true);
@@ -417,7 +421,7 @@ await myObject.get('settings').batch((ctx) => {
 });
 
 // Instance: batch operations on specific map instance
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 await settingsInstance?.batch((ctx) => {
   ctx.set('theme', 'dark');
   ctx.set('fontSize', 14);
@@ -443,7 +447,7 @@ Learn more about [`PathObject`](/docs/liveobjects/concepts/path-object#subscribe
 <Code>
 ```javascript
 // PathObject: observe location - tracks changes even if map instance is replaced
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 const { unsubscribe } = settings.subscribe(() => {
   console.log('Settings:', settings.compact());
 });
@@ -452,7 +456,7 @@ const { unsubscribe } = settings.subscribe(() => {
 unsubscribe();
 
 // Instance: track specific map instance - follows it even if moved in object tree
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 if (settingsInstance) {
   const { unsubscribe } = settingsInstance.subscribe(() => {
     console.log('Settings:', settingsInstance.compact());
@@ -465,7 +469,7 @@ if (settingsInstance) {
 
 ```java
 // PathObject: observe location - tracks changes even if map instance is replaced
-LiveMapPathObject settings = myObject.get("settings").asLiveMap();
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 Subscription subscription = settings.subscribe(event ->
     System.out.println("Settings: " + settings.compactJson()));
 
@@ -473,7 +477,7 @@ Subscription subscription = settings.subscribe(event ->
 subscription.unsubscribe();
 
 // Instance: track specific map instance - follows it even if moved in object tree
-Instance settingsInstance = myObject.get("settings").instance();
+Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
     Subscription instanceSub = settingsInstance.asLiveMap().subscribe(event ->
         System.out.println("This settings instance changed"));
@@ -490,7 +494,7 @@ Alternatively, use the `subscribeIterator()` method for an async iterator syntax
 <Code>
 ```javascript
 // PathObject: observe location - tracks changes even if map instance is replaced
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 for await (const _ of settings.subscribeIterator()) {
   console.log('Settings:', settings.compact());
 
@@ -500,7 +504,7 @@ for await (const _ of settings.subscribeIterator()) {
 }
 
 // Instance: track specific map instance - follows it even if moved in object tree
-const settingsInstance = myObject.get('settings').instance();
+const settingsInstance = rootObject.get('settings').instance();
 if (settingsInstance) {
   for await (const _ of settingsInstance.subscribeIterator()) {
     console.log('Settings:', settingsInstance.compact());
@@ -512,6 +516,10 @@ if (settingsInstance) {
 }
 ```
 </Code>
+</If>
+
+<If lang="java">
+The Java SDK has no `subscribeIterator()` equivalent; a listener plus the returned `Subscription` is the only subscription form.
 </If>
 
 </If>
