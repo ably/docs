@@ -21,6 +21,7 @@ const pageLayoutOptions: Record<string, LayoutOptions> = {
   },
   '/docs/sdks': { leftSidebar: false, rightSidebar: false, template: 'sdk', mdx: false },
   '/examples': { leftSidebar: false, rightSidebar: false, template: 'examples', mdx: false },
+  '/docs/changelog': { leftSidebar: false, rightSidebar: false, template: 'changelog', mdx: false },
   '/docs/404': { leftSidebar: false, rightSidebar: false, template: '404', mdx: false },
 };
 
@@ -56,14 +57,21 @@ export const onCreatePage: GatsbyNode['onCreatePage'] = async ({ page, actions }
   const { createPage } = actions;
   const pathOptions = Object.entries(pageLayoutOptions).find(([path]) => page.path === path);
   const isMDX = page.component.endsWith('.mdx');
+  // Changelog entry pages are MDX but use a dedicated layout (no product left-nav,
+  // a changelog-specific header) instead of the standard doc chrome.
+  const isChangelogEntry = isMDX && page.path.startsWith('/docs/changelog/');
   const detectedLanguages = isMDX ? await extractCodeLanguages(page.component) : new Set();
+
+  const defaultLayout: LayoutOptions = isChangelogEntry
+    ? { leftSidebar: false, rightSidebar: true, template: 'changelog-entry', mdx: true }
+    : { leftSidebar: true, rightSidebar: true, template: 'base', mdx: isMDX };
 
   if (pathOptions || isMDX) {
     createPage({
       ...page,
       context: {
         ...page.context,
-        layout: pathOptions ? pathOptions[1] : { leftSidebar: true, rightSidebar: true, template: 'base', mdx: isMDX },
+        layout: pathOptions ? pathOptions[1] : defaultLayout,
         ...(isMDX ? { languages: Array.from(detectedLanguages) } : {}),
       },
       component: isMDX ? `${mdxWrapper}?__contentFilePath=${page.component}` : page.component,
