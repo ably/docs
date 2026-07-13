@@ -49,7 +49,10 @@ console.log(rootObject.path()); // ""
 ```
 
 ```java
+// Get a PathObject for the channel object
 LiveMapPathObject rootObject = channel.object.get().join();
+
+// This PathObject has an empty path
 System.out.println(rootObject.path()); // ""
 ```
 </Code>
@@ -84,13 +87,19 @@ await visits.increment(1);
 ```
 
 ```java
+// Obtain a PathObject at the 'visits' key
 PathObject visits = rootObject.get("visits");
+
+// Increment the LiveCounter stored at this path
 visits.asLiveCounter().increment(5).join();
 
-// Replace the underlying object - the path reference stays valid
+// Someone replaces the LiveCounter instance stored at 'visits'
 LiveCounter replacement = LiveCounter.create(0);
 rootObject.set("visits", LiveMapValue.of(replacement)).join();
-visits.asLiveCounter().increment(1).join(); // operates on the new counter
+
+// The same PathObject can be used to increment the LiveCounter instance
+// stored at the 'visits' key at the time the method is called
+visits.asLiveCounter().increment(1).join();
 ```
 </Code>
 
@@ -135,11 +144,14 @@ Java expresses typing through a fixed set of typed views instead of user-supplie
 
 <Code>
 ```java
+// Select a typed view of the path and update through it
 LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
 visits.increment(1).join();
 
+// Wrong-typed reads return null instead of throwing
 String theme = rootObject.at("settings.theme").asString().value(); // String or null
 
+// Check the type first when it isn't known
 if (rootObject.get("score").getType() == ValueType.LIVE_COUNTER) {
     // safe to treat as a counter
 }
@@ -185,6 +197,7 @@ console.log(color.value()); // e.g. blue
 ```
 
 ```java
+// Navigate to a child path
 PathObject settings = rootObject.get("settings");
 System.out.println(settings.path()); // "settings"
 
@@ -252,6 +265,7 @@ System.out.println(apiEndpoint.path()); // "config.api\.endpoint"
 
 // Use the escaped path with at() - Java string literals double the backslash
 PathObject same = rootObject.at("config.api\\.endpoint");
+System.out.println(same.path()); // "config.api\.endpoint"
 ```
 </Code>
 
@@ -282,12 +296,15 @@ console.log(visits.value()); // e.g. 5
 ```
 
 ```java
-System.out.println(rootObject.get("username").asString().value());    // e.g. "alice"
+// Get the value of an entry containing a primitive
+System.out.println(rootObject.get("username").asString().value()); // e.g. "alice"
+
+// Get the value of the LiveCounter stored in 'visits'
 System.out.println(rootObject.get("visits").asLiveCounter().value()); // e.g. 5.0
 
 // The same typed-read shape applies to every primitive view
-System.out.println(rootObject.get("active").asBoolean().value());   // Boolean or null
-System.out.println(rootObject.get("fontSize").asNumber().value());  // Number or null
+System.out.println(rootObject.get("active").asBoolean().value());  // Boolean or null
+System.out.println(rootObject.get("fontSize").asNumber().value()); // Number or null
 ```
 </Code>
 
@@ -312,8 +329,11 @@ console.log(rootObject.get('settings').value()); // undefined - it's a LiveMap, 
 ```
 
 ```java
+// Get the value of an entry that doesn't exist
 System.out.println(rootObject.get("nonexistent").asString().value()); // null
-System.out.println(rootObject.get("settings").asString().value());    // null - it's a LiveMap
+
+// Calling value() through a mismatched typed view also returns null
+System.out.println(rootObject.get("settings").asString().value()); // null - it's a LiveMap
 
 // exists() distinguishes "no value at this path" from
 // "a value of a different type" without committing to a typed read
@@ -348,14 +368,20 @@ await settings?.set('theme', 'dark');
 ```
 
 ```java
+// Get the LiveCounter instance stored in 'visits'
 Instance visitsInstance = rootObject.get("visits").instance();
+
+// Work with the specific LiveCounter instance
 if (visitsInstance != null) {
     LiveCounterInstance counter = visitsInstance.asLiveCounter(); // throws if not a counter
     System.out.println(counter.getId());
     counter.increment(1).join();
 }
 
+// Get the LiveMap instance stored in 'settings'
 Instance settingsInstance = rootObject.get("settings").instance();
+
+// Work with the specific LiveMap instance
 if (settingsInstance != null) {
     LiveMapInstance settings = settingsInstance.asLiveMap();
     System.out.println(settings.getId());
@@ -429,10 +455,14 @@ for (Map.Entry<String, PathObject> entry : settings.entries()) {
 }
 
 // Iterate over keys only
-for (String key : settings.keys())        { System.out.println("Key: " + key); }
+for (String key : settings.keys()) {
+    System.out.println("Key: " + key);
+}
 
 // Iterate over values
-for (PathObject value : settings.values()) { System.out.println("Value: " + value.compactJson()); }
+for (PathObject value : settings.values()) {
+    System.out.println("Value: " + value.compactJson());
+}
 ```
 </Code>
 
@@ -448,9 +478,11 @@ for (const [key, value] of visits.entries()) {
 ```
 
 ```java
+PathObject visits = rootObject.get("visits"); // This is a LiveCounter, not a LiveMap
+
 // entries() is empty when the path is not a LiveMap - the cast itself never throws
-for (Map.Entry<String, PathObject> e : rootObject.get("visits").asLiveMap().entries()) {
-    // never executes
+for (Map.Entry<String, PathObject> entry : visits.asLiveMap().entries()) {
+    // This loop doesn't execute - entries() returns an empty iterable
 }
 ```
 </Code>
@@ -578,6 +610,13 @@ console.log(JSON.stringify(compactJson));
 ```
 
 ```java
+// Example: Using the same cyclic structure from before
+// root (LiveMap)
+//   ├─ user (LiveMap)
+//   │   └─ profile -> references root (creates cycle)
+//   └─ name: "Alice"
+
+// compactJson() breaks cycles, making it safe to serialize
 JsonElement compactJson = rootObject.compactJson(); // null if the path doesn't resolve
 System.out.println(compactJson);
 // {"user":{"profile":{"objectId":"root"}},"name":"Alice"}   <- cycle broken via objectId marker
