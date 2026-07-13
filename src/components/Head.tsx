@@ -16,6 +16,10 @@ export const Head = ({
   metaTitle,
   keywords,
   structuredData,
+  ogImage,
+  ogImageAlt,
+  rssUrl,
+  rssTitle,
 }: {
   title: string;
   canonical: string;
@@ -23,6 +27,10 @@ export const Head = ({
   metaTitle?: string;
   keywords?: string;
   structuredData?: StructuredData;
+  ogImage?: string;
+  ogImageAlt?: string;
+  rssUrl?: string;
+  rssTitle?: string;
 }) => {
   const markdownUrl = getMarkdownUrl(canonical);
   const llmsTxtUrl = getLlmsTxtUrl(canonical);
@@ -37,6 +45,13 @@ export const Head = ({
       <meta property="og:description" content={description} />
       <meta name="twitter:description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
+      {ogImage && <meta property="og:image" content={ogImage} />}
+      {ogImage && <meta name="twitter:image" content={ogImage} />}
+      {ogImage && <meta name="twitter:card" content="summary_large_image" />}
+      {ogImage && ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
+      {rssUrl && (
+        <link rel="alternate" type="application/rss+xml" title={rssTitle || `${title} RSS feed`} href={rssUrl} />
+      )}
       {structuredData && <script type="application/ld+json">{JSON.stringify(structuredData)}</script>}
 
       {/* LLM/Agent discoverability hints */}
