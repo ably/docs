@@ -58,7 +58,7 @@ System.out.println(rootObject.path()); // ""
 </Code>
 
 <If lang="java">
-In the Java SDK the root is already the typed `LiveMapPathObject` view; no cast is needed at the root.
+In the Java SDK the root is already typed as a `LiveMapPathObject`; no cast is needed at the root.
 </If>
 
 <If lang="javascript">
@@ -138,17 +138,18 @@ See the [Typing documentation](/docs/liveobjects/typing) for more details on typ
 </If>
 
 <If lang="java">
-## Typed views <a id="typing"/>
+## Type inference <a id="typing"/>
 
-Java expresses typing through a fixed set of typed views instead of user-supplied type parameters. The `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()` and so on) select a typed view of the path without checking what is actually stored there, and they never throw. A wrong cast only shows up when you use it: reads return `null` or an empty result, and writes complete their returned `CompletableFuture` exceptionally with an `AblyException`. Use `getType()` to check the type first; it returns a `ValueType`, or `null` when nothing resolves at the path.
+Java has no user-supplied type parameters. Instead, infer the type of a path by calling one of the `as*` methods, such as `asLiveCounter()` or `asLiveMap()`. These casts never throw, even when the value at the path has a different type:
 
 <Code>
 ```java
-// Select a typed view of the path and update through it
+// Infer the 'visits' path as a LiveCounter and update through it
 LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
+
 visits.increment(1).join();
 
-// Wrong-typed reads return null instead of throwing
+// A read through the wrong inferred type returns null instead of throwing
 String theme = rootObject.at("settings.theme").asString().value(); // String or null
 
 // Check the type first when it isn't known
@@ -158,7 +159,9 @@ if (rootObject.get("score").getType() == ValueType.LIVE_COUNTER) {
 ```
 </Code>
 
-See the [Typed views documentation](/docs/liveobjects/typing?lang=java#typed-views) for the full contract, including how the instance-layer casts differ.
+A wrong cast only shows up when you use it: reads return `null` or an empty result, and writes return a `CompletableFuture` that completes exceptionally with an `AblyException`. Use `getType()` to check what is stored at a path before inferring its type; it returns a `ValueType`, or `null` when nothing resolves at the path.
+
+See the [Type inference documentation](/docs/liveobjects/typing?lang=java#type-inference) for the full contract, including how the instance-layer casts differ.
 </If>
 
 ## Navigate a PathObject <a id="navigate"/>
@@ -241,7 +244,7 @@ When using TypeScript, navigating with `at()` loses rich type inference. Use cha
 </If>
 <If lang="java">
 <Aside data-type='note'>
-`at()` is only available on `LiveMapPathObject` and returns the base `PathObject`; finish with an `as*` cast to obtain a typed view.
+`at()` is only available on `LiveMapPathObject` and returns the base `PathObject`; finish with an `as*` cast to infer its type.
 </Aside>
 </If>
 
@@ -281,7 +284,7 @@ Use the `get(key)` method to navigate to a nested path within a `LiveMap`. The r
 When an entry contains a primitive value or `LiveCounter`, use the `value()` method to get the current value:
 </If>
 <If lang="java">
-When an entry contains a primitive value or `LiveCounter`, select the matching typed view first and then call its `value()` method, for example `asString().value()` or `asLiveCounter().value()`:
+When an entry contains a primitive value or `LiveCounter`, infer the matching type first and then call its `value()` method, for example `asString().value()` or `asLiveCounter().value()`:
 </If>
 
 <Code>
@@ -302,7 +305,7 @@ System.out.println(rootObject.get("username").asString().value()); // e.g. "alic
 // Get the value of the LiveCounter stored in 'visits'
 System.out.println(rootObject.get("visits").asLiveCounter().value()); // e.g. 5.0
 
-// The same typed-read shape applies to every primitive view
+// The same typed-read shape applies to every primitive type
 System.out.println(rootObject.get("active").asBoolean().value());  // Boolean or null
 System.out.println(rootObject.get("fontSize").asNumber().value()); // Number or null
 ```
@@ -312,7 +315,7 @@ System.out.println(rootObject.get("fontSize").asNumber().value()); // Number or 
 If the entry doesn't exist, or the entry does not contain a primitive or a `LiveCounter` instance, `value()` returns `undefined`:
 </If>
 <If lang="java">
-If the entry doesn't exist, or the entry does not contain a value matching the typed view, `value()` returns `null`:
+If the entry doesn't exist, or the entry does not contain a value matching the inferred type, `value()` returns `null`:
 </If>
 
 <Code>
@@ -332,7 +335,7 @@ console.log(rootObject.get('settings').value()); // undefined - it's a LiveMap, 
 // Get the value of an entry that doesn't exist
 System.out.println(rootObject.get("nonexistent").asString().value()); // null
 
-// Calling value() through a mismatched typed view also returns null
+// Calling value() through the wrong inferred type also returns null
 System.out.println(rootObject.get("settings").asString().value()); // null - it's a LiveMap
 
 // exists() distinguishes "no value at this path" from
@@ -343,7 +346,7 @@ System.out.println(rootObject.get("settings").exists());    // true
 </Code>
 
 <If lang="java">
-The Java SDK additionally offers `exists()` (a best-effort presence check) and `getType()` (returns a `ValueType`, or `null` when nothing resolves at the path). Use them to check what is at a path before reading it with a typed view.
+The Java SDK additionally offers `exists()` (a best-effort presence check) and `getType()` (returns a `ValueType`, or `null` when nothing resolves at the path). Use them to check what is at a path before reading it through an inferred type.
 </If>
 
 ### Obtain object instances
@@ -407,9 +410,9 @@ console.log(username); // undefined
 ```java
 // The 'username' entry contains a primitive string,
 // so instance() returns a read-only StringInstance
-Instance username = rootObject.get("username").instance();
-if (username != null) {
-    System.out.println(username.asString().value()); // e.g. "alice"
+Instance usernameInstance = rootObject.get("username").instance();
+if (usernameInstance != null) {
+    System.out.println(usernameInstance.asString().value()); // e.g. "alice"
 }
 
 // instance() returns null only when nothing exists at the path
@@ -691,10 +694,10 @@ If you call a method that doesn't match the type of object at the resolved path,
 In Java you cannot call a wrong-typed method without an explicit cast, and the cast itself never throws. Instead:
 
 - Wrong-typed *reads* return `null`/empty.
-- A *write* returns normally, but its `CompletableFuture` completes exceptionally with an `AblyException`: code `92007` when the resolved object's type doesn't match the typed view, or `92005` when the path cannot be resolved to any object at the time the method is called.
+- A *write* returns a `CompletableFuture` that completes exceptionally with an `AblyException`: code `92007` when the resolved object's type doesn't match the inferred type, or `92005` when the path cannot be resolved to any object at the time the method is called.
 - When blocking with `.join()`, the failure surfaces as a `CompletionException` whose cause is the `AblyException`.
 
-See the [Typed views documentation](/docs/liveobjects/typing?lang=java#typed-views) for the full cast contract.
+See the [Type inference documentation](/docs/liveobjects/typing?lang=java#type-inference) for the full cast contract.
 </Aside>
 <Aside data-type='note'>
 Mutation methods return a `CompletableFuture<Void>`. These examples call `.join()` for brevity, which blocks the calling thread. In production code, especially on a UI thread or inside an Ably callback, compose the future with `thenCompose`/`thenAccept`/`exceptionally` rather than blocking on it. See the [quickstart](/docs/liveobjects/quickstart/java#step-4) for details.

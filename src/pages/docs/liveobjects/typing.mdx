@@ -24,69 +24,114 @@ meta_description: "Type objects on a channel for type safety and code autocomple
 </If>
 
 <If lang="java">
-## Typed views <a id="typed-views"/>
+## Type inference <a id="type-inference"/>
 
-The Java SDK has no user-supplied type parameters; static typing comes from a fixed typed hierarchy instead. The `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()`, `asNumber()`, `asBoolean()`, `asBinary()`, `asJsonObject()`, `asJsonArray()`) select a typed view, and behave differently on the path and instance layers.
+The Java SDK doesn't take user-supplied type parameters to describe the structure of your data. Instead, you infer the type of a value by calling one of the `as*` methods: `asLiveMap()`, `asLiveCounter()`, `asString()`, `asNumber()`, `asBoolean()`, `asBinary()`, `asJsonObject()` or `asJsonArray()`. Each cast returns a typed object that exposes only the operations valid for that type, for example `increment()` on a counter or `set()` on a map.
 
-### Path layer: never-throwing casts <a id="path-layer-casts"/>
+The same casts follow different rules depending on the layer you call them on:
 
-On a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java), the `as*` casts select a typed view of the path without checking what is actually stored there, and they **never throw**. A wrong cast only shows up when you use it:
+- On a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java), casts **never throw**. A wrong cast only surfaces later, when you use the result.
+- On an [`Instance`](/docs/liveobjects/concepts/instance?lang=java), casts **throw immediately** when the type doesn't match. In return, reads on a typed instance never return `null`.
 
-- Reads return `null` or an empty result.
-- Writes return normally, but the returned `CompletableFuture` completes exceptionally with an `AblyException`: error code `92007` when the resolved value doesn't match the typed view, or `92005` when the path doesn't resolve at all. When blocking with `.join()`, this surfaces as a `CompletionException` whose cause is the `AblyException`.
+### Cast on the path layer <a id="path-layer-casts"/>
+
+A `PathObject` is a reference to a location, not to a value, so an `as*` cast can't check what is actually stored at the path. The cast always succeeds, and a mismatch only shows up when you use the result:
+
+- Reads, such as `value()` or `entries()`, return `null` or an empty result instead of the expected value.
+- Writes, such as `set()` or `increment()`, return a `CompletableFuture` that completes exceptionally with an `AblyException`: error code `92007` when the value at the path doesn't match the inferred type, or `92005` when nothing resolves at the path at all. When you block with `.join()`, the failure surfaces as a `CompletionException` whose cause is the `AblyException`.
 
 <Code>
 ```java
 LiveMapPathObject rootObject = channel.object.get().join();
 
-// Never-throwing casts, typed reads
+// Infer the 'visits' path as a LiveCounter; the cast itself never throws
 LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
+
 visits.increment(1).join();
+
+// A typed read returns the value, or null when the path is missing
+// or holds a value of a different type
 String theme = rootObject.at("settings.theme").asString().value(); // String or null
 ```
 </Code>
 
-### Instance layer: throwing casts <a id="instance-layer-casts"/>
+### Cast on the instance layer <a id="instance-layer-casts"/>
 
-On an [`Instance`](/docs/liveobjects/concepts/instance?lang=java), the wrapped value is already resolved and its type is known, so the `as*` casts **throw** an `IllegalStateException` on mismatch. In exchange, reads on a typed instance are non-null:
+An `Instance` wraps a value that has already been resolved, so its type is known at the moment you cast. Because of this, an `as*` cast fails fast: it throws an `IllegalStateException` if the instance is not of the expected type. In return, once the cast succeeds, reads on the typed instance never return `null`:
 
 <Code>
 ```java
-Instance instance = rootObject.get("score").instance();
-if (instance != null) {
-    LiveCounterInstance score = instance.asLiveCounter(); // throws IllegalStateException if not a counter
+Instance scoreInstance = rootObject.get("score").instance();
+
+if (scoreInstance != null) {
+    LiveCounterInstance score = scoreInstance.asLiveCounter(); // throws IllegalStateException if not a counter
+
     System.out.println(score.value()); // non-null Double
 }
 ```
 </Code>
 
-### Discriminate with getType() <a id="get-type"/>
+### Check the type with getType() <a id="get-type"/>
 
-Use `getType()` to inspect a value's type before committing to a cast. It returns a `ValueType`, which is one of `STRING`, `NUMBER`, `BOOLEAN`, `BINARY`, `JSON_OBJECT`, `JSON_ARRAY`, `LIVE_MAP`, `LIVE_COUNTER` or `UNKNOWN`:
+When you don't know what is stored at a path, call `getType()` before committing to a cast. It returns a `ValueType` enum with one of the following values: `STRING`, `NUMBER`, `BOOLEAN`, `BINARY`, `JSON_OBJECT`, `JSON_ARRAY`, `LIVE_MAP`, `LIVE_COUNTER` or `UNKNOWN`.
 
-- On a `PathObject`, `getType()` returns `null` when nothing resolves at the path: `null` means "no value", while `UNKNOWN` means "a value of an unrecognized type".
-- On an `Instance`, `getType()` is non-null and never returns `UNKNOWN` in normal operation.
-- A `PathObject` also offers `exists()` as a lightweight, best-effort presence check.
+The result tells you slightly different things on each layer:
+
+- On a `PathObject`, `getType()` returns `null` when nothing resolves at the path. This makes the two cases easy to tell apart: `null` means there is no value at the path, while `UNKNOWN` means a value exists but its type is not recognized.
+- On an `Instance`, `getType()` never returns `null`, because an instance always wraps an existing value. It also doesn't return `UNKNOWN` in normal operation.
+- A `PathObject` additionally provides `exists()`, a lightweight, best-effort check for whether anything is currently stored at the path.
+
+On a `PathObject`, check the result for `null` before acting on it. Switching directly on a `null` enum throws a `NullPointerException`:
 
 <Code>
 ```java
-Instance instance = rootObject.get("score").instance();
-if (instance != null) {
-    switch (instance.getType()) {
+PathObject score = rootObject.get("score");
+
+// getType() returns null when nothing resolves at the path
+ValueType type = score.getType();
+
+if (type == null) {
+    System.out.println("Nothing exists at the 'score' path");
+} else if (type == ValueType.LIVE_COUNTER) {
+    System.out.println(score.asLiveCounter().value());
+} else {
+    System.out.println(score.compactJson());
+}
+```
+</Code>
+
+On an `Instance`, the result is never `null`, so you can switch over every `ValueType` value directly:
+
+<Code>
+```java
+Instance scoreInstance = rootObject.get("score").instance();
+
+if (scoreInstance != null) {
+    switch (scoreInstance.getType()) {
         case LIVE_COUNTER:
-            System.out.println(instance.asLiveCounter().value());
+            System.out.println(scoreInstance.asLiveCounter().value());
             break;
         case LIVE_MAP:
-            System.out.println(instance.asLiveMap().size());
+            System.out.println(scoreInstance.asLiveMap().size());
             break;
-        default:
-            System.out.println(instance.compactJson());
+        case STRING:
+        case NUMBER:
+        case BOOLEAN:
+        case BINARY:
+        case JSON_OBJECT:
+        case JSON_ARRAY:
+            // Primitive values are wrapped in read-only primitive instances
+            System.out.println(scoreInstance.compactJson());
+            break;
+        case UNKNOWN:
+            // Never produced by an Instance in normal operation
+            break;
     }
 }
 ```
 </Code>
 
-Learn more about the typed hierarchy on the [PathObject](/docs/liveobjects/concepts/path-object?lang=java#typing) and [Instance](/docs/liveobjects/concepts/instance?lang=java#typing) concept pages.
+Learn more about type inference on the [PathObject](/docs/liveobjects/concepts/path-object?lang=java#typing) and [Instance](/docs/liveobjects/concepts/instance?lang=java#typing) concept pages.
 </If>
 
 <If lang="javascript">
