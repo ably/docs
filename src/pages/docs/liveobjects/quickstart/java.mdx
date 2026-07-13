@@ -16,7 +16,8 @@ You will learn how to:
 * Create an Ably account and get an API key for authentication.
 * Install the Ably Pub/Sub SDK.
 * Create a channel with LiveObjects functionality enabled.
-* Create, update and subscribe to changes on LiveObjects data structures: [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/counter).
+* Use the [PathObject API](/docs/liveobjects/concepts/path-object?lang=java) to access objects on a channel.
+* Create, update and subscribe to changes on LiveObjects data structures: [LiveMap](/docs/liveobjects/map?lang=java) and [LiveCounter](/docs/liveobjects/counter?lang=java).
 
 ## Authentication <a id="step-0"/>
 
@@ -30,7 +31,7 @@ The examples use [basic authentication](/docs/auth/basic) to demonstrate feature
 
 API keys and tokens have a set of [capabilities](/docs/auth/capabilities) assigned to them that specify which operations can be performed on which resources. The following capabilities are available for LiveObjects:
 
-* `object-subscribe` - grants clients read access to LiveObjects, allowing them to get the root object and subscribe to updates.
+* `object-subscribe` - grants clients read access to LiveObjects, allowing them to get the channel object and subscribe to updates.
 * `object-publish` - grants clients write access to LiveObjects, allowing them to perform mutation operations on objects.
 
 To use LiveObjects, an API key must have at least the `object-subscribe` capability. With only this capability, clients will have read-only access, preventing them from calling mutation methods on LiveObjects.
@@ -39,39 +40,41 @@ For the purposes of this guide, make sure your API key includes both `object-sub
 
 ## Install Ably Pub/Sub SDK <a id="step-1"/>
 
-LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objects plugin.
+LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objects plugin. The plugin is discovered from the classpath at runtime. No code registration is needed; adding the dependency is enough.
 
-### Install for Maven:
+### Install for Maven <a id="maven"/>
 
 ```xml
 <dependency>
     <groupId>io.ably</groupId>
     <artifactId>ably-java</artifactId>
-    <version>1.3.0</version>
+    <version>1.8.0</version>
 </dependency>
 <dependency>
     <groupId>io.ably</groupId>
     <artifactId>liveobjects</artifactId>
-    <version>1.3.0</version>
+    <version>1.8.0</version>
+    <scope>runtime</scope>
 </dependency>
 ```
 
-### Install for Gradle:
+### Install for Gradle <a id="gradle"/>
 
 ```java
-implementation 'io.ably:ably-java:1.3.0'
-implementation 'io.ably:liveobjects:1.3.0'
+implementation 'io.ably:ably-java:1.8.0'
+runtimeOnly 'io.ably:liveobjects:1.8.0'
 ```
 
 For `Android` platform, use `ably-android` instead of `ably-java`
 
 ```java
-implementation 'io.ably:ably-android:1.3.0'
+implementation 'io.ably:ably-android:1.8.0'
+runtimeOnly 'io.ably:liveobjects:1.8.0'
 ```
 
 ## Instantiate a client <a id="step-2"/>
 
-Instantiate an Ably Realtime client from the Pub/Sub SDK, providing the Objects plugin:
+Instantiate an Ably Realtime client from the Pub/Sub SDK:
 
 <Code>
 ```java
@@ -79,17 +82,17 @@ AblyRealtime realtime = new AblyRealtime(new ClientOptions("{{API_KEY}}"));
 ```
 </Code>
 
-A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key and provide an `Objects` plugin so that the client can use LiveObjects functionality.
+A [`ClientOptions`](/docs/api/realtime-sdk?lang=java#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key. The LiveObjects plugin is picked up automatically when `io.ably:liveobjects` is on the runtime classpath. If the plugin is missing, reading the `channel.object` field is still safe, but calling any method on it (for example `channel.object.get()`) fails with error code `40019` and a message telling you which dependency to add.
 
 ## Create a channel <a id="step-3"/>
 
-LiveObjects is managed and persisted on [channels](/docs/channels). To use LiveObjects, you must first create a channel with the correct [channel mode flags](/docs/channels/options#modes):
+LiveObjects is managed and persisted on [channels](/docs/channels?lang=java). To use LiveObjects, you must first create a channel with the correct [channel mode flags](/docs/channels/options?lang=java#modes):
 
 * `OBJECT_SUBSCRIBE` - required to access objects on a channel.
 * `OBJECT_PUBLISH` - required to create and modify objects on a channel.
 
 <Aside data-type='note'>
-When you provide an explicit `modes` field for a channel, you override the set of [default modes](/docs/channels/options#modes) used for that channel. So, if you're using the channel for anything in addition to LiveObjects, you need to ensure that you also include the other modes required by the features you are using.
+When you provide an explicit `modes` field for a channel, you override the set of [default modes](/docs/channels/options?lang=java#modes) used for that channel. So, if you're using the channel for anything in addition to LiveObjects, you need to ensure that you also include the other modes required by the features you are using.
 </Aside>
 
 <Code>
@@ -99,122 +102,149 @@ opts.modes = new ChannelMode[] {
     ChannelMode.object_publish,
     ChannelMode.object_subscribe
 };
-ChannelBase channel = realtime.channels.get("test-channel", opts);
+Channel channel = realtime.channels.get("test-channel", opts);
 ```
 </Code>
 
-## Get root object <a id="step-4"/>
+## Get the channel object <a id="step-4"/>
 
-The [`channel.getObjects`](/docs/api/realtime-sdk/channels#objects) method gives access to the LiveObjects API for a channel.
+The [`channel.object`](/docs/api/realtime-sdk/channels?lang=java#object) field gives access to the LiveObjects API for a channel.
 
-Use it to get the root object, which is the entry point for accessing and persisting objects on a channel. The root object is a [`LiveMap`](/docs/liveobjects/map) instance that always exists on a channel and acts as the top-level node in your object tree. You can get the root object using the `getRoot()` method of LiveObjects:
+Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map?lang=java) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object?lang=java#get), which provides a path-based API for accessing and manipulating the object hierarchy.
+
+Every LiveObjects mutation is asynchronous: `channel.object.get()` returns a `CompletableFuture<LiveMapPathObject>` that completes once the LiveObjects state is synchronized with the Ably system; reads are synchronous and local. The **recommended** pattern is to compose these futures rather than block on them: hold the future returned by `get()` and chain each step onto it:
 
 <Code>
 ```java
-// The root is returned once the LiveObjects state is synchronized with the Ably system.
-// `getRoot` Implicitly attaches channel if it's in a INITIALIZED state
-RealtimeObjects objects = channel.getObjects();
-LiveMap root = objects.getRoot(); // blocks current thread till result is returned
+// Recommended: keep the future reference explicit and compose it
+CompletableFuture<LiveMapPathObject> objectFuture = channel.object.get();
+
+// Get the object, then create your first object - without blocking.
+// thenCompose sequences dependent operations (each returns its own future);
+// finish with thenRun/exceptionally.
+objectFuture
+    .thenCompose(rootObject -> rootObject.set("visits", LiveMapValue.of(LiveCounter.create(0))))
+    .thenRun(() -> System.out.println("Channel object ready and counter created"))
+    .exceptionally(err -> { System.err.println("Failed to set up objects: " + err); return null; });
 ```
 </Code>
 
-The above `getRoot()` method is blocking in nature so it's recommended to use `getRootAsync()` instead
+<Aside data-type='important'>
+`.join()` blocks the calling thread until the future completes. It is fine for scripts, tests, and learning. But, in production code, it's recommended to compose the future with `thenApply`/`thenCompose`/`thenAccept`/`exceptionally` as shown above. Also, running blocking code inside an ably event listener callback causes deadlock.
+</Aside>
+
+The remaining steps in this guide call `.join()` to keep each example short and focused on the LiveObjects API. It blocks until the operation completes and returns the result directly:
 
 <Code>
 ```java
-RealtimeObjects objects = channel.getObjects();
-objects.getRootAsync(new ObjectsCallback<LiveMap>() {
-    @Override
-    public void onSuccess(LiveMap root) {
-        // Successfully retrieved the root LiveMap
-        System.out.println("Root object retrieved: " + root);
-        // You can now use the root object to create and manage other objects
-    }
-
-    @Override
-    public void onError(AblyException exception) {
-        // Handle errors (network issues, authentication failures, etc.)
-        System.err.println("Failed to get root object: " + exception.getMessage());
-    }
-});
+// For brevity, the rest of this guide blocks with join()
+LiveMapPathObject rootObject = channel.object.get().join();
 ```
 </Code>
 
 <Aside data-type='note'>
-Calling blocking methods like `getRoot()` within `realtime` client callbacks can cause deadlocks. To avoid this, such calls should be executed on a separate thread pool or
-it's recommended to use the asynchronous equivalents of these blocking methods. You can wrap async callbacks in a `CompletableFuture` to create flat, chainable, and sequential logic.
+Calling `channel.object.get()` implicitly attaches to the channel if it's not already attached. You don't need to manually call `channel.attach()` before getting the object.
 </Aside>
 
-| Blocking Method | Async Method |
-| --------------- | ------------ |
-| `RealtimeObjects.getRoot()` | `RealtimeObjects.getRootAsync()` |
-| `RealtimeObjects.createMap()` | `RealtimeObjects.createMapAsync()` |
-| `RealtimeObjects.createCounter()` | `RealtimeObjects.createCounterAsync()` |
-| `LiveMap.set()` | `LiveMap.setAsync()` |
-| `LiveMap.remove()` | `LiveMap.removeAsync()` |
-| `LiveCounter.increment()` | `LiveCounter.incrementAsync()` |
-| `LiveCounter.decrement()` | `LiveCounter.decrementAsync()` |
+## Create and assign objects <a id="step-5"/>
 
-## Create objects <a id="step-5"/>
-
-You can create new objects using dedicated methods of the LiveObjects API at [`channel.getObjects()`](/docs/api/realtime-sdk/channels#objects). To persist them on a channel and share them between clients, you must assign objects to a parent `LiveMap` instance connected to the root object. The root object itself is a `LiveMap` instance, so you can assign objects to the root and start building your object tree from there.
-
-<Aside data-type='note'>
-Objects that are not descendants of the root object are "unreachable" and will eventually be garbage collected. Read more in the [objects lifecycle events section](/docs/liveobjects/lifecycle#objects-lifecycle).
-</Aside>
+You can create and assign objects using the `LiveMap.create()` and `LiveCounter.create()` static methods. These methods return a description of the object to create; the actual object is created when you assign it to a key with `set()`. Every value passed to `set()` is wrapped in `LiveMapValue.of(...)`:
 
 <Code>
 ```java
-LiveCounter visitsCounter = objects.createCounter();
-LiveMap reactionsMap = objects.createMap();
+// Create a LiveCounter with initial value 0
+LiveCounter visits = LiveCounter.create(0);
 
-root.set("visits", LiveMapValue.of(visitsCounter));
-root.set("reactions", LiveMapValue.of(reactionsMap));
+// Assign it to the 'visits' key on the channel object
+rootObject.set("visits", LiveMapValue.of(visits)).join();
+
+// Create a LiveMap with initial entries
+LiveMap reactions = LiveMap.create(Map.of(
+    "likes", LiveMapValue.of(0),
+    "hearts", LiveMapValue.of(0)));
+
+// Assign it to the 'reactions' key on the channel object
+rootObject.set("reactions", LiveMapValue.of(reactions)).join();
+
+// Infer types for the assigned objects
+LiveCounterPathObject visitsCounter = rootObject.get("visits").asLiveCounter();
+LiveMapPathObject reactionsMap = rootObject.get("reactions").asLiveMap();
 ```
 </Code>
+
+`rootObject.get(key)` returns a general [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java) that doesn't yet know the type of the value it points to. Call one of the `as*` methods, such as `asLiveCounter()` or `asLiveMap()`, to work with the value as a specific type. These casts are always safe to call: they never throw an exception, even if the value at the path has a different type. Learn more about [Type inference](/docs/liveobjects/typing?lang=java#type-inference).
+
+<Aside data-type='note'>
+You can create deeply nested structures in a single operation by nesting `LiveMap.create()` and `LiveCounter.create()` calls.
+</Aside>
 
 ## Subscribe to updates <a id="step-6"/>
 
-Subscribe to realtime updates to objects on a channel. You will be notified when an object is updated by other clients or by you.
+Subscribe to realtime updates using the `subscribe()` method on a `PathObject`. You will be notified when the object at that path is updated by other clients or by you:
 
 <Code>
 ```java
-visitsCounter.subscribe((counterUpdate) ->
-    System.out.println("Visits counter updated: " +
-        counterUpdate.getUpdate().getAmount());
-);
+// Subscribe to counter updates
+visitsCounter.subscribe(event ->
+    System.out.println("Visits counter updated: " + event.getObject().asLiveCounter().value()));
 
-reactionsMap.subscribe((mapUpdate) -> {
-    System.out.println("Reactions map updated: " + mapUpdate.getUpdate());
-    System.out.println("Reactions map updated: " + reactionsMap.entries());
-});
+// Subscribe to map updates
+reactionsMap.subscribe(event ->
+    System.out.println("Reactions updated: " + event.getObject().compactJson()));
+```
+</Code>
+
+The subscription callback receives an event that exposes:
+- `getObject()`: A `PathObject` pointing to the path where the change occurred
+- `getMessage()`: The `ObjectMessage` that carried the operation that led to the change (nullable)
+
+The `subscribe()` method also returns a `Subscription` object. When you no longer want to receive updates, call `subscription.unsubscribe()` on it:
+
+<Code>
+```java
+// Keep the Subscription returned by subscribe()
+Subscription subscription = visitsCounter.subscribe(event ->
+    System.out.println("Visits counter updated: " + event.getObject().asLiveCounter().value()));
+
+// Later, stop receiving updates
+subscription.unsubscribe();
 ```
 </Code>
 
 ## Update objects <a id="step-7"/>
 
-Update objects using mutation methods. All subscribers (including you) will be notified of the changes when you update an object:
+Update objects using mutation methods on `PathObject`. All subscribers (including you) will be notified of the changes:
 
 <Code>
 ```java
-visitsCounter.increment(5); // counter updated: 5
-visitsCounter.decrement(2); // counter updated: 3
+// Update counter
+visitsCounter.increment(5).join();
+// console: Visits counter updated: 5.0
 
-reactionsMap.set("like", LiveMapValue.of(10)); // {"like": 10}
-reactionsMap.set("love", LiveMapValue.of(5)); // {"like": 10}, {"love": 5}
-reactionsMap.remove("like"); // {"love": 5}
+visitsCounter.decrement(2).join();
+// console: Visits counter updated: 3.0
+
+// Update map
+reactionsMap.set("likes", LiveMapValue.of(10)).join();
+// console: Reactions updated: {"likes":10.0,"hearts":0.0}
+
+reactionsMap.set("hearts", LiveMapValue.of(5)).join();
+// console: Reactions updated: {"likes":10.0,"hearts":5.0}
+
+reactionsMap.remove("likes").join();
+// console: Reactions updated: {"hearts":5.0}
 ```
 </Code>
 
 <Aside data-type='note'>
-Mutation methods (such as `LiveMap.set`, `LiveCounter.increment`, etc.) send operations to the Ably system and apply changes locally as soon as the operations are acknowledged. When a mutation method returns, the operation has been applied and you can immediately read the updated state. You will also be notified via subscription when the object is updated.
+Mutation methods send operations to the Ably system and apply changes locally as soon as the operations are acknowledged. Once the returned `CompletableFuture` completes, the operation has been applied locally and you can read the updated state immediately. You will also be notified via subscription when the object is updated.
 </Aside>
 
 ## Next steps <a id="step-8"/>
 
-This quickstart introduced the basic concepts of LiveObjects and demonstrated how it works. The next steps are to:
+This quickstart introduced the basic concepts of LiveObjects and demonstrated how the path-based API works. The next steps are to:
 
-* Read more about [LiveCounter](/docs/liveobjects/counter) and [LiveMap](/docs/liveobjects/map).
-* Learn about [Batching Operations](/docs/liveobjects/batch).
-* Learn about [Objects Lifecycle Events](/docs/liveobjects/lifecycle).
-* Add [Typings](/docs/liveobjects/typing) for your LiveObjects.
+* Learn about the [PathObject](/docs/liveobjects/concepts/path-object?lang=java) and [Instance](/docs/liveobjects/concepts/instance?lang=java) APIs.
+* Read more about [LiveCounter](/docs/liveobjects/counter?lang=java) and [LiveMap](/docs/liveobjects/map?lang=java).
+* Learn about [Objects Lifecycle Events](/docs/liveobjects/lifecycle?lang=java).
+* Learn about [Type inference](/docs/liveobjects/typing?lang=java) for your LiveObjects.
