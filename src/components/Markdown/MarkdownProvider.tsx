@@ -7,37 +7,37 @@ import { CodeBlock } from './CodeBlock';
 import { checkLinkIsInternal } from 'src/utilities/link-checks';
 
 const H1: FC<JSX.IntrinsicElements['h1']> = ({ children, ...props }) => (
-  <h1 className="ui-text-h1 my-10" {...props}>
+  <h1 className="ui-text-h1 mb-6" {...props}>
     {children}
   </h1>
 );
 
 const H2: FC<JSX.IntrinsicElements['h2']> = ({ children, ...props }) => (
-  <h2 className="ui-text-h2 my-8" {...props}>
+  <h2 className="ui-text-h2 mt-12 mb-6" {...props}>
     {children}
   </h2>
 );
 
 const H3: FC<JSX.IntrinsicElements['h3']> = ({ children, ...props }) => (
-  <h3 className="ui-text-h3 my-5" {...props}>
+  <h3 className="ui-text-h3 mt-8 mb-5" {...props}>
     {children}
   </h3>
 );
 
 const H4: FC<JSX.IntrinsicElements['h4']> = ({ children, ...props }) => (
-  <h4 className="ui-text-h4 my-5" {...props}>
+  <h4 className="ui-text-h4 mt-7 mb-4" {...props}>
     {children}
   </h4>
 );
 
 const H5: FC<JSX.IntrinsicElements['h5']> = ({ children, ...props }) => (
-  <h5 className="ui-text-h5 my-5" {...props}>
+  <h5 className="ui-text-h5 mt-6 mb-3" {...props}>
     {children}
   </h5>
 );
 
 const Paragraph: FC<JSX.IntrinsicElements['p']> = ({ children, ...props }) => (
-  <p className="ui-text-p2 mb-5" {...props}>
+  <p className="ui-text-p1 mb-3" {...props}>
     {children}
   </p>
 );
@@ -113,7 +113,7 @@ const Ul: FC<JSX.IntrinsicElements['ul']> = ({ children, ...props }) => (
 );
 
 const Li: FC<JSX.IntrinsicElements['li']> = ({ children, ...props }) => (
-  <li className="ui-text-p2 mb-2" {...props}>
+  <li className="ui-text-p1 mb-1" {...props}>
     {children}
   </li>
 );
@@ -128,7 +128,7 @@ const Pre: FC<JSX.IntrinsicElements['pre']> = ({ children }) => {
   const lang = (children as React.ReactElement)?.props?.className?.replace('language-', '');
 
   return (
-    <div className="mb-5">
+    <div className="my-6">
       <CodeBlock language={lang || 'javascript'}>{children}</CodeBlock>
     </div>
   );
