@@ -66,7 +66,7 @@ const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note',
         {...rest}
         data-type={dataType}
         className={cn(
-          'border-l px-6 py-3.5 my-4 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
+          'border-l px-6 py-3.5 my-6 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
           borderColor,
           backgroundColor,
           className,
@@ -84,7 +84,7 @@ const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note',
       {...rest}
       data-type={dataType}
       className={cn(
-        'border-l px-6 py-4 my-4 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
+        'border-l px-6 py-4 my-6 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
         borderColor,
         backgroundColor,
         className,

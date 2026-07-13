@@ -8,8 +8,8 @@ export interface TableRootProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const TableRoot: React.FC<TableRootProps> = ({ children, className, ...props }) => {
   return (
-    <div className={cn('overflow-x-auto my-4 rounded-lg overflow-hidden', className)} {...props}>
-      <table className="w-full border-separate border-spacing-0 text-left text-sm">{children}</table>
+    <div className={cn('overflow-x-auto my-6 rounded-lg overflow-hidden', className)} {...props}>
+      <table className="w-full border-separate border-spacing-0 text-left text-p2">{children}</table>
     </div>
   );
 };
