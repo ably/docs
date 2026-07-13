@@ -263,6 +263,15 @@ const Header: React.FC = () => {
             >
               Examples
             </Link>
+            <Link
+              to="/docs/changelog"
+              className={cn(
+                headerLinkClassName,
+                location.pathname.includes('/docs/changelog') ? activeHeaderLinkClassName : inactiveHeaderLinkClassName,
+              )}
+            >
+              Changelog
+            </Link>
           </nav>
           {isMobileMenuOpen && (
             <div
