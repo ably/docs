@@ -508,7 +508,9 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
           </div>
 
-          <div className="flex-1 text-center ui-text-p3 font-bold text-neutral-1300 dark:text-neutral-000">{title}</div>
+          <div className="flex-1 text-center ui-text-p3 font-semibold text-neutral-1300 dark:text-neutral-000">
+            {title}
+          </div>
 
           <div className="w-12"></div>
         </div>

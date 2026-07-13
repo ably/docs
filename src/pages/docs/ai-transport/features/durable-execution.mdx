@@ -1,0 +1,120 @@
+---
+title: "Durable execution"
+meta_description: "Run AI Transport agents inside a durable workflow engine. Adopt an in-flight Run from a fresh process, retry a failed Step under a stable stepId, and let the retry supersede the failed attempt on the channel."
+meta_keywords: "AI Transport, durable execution, Temporal, Vercel Workflow Development Kit, Vercel WDK, adoptRun, createStep, stepId, retry, supersede"
+intro: "Your agent turn survives a mid-flight process crash. AI Transport's Runs and Steps let a fresh process adopt the in-flight Run, retry the failed Step under the same stepId, and supersede the dead attempt's channel output cleanly."
+---
+
+An agent turn is often more than one HTTP request's worth of work. An LLM call, a tool execution, a follow-up call, sometimes a suspend and a later resume. Each stage is a candidate for failure: a serverless cold start, a container redeploy, a spot instance eviction. Durable execution keeps the whole turn safe by pushing each stage into a workflow engine's activity and using AI Transport's [Steps](/docs/ai-transport/concepts/steps) to keep the channel clean.
+
+AI Transport is not itself a durable execution engine. It works with any engine that gives each retryable activity a stable identifier, including [Temporal](/docs/ai-transport/frameworks/temporal), [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk), Inngest, and trigger.dev.
+
+![Diagram of a Run on the channel between an agent that publishes and a client that subscribes. The Run contains three Steps: Step s1 attempt A ends failed, Step s1 attempt B retries and supersedes attempt A to end complete, then Step s2 publishes a tool result and ends complete, before the Run ends complete.](../../../../images/content/diagrams/ait-concepts-steps.png)
+
+## How it works <a id="how-it-works"/>
+
+Each retryable step or activity in the workflow engine maps to an SDK [Step](/docs/ai-transport/concepts/steps) with a `stepId`. When the workflow engine retries a failed activity, by re-using the `stepId` the SDK automatically supersedes the previous failed activity's partial output, leaving the conversation history clean.
+
+To create a Step inside a Run, the SDK needs three identifiers: `runId`, `invocationId`, and `triggerEventId`. These identifiers allow different retryable activities, scheduled across different durable-execution workers, to contribute Steps to an existing Run, even if that Run was started in a different activity:
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createAgentSession } from '@ably/ai-transport';
+import { UIMessageCodec } from '@ably/ai-transport/vercel';
+
+async function runToolStep({ runId, invocationId, triggerEventId, activityId, toolCall }) {
+  const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+  const session = createAgentSession({
+    client: ably,
+    channelName: 'conversation-42',
+    codec: UIMessageCodec,
+  });
+  await session.connect();
+
+  const run = session.adoptRun({ runId, invocationId, triggerEventId });
+  await run.load();
+
+  const output = await runYourTool(toolCall);
+
+  const step = run.createStep({ stepId: activityId });
+  await step.start();
+  await step.send({ type: 'tool-output-available', toolCallId: toolCall.id, output });
+  await step.end();
+
+  await session.detach();
+  ably.close();
+}
+```
+</Code>
+
+`load` completes the adoption. It confirms the Run is still open on the channel and routes any cancels for this Run to the handle's abort signal. It rejects if the Run has already been suspended or ended, because a Run in either state can no longer accept new Steps.
+
+## Retry a Step under a stable stepId <a id="retry-step"/>
+
+For a retry to supersede the failed attempt, both attempts must publish under the same `stepId`. Pass the workflow engine's own per-activity id as the `stepId` option to [`run.createStep()`](/docs/ai-transport/api/javascript/core/agent-session#create-step). Any id that the engine keeps stable across retries of the same activity is a valid source. In Temporal, that is the activity id. In [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk), it is `getStepMetadata().stepId`.
+
+Inside a single process, leave `stepId` out. The SDK picks one for you and reuses it if the previous Step ended `failed`, so an in-process retry supersedes without any extra bookkeeping.
+
+<Aside data-type="important">
+A cross-process retry that lands with a fresh `stepId` silently double-publishes. The failed attempt stays in the conversation and the retry's output appears beside it. Always supply the workflow engine's stable id when the same logical Step re-attempts in a separate process.
+</Aside>
+
+## Close the Run only once <a id="close-once"/>
+
+Every activity ends by releasing the channel with [`session.detach()`](/docs/ai-transport/api/javascript/core/agent-session#detach). Detach unsubscribes and drops the channel without publishing anything, so the Run stays open on the channel for the next activity to adopt.
+
+Exactly one process publishes the Run's terminal event. On the happy path that is the activity holding the final Step: it calls `run.end(...)` (or `run.suspend()` if the Run is waiting on external input) before it detaches. Account for the failure path as well: if a turn exhausts its retries with the Run still open, nothing has ended it and every observer's UI stays stuck on `streaming`. Your failure path needs to adopt the Run and call `run.end({ reason: 'error' })` to unstick them.
+
+Do not call [`session.end()`](/docs/ai-transport/api/javascript/core/agent-session#session-end) inside a still-running workflow. `session.end()` closes every open Run this session owns as `'cancelled'`, which is the wrong outcome for a Run whose next activity has not run yet. `session.end()` belongs to the final teardown of a turn that runs in a single process, not one driven across workflow-engine activities.
+
+## Route cancels through the channel <a id="cancels"/>
+
+Cancels arrive on the Ably channel, not through a workflow signal. Every `AgentSession` subscribes to the channel on connect, so a cancel published by the client fires [`run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run) inside the activity that currently holds the Run. Pass that signal into the LLM call as its `abortSignal` and the model call stops with the Step ending `'cancelled'`. No listener activity or workflow signal is required.
+
+Each activity constructs its own `Ably.Realtime` client and its own `AgentSession`. Sharing session objects (instances) across activities is not supported; each activity should connect to the underlying Ably AI Transport session through its own session object. Sharing a Realtime client is only possible when activities run in the same process; workflow engines that isolate each activity in its own process, such as Temporal and Vercel WDK, give each activity a fresh client regardless. Where a client is shared, no activity may close a channel that another Run still uses.
+
+## Edge cases <a id="edge-cases"/>
+
+- Cross-process retry with a fresh `stepId` appends instead of superseding. Two attempts persist in the conversation. Always source `stepId` from the workflow engine's stable per-activity id.
+- `adoptRun` on a suspended Run rejects with `InvalidArgument`. Resume via `createRun().start()` with the continuation input event; adoption is for still-active Runs only.
+- `adoptRun` on a terminal Run rejects as read-only. There is nothing to publish; the Run is already closed on the wire.
+- `load` times out if the Run's `ai-run-start` is not observed within 30 seconds (`options.timeoutMs`). This is a workflow-ordering error: the adopting activity ran before the opener published. Retry with backoff, or raise the timeout when history pages back a long way.
+- A cancel arriving before `load()` returns fires `run.abortSignal` synchronously once load resolves. The cancel is not lost.
+- A turn that exhausts its retries with the Run still open leaves every observer's UI on `streaming`. Your failure path must adopt the Run and publish `run.end({ reason: 'error' })` so the client unsticks.
+- A retry supersedes the previous attempt as soon as it calls `step.start()`, because supersede keys on the fresh, higher-serial `ai-step-start` published under the same `stepId`, not on any output the retry goes on to produce. A retry that starts and then emits nothing still replaces the earlier attempt's output with an empty Step.
+- `session.end()` on a still-active Run publishes `ai-run-end` with reason `'cancelled'`. Reserve it for teardown, not mid-workflow handoff.
+
+## FAQ <a id="faq"/>
+
+### Does Ably retry Steps automatically?
+
+No. The workflow engine retries. AI Transport's role is to keep the channel clean when the retry lands: the stable `stepId` causes the retry's `ai-step-start` to supersede the failed attempt.
+
+### Which durable execution engines can I use?
+
+Any engine that gives each retryable unit of work an id it keeps stable across retries of that unit and unique across different units. AI Transport passes that id to [`createStep({ stepId })`](/docs/ai-transport/api/javascript/core/agent-session#create-step), so a retry lands under the same `stepId` and supersedes the failed attempt. What differs per engine is where that id comes from:
+
+- Temporal: the activity id. The [`stepIdFor`](/docs/ai-transport/api/javascript/temporal) helper reads it from `Context.current().info.activityId` and prefixes it with the Run's invocation id. Temporal is the reference integration, with a [framework page](/docs/ai-transport/frameworks/temporal).
+- Vercel WDK: `getStepMetadata().stepId`, already stable across retries and unique across workflow runs, so it passes straight to `createStep` with no helper. Integration documented on a [framework page](/docs/ai-transport/frameworks/vercel-wdk).
+- Inngest and trigger.dev: the stable id each exposes for a step or task. Dedicated helpers are [on the roadmap](/docs/ai-transport/roadmap); until then, read that id and pass it to `createStep({ stepId })` yourself.
+
+An engine that does not expose a retry-stable id cannot supersede: derive one that is stable, or the retry double-publishes.
+
+### What happens if a Step throws before `step.start()`?
+
+Nothing is published on the channel. `createStep` mints an id but does no I/O. `start()` is what emits `ai-step-start`. A throw before `start()` leaves the Run unchanged; the retry starts clean.
+
+### Can two Steps run in parallel on one Run?
+
+No. Exactly one Step at a time on a given Run; `step.start()` rejects if another Step is still open. Parallel work runs as [concurrent Runs](/docs/ai-transport/features/concurrent-turns) on the same session instead.
+
+### How is `createStep` different from `run.pipe`?
+
+[`AgentRun.pipe`](/docs/ai-transport/api/javascript/core/agent-session#pipe) opens an implicit Step lazily at the first output, streams, and closes on stream end. Each `pipe` call is a fresh Step with a fresh id; retries never supersede. Use `pipe` when a turn runs in a single process. Use `createStep({ stepId })` when it runs across workflow-engine activities, or for any case where a re-attempt must replace the failed attempt's output.
+
+## Related features <a id="related"/>
+
+- [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery): what the client side does when a connection drops. Durable execution is the agent-side counterpart.
+- [Tool calling](/docs/ai-transport/features/tool-calling): each tool becomes its own Step under a workflow engine.
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): parallel Runs on the same session.
