@@ -8,6 +8,7 @@ import { getLanguageInfo, stripSdkType, SDK_PREFIXES, SDKType } from './CodeSnip
 import LanguageSelector from './CodeSnippet/LanguageSelector';
 import ApiKeySelector from './CodeSnippet/ApiKeySelector';
 import PlainCodeView from './CodeSnippet/PlainCodeView';
+import CollapsibleCode from './CodeSnippet/CollapsibleCode';
 import CopyButton from './CodeSnippet/CopyButton';
 import SegmentedControl from 'src/components/ui/SegmentedControl';
 import { CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
@@ -70,6 +71,15 @@ export type CodeSnippetProps = {
    * Whether to wrap code content instead of scrolling
    */
   wrapCode?: boolean;
+  /**
+   * Whether long snippets collapse behind a "Show more" toggle. Defaults to true.
+   * Set `collapse={false}` in MDX to always show the full snippet.
+   */
+  collapse?: boolean;
+  /**
+   * Number of lines shown before a snippet collapses. Defaults to 15.
+   */
+  collapsedLineCount?: number;
 };
 
 const substituteApiKey = (content: string, apiKey: string, mask = true): string => {
@@ -92,6 +102,8 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
   showCodeLines = true,
   languageOrdering,
   wrapCode = false,
+  collapse = true,
+  collapsedLineCount,
 }) => {
   const codeRef = useRef<HTMLDivElement>(null);
 
@@ -376,6 +388,18 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
     selectedApiKey,
   ]);
 
+  const activeLineCount = useMemo(() => {
+    if (!activeLanguage) {
+      return 0;
+    }
+    const targetLanguage = hasOnlyJsonSnippet ? 'json' : activeLanguage;
+    const content = codeData.find((code) => code?.language === targetLanguage)?.content;
+    if (typeof content !== 'string') {
+      return 0;
+    }
+    return content.trimEnd().split(/\r\n|\r|\n/).length;
+  }, [activeLanguage, hasOnlyJsonSnippet, codeData]);
+
   const hasSnippetForActiveLanguage = useMemo(() => {
     if (!activeLanguage) {
       return false;
@@ -571,7 +595,13 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         onFocus={() => setIsHovering(true)}
         onBlur={() => setIsHovering(false)}
       >
-        {renderContent}
+        {collapse && hasSnippetForActiveLanguage ? (
+          <CollapsibleCode key={activeLanguage} lineCount={activeLineCount} maxLines={collapsedLineCount}>
+            {renderContent}
+          </CollapsibleCode>
+        ) : (
+          renderContent
+        )}
         {isHovering && activeLanguage && hasSnippetForActiveLanguage && (
           <CopyButton
             onCopy={() => {
