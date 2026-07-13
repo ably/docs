@@ -82,7 +82,7 @@ AblyRealtime realtime = new AblyRealtime(new ClientOptions("{{API_KEY}}"));
 ```
 </Code>
 
-A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key. The LiveObjects plugin is picked up automatically when `io.ably:liveobjects` is on the runtime classpath. The `channel.object` field itself is always safe to dereference (a Null-Object stands in when the plugin is absent); if the plugin is missing, calling any method on it (for example `channel.object.get()`) fails with error code `40019` telling you which dependency to add.
+A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key. The LiveObjects plugin is picked up automatically when `io.ably:liveobjects` is on the runtime classpath. If the plugin is missing, reading the `channel.object` field is still safe, but calling any method on it (for example `channel.object.get()`) fails with error code `40019` and a message telling you which dependency to add.
 
 ## Create a channel <a id="step-3"/>
 
@@ -110,9 +110,9 @@ Channel channel = realtime.channels.get("test-channel", opts);
 
 The [`channel.object`](/docs/api/realtime-sdk/channels?lang=java#object) field gives access to the LiveObjects API for a channel.
 
-Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map?lang=java) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object?lang=java), which provides a path-based API for accessing and manipulating the object hierarchy.
+Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map?lang=java) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object?lang=java#get), which provides a path-based API for accessing and manipulating the object hierarchy.
 
-Every LiveObjects mutation is asynchronous: `channel.object.get()` returns a `CompletableFuture<LiveMapPathObject>` that completes once the LiveObjects state is synchronized with the Ably system, and every mutation returns a `CompletableFuture` too; reads are synchronous and local. The **recommended** pattern is to compose these futures rather than block on them: hold the future returned by `get()` and chain each step onto it:
+Every LiveObjects mutation is asynchronous: `channel.object.get()` returns a `CompletableFuture<LiveMapPathObject>` that completes once the LiveObjects state is synchronized with the Ably system; reads are synchronous and local. The **recommended** pattern is to compose these futures rather than block on them: hold the future returned by `get()` and chain each step onto it:
 
 <Code>
 ```java
@@ -130,7 +130,7 @@ objectFuture
 </Code>
 
 <Aside data-type='important'>
-`.join()` blocks the calling thread until the future completes. It is fine for scripts, tests, and learning, but blocking a UI thread (Android's main thread) causes an [ANR](https://developer.android.com/topic/performance/vitals/anr) and blocking inside an Ably event listener callback can deadlock; in production code, compose the future with `thenApply`/`thenCompose`/`thenAccept`/`exceptionally` as shown above.
+`.join()` blocks the calling thread until the future completes. It is fine for scripts, tests, and learning. But, in production code, it's recommended to compose the future with `thenApply`/`thenCompose`/`thenAccept`/`exceptionally` as shown above. Also, running blocking code inside an ably event listener callback causes deadlock.
 </Aside>
 
 The remaining steps in this guide call `.join()` to keep each example short and focused on the LiveObjects API. It blocks until the operation completes and returns the result directly:
@@ -148,12 +148,13 @@ Calling `channel.object.get()` implicitly attaches to the channel if it's not al
 
 ## Create and assign objects <a id="step-5"/>
 
-You can create and assign objects using the `LiveMap.create()` and `LiveCounter.create()` static methods. These methods create value types that are materialized when assigned to a path with `set()`. Every value passed to `set()` is wrapped in `LiveMapValue.of(...)`:
+You can create and assign objects using the `LiveMap.create()` and `LiveCounter.create()` static methods. These methods return a description of the object to create; the actual object is created when you assign it to a key with `set()`. Every value passed to `set()` is wrapped in `LiveMapValue.of(...)`:
 
 <Code>
 ```java
 // Create a LiveCounter with initial value 0
 LiveCounter visits = LiveCounter.create(0);
+
 // Assign it to the 'visits' key on the channel object
 rootObject.set("visits", LiveMapValue.of(visits)).join();
 
@@ -161,6 +162,7 @@ rootObject.set("visits", LiveMapValue.of(visits)).join();
 LiveMap reactions = LiveMap.create(Map.of(
     "likes", LiveMapValue.of(0),
     "hearts", LiveMapValue.of(0)));
+
 // Assign it to the 'reactions' key on the channel object
 rootObject.set("reactions", LiveMapValue.of(reactions)).join();
 
@@ -170,7 +172,7 @@ LiveMapPathObject reactionsMap = rootObject.get("reactions").asLiveMap();
 ```
 </Code>
 
-`get(key)` returns an untyped [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java); the `as*` casts select the typed view and never throw. Learn more about [Typed views](/docs/liveobjects/typing?lang=java#typed-views).
+`rootObject.get(key)` returns a general [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java) that doesn't yet know the type of the value it points to. Call one of the `as*` methods, such as `asLiveCounter()` or `asLiveMap()`, to work with the value as a specific type. These casts are always safe to call: they never throw an exception, even if the value at the path has a different type. Learn more about [Typed views](/docs/liveobjects/typing?lang=java#typed-views).
 
 <Aside data-type='note'>
 You can create deeply nested structures in a single operation by nesting `LiveMap.create()` and `LiveCounter.create()` calls.
@@ -182,19 +184,32 @@ Subscribe to realtime updates using the `subscribe()` method on a `PathObject`. 
 
 <Code>
 ```java
+// Subscribe to counter updates
 visitsCounter.subscribe(event ->
-    System.out.println("Visits counter updated: " + visitsCounter.value()));
+    System.out.println("Visits counter updated: " + event.getObject().asLiveCounter().value()));
 
+// Subscribe to map updates
 reactionsMap.subscribe(event ->
-    System.out.println("Reactions updated: " + reactionsMap.compactJson()));
+    System.out.println("Reactions updated: " + event.getObject().compactJson()));
 ```
 </Code>
 
 The subscription callback receives an event that exposes:
-- `getObject()`: A `PathObject` representing the path at which there was an object change
+- `getObject()`: A `PathObject` pointing to the path where the change occurred
 - `getMessage()`: The `ObjectMessage` that carried the operation that led to the change (nullable)
 
-`subscribe` returns a `Subscription`; call `subscription.unsubscribe()` to stop listening.
+The `subscribe()` method also returns a `Subscription` object. When you no longer want to receive updates, call `subscription.unsubscribe()` on it:
+
+<Code>
+```java
+// Keep the Subscription returned by subscribe()
+Subscription subscription = visitsCounter.subscribe(event ->
+    System.out.println("Visits counter updated: " + event.getObject().asLiveCounter().value()));
+
+// Later, stop receiving updates
+subscription.unsubscribe();
+```
+</Code>
 
 ## Update objects <a id="step-7"/>
 
@@ -202,12 +217,22 @@ Update objects using mutation methods on `PathObject`. All subscribers (includin
 
 <Code>
 ```java
-visitsCounter.increment(5).join();   // Visits counter updated: 5.0
-visitsCounter.decrement(2).join();   // Visits counter updated: 3.0
+// Update counter
+visitsCounter.increment(5).join();
+// console: Visits counter updated: 5.0
 
-reactionsMap.set("likes", LiveMapValue.of(10)).join();   // Reactions updated: {"likes":10.0,"hearts":0.0}
-reactionsMap.set("hearts", LiveMapValue.of(5)).join();   // Reactions updated: {"likes":10.0,"hearts":5.0}
-reactionsMap.remove("likes").join();                     // Reactions updated: {"hearts":5.0}
+visitsCounter.decrement(2).join();
+// console: Visits counter updated: 3.0
+
+// Update map
+reactionsMap.set("likes", LiveMapValue.of(10)).join();
+// console: Reactions updated: {"likes":10.0,"hearts":0.0}
+
+reactionsMap.set("hearts", LiveMapValue.of(5)).join();
+// console: Reactions updated: {"likes":10.0,"hearts":5.0}
+
+reactionsMap.remove("likes").join();
+// console: Reactions updated: {"hearts":5.0}
 ```
 </Code>
 

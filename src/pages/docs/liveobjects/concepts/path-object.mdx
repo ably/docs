@@ -58,7 +58,12 @@ System.out.println(rootObject.path()); // ""
 In the Java SDK the root is already the typed `LiveMapPathObject` view; no cast is needed at the root.
 </If>
 
-<If lang="javascript">Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=javascript#attach) to the channel if not already attached. The returned promise resolves when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization) to the client.</If><If lang="java">Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=java#attach) to the channel if not already attached. The returned `CompletableFuture` completes when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization?lang=java) to the client.</If>
+<If lang="javascript">
+Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=javascript#attach) to the channel if not already attached. The returned promise resolves when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization) to the client.
+</If>
+<If lang="java">
+Calling `channel.object.get()` implicitly [attaches](/docs/channels/states?lang=java#attach) to the channel if not already attached. The returned `CompletableFuture` completes when the channel object data has been [synchronized](/docs/liveobjects/concepts/synchronization?lang=java) to the client.
+</If>
 
 A `PathObject` doesn't hold actual data - it holds a reference to a location. This makes `PathObject` references stable and reusable, even if the underlying object instances change:
 
@@ -126,7 +131,7 @@ See the [Typing documentation](/docs/liveobjects/typing) for more details on typ
 <If lang="java">
 ## Typed views <a id="typing"/>
 
-Java expresses typing through a fixed view hierarchy instead of user-supplied type parameters. On the path layer, the `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()` and so on) re-wrap the same path without validating it and **never throw**; a wrong cast surfaces on use: reads return `null`/empty, and the write's returned `CompletableFuture` completes exceptionally with an `AblyException`. Discriminate with `getType()` (returns a `ValueType`, or `null` when nothing resolves).
+Java expresses typing through a fixed set of typed views instead of user-supplied type parameters. The `as*` casts (`asLiveMap()`, `asLiveCounter()`, `asString()` and so on) select a typed view of the path without checking what is actually stored there, and they never throw. A wrong cast only shows up when you use it: reads return `null` or an empty result, and writes complete their returned `CompletableFuture` exceptionally with an `AblyException`. Use `getType()` to check the type first; it returns a `ValueType`, or `null` when nothing resolves at the path.
 
 <Code>
 ```java
@@ -159,7 +164,7 @@ Unlike `Instance`, the `get()` method on a `PathObject` never returns `undefined
 </If>
 <If lang="java">
 <Aside data-type="note">
-Unlike `Instance`, the `get(key)` method always returns a `PathObject` and never `null`, because it references a location, not the actual value at that location. `get()` lives on `LiveMapPathObject`; use an `asLiveMap()` cast between navigation hops.
+Unlike `Instance`, the `get(key)` method always returns a `PathObject` and never `null`, because it references a location, not the actual value at that location. `get()` is only available on `LiveMapPathObject`, so when navigating several levels deep, call `asLiveMap()` before each `get()`.
 </Aside>
 </If>
 
@@ -258,7 +263,12 @@ Use the `get(key)` method to navigate to a nested path within a `LiveMap`. The r
 
 ### Read values
 
-<If lang="javascript">When an entry contains a primitive value or `LiveCounter`, use the `value()` method to get the current value:</If><If lang="java">When an entry contains a primitive value or `LiveCounter`, read it through the matching typed view; `value()` lives on the typed views (`asString().value()`, `asLiveCounter().value()`, and so on):</If>
+<If lang="javascript">
+When an entry contains a primitive value or `LiveCounter`, use the `value()` method to get the current value:
+</If>
+<If lang="java">
+When an entry contains a primitive value or `LiveCounter`, select the matching typed view first and then call its `value()` method, for example `asString().value()` or `asLiveCounter().value()`:
+</If>
 
 <Code>
 ```javascript
@@ -281,7 +291,12 @@ System.out.println(rootObject.get("fontSize").asNumber().value());  // Number or
 ```
 </Code>
 
-<If lang="javascript">If the entry doesn't exist, or the entry does not contain a primitive or a `LiveCounter` instance, `value()` returns `undefined`:</If><If lang="java">If the entry doesn't exist, or the entry does not contain a value matching the typed view, `value()` returns `null`:</If>
+<If lang="javascript">
+If the entry doesn't exist, or the entry does not contain a primitive or a `LiveCounter` instance, `value()` returns `undefined`:
+</If>
+<If lang="java">
+If the entry doesn't exist, or the entry does not contain a value matching the typed view, `value()` returns `null`:
+</If>
 
 <Code>
 ```javascript
@@ -308,7 +323,7 @@ System.out.println(rootObject.get("settings").exists());    // true
 </Code>
 
 <If lang="java">
-The Java SDK additionally offers `exists()` (a best-effort presence check) and `getType()` (returns a `ValueType`, or `null` when nothing resolves at the path). Use them to discriminate before committing to a typed read.
+The Java SDK additionally offers `exists()` (a best-effort presence check) and `getType()` (returns a `ValueType`, or `null` when nothing resolves at the path). Use them to check what is at a path before reading it with a typed view.
 </If>
 
 ### Obtain object instances
@@ -349,7 +364,12 @@ if (settingsInstance != null) {
 ```
 </Code>
 
-<If lang="javascript">If the entry at the path does not exist, or the entry does not contain a `LiveMap` or `LiveCounter` object, `instance()` returns `undefined`:</If><If lang="java">If the entry at the path does not exist, or the entry does not contain a `LiveMap` or `LiveCounter` object, `instance()` returns `null`:</If>
+<If lang="javascript">
+If the entry at the path does not exist, or the entry does not contain a `LiveMap` or `LiveCounter` object, `instance()` returns `undefined`:
+</If>
+<If lang="java">
+In the Java SDK, `instance()` returns `null` only if the entry at the path does not exist. A primitive value is wrapped in a read-only primitive instance:
+</If>
 
 <Code>
 ```javascript
@@ -359,9 +379,16 @@ console.log(username); // undefined
 ```
 
 ```java
-// The 'username' entry contains a primitive, not an object
+// The 'username' entry contains a primitive string,
+// so instance() returns a read-only StringInstance
 Instance username = rootObject.get("username").instance();
-System.out.println(username); // null
+if (username != null) {
+    System.out.println(username.asString().value()); // e.g. "alice"
+}
+
+// instance() returns null only when nothing exists at the path
+Instance missing = rootObject.get("nonexistent").instance();
+System.out.println(missing); // null
 ```
 </Code>
 
@@ -448,7 +475,12 @@ System.out.println(settings.size());
 ```
 </Code>
 
-<If lang="javascript">The `size()` method returns `undefined` if the path doesn't resolve to a `LiveMap`:</If><If lang="java">The `size()` method returns `null` if the path doesn't resolve to a `LiveMap`:</If>
+<If lang="javascript">
+The `size()` method returns `undefined` if the path doesn't resolve to a `LiveMap`:
+</If>
+<If lang="java">
+The `size()` method returns `null` if the path doesn't resolve to a `LiveMap`:
+</If>
 
 <Code>
 ```javascript
@@ -515,7 +547,12 @@ JSON.stringify(compact); // ❌ TypeError: cyclic object value
 It is possible for the value returned from `compact()` to contain cyclic references, so it is not safe to serialize this value with `JSON.stringify()`.
 </If>
 
-<If lang="javascript">Use the `compactJson()` method to obtain a value that can be safely passed to `JSON.stringify()`:</If><If lang="java">Use the `compactJson()` method to obtain a JSON representation of the data at a path. On the path layer it returns `null` when the path doesn't resolve:</If>
+<If lang="javascript">
+Use the `compactJson()` method to obtain a value that can be safely passed to `JSON.stringify()`:
+</If>
+<If lang="java">
+Use the `compactJson()` method to obtain a JSON representation of the data at a path. On the path layer it returns `null` when the path doesn't resolve:
+</If>
 
 <Code>
 ```javascript
@@ -852,9 +889,11 @@ await settings.set('theme', 'dark');
 PathObject visits = rootObject.get("visits");
 visits.subscribe(event -> {
     ObjectMessage message = event.getMessage();
-    if (message != null) {
+    // getCounterInc() is non-null only for counter increment operations
+    CounterInc counterInc = message != null ? message.getOperation().getCounterInc() : null;
+    if (counterInc != null) {
         System.out.println("path: " + event.getObject().path()
-            + " number: " + message.getOperation().getCounterInc().getNumber());
+            + " number: " + counterInc.getNumber());
     }
 });
 visits.asLiveCounter().increment(5).join();
@@ -864,9 +903,11 @@ visits.asLiveCounter().increment(5).join();
 LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
 settings.subscribe(event -> {
     ObjectMessage message = event.getMessage();
-    if (message != null) {
+    // getMapSet() is non-null only for map set operations
+    MapSet mapSet = message != null ? message.getOperation().getMapSet() : null;
+    if (mapSet != null) {
         System.out.println("path: " + event.getObject().path()
-            + " key: " + message.getOperation().getMapSet().getKey());
+            + " key: " + mapSet.getKey());
     }
 });
 settings.set("theme", LiveMapValue.of("dark")).join();
@@ -878,9 +919,10 @@ settings.get("preferences").asLiveMap().set("language", LiveMapValue.of("en")).j
 PathObject theme = settings.get("theme");
 theme.subscribe(event -> {
     ObjectMessage message = event.getMessage();
-    if (message != null) {
+    MapSet mapSet = message != null ? message.getOperation().getMapSet() : null;
+    if (mapSet != null) {
         System.out.println("path: " + event.getObject().path()
-            + " key: " + message.getOperation().getMapSet().getKey());
+            + " key: " + mapSet.getKey());
     }
 });
 settings.set("theme", LiveMapValue.of("dark")).join();
@@ -945,7 +987,7 @@ settings.subscribe(event -> {
 </Code>
 
 <If lang="java">
-The no-arg `PathObjectSubscriptionOptions()` constructor means unlimited depth; the int constructor rejects a depth of zero or less with an `AblyException` (`400`/`40003`).
+Create `PathObjectSubscriptionOptions` with no arguments to observe changes at all depths. The depth passed to the constructor must be 1 or greater; zero or negative values are rejected with an `AblyException` (status `400`, error code `40003`).
 </If>
 
 <If lang="javascript">

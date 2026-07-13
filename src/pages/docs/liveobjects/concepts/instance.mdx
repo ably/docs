@@ -36,7 +36,7 @@ See the [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/cou
 </If>
 
 <If lang="java">
-In the Java SDK the base `Instance` type is type-agnostic; capabilities (`getId()`, `get()`, `value()`, `set()`, `subscribe()`) live on the typed instances (`LiveMapInstance`, `LiveCounterInstance` and the primitive instances), reached via throwing `as*` casts. Primitive instances (for example `StringInstance`, `NumberInstance`) are read-only and anonymous: they expose only `value()`, with no `getId()`, no mutation methods and no `subscribe()`.
+In the Java SDK, the base `Instance` type has no type-specific methods. To read or update an instance, cast it to its typed form using the `as*` methods: `asLiveMap()` returns a `LiveMapInstance`, `asLiveCounter()` returns a `LiveCounterInstance`, and so on. These casts throw an `IllegalStateException` if the instance is not of the expected type. Primitive instances (for example `StringInstance`, `NumberInstance`) are read-only and anonymous: they expose only `value()`, with no `getId()`, no mutation methods and no `subscribe()`.
 </If>
 
 ## Get an Instance <a id="get"/>
@@ -57,7 +57,7 @@ console.log(visits?.value()); // e.g. 5
 ```java
 LiveMapPathObject rootObject = channel.object.get().join();
 
-Instance instance = rootObject.get("visits").instance(); // null if no LiveMap or LiveCounter at the path
+Instance instance = rootObject.get("visits").instance(); // null only if nothing exists at the path
 if (instance != null) {
     LiveCounterInstance visits = instance.asLiveCounter(); // throws IllegalStateException on mismatch
     System.out.println(visits.getId());  // e.g. "counter:abc123@1234567890"
@@ -66,7 +66,12 @@ if (instance != null) {
 ```
 </Code>
 
-<If lang="javascript">The `instance()` method returns `undefined` if no object exists at that path.</If><If lang="java">The `instance()` method returns `null` if the path doesn't resolve, or if the entry does not contain a `LiveMap` or `LiveCounter` object, because primitive values have no object ID. Primitive instances are instead obtained by navigating from a `LiveMapInstance` with `get(key)`.</If>
+<If lang="javascript">
+The `instance()` method returns `undefined` if no object exists at that path.
+</If>
+<If lang="java">
+The `instance()` method returns `null` only if nothing exists at that path. It wraps whatever value resolves there: a `LiveMap` or `LiveCounter` becomes a `LiveMapInstance` or `LiveCounterInstance`, and a primitive value becomes a read-only primitive instance (for example `StringInstance`).
+</If>
 
 Once you have an `Instance`, it references a specific object by its ID. This means operations target that exact object:
 
@@ -134,7 +139,7 @@ See the [Typing documentation](/docs/liveobjects/typing) for more details on typ
 <If lang="java">
 ## Typed views <a id="typing"/>
 
-An `Instance` wraps an already-resolved value of known type, so its `as*` casts **throw** an `IllegalStateException` on mismatch, the opposite contract to the never-throwing `PathObject` casts. In exchange, reads on a typed instance are non-null. Check `getType()` first when the type isn't known; `getType()` on an `Instance` is non-null.
+An `Instance` wraps a value whose type is already known, so its `as*` casts **throw** an `IllegalStateException` when the type doesn't match. This is the opposite of the `PathObject` casts, which never throw. In exchange, reads on a typed instance never return `null`. Check `getType()` first when the type isn't known; `getType()` on an `Instance` is non-null.
 
 <Code>
 ```java
@@ -197,7 +202,12 @@ if (instance != null) {
 ```
 </Code>
 
-<If lang="javascript">The `id` getter returns the [object ID](/docs/liveobjects/concepts/objects#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).</If><If lang="java">The `getId()` method returns the [object ID](/docs/liveobjects/concepts/objects?lang=java#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).</If>
+<If lang="javascript">
+The `id` getter returns the [object ID](/docs/liveobjects/concepts/objects#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).
+</If>
+<If lang="java">
+The `getId()` method returns the [object ID](/docs/liveobjects/concepts/objects?lang=java#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).
+</If>
 
 ## Access data <a id="access"/>
 
@@ -242,7 +252,12 @@ if (userInstance != null) {
 ```
 </Code>
 
-<If lang="javascript">If the entry doesn't exist, `get()` returns undefined:</If><If lang="java">If the entry doesn't exist, `get()` returns `null`:</If>
+<If lang="javascript">
+If the entry doesn't exist, `get()` returns undefined:
+</If>
+<If lang="java">
+If the entry doesn't exist, `get()` returns `null`:
+</If>
 
 <Code>
 ```javascript
@@ -280,7 +295,7 @@ console.log(settings?.value()); // undefined - it's a LiveMap, not a primitive o
 </If>
 
 <If lang="java">
-Where the JavaScript `Instance` degrades gracefully (an `undefined` value, empty iterators, an `undefined` size), Java prevents the call at compile time or fails fast in the cast. Check `getType()` when the type isn't known:
+In JavaScript, calling a method that doesn't match the underlying type returns an `undefined` value, an empty iterator or an `undefined` size. In Java this cannot happen: the method simply doesn't exist on the wrong typed instance, and casting to the wrong view throws an exception. Check `getType()` when the type isn't known:
 
 <Code>
 ```java
@@ -451,7 +466,12 @@ if (userInstance) {
 It is possible for the value returned from `compact()` to contain cyclic references, so it is not safe to serialize this value with `JSON.stringify()`.
 </If>
 
-<If lang="javascript">Use the `compactJson()` method to obtain a value that can be safely passed to `JSON.stringify()`:</If><If lang="java">Use the `compactJson()` method to obtain a JSON representation of the instance:</If>
+<If lang="javascript">
+Use the `compactJson()` method to obtain a value that can be safely passed to `JSON.stringify()`:
+</If>
+<If lang="java">
+Use the `compactJson()` method to obtain a JSON representation of the instance:
+</If>
 
 <Code>
 ```javascript
@@ -697,7 +717,7 @@ The subscription receives an argument with information about the update:
 - The `message` field contains the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made.
 </If>
 <If lang="java">
-- `getObject()` returns an `Instance` representing the same object instance you called `subscribe()` on. It is the base `Instance` type, so cast it with the matching `as*` view. The cast is safe here because you subscribed on a typed instance, so the type is already known; on an unknown `Instance` the `as*` cast throws on mismatch.
+- `getObject()` returns the same object instance you called `subscribe()` on, as the base `Instance` type. Cast it back with the matching `as*` method; the cast is safe here because you already know the type you subscribed on.
 - `getMessage()` returns the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made. It is nullable.
 </If>
 
