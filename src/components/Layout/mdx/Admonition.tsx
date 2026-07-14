@@ -24,28 +24,28 @@ const admonitionConfig: Record<
     title: 'Category',
   },
   note: {
-    borderColor: 'border-l-blue-500 dark:border-l-blue-400',
-    backgroundColor: 'bg-blue-100 dark:bg-blue-800',
+    borderColor: 'border-l-blue-500 dark:border-l-blue-500',
+    backgroundColor: 'bg-blue-100 dark:bg-blue-900',
     title: 'Note',
   },
   'further-reading': {
-    borderColor: 'border-l-green-500 dark:border-l-green-400',
-    backgroundColor: 'bg-green-100 dark:bg-green-800',
+    borderColor: 'border-l-green-500 dark:border-l-green-500',
+    backgroundColor: 'bg-green-100 dark:bg-green-900',
     title: 'Further reading',
   },
   important: {
     borderColor: 'border-l-yellow-500 dark:border-l-yellow-500',
-    backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
+    backgroundColor: 'bg-yellow-100 dark:bg-yellow-900',
     title: 'Important',
   },
   // Unused for now, but available for another type if needed in future.
   warning: {
-    borderColor: 'border-l-yellow-500 dark:border-l-yellow-400',
-    backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
+    borderColor: 'border-l-yellow-500 dark:border-l-yellow-500',
+    backgroundColor: 'bg-yellow-100 dark:bg-yellow-900',
     title: 'Warning',
   },
   usp: {
-    borderColor: 'border-l-orange-600 dark:border-l-orange-600',
+    borderColor: 'border-l-orange-700 dark:border-l-orange-500',
     backgroundColor: '',
     title: '', // USP callouts don't use a title prefix - the content includes the headline
   },
