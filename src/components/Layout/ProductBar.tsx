@@ -51,7 +51,7 @@ const tabBaseClassName = cn(
   'focus-base',
 );
 
-const activeTabClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1000';
+const activeTabClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1100';
 
 const inactiveTabClassName = cn(
   'text-neutral-1000 dark:text-neutral-500',

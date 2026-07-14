@@ -145,7 +145,8 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
                   layer > 1,
                 'pl-3': layer <= 1,
                 'text-neutral-1300 dark:text-neutral-000 font-semibold': isActive,
-                'border-orange-600 bg-orange-100 hover:bg-orange-100': isSelected,
+                'border-orange-600 bg-orange-100 hover:bg-orange-100 dark:bg-orange-1100 dark:hover:bg-orange-1100 dark:text-neutral-000':
+                  isSelected,
               })}
             >
               {hasDeeperLayer ? (
@@ -216,7 +217,7 @@ const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductCo
                 'ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000',
                 'mt-4 flex items-center justify-between gap-2 rounded-lg py-1.5 pl-3 pr-2',
                 'hover:bg-neutral-100 dark:hover:bg-neutral-1200',
-                isSelected && 'bg-orange-100 hover:bg-orange-100',
+                isSelected && 'bg-orange-100 hover:bg-orange-100 dark:bg-orange-1100 dark:hover:bg-orange-1100',
               )}
               {...(page.external && {
                 target: '_blank',
