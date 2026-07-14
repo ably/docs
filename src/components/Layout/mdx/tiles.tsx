@@ -20,7 +20,9 @@ const Tile = ({ title, description, image, link = '/docs' }: TileProps) => {
           {image && <Icon name={image} size="2rem" />}
         </div>
         <div className="flex-1 max-w-66">
-          <h3 className="text-lg font-bold leading-tight tracking-tight mb-2 text-neutral-1300">{title}</h3>
+          <h3 className="text-lg font-bold leading-tight tracking-tight mb-2 text-neutral-1300 dark:text-neutral-000">
+            {title}
+          </h3>
           <p className="text-sm font-medium leading-relaxed tracking-normal text-neutral-800 dark:text-neutral-500 max-h-11 overflow-hidden">
             {description}
           </p>

@@ -66,7 +66,7 @@ const FeaturedLink = ({
           'text-gui-disabled-light dark:text-gui-disabled-dark pointer-events-none': disabled,
         },
         {
-          'text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-none focus-visible:outline-gui-focus':
+          'text-gui-default hover:text-gui-hover dark:text-gui-default-dark dark:hover:text-gui-hover-dark focus:text-gui-focus focus:outline-none focus-visible:outline-gui-focus':
             !disabled,
         },
         { 'py-2': !flush },

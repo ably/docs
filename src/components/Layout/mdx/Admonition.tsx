@@ -35,7 +35,7 @@ const admonitionConfig: Record<
   },
   important: {
     borderColor: 'border-l-yellow-500 dark:border-l-yellow-500',
-    backgroundColor: 'bg-yellow-100 dark:bg-yellow-900',
+    backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
     title: 'Important',
   },
   // Unused for now, but available for another type if needed in future.
@@ -72,7 +72,7 @@ const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note',
           className,
         )}
       >
-        <div className="ui-text-p3 [&>p:first-child]:ui-text-p1 [&>p:first-child]:font-bold [&>p:first-child]:text-neutral-1300 [&>p:first-child]:mb-2 [&>*:last-child]:mb-0">
+        <div className="ui-text-p3 [&>p:first-child]:ui-text-p1 [&>p:first-child]:font-bold [&>p:first-child]:text-neutral-1300 dark:[&>p:first-child]:text-neutral-000 [&>p:first-child]:mb-2 [&>*:last-child]:mb-0">
           {children}
         </div>
       </aside>
