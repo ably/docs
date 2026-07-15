@@ -23,7 +23,7 @@ const ThemeToggle: React.FC = () => {
     <div
       role="radiogroup"
       aria-label="Theme"
-      className="inline-flex items-center gap-0.5 p-0.5 rounded-lg border border-neutral-300 dark:border-neutral-1000"
+      className="inline-flex items-center gap-0.5 p-0.5 rounded-lg border border-neutral-300 dark:border-neutral-1100"
     >
       {OPTIONS.map(({ value, label, icon: OptionIcon }) => {
         const isActive = selected === value;

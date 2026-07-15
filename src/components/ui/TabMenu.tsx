@@ -158,7 +158,7 @@ const TabMenu: React.FC<TabMenuProps> = ({
         className={cn(
           'relative',
           {
-            'flex border-b border-neutral-300 dark:border-neutral-1000': underline,
+            'flex border-b border-neutral-300 dark:border-neutral-1100': underline,
           },
           { 'h-full': flexibleTabHeight },
         )}

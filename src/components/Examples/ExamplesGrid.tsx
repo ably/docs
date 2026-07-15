@@ -90,7 +90,7 @@ const ExamplesGrid = ({
             <div className="group-hover/examples-index-card:scale-105 transition-transform">
               {exampleImages ? displayExampleImage(exampleImages, id, name) : null}
             </div>
-            <div className="flex bg-neutral-000 dark:bg-neutral-1300 gap-x-1.5 py-1.5 px-2 absolute right-3 bottom-3 rounded border border-neutral-200 dark:border-neutral-1000 z-10">
+            <div className="flex bg-neutral-000 dark:bg-neutral-1300 gap-x-1.5 py-1.5 px-2 absolute right-3 bottom-3 rounded border border-neutral-300 dark:border-neutral-1100 z-10">
               {(languages ?? DEFAULT_EXAMPLE_LANGUAGES).map((language) => (
                 <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />
               ))}

@@ -81,7 +81,7 @@ const ProductBar = ({ className, onSelectProduct, selectedProduct }: ProductBarP
   return (
     <nav
       className={cn(
-        'z-30 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000',
+        'z-30 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1100',
         selectionMode ? 'sticky top-0' : 'sticky top-16',
         className,
       )}

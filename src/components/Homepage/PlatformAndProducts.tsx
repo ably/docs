@@ -42,7 +42,7 @@ const PlatformFeatureCard = ({
 
   return (
     <div
-      className="md:col-span-1 md:row-span-2 lg:row-span-3 p-3 bg-white dark:bg-neutral-1300 rounded-lg border border-neutral-300 dark:border-neutral-1000 flex flex-col relative group overflow-hidden cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-1200"
+      className="md:col-span-1 md:row-span-2 lg:row-span-3 p-3 bg-white dark:bg-neutral-1300 rounded-lg border border-neutral-300 dark:border-neutral-1100 flex flex-col relative group overflow-hidden cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-1200"
       onClick={() => {
         navigate(card.link);
       }}
@@ -90,7 +90,7 @@ export const PlatformAndProducts = ({
             key={card.name}
             name={card.name}
             animateIcons={true}
-            className="border border-neutral-300 dark:border-neutral-1000 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-1200"
+            className="border border-neutral-300 dark:border-neutral-1100 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-1200"
             onClick={() => {
               if (card.link) {
                 navigate(card.link);

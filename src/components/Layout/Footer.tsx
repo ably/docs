@@ -281,7 +281,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
 
         <div className="flex flex-wrap items-center gap-5">
           {lastUpdated && (
-            <span className="ui-text-p4 text-neutral-800 dark:text-neutral-500 border-r border-neutral-300 dark:border-neutral-1000 pr-5">
+            <span className="ui-text-p4 text-neutral-800 dark:text-neutral-500 border-r border-neutral-300 dark:border-neutral-1100 pr-5">
               Last updated: {lastUpdated}
             </span>
           )}
@@ -294,7 +294,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
         </div>
       </div>
 
-      <div className="mt-8 border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
+      <div className="mt-8 border border-x-0 border-y-neutral-300 dark:border-y-neutral-1100 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
         <div className="flex gap-5 items-center flex-1">
           <span className="ui-text-p3 font-semibold text-neutral-1300 dark:text-neutral-000">Find us on</span>
           <div className="flex gap-1 items-center">
@@ -332,7 +332,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
         </div>
         <div className="flex flex-col items-end gap-3">
           <Status
-            additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
+            additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1100 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
             statusUrl={StatusUrl}
             showDescription
           />

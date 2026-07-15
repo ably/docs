@@ -141,7 +141,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
             <Accordion.Trigger
               ref={isSelected ? activeTriggerRef : null}
               className={cn(accordionTriggerClassName, 'font-medium rounded-lg', {
-                'border-l border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 rounded-l-none':
+                'border-l border-neutral-300 dark:border-neutral-1100 hover:border-neutral-500 dark:hover:border-neutral-800 rounded-l-none':
                   layer > 1,
                 'pl-3': layer <= 1,
                 'text-neutral-1300 dark:text-neutral-000 font-semibold': isActive,
@@ -296,7 +296,7 @@ const LeftSidebar = ({ className, inHeader = false, product }: LeftSidebarProps)
           'bg-neutral-000 dark:bg-neutral-1300 overflow-x-hidden',
           inHeader
             ? 'w-full'
-            : 'w-[300px] h-full overflow-y-auto border-r border-neutral-300 dark:border-neutral-1000 pt-2',
+            : 'w-[300px] h-full overflow-y-auto border-r border-neutral-300 dark:border-neutral-1100 pt-2',
         )}
       >
         {content.length > 0 ? (

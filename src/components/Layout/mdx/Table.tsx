@@ -64,7 +64,7 @@ const TableHead: React.FC<TableHeadProps> = ({ children, className, ...props }) 
       className={cn(
         'px-4 py-3 text-left font-bold text-neutral-1000 dark:text-neutral-300',
         'first:rounded-tl-lg last:rounded-tr-lg',
-        'border-t first:border-l last:border-r border-b border-neutral-300 dark:border-neutral-1000',
+        'border-t first:border-l last:border-r border-b border-neutral-300 dark:border-neutral-1100',
         className,
       )}
       {...props}
@@ -84,7 +84,7 @@ const TableCell: React.FC<TableCellProps> = ({ children, className, ...props }) 
     <td
       className={cn(
         'px-4 py-3 font-medium text-neutral-1000 dark:text-neutral-300',
-        'first:border-l last:border-r border-b border-neutral-300 dark:border-neutral-1000',
+        'first:border-l last:border-r border-b border-neutral-300 dark:border-neutral-1100',
         '[table>tbody:first-child_tr:first-child_&]:border-t',
         '[table>tbody:first-child_tr:first-child_&]:first:rounded-tl-lg [table>tbody:first-child_tr:first-child_&]:last:rounded-tr-lg',
         '[tr:last-child_&]:first:rounded-bl-lg [tr:last-child_&]:last:rounded-br-lg',

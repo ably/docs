@@ -24,7 +24,7 @@ const ProductIcon = ({ name, hoverName, selected, size, unavailable, className }
     // Carries the gradient stroke; CSS has no native gradient border.
     <span
       className={cn(
-        'flex items-center justify-center border border-neutral-300 dark:border-neutral-1000 rounded-xl',
+        'flex items-center justify-center border border-neutral-300 dark:border-neutral-1100 rounded-xl',
         'bg-neutral-100 dark:bg-neutral-1200 hover:bg-neutral-000 dark:hover:bg-neutral-1300 active:bg-neutral-000 dark:active:bg-neutral-1300',
         className,
       )}

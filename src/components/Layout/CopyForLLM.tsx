@@ -156,7 +156,7 @@ const CopyForLLM: React.FC = () => {
       </ButtonGroup>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="min-w-[220px] bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-lg-medium p-1 z-50"
+          className="min-w-[220px] bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 rounded-lg ui-shadow-lg-medium p-1 z-50"
           sideOffset={5}
           align="end"
         >

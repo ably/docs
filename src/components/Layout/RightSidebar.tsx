@@ -289,7 +289,7 @@ const RightSidebar = () => {
         {headers.length > 0 ? (
           <>
             <p className="ui-text-label4 font-semibold text-neutral-1300 dark:text-neutral-000 mb-3">On this page</p>
-            <div className={cn('flex border-l border-neutral-300 dark:border-neutral-1000', isStepped && 'ml-2')}>
+            <div className={cn('flex border-l border-neutral-300 dark:border-neutral-1100', isStepped && 'ml-2')}>
               {isStepped ? (
                 <div className="-ml-[7px]">{headers.map((header, index) => steppedHeader(header, index))}</div>
               ) : (

@@ -111,7 +111,7 @@ const SingleLanguageSelector = () => {
 
         <Select.Portal>
           <Select.Content
-            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft z-40"
+            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 rounded-lg ui-shadow-sm-soft z-40"
             position="popper"
             align="end"
             sideOffset={4}
@@ -269,7 +269,7 @@ const DualLanguageDropdown = ({ label, paramName, languages, selectedLanguage }:
 
         <Select.Portal>
           <Select.Content
-            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft z-40"
+            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 rounded-lg ui-shadow-sm-soft z-40"
             position="popper"
             align="end"
             sideOffset={4}

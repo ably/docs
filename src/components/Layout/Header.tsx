@@ -225,13 +225,13 @@ const Header: React.FC = () => {
   const defaultMobileTabIndex = currentProduct ? 1 : location.pathname.includes('/examples') ? 2 : 0;
 
   return (
-    <div className="fixed top-0 w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000">
+    <div className="fixed top-0 w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1100">
       <div className="flex items-center justify-between h-16 px-5 max-w-[1600px] mx-auto">
         <div className="flex items-center shrink-0">
           <a href="/docs" className="flex items-center gap-2 focus-base px-5 py-2 rounded -ml-5">
             <img src={Logo} width="96px" alt="Ably" className="dark:hidden" />
             <img src={LogoDark} width="96px" alt="Ably" className="hidden dark:block" />
-            <span className="bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 text-[10px] font-bold text-neutral-1000 dark:text-neutral-400 px-1.5 py-[3px] rounded-md uppercase">
+            <span className="bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 text-[10px] font-bold text-neutral-1000 dark:text-neutral-400 px-1.5 py-[3px] rounded-md uppercase">
               Docs
             </span>
           </a>
@@ -318,7 +318,7 @@ const Header: React.FC = () => {
               </Tooltip.Root>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  className="min-w-[200px] bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-lg-medium p-1 z-50"
+                  className="min-w-[200px] bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 rounded-lg ui-shadow-lg-medium p-1 z-50"
                   sideOffset={5}
                   align="end"
                 >
