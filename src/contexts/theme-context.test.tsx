@@ -42,9 +42,9 @@ describe('ThemeProvider', () => {
     mockMatchMedia(false);
   });
 
-  it('defaults to light and sets ui-theme-light on <html>', () => {
-    renderWithProvider();
-    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+  it('defaults to system and resolves via the OS preference', () => {
+    renderWithProvider(); // beforeEach mocks the OS preference as light
+    expect(screen.getByTestId('theme')).toHaveTextContent('system');
     expect(screen.getByTestId('resolved')).toHaveTextContent('light');
     expect(document.documentElement).toHaveClass('ui-theme-light');
   });
@@ -77,7 +77,7 @@ describe('ThemeProvider', () => {
   it('falls back to the default when the persisted value is invalid', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'not-a-theme');
     renderWithProvider();
-    expect(screen.getByTestId('theme')).toHaveTextContent('light');
+    expect(screen.getByTestId('theme')).toHaveTextContent('system');
     expect(document.documentElement).toHaveClass('ui-theme-light');
     expect(document.documentElement).not.toHaveClass('ui-theme-dark');
   });

@@ -8,10 +8,11 @@ export type ResolvedTheme = 'light' | 'dark';
 // docs; a future cross-property theme would move this to a shared cookie.
 export const THEME_STORAGE_KEY = 'ably.docs.theme';
 
-// Default until the user chooses. Deliberately 'light' (not 'system') while
-// content imagery is still light-only (see DX-1518 phase 4); flip to 'system'
-// once dark-mode imagery lands.
-export const DEFAULT_THEME: Theme = 'light';
+// Default until the user chooses. 'system' so the docs follow the reader's OS
+// preference out of the box. Note: some content imagery is still light-only
+// (see DX-1518 phase 4), so dark pages may show light-background diagrams until
+// that lands.
+export const DEFAULT_THEME: Theme = 'system';
 
 export const THEME_CLASS_LIGHT = 'ui-theme-light';
 export const THEME_CLASS_DARK = 'ui-theme-dark';
