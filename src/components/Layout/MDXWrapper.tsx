@@ -365,7 +365,17 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
               RequiredBadge,
             }}
           >
-            <PageHeader title={title} intro={intro} subtitle={identifier ? <code>{identifier}</code> : undefined} />
+            <PageHeader
+              title={title}
+              intro={intro}
+              subtitle={
+                identifier ? (
+                  <code className="inline-flex items-center rounded border-[0.5px] border-neutral-500 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-1200 px-1.5 py-[3px] font-mono font-medium text-[20px] leading-normal text-neutral-1000 dark:text-neutral-300">
+                    {identifier}
+                  </code>
+                ) : undefined
+              }
+            />
             {children}
           </MarkdownProvider>
         </NestedTableProvider>
