@@ -61,7 +61,7 @@ const FeaturedLink = ({
     <a
       {...(onClick ? {} : { href: url })}
       className={cn(
-        'font-sans font-bold block group/featured-link',
+        'font-sans font-semibold block group/featured-link',
         {
           'text-gui-disabled-light dark:text-gui-disabled-dark pointer-events-none': disabled,
         },

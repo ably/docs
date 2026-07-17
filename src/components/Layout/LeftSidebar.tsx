@@ -59,7 +59,8 @@ const accordionTriggerClassName = cn(
 
 const accordionLinkClassName = 'pl-3 py-1';
 
-const sectionHeadingClassName = 'ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000 pb-2 pt-5 pl-3 pr-2';
+const sectionHeadingClassName =
+  'ui-text-label2 font-semibold text-neutral-1300 dark:text-neutral-000 pb-2 pt-5 pl-3 pr-2';
 
 const iconClassName = 'text-neutral-1300 dark:text-neutral-000 transition-transform';
 
@@ -214,7 +215,7 @@ const SectionNav = ({ content, tree }: { content: (NavProductPage | NavProductCo
               key={page.name}
               to={buildLinkWithParams(page.link, searchParams)}
               className={cn(
-                'ui-text-label2 font-bold text-neutral-1300 dark:text-neutral-000',
+                'ui-text-label2 font-semibold text-neutral-1300 dark:text-neutral-000',
                 'mt-4 flex items-center justify-between gap-2 rounded-lg py-1.5 pl-3 pr-2',
                 'hover:bg-neutral-100 dark:hover:bg-neutral-1200',
                 isSelected && 'bg-orange-100 hover:bg-orange-100 dark:bg-orange-1100 dark:hover:bg-orange-1100',
