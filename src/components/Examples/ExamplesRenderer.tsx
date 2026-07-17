@@ -10,6 +10,7 @@ import Icon from 'src/components/Icon';
 import { IconName } from 'src/components/Icon/types';
 import SegmentedControl from 'src/components/ui/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
+import { withThemeSync } from './sandpackThemeSync';
 import cn from 'src/utilities/cn';
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
 // Shared tsconfig for proper ES2020+ transpilation in Sandpack
@@ -97,6 +98,15 @@ const ExamplesRenderer = ({
   }, [files, apiKey]);
 
   const languageFiles = rewrittenFiles[activeLanguage];
+  // Bake the current theme into the example files. Combined with the keyed
+  // SandpackProvider below, a theme change fully reloads the preview into the
+  // matching theme — a full reload (not an in-place hot reload) so the example's
+  // side effects, e.g. its Ably connection, are torn down rather than stacking
+  // up a fresh instance on each toggle.
+  const themedFiles = useMemo(
+    () => withThemeSync(languageFiles, activeLanguage, resolvedTheme),
+    [languageFiles, activeLanguage, resolvedTheme],
+  );
 
   const isVerticalLayout = useMemo(() => layout === 'single-vertical' || layout === 'double-vertical', [layout]);
   const isDoubleLayout = useMemo(() => layout === 'double-horizontal' || layout === 'double-vertical', [layout]);
@@ -105,8 +115,13 @@ const ExamplesRenderer = ({
 
   return (
     <SandpackProvider
+      // Remount (a full preview reload) when the theme changes so the baked
+      // theme takes effect on a fresh iframe. Keyed on resolvedTheme (not the
+      // mount-gated editorTheme) so it's stable across mount and doesn't force
+      // an extra reload on first load for dark-mode readers.
+      key={resolvedTheme}
       files={{
-        ...languageFiles,
+        ...themedFiles,
         '/tsconfig.json': { code: SANDPACK_TSCONFIG, hidden: true },
       }}
       customSetup={{
