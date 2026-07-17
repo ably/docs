@@ -66,16 +66,11 @@ const { consumed, runTerminalReason } = await outcome;
   - `consumed: false`: the Run ended before the agent saw the message.
   - `runTerminalReason`: how the Run ended (`'complete'`, `'cancelled'`, or `'error'`). Absent if `outcome` resolves on a `run-suspend` instead of `run-end`.
 
-On the agent side, `Run.hasInput()` controls the loop. It returns `true` while there's input the agent hasn't responded to (the original prompt, or a steering message from the previous iteration), and `false` once the agent has caught up. The optional `onSteer` hook fires when a steering message arrives; use it to cancel an in-flight model call:
+On the agent side, `Run.hasInput()` controls the loop. It returns `true` while there's input the agent hasn't responded to (the original prompt, or a steering message from the previous iteration), and `false` once the agent has caught up:
 
 <Code>
 ```javascript
-const run = session.createRun(invocation, {
-  onSteer: () => {
-    // Optional. Cancel any in-flight model call here.
-    // The SDK doesn't interrupt the model call for you.
-  },
-});
+const run = session.createRun(invocation, { signal: req.signal });
 
 // Drain run.view for the full conversation before starting. run.messages is
 // only this Run's own turn, so feed run.view to the model instead.
@@ -84,8 +79,12 @@ await run.start();
 
 while (run.hasInput()) {
   const conversation = run.view.getMessages().map(({ message }) => message);
-  const stream = await model.stream({ messages: conversation });
-  await run.pipe(stream);
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages: await convertToModelMessages(conversation),
+    abortSignal: run.abortSignal,
+  });
+  await run.pipe(result.toUIMessageStream());
 }
 
 await run.end({ reason: 'complete' });
@@ -95,7 +94,78 @@ await session.end();
 
 Each `pipe()` records which steering messages the agent had seen before producing that response. The client uses those records to resolve each message's outcome when the Run ends.
 
-## Implement cancel-then-send <a id="cancel-then-send"/>
+### Cancel the in-flight model call <a id="on-steer"/>
+
+The loop above only sees a steering message once the current model call finishes and `hasInput()` is checked again, so the steer takes effect on the *next* response. To react immediately, pass the optional `onSteer` hook to `createRun()`. It fires the moment a steering message folds into the Run. The SDK does not interrupt the model call for you, so wire `onSteer` to abort the current model call; the loop then restarts with the steering message already in the conversation.
+
+Give each model call its own `AbortController`, abort it from `onSteer`, and pass a signal that fires on either run cancellation or a steer. The subtlety is that `onSteer` must abort *only* the model call, never the Run, and the loop has to tell a steer-interruption apart from a genuine cancel before deciding how to end:
+
+<Code>
+```javascript
+let stepAbort = new AbortController();
+
+const run = session.createRun(invocation, {
+  signal: req.signal,
+  // Abort only the current model call, never run.abortSignal, so a steer
+  // stops the response without cancelling the Run.
+  onSteer: () => stepAbort.abort(),
+});
+
+while (run.view.hasOlder()) await run.view.loadOlder();
+await run.start();
+
+let outcome;
+while (run.hasInput()) {
+  stepAbort = new AbortController();
+  const conversation = run.view.getMessages().map(({ message }) => message);
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages: await convertToModelMessages(conversation),
+    // Abort on a genuine cancel (run.abortSignal) OR a steer (stepAbort).
+    abortSignal: AbortSignal.any([run.abortSignal, stepAbort.signal]),
+  });
+
+  const pipeResult = await run.pipe(result.toUIMessageStream());
+
+  // run.pipe races only run.abortSignal, so a steer abort ends the stream
+  // cleanly (pipe reason 'complete') while a real cancel ends it 'cancelled'.
+  // A steer interrupted this iteration if the stream ended clean, this
+  // iteration's stepAbort fired, and the Run itself was not cancelled.
+  const steerInterrupted =
+    pipeResult.reason === 'complete' &&
+    stepAbort.signal.aborted &&
+    !run.abortSignal.aborted;
+
+  if (steerInterrupted) {
+    // Don't pass an interrupted iteration to vercelRunOutcome: an aborted
+    // streamText rejects finishReason abort-like, which maps to 'cancelled' and
+    // would end the Run. Swallow the rejection so it isn't unhandled, then loop.
+    // hasInput() is now true, so the next iteration re-infers with the steer at
+    // the tail of the conversation.
+    result.finishReason.catch(() => {});
+    continue;
+  }
+
+  outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+  if (outcome.reason !== 'complete') break;
+}
+
+if (outcome?.reason === 'suspend') {
+  await run.suspend();
+} else {
+  await run.end(outcome ?? { reason: 'complete' });
+}
+await session.end();
+```
+</Code>
+
+When `onSteer` aborts the model call, `run.pipe()` returns with the partial output published, `run.hasInput()` returns `true` because the steer has folded into the conversation, and the next iteration streams a fresh response that includes it. `onSteer` takes no arguments and returns `void`; keep it synchronous and cheap, since it runs on the message-handling path.
+
+<Aside data-type='note'>
+This immediate-interruption pattern is an optimisation, not a requirement. The [base loop](#steer) already picks up a steer on the next iteration once the current response finishes; add `onSteer` only when you need to interrupt an in-flight response rather than wait for it to complete.
+</Aside>
+
+## Implement cancel-and-reprompt <a id="cancel-then-send"/>
 
 To replace the in-flight Run with a fresh one, cancel active Runs and then send the new message:
 
@@ -184,9 +254,25 @@ Yes. `consumed: true` only means the agent saw the message, not that the LLM act
 
 Yes. `session.cancel(runId)` only cancels the matching Run. Pull `runId`s from `session.view.runs()` to target the right one.
 
+### Does cancel work from a different device?
+
+Yes. Cancel is a signal on the shared channel, so any client with publish capability can cancel a Run, not just the device that started it. The agent's `onCancel` hook decides whether to honour it; the default accepts every request. Scope it to the Run owner if a user should only cancel their own turns. See [cancellation](/docs/ai-transport/features/cancellation#authorization) for the authorisation pattern.
+
 ### How does steering differ from concurrent turns?
 
 Steering joins the *same* Run; the agent picks up the new message on the next loop iteration. A concurrent send starts a *new* Run that streams independently. Steering keeps one response in flight; concurrent turns keep two. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for the multiplexing model.
+
+### Do steering messages persist in the conversation?
+
+Yes. A steering message joins the conversation tree under the Run it steers, so every connected client sees it live and it survives reload. On rehydration `run.view.getMessages()` returns it in order alongside the original prompt and the agent's output, so the model sees the full exchange on the next turn.
+
+### What happens if I send several steering messages at once?
+
+The next `run.hasInput()` call drains all pending steers together, and the following `pipe()` stamps every one of their codec-message-ids, resolving each message's `outcome` as `consumed`. The agent folds them all into a single model call rather than replying to each separately.
+
+### What if the agent endpoint is down when I send the follow-up?
+
+The follow-up is published to the channel before your agent endpoint is called, so it is durable regardless of the endpoint's health. For a steering message that is all that is needed: the already-running agent picks it up on its next `hasInput()` check. For a new Run (cancel-and-reprompt or send-alongside) the client also POSTs to wake the agent; if that POST fails, the user input still sits on the channel, so retry the POST once the endpoint recovers and the agent drains history to find the trigger and start the Run.
 
 ## Related features <a id="related"/>
 
