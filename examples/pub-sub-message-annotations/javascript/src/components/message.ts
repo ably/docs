@@ -17,7 +17,7 @@ export function createMessageElement(message: MessageWithSerial) {
 
   // Main message element that can be clicked to expand
   const messageElement = document.createElement('div');
-  messageElement.className = `px-3 py-2 border-t border-l border-r border-gray-200 rounded-t-md bg-white shadow-sm cursor-pointer`;
+  messageElement.className = `px-3 py-2 border-t border-l border-r border-gray-200 dark:border-gray-700 rounded-t-md bg-white dark:bg-gray-900 shadow-sm cursor-pointer`;
   messageElement.id = `message-${message.id}`;
 
   // First row: message text (left aligned) and dropdown arrow (right aligned)
@@ -25,7 +25,7 @@ export function createMessageElement(message: MessageWithSerial) {
   firstRow.className = 'flex justify-between items-center w-full';
 
   const messageContent = document.createElement('div');
-  messageContent.className = 'flex-grow text-sm font-medium text-gray-700 overflow-hidden text-ellipsis';
+  messageContent.className = 'flex-grow text-sm font-medium text-gray-700 dark:text-gray-300 overflow-hidden text-ellipsis';
   messageContent.textContent = message.data;
   firstRow.appendChild(messageContent);
 
@@ -44,7 +44,7 @@ export function createMessageElement(message: MessageWithSerial) {
   clientBadge.classList.add('shrink-0');
 
   const timestamp = document.createElement('div');
-  timestamp.className = 'text-xs text-gray-500';
+  timestamp.className = 'text-xs text-gray-500 dark:text-gray-400';
   timestamp.textContent = formatTimestamp(message.timestamp || Date.now());
 
   secondRow.appendChild(clientBadge);

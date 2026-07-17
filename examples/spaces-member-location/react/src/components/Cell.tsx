@@ -53,10 +53,10 @@ function Cell({
         "--member-color": self?.profileData.memberColor,
         "--cell-member-color": cellMembers[0]?.profileData.memberColor,
       } as React.CSSProperties}
-      className={`uk-table-middle border border-gray-300 p-2 cursor-pointer transition-colors relative
-        ${selfInCell ? 'bg-white' : 'bg-gray-50'}
+      className={`uk-table-middle border border-gray-300 dark:border-gray-700 p-2 cursor-pointer transition-colors relative
+        ${selfInCell ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'}
         ${cellMembers.length > 0 && !selfInCell ? 'uk-box-shadow-small' : ''}
-        hover:bg-gray-100`}
+        hover:bg-gray-100 dark:hover:bg-gray-800`}
       onClick={() => handleClick(rowIndex, colIndex)}
       data-name-content={memberName ? cellLabel : ""}
     >

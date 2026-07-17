@@ -50,10 +50,10 @@ function EncodedMessages() {
           </button>
         </div>
 
-        <div className="h-full border rounded-lg overflow-y-auto bg-white shadow-lg">
+        <div className="h-full border rounded-lg overflow-y-auto bg-white dark:bg-gray-900 shadow-lg">
           <div className="p-4 space-y-2">
             {messages.map((msg, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded-lg flex items-center gap-2">
+              <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center gap-2">
                 <span>{msg}</span>
               </div>
             ))}
@@ -101,10 +101,10 @@ function DecodedMessages() {
           </button>
         </div>
 
-        <div className="h-full border rounded-lg overflow-y-auto bg-white shadow-lg">
+        <div className="h-full border rounded-lg overflow-y-auto bg-white dark:bg-gray-900 shadow-lg">
           <div className="p-4 space-y-2">
             {messages.map((msg, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded-lg flex items-center gap-2">
+              <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center gap-2">
                 <span>{msg.data}</span>
               </div>
             ))}

@@ -119,7 +119,7 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   historyItem.id = `history-item-${message.id}`;
   historyItem.className = 'border-b pb-2';
   const historyDiv = document.createElement('div');
-  historyDiv.className = 'flex justify-between text-sm text-gray-600';
+  historyDiv.className = 'flex justify-between text-sm text-gray-600 dark:text-gray-300';
   historyItem.appendChild(historyDiv);
 
   const homeWin = document.createElement('span');

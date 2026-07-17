@@ -49,11 +49,11 @@ const Chat = () => {
               <span className={`font-bold ${message.clientId === clientId ? 'text-grey-500' : 'text-blue-500'} mr-2`}>
                 {message.clientId === clientId ? 'You' : message.clientId}:
               </span>
-              <span className="text-gray-700">{message.text}</span>
+              <span className="text-gray-700 dark:text-gray-300">{message.text}</span>
             </div>
           ))}
         </div>
-        <div className="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0">
+        <div className="border-t-2 border-gray-200 dark:border-gray-700 px-4 pt-4 mb-2 sm:mb-0">
           <form className="flex" onSubmit={handleSubmit}>
             <input
               type="text"

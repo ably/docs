@@ -19,7 +19,7 @@ function PresenceList() {
 
   return (
     <div className="min-h-screen p-8 uk-text-primary">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
+      <div className="max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
         <div className="space-y-2">
           {presenceData.map((viewer) => (
             <li key={viewer.clientId} className="flex items-center justify-between p-2 border-b">
@@ -28,7 +28,7 @@ function PresenceList() {
                   {viewer.clientId}
                   {viewer.clientId === currentClientId ? ' (You)' : ''}{' '}
                 </span>
-                <span className="italic text-sm text-gray-500">{viewer.data}</span>
+                <span className="italic text-sm text-gray-500 dark:text-gray-400">{viewer.data}</span>
               </div>
             </li>
           ))}

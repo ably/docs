@@ -66,7 +66,7 @@ document.getElementById('send-message').addEventListener('click', () => {
     if (enterChatButton) {
       enterChatButton.disabled = false;
       enterChatButton.className =
-        'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black';
+        'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black dark:border-gray-600 bg-transparent text-black dark:text-white';
     }
   }
 
@@ -102,7 +102,7 @@ const getPastMessages = async () => {
   if (loadButton instanceof HTMLButtonElement) {
     loadButton.disabled = true;
     loadButton.className =
-      'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2 absolute top-2 left-1/2 transform -translate-x-1/2 p-2 cursor-not-allowed';
+      'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black dark:border-gray-600 bg-transparent text-black dark:text-white cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2 absolute top-2 left-1/2 transform -translate-x-1/2 p-2 cursor-not-allowed';
   }
 };
 
@@ -140,7 +140,7 @@ function addMessage(message: Message, position = 'after') {
 
   /** Add message text to message div */
   const messageSpan = document.createElement('span');
-  messageSpan.className = 'text-gray-700';
+  messageSpan.className = 'text-gray-700 dark:text-gray-300';
   messageSpan.textContent = message.text;
   messageDiv.appendChild(messageSpan);
 }

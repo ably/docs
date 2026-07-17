@@ -88,11 +88,11 @@ function LiveMatch({ channelName }: { channelName: string }) {
   }, [matchData, channel]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-800 p-4">
       <div className="max-w-sm mx-auto">
         {matchData && (
           <>
-            <div className="bg-white rounded shadow p-3 mb-4">
+            <div className="bg-white dark:bg-gray-900 rounded shadow p-3 mb-4">
               <div className="flex justify-between items-center text-sm font-semibold">
                 <span>
                   <span className="hidden sm:inline">{matchData.match.homeTeam}</span>
@@ -113,19 +113,19 @@ function LiveMatch({ channelName }: { channelName: string }) {
             </div>
 
             <div className="grid grid-cols-3 gap-2 mb-4">
-              <div className="bg-white rounded shadow p-2">
+              <div className="bg-white dark:bg-gray-900 rounded shadow p-2">
                 <h3 className="text-xs font-medium mb-1">Home win</h3>
                 <p className="text-lg font-bold text-green-600">
                   {matchData.match.matchOdds.homeWin}
                 </p>
               </div>
-              <div className="bg-white rounded shadow p-2">
+              <div className="bg-white dark:bg-gray-900 rounded shadow p-2">
                 <h3 className="text-xs font-medium mb-1">Draw</h3>
                 <p className="text-lg font-bold text-blue-600">
                   {matchData.match.matchOdds.draw}
                 </p>
               </div>
-              <div className="bg-white rounded shadow p-2">
+              <div className="bg-white dark:bg-gray-900 rounded shadow p-2">
                 <h3 className="text-xs font-medium mb-1">Away win</h3>
                 <p className="text-lg font-bold text-red-600">
                   {matchData.match.matchOdds.awayWin}
@@ -133,12 +133,12 @@ function LiveMatch({ channelName }: { channelName: string }) {
               </div>
             </div>
 
-            <div className="bg-white rounded shadow p-3">
+            <div className="bg-white dark:bg-gray-900 rounded shadow p-3">
               <h2 className="text-sm font-bold mb-2">Odds history</h2>
               <div className="space-y-2">
                 {oddsHistory.map((odds, index) => (
                   <div key={index} className="border-b pb-1">
-                    <div className="flex justify-between text-xs text-gray-600">
+                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
                       <span>Home: {odds.match.matchOdds.homeWin}</span>
                       <span>Draw: {odds.match.matchOdds.draw}</span>
                       <span>Away: {odds.match.matchOdds.awayWin}</span>

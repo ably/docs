@@ -44,11 +44,11 @@ export function InputCell({
 
   return (
     <div ref={ref} className="flex flex-col space-y-2">
-      <label htmlFor={name} className="text-sm font-medium text-gray-700">
+      <label htmlFor={name} className="text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
       </label>
       <div
-        className="relative rounded-md border border-gray-300 shadow-sm"
+        className="relative rounded-md border border-gray-300 dark:border-gray-700 shadow-sm"
         style={{ backgroundColor: memberColor ? `${memberColor}10` : 'transparent' }}
       >
         {memberName && (
@@ -57,7 +57,7 @@ export function InputCell({
               {memberName}
             </span>
             {!lockedByYou && (
-              <LockedFieldSvg className="w-4 h-4 text-gray-500" />
+              <LockedFieldSvg className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             )}
           </div>
         )}
@@ -71,12 +71,12 @@ export function InputCell({
           placeholder="Click to lock and edit me"
           className={`uk-input w-full p-3 rounded-md transition-colors duration-200 ${
             !lockHolder
-              ? 'bg-white hover:bg-gray-50'
+              ? 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900'
               : 'bg-opacity-10'
           } ${
             !readOnly
               ? 'cursor-text focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-              : 'cursor-not-allowed bg-gray-50'
+              : 'cursor-not-allowed bg-gray-50 dark:bg-gray-900'
           }`}
         />
       </div>

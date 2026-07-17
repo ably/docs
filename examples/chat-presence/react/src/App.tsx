@@ -29,12 +29,12 @@ const Online = () => {
   });
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg uk-text-primary">
+    <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg uk-text-primary">
       <div className="space-y-4">
         {presenceData.map((onlineStatus) => (
           <div
             key={onlineStatus.clientId}
-            className="flex items-center p-4 bg-gray-100 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
+            className="flex items-center p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
           >
             <div
               className={`w-4 h-4 mr-3 rounded-full ${

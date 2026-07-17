@@ -33,7 +33,7 @@ function Chat() {
           id="messages"
           className="w-96 flex flex-auto flex-col space-y-4 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
         ></div>
-        <div className="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0">
+        <div className="border-t-2 border-gray-200 dark:border-gray-700 px-4 pt-4 mb-2 sm:mb-0">
           <div className="emoji-selector">
             {emojis.map((emoji, index) => (
               <span key={index} className="emoji-btn" onClick={() => sendRoomReaction({ name: emoji })}>

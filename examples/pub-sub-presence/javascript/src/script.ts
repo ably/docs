@@ -49,7 +49,7 @@ async function addPresenceEntry(clientId: string, status: string) {
   const clientIdSpan = document.createElement('span');
   clientIdSpan.innerText = clientId + (clientId === client.auth.clientId ? ' (You)' : '');
   const statusSpan = document.createElement('span');
-  statusSpan.className = 'italic text-sm text-gray-500';
+  statusSpan.className = 'italic text-sm text-gray-500 dark:text-gray-400';
   statusSpan.innerText = status;
 
   statusDiv.appendChild(clientIdSpan);

@@ -67,8 +67,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 uk-text-primary">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800 uk-text-primary">
+      <div className="bg-white dark:bg-gray-900 p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl mb-6 text-center">Live odds</h2>
         <p>Simulate 4 betting odds for a sports game before attaching.</p>
         <div className="flex flex-col gap-4">

@@ -87,7 +87,7 @@ function createTaskDiv(id: string, title: string, tasks: PathObject<LiveMap<Task
     `<div class="flex justify-between items-center rounded space-x-4 task" data-task-id="${id}">
         <span class="flex-grow">${title}</span>
         <button class="uk-btn uk-btn-primary uk-btn-sm uk-border-rounded-right update-task rounded-[1998px]">Edit</button>
-        <button class="uk-btn uk-btn-sm uk-border-rounded-right remove-task rounded-[1998px] bg-transparent border border-black">Remove</button>
+        <button class="uk-btn uk-btn-sm uk-border-rounded-right remove-task rounded-[1998px] bg-transparent border border-black dark:border-gray-600">Remove</button>
     </div>`,
     'text/html',
   ).body.firstChild;

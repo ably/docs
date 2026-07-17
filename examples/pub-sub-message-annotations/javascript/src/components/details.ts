@@ -6,17 +6,17 @@ import { createAnnotationsListElement } from './annotations';
 
 export function createPublishAnnotationElement(message: MessageWithSerial) {
   const publisher = document.createElement('div');
-  publisher.className = 'p-2 border-b border-gray-200 bg-gray-50';
+  publisher.className = 'p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900';
   publisher.innerHTML = `
     <div class="flex items-center gap-1.5">
-      <select class="uk-select uk-form-sm w-24 flex-none bg-white border rounded-md">
+      <select class="uk-select uk-form-sm w-24 flex-none bg-white dark:bg-gray-900 border rounded-md">
         <option>total.v1</option>
         <option>distinct.v1</option>
         <option>unique.v1</option>
         <option>multiple.v1</option>
         <option>flag.v1</option>
       </select>
-      <input placeholder="Annotate message" class="uk-input uk-form-sm border rounded-md bg-white flex-grow" type="text">
+      <input placeholder="Annotate message" class="uk-input uk-form-sm border rounded-md bg-white dark:bg-gray-900 flex-grow" type="text">
       <button class="uk-btn uk-btn-primary uk-btn-sm rounded-md flex-none">Publish</button>
     </div>
   `;
@@ -116,7 +116,7 @@ export function createMessageDetailsElement(message: MessageWithSerial) {
 
 export function createDetailsPane(message: MessageWithSerial) {
   const detailsPane = document.createElement('div');
-  detailsPane.className = 'border-b border-l border-r border-gray-200 rounded-b-md overflow-hidden bg-white shadow-sm';
+  detailsPane.className = 'border-b border-l border-r border-gray-200 dark:border-gray-700 rounded-b-md overflow-hidden bg-white dark:bg-gray-900 shadow-sm';
   detailsPane.id = `details-${message.id}`;
 
   const messageDetails = createMessageDetailsElement(message);

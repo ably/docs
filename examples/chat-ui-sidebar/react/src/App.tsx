@@ -47,7 +47,7 @@ export default function App() {
         <AvatarProvider>
           <ChatSettingsProvider>
             <ChatClientProvider client={chatClient}>
-              <div className="h-screen w-full flex justify-center items-center bg-white">
+              <div className="h-screen w-full flex justify-center items-center bg-white dark:bg-gray-950">
                 <div
                   className="shadow-lg rounded-lg overflow-hidden"
                 >

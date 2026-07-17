@@ -92,10 +92,10 @@ function buildCell(value: string, rowIndex: number, colIndex: number, cellMember
   const cellTd = document.createElement('td');
   cellTd.setAttribute('key', `${rowIndex}-${colIndex}`);
 
-  cellTd.className = `uk-table-middle border border-gray-300 p-2 cursor-pointer transition-colors relative
-    ${selfInCell ? 'bg-white' : 'bg-gray-50'}
+  cellTd.className = `uk-table-middle border border-gray-300 dark:border-gray-700 p-2 cursor-pointer transition-colors relative
+    ${selfInCell ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'}
     ${cellMembers.length > 0 && !selfInCell ? 'uk-box-shadow-small' : ''}
-    hover:bg-gray-100`;
+    hover:bg-gray-100 dark:hover:bg-gray-800`;
 
   cellTd.addEventListener('click', () => handleClick(rowIndex, colIndex));
   cellTd.textContent = value;
@@ -118,7 +118,7 @@ async function buildSpreadsheet(otherMembers: Member[], self: Member) {
     sheetRow.className = 'uk-table-middle';
 
     const sheetTd = document.createElement('td');
-    sheetTd.className = 'uk-text-bold uk-text-center uk-background-muted border border-gray-300 p-2';
+    sheetTd.className = 'uk-text-bold uk-text-center uk-background-muted border border-gray-300 dark:border-gray-700 p-2';
     sheetTd.textContent = (rowIndex + 1).toString();
     sheetRow.appendChild(sheetTd);
 
