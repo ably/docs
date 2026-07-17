@@ -81,7 +81,8 @@ describe('Header', () => {
 
   it('renders the header with logo and links', () => {
     render(<Header />);
-    expect(screen.getByAltText('Ably')).toBeInTheDocument();
+    // Two logo variants render (light + dark, CSS-toggled); both carry the alt.
+    expect(screen.getAllByAltText('Ably').length).toBeGreaterThan(0);
 
     expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Platform')).toBeInTheDocument();

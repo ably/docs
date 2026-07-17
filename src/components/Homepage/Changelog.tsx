@@ -184,7 +184,7 @@ export const ChangelogSection = () => {
   `);
 
   return (
-    <div className="rounded-lg border border-neutral-300 dark:border-neutral-1000 p-6 lg:p-8 mt-6 md:mt-0">
+    <div className="rounded-lg border border-neutral-300 dark:border-neutral-1100 p-6 lg:p-8 mt-6 md:mt-0">
       <div className="flex justify-between items-center mb-6">
         <h3 className="ui-text-h3 text-neutral-1300 dark:text-neutral-000">Changelog</h3>
         <FeaturedLink

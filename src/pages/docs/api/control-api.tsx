@@ -16,7 +16,7 @@ const ControlApi = () => {
     <>
       <Head title={meta_title} metaTitle={meta_title} canonical={canonical} description={meta_description} />
       <div className="ml-2 mt-8 mb-6">
-        <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
+        <div className="text-gui-default hover:text-gui-hover dark:text-gui-default-dark dark:hover:text-gui-hover-dark focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
           <Link to="/docs/api">
             <ArrowLongRightIcon
               className="size-[1rem] align-middle transform rotate-180 mr-1 h-4 w-4 ui-link"

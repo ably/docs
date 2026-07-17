@@ -69,7 +69,7 @@ const LanguageSelector = ({ languages, activeLanguage, onLanguageChange }: Langu
   );
 
   return (
-    <div className="p-2 border-b border-neutral-300 dark:border-neutral-1000 overflow-x-auto">
+    <div className="p-2 border-b border-neutral-300 dark:border-neutral-1100 overflow-x-auto">
       <div className="hidden sm:flex gap-1">{desktopLanguageElements}</div>
 
       <div className="sm:hidden w-full">
@@ -86,7 +86,7 @@ const LanguageSelector = ({ languages, activeLanguage, onLanguageChange }: Langu
 
           <Select.Portal>
             <Select.Content
-              className="overflow-hidden rounded-md bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 shadow-md z-50 w-[var(--radix-select-trigger-width)]"
+              className="overflow-hidden rounded-md bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 shadow-md z-50 w-[var(--radix-select-trigger-width)]"
               position="popper"
             >
               <Select.ScrollUpButton className="flex items-center justify-center h-6 bg-neutral-000 dark:bg-neutral-1300 text-neutral-1300 dark:text-neutral-000 cursor-default focus-base">

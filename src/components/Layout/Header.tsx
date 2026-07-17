@@ -8,6 +8,7 @@ import cn from 'src/utilities/cn';
 import Icon from 'src/components/Icon';
 import TabMenu from 'src/components/ui/TabMenu';
 import Logo from 'src/images/ably-logo.svg';
+import LogoDark from 'src/images/ably-logo-dark.svg';
 import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from 'src/utilities/heights';
 import LeftSidebar from './LeftSidebar';
@@ -38,7 +39,7 @@ const MAX_MOBILE_MENU_WIDTH = '560px';
 
 const headerLinkClassName =
   'inline-flex items-center h-9 px-4 rounded-lg ui-text-label3 font-semibold transition-colors';
-const activeHeaderLinkClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1000';
+const activeHeaderLinkClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1100';
 const inactiveHeaderLinkClassName =
   'text-neutral-900 dark:text-neutral-500 hover:text-neutral-1300 dark:hover:text-neutral-000 hover:bg-neutral-100 dark:hover:bg-neutral-1200';
 
@@ -224,12 +225,13 @@ const Header: React.FC = () => {
   const defaultMobileTabIndex = currentProduct ? 1 : location.pathname.includes('/examples') ? 2 : 0;
 
   return (
-    <div className="fixed top-0 w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000">
+    <div className="fixed top-0 w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1100">
       <div className="flex items-center justify-between h-16 px-5 max-w-[1600px] mx-auto">
         <div className="flex items-center shrink-0">
           <a href="/docs" className="flex items-center gap-2 focus-base px-5 py-2 rounded -ml-5">
-            <img src={Logo} width="96px" alt="Ably" />
-            <span className="bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 text-[10px] font-bold text-neutral-1000 dark:text-neutral-400 px-1.5 py-[3px] rounded-md uppercase">
+            <img src={Logo} width="96px" alt="Ably" className="dark:hidden" />
+            <img src={LogoDark} width="96px" alt="Ably" className="hidden dark:block" />
+            <span className="bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 text-[10px] font-bold text-neutral-1000 dark:text-neutral-400 px-1.5 py-[3px] rounded-md uppercase">
               Docs
             </span>
           </a>
@@ -316,7 +318,7 @@ const Header: React.FC = () => {
               </Tooltip.Root>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  className="min-w-[200px] bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-lg-medium p-1 z-50"
+                  className="min-w-[200px] bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 rounded-lg ui-shadow-lg-medium p-1 z-50"
                   sideOffset={5}
                   align="end"
                 >

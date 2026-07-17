@@ -465,7 +465,7 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
   const renderLanguageLabel = (langKey: string, onClick?: () => void) => (
     <div
       className={cn(
-        'border-b border-neutral-300 dark:border-neutral-1000 h-[2.125rem] inline-flex items-center px-3 w-full',
+        'border-b border-neutral-300 dark:border-neutral-1100 h-[2.125rem] inline-flex items-center px-3 w-full',
         { 'rounded-t-lg': !headerRow },
       )}
     >
@@ -520,12 +520,12 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
   return (
     <div
       className={cn(
-        'rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 min-h-[3.375rem]',
+        'rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1100 min-h-[3.375rem]',
         className,
       )}
     >
       {headerRow && (
-        <div className="h-[2.375rem] bg-neutral-200 dark:bg-neutral-1100 border-b border-neutral-300 dark:border-neutral-1000 flex items-center py-1 px-3 rounded-t-lg">
+        <div className="h-[2.375rem] bg-neutral-200 dark:bg-neutral-1100 border-b border-neutral-300 dark:border-neutral-1100 flex items-center py-1 px-3 rounded-t-lg">
           <div className="flex space-x-1.5">
             <div className="w-3 h-3 rounded-full bg-orange-500"></div>
             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -543,7 +543,7 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
       {showSDKSelector && (
         <div
           className={cn(
-            'p-2 border-b border-neutral-300 dark:border-neutral-1000',
+            'p-2 border-b border-neutral-300 dark:border-neutral-1100',
             sdkTypes.size === 1 && 'p-1',
             headerRow ? '' : 'rounded-t-lg',
           )}

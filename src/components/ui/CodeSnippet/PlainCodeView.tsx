@@ -18,7 +18,7 @@ const PlainCodeView: React.FC<PlainCodeViewProps> = ({ content, className, langu
   return (
     <div
       className={cn(
-        'rounded-lg overflow-hidden bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 relative flex items-center',
+        'rounded-lg overflow-hidden bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 relative flex items-center',
         language === 'shell' ? 'min-h-[3.375rem]' : 'min-h-12',
         className,
       )}

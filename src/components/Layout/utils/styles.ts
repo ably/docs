@@ -1,7 +1,9 @@
 import cn from 'src/utilities/cn';
 
+// Tooltips stay a dark chip in both themes (dark surface, light text) rather
+// than inverting to a light chip in dark mode.
 export const tooltipContentClassName = cn(
-  'px-2 py-1 bg-neutral-1000 dark:bg-neutral-300 text-neutral-200 dark:text-neutral-1100 ui-text-p3 font-medium rounded-lg relative z-50 mt-2',
+  'px-2 py-1 bg-neutral-1000 dark:bg-neutral-1100 text-neutral-200 dark:text-neutral-200 ui-text-p3 font-medium rounded-lg relative z-50 mt-2',
   'data-[state=closed]:animate-[tooltipExit_0.25s_ease-in-out]',
   'data-[state=delayed-open]:animate-[tooltipEntry_0.25s_ease-in-out]',
 );
