@@ -115,7 +115,9 @@ const writeDetailPage = (entry: ErrorEntry): void => {
     // The canonical URL carries the identifier; redirect the bare-code URL to it
     // so links by code alone (inline docs links, error `href`) keep working.
     'redirect_from:',
-    `  - ${yamlQuote(`${DETAIL_BASE_URL}/${entry.code}`)}`,
+    // Redirect paths are simple URL scalars, so emit them unquoted to match the
+    // repo's hand-authored `redirect_from` convention.
+    `  - ${DETAIL_BASE_URL}/${entry.code}`,
     '---',
     '',
   ].join('\n');
@@ -132,7 +134,7 @@ const writeIndexPage = (entries: ErrorEntry[]): void => {
     `title: ${yamlQuote('Error codes')}`,
     `meta_description: ${yamlQuote('Understand Ably error codes and their causes, to resolve them efficiently.')}`,
     'redirect_from:',
-    `  - ${yamlQuote('/docs/errors/codes')}`,
+    '  - /docs/errors/codes',
     '---',
     '',
   ].join('\n');
