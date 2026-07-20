@@ -97,7 +97,14 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
   const location = useLocation();
 
   const activePage = useMemo(() => {
-    const activePageData = determineActivePage(productData, location.pathname);
+    const activePageData =
+      determineActivePage(productData, location.pathname) ??
+      // Error-code detail pages (/docs/platform/errors/codes/<code>) are generated
+      // from the ably-common registry and not individually in the nav; resolve them
+      // to the Error codes index so they inherit the Platform sidebar.
+      (/^\/docs\/platform\/errors\/codes\/[^/]+\/?$/.test(location.pathname)
+        ? determineActivePage(productData, '/docs/platform/errors/codes')
+        : null);
 
     let languages: LanguageKey[] = [];
     if (activePageData?.page.languages) {

@@ -235,6 +235,9 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const description = getFrontmatter(frontmatter, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const intro = getFrontmatter(frontmatter, 'intro') as string;
   const keywords = getFrontmatter(frontmatter, 'meta_keywords') as string;
+  // Error-code pages carry a stable snake_case identifier, shown as a soft
+  // sub-title beneath the title.
+  const identifier = getFrontmatter(frontmatter, 'identifier') as string;
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
   const { canonicalUrl } = useSiteMetadata();
@@ -362,7 +365,17 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
               RequiredBadge,
             }}
           >
-            <PageHeader title={title} intro={intro} />
+            <PageHeader
+              title={title}
+              intro={intro}
+              subtitle={
+                identifier ? (
+                  <code className="inline-flex items-center rounded border-[0.5px] border-neutral-500 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-1200 px-1.5 py-[3px] font-mono font-medium text-[20px] leading-normal text-neutral-1000 dark:text-neutral-300">
+                    {identifier}
+                  </code>
+                ) : undefined
+              }
+            />
             {children}
           </MarkdownProvider>
         </NestedTableProvider>
