@@ -23,35 +23,35 @@ Find out more about [AI Transport](/docs/ai-transport), [token streaming](/docs/
 
 1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-  ```sh
-  git clone git@github.com:ably/docs.git
-  ```
+    ```sh
+    git clone git@github.com:ably/docs.git
+    ```
 
 2. Change directory:
 
-  ```sh
-  cd examples/
-  ```
+    ```sh
+    cd examples/
+    ```
 
 3. Rename the environment file:
 
-  ```sh
-  mv .env.example .env.local
-  ```
+    ```sh
+    mv .env.example .env.local
+    ```
 
 4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
-  ```sh
-  yarn install
-  ```
+    ```sh
+    yarn install
+    ```
 
 6. Run the server:
 
-  ```sh
-  yarn run ai-transport-message-per-token-javascript
-  ```
+    ```sh
+    yarn run ai-transport-message-per-token-javascript
+    ```
 
 7. Try it out by opening [http://localhost:5173/](http://localhost:5173/) with your browser and selecting a prompt to see realtime AI token streaming.
 

@@ -32,7 +32,7 @@ const PlainCodeView: React.FC<PlainCodeViewProps> = ({ content, className, langu
       ref={codeRef}
     >
       {icon && (
-        <div className="absolute top-2 left-2 z-10">
+        <div className="absolute top-1/2 -translate-y-1/2 left-2 z-10">
           <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-neutral-200 dark:bg-neutral-1100">
             <IconSlot icon={icon} size="20px" colorClass="text-neutral-1300 dark:text-neutral-000" />
           </div>

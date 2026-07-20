@@ -43,37 +43,37 @@ This example demonstrates:
 
 1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-  ```sh
-  git clone git@github.com:ably/docs.git
-  ```
+    ```sh
+    git clone git@github.com:ably/docs.git
+    ```
 
 2. Change directory:
 
-  ```sh
-  cd examples/
-  ```
+    ```sh
+    cd examples/
+    ```
 
 3. Rename the environment file:
 
-  ```sh
-  mv .env.example .env.local
-  ```
+    ```sh
+    mv .env.example .env.local
+    ```
 
 4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
-  ```sh
-  yarn install
-  ```
+    ```sh
+    yarn install
+    ```
 
 6. Enable the "Annotations, updates, deletes, and appends" channel rule that matches the channel name you'll be using (by default we use a channel name of `annotation:pub-sub-message-annotations`, so if using this, [create this rule](https://ably.com/docs/channels#rules) for the "annotation" channel namespace).
 
 7. Run the server:
 
-  ```sh
-  yarn run pub-sub-message-annotations-javascript
-  ```
+    ```sh
+    yarn run pub-sub-message-annotations-javascript
+    ```
 
 8. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result. Specify different client IDs in the URL (e.g., `?clientId=user1` and `?clientId=user2`) to see how annotations from different clients are handled and summarized
 
