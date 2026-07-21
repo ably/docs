@@ -1,7 +1,7 @@
 ---
 title: "ClientSession"
-meta_description: "API reference for the AI Transport ClientSession: factory, properties, lifecycle methods, and the View interface returned by createView()."
-meta_keywords: "AI Transport, ClientSession, createClientSession, View, Tree, connect, createView, cancel, Ably"
+meta_description: "API reference for the AI Transport ClientSession: factory, properties, lifecycle methods, the ClientRun handle with steer, and the View interface returned by createView()."
+meta_keywords: "AI Transport, ClientSession, createClientSession, ClientRun, steer, View, Tree, connect, createView, cancel, Ably"
 redirect_from:
   - /docs/ai-transport/api-reference/client-transport
   - /docs/ai-transport/api/javascript/client-transport
@@ -195,6 +195,89 @@ await clientRun.cancel();
 ### Returns <a id="cancel-returns"/>
 
 `Promise<void>`. Resolves once the cancel message has been published. The cancel is best-effort: if the agent has already ended the Run, the cancel is a no-op.
+
+## ClientRun <a id="client-run"/>
+
+The handle returned by [`view.send`](#properties), `regenerate`, and `edit`. It extends the shared `BaseRun` read-model (`runId`, `status`, `error`, `messages`) with the client's control surface, including the run-scoped [`steer`](#steer) verb.
+
+### Properties <a id="client-run-properties"/>
+
+<Table id='ClientRunProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| runId | The Run's unique identifier, minted by the agent. Empty until the agent's `ai-run-start` is observed; await [`started`](#client-run-properties) before reading it. | String |
+| status | The Run's lifecycle status, read live off the tree. | `RunStatus` |
+| error | The terminal error, present exactly when `status` is `'error'`. | `Ably.ErrorInfo` or Undefined |
+| messages | This Run's whole turn: its originating input followed by the Run's output, deduplicated by `codecMessageId`. | `TMessage[]` |
+| started | Resolves when the agent's `ai-run-start` (or `ai-run-resume`) is observed, the point at which `runId` is populated. No built-in deadline; race it against your own timeout. | `Promise<void>` |
+| inputCodecMessageId | The triggering input's codec-message-id, owned by the client the moment it publishes. Stream routing and cancel key on this, so it is known synchronously, unlike `runId`. | String |
+| inputEventId | The input event's unique identifier, stamped on the published input event and forwarded in the POST body so the agent can locate the trigger. | String |
+
+</Table>
+
+### Steer the run <a id="steer"/>
+
+<MethodSignature>{`steer(input: TInput): SteerResult`}</MethodSignature>
+
+Publish a codec input event that targets this Run. The steering message carries this Run's `run-id` so the agent folds it into the active Run rather than starting a new Run. Pass the same shape [`view.send`](#properties) accepts, typically `codec.createUserMessage(...)`. The SDK awaits `runId` internally, so this is safe to call as soon as the handle is returned. Once an `ai-run-end` has folded for this Run the handle is dead and further `steer()` calls return immediately-rejected promises. See [Interruption and steering](/docs/ai-transport/features/interruption-and-steering).
+
+<Code>
+```javascript
+const { published, outcome } = activeRun.steer(UIMessageCodec.createUserMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Also include vegan options.' }],
+}));
+
+const { serial } = await published;
+const { consumed, runTerminalReason } = await outcome;
+```
+</Code>
+
+#### Parameters <a id="steer-params"/>
+
+<Table id='SteerParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| input | required | The codec input event to publish, in the codec's input shape. Wrap a domain message via `codec.createUserMessage` for a follow-up user message. | `TInput` |
+
+</Table>
+
+#### Returns <a id="steer-returns"/>
+
+`SteerResult`. Two promises: `published` for the channel-publish acknowledgement, and `outcome` for the consumed determination resolved at the Run's next terminal event. <Table id='SteerResult'/>
+
+<Table id='SteerResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| published | Resolves when the steering message is published to the channel, carrying the Ably-assigned `serial`. Rejects if the publish (or the internal `runId` await) fails. | `Promise<{ serial: string \| undefined }>` |
+| outcome | A `Promise` that resolves once a terminal lifecycle event (`ai-run-end`, or `ai-run-suspend` for a consumed steering message) folds for the Run. Rejects if the handle dies first (for example the session closes). | <Table id='SteerOutcome'/> |
+
+</Table>
+
+<Table id='SteerOutcome' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| consumed | `true` when the steering message's codec-message-id appears in the union of `steer-codec-message-ids` stamps on the Run's responses (the agent's loop had it visible when it produced that response), `false` when it never appeared before `ai-run-end`. For an `ai-run-suspend` a not-consumed steering message stays pending. | Boolean |
+| runTerminalReason | How the Run ended, present when the outcome was determined by an `ai-run-end`. Absent when determined by an `ai-run-suspend`, since the Run has not ended. | `RunEndReason` |
+
+</Table>
+
+### Cancel the run <a id="client-run-cancel"/>
+
+<MethodSignature>{`cancel(): Promise<void>`}</MethodSignature>
+
+Cancel this specific Run. Keyed by [`inputCodecMessageId`](#client-run-properties), which the client owns synchronously, so a cancel issued before the agent mints the `runId` is still honoured (the agent buffers it and fires it once its input-event watcher matches the trigger). Resolves once the cancel is published; it does not wait for [`started`](#client-run-properties).
+
+### Build the invocation <a id="to-invocation"/>
+
+<MethodSignature>{`toInvocation(): Invocation`}</MethodSignature>
+
+Build the [`Invocation`](/docs/ai-transport/api/javascript/core/agent-session#invocation) pointer for this Run, carrying only `inputEventId` and the session's channel name. POST `run.toInvocation().toJSON()` to your agent endpoint to wake the agent; run identity lives on the channel, not in the invocation body.
 
 ## Subscribe to session errors <a id="on"/>
 

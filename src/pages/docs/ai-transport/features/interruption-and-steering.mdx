@@ -62,7 +62,7 @@ const { consumed, runTerminalReason } = await outcome;
 
 - `published` resolves once the steering message has been published to the channel, carrying the Ably-assigned `serial`.
 - `outcome` resolves to `{ consumed: boolean, runTerminalReason?: RunEndReason }` once the agent consumes the steering message, or once the Run ends without consuming it:
-  - `consumed: true`: the agent saw the steering message before it sent its response. The `pipe()` that records the message resolves `outcome`, so a consumed message resolves even when the Run later suspends rather than ends.
+  - `consumed: true`: the agent saw the steering message before it sent its response. `outcome` resolves at the Run's next terminal event, whether the Run ends or suspends, so a message consumed before a suspend resolves rather than staying pending.
   - `consumed: false`: the Run ended before the agent saw the message.
   - `runTerminalReason`: how the Run ended (`'complete'`, `'cancelled'`, or `'error'`). Absent when the agent consumes the message at a `run-suspend`, since the Run has not ended.
 
@@ -96,9 +96,9 @@ Each `pipe()` records which steering messages the agent had seen before producin
 
 ### Cancel the in-flight model call <a id="on-steer"/>
 
-The loop above only sees a steering message once the current model call finishes and `hasInput()` is checked again, so the steer takes effect on the *next* response. To react immediately, pass the optional `onSteer` hook to `createRun()`. It fires the moment a steering message folds into the Run. The SDK does not interrupt the model call for you, so wire `onSteer` to abort the current model call; the loop then restarts with the steering message already in the conversation.
+The loop above only sees a steering message once the current model call finishes and `hasInput()` is checked again, so the steering message takes effect on the *next* response. To react immediately, pass the optional `onSteer` hook to `createRun()`. It fires the moment a steering message folds into the Run. The SDK does not interrupt the model call for you, so wire `onSteer` to abort the current model call; the loop then restarts with the steering message already in the conversation.
 
-Give each model call its own `AbortController`, abort it from `onSteer`, and pass a signal that fires on either run cancellation or a steer. The subtlety is that `onSteer` must abort *only* the model call, never the Run, and the loop has to tell a steer-interruption apart from a genuine cancel before deciding how to end:
+Give each model call its own `AbortController`, abort it from `onSteer`, and pass a signal that fires on either run cancellation or a steering message. The subtlety is that `onSteer` must abort *only* the model call, never the Run, and the loop has to tell a steering interruption apart from a genuine cancel before deciding how to end:
 
 <Code>
 ```javascript
@@ -106,8 +106,8 @@ let stepAbort = new AbortController();
 
 const run = session.createRun(invocation, {
   signal: req.signal,
-  // Abort only the current model call, never run.abortSignal, so a steer
-  // stops the response without cancelling the Run.
+  // Abort only the current model call, never run.abortSignal, so a steering
+  // message stops the response without cancelling the Run.
   onSteer: () => stepAbort.abort(),
 });
 
@@ -121,15 +121,15 @@ while (run.hasInput()) {
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
     messages: await convertToModelMessages(conversation),
-    // Abort on a genuine cancel (run.abortSignal) OR a steer (stepAbort).
+    // Abort on a genuine cancel (run.abortSignal) OR a steering message (stepAbort).
     abortSignal: AbortSignal.any([run.abortSignal, stepAbort.signal]),
   });
 
   const pipeResult = await run.pipe(result.toUIMessageStream());
 
-  // run.pipe races only run.abortSignal, so a steer abort ends the stream
+  // run.pipe races only run.abortSignal, so a steering abort ends the stream
   // cleanly (pipe reason 'complete') while a real cancel ends it 'cancelled'.
-  // A steer interrupted this iteration if the stream ended clean, this
+  // A steering message interrupted this iteration if the stream ended clean, this
   // iteration's stepAbort fired, and the Run itself was not cancelled.
   const steerInterrupted =
     pipeResult.reason === 'complete' &&
@@ -140,8 +140,8 @@ while (run.hasInput()) {
     // Don't pass an interrupted iteration to vercelRunOutcome: an aborted
     // streamText rejects finishReason abort-like, which maps to 'cancelled' and
     // would end the Run. Swallow the rejection so it isn't unhandled, then loop.
-    // hasInput() is now true, so the next iteration re-infers with the steer at
-    // the tail of the conversation.
+    // hasInput() is now true, so the next iteration re-infers with the steering
+    // message at the tail of the conversation.
     result.finishReason.catch(() => {});
     continue;
   }
@@ -159,10 +159,10 @@ await session.end();
 ```
 </Code>
 
-When `onSteer` aborts the model call, `run.pipe()` returns with the partial output published, `run.hasInput()` returns `true` because the steer has folded into the conversation, and the next iteration streams a fresh response that includes it. `onSteer` takes no arguments and returns `void`; keep it synchronous and cheap, since it runs on the message-handling path.
+When `onSteer` aborts the model call, `run.pipe()` returns with the partial output published, `run.hasInput()` returns `true` because the steering message has folded into the conversation, and the next iteration streams a fresh response that includes it. `onSteer` takes no arguments and returns `void`; keep it synchronous and cheap, since it runs on the message-handling path.
 
 <Aside data-type='note'>
-This immediate-interruption pattern is an optimisation, not a requirement. The [base loop](#steer) already picks up a steer on the next iteration once the current response finishes; add `onSteer` only when you need to interrupt an in-flight response rather than wait for it to complete.
+This immediate-interruption pattern is an optimisation, not a requirement. The [base loop](#steer) already picks up a steering message on the next iteration once the current response finishes; add `onSteer` only when you need to interrupt an in-flight response rather than wait for it to complete.
 </Aside>
 
 ## Implement cancel and re-prompt <a id="cancel-and-re-prompt"/>
@@ -264,7 +264,7 @@ Yes. A steering message joins the conversation tree under the Run it steers, so 
 
 ### What happens if I send several steering messages at once?
 
-The next `run.hasInput()` call drains all pending steers together, and the following `pipe()` stamps every one of their codec-message-ids, resolving each message's `outcome` as `consumed`. The agent folds them all into a single model call rather than replying to each separately.
+The next `run.hasInput()` call drains all pending steering messages together, and the following `pipe()` stamps every one of their codec-message-ids, resolving each message's `outcome` as `consumed`. The agent folds them all into a single model call rather than replying to each separately.
 
 ### What if the agent endpoint is down when I send the follow-up?
 
