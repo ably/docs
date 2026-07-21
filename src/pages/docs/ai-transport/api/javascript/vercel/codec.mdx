@@ -1,25 +1,26 @@
 ---
-title: "UIMessageCodec"
-meta_description: "API reference for UIMessageCodec, the pre-built AI Transport codec for the Vercel AI SDK."
-meta_keywords: "Vercel AI SDK, AI Transport, UIMessageCodec, VercelInput, VercelOutput, VercelProjection, codec, Ably"
+title: "createUIMessageCodec"
+meta_description: "API reference for createUIMessageCodec, the factory for the pre-built AI Transport codec for the Vercel AI SDK."
+meta_keywords: "Vercel AI SDK, AI Transport, createUIMessageCodec, UIMessageCodec, VercelInput, VercelOutput, VercelProjection, codec, Ably"
 ---
 
-`UIMessageCodec` is the pre-built codec for the Vercel AI SDK. It implements [`Codec<VercelInput, VercelOutput, VercelProjection, UIMessage>`](/docs/ai-transport/api/javascript/core/codec) so a session can encode `UIMessageChunk` events out and decode them back into `UIMessage` objects without a custom implementation.
+`createUIMessageCodec()` returns the pre-built codec for the Vercel AI SDK. The returned codec implements [`Codec<VercelInput, VercelOutput, VercelProjection, UIMessage>`](/docs/ai-transport/api/javascript/core/codec) so a session can encode `UIMessageChunk` events out and decode them back into `UIMessage` objects without a custom implementation.
 
-You rarely import `UIMessageCodec` directly. The Vercel-pre-bound [`createClientSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-client-session) and [`createAgentSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-agent-session) already supply it. Import it explicitly when you build a codec wrapper, run the encoder or decoder outside of a session, or compose `UIMessageCodec` into a different codec.
+You rarely call `createUIMessageCodec()` yourself. The Vercel-pre-bound [`createClientSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-client-session) and [`createAgentSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-agent-session) already supply the codec. Call it explicitly when you build a codec wrapper, run the encoder or decoder outside of a session, or compose the codec into a different codec.
 
 <Code>
 ```javascript
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 
-const decoder = UIMessageCodec.createDecoder();
-const projection = UIMessageCodec.init();
+const codec = createUIMessageCodec();
+const decoder = codec.createDecoder();
+const projection = codec.init();
 ```
 </Code>
 
 ## Properties <a id="properties"/>
 
-`UIMessageCodec` is a value, not a type. It satisfies the full [`Codec`](/docs/ai-transport/api/javascript/core/codec) interface for the Vercel `TInput`, `TOutput`, `TProjection`, and `TMessage` parameters listed below.
+`createUIMessageCodec()` is a factory, not a type. Each call returns a fresh, stateless codec value that satisfies the full [`Codec`](/docs/ai-transport/api/javascript/core/codec) interface for the Vercel `TInput`, `TOutput`, `TProjection`, and `TMessage` parameters listed below. Because the codec is stateless, hold a single instance at module scope (or, in React, `useMemo(() => createUIMessageCodec(), [])`) and reuse it rather than calling the factory inline on every render.
 
 <Table id='UIMessageCodecProperties'>
 
@@ -39,6 +40,10 @@ const projection = UIMessageCodec.init();
 </Table>
 
 ## Type parameters <a id="types"/>
+
+`createUIMessageCodec` is generic over the AI SDK's three `UIMessage` type parameters — `createUIMessageCodec<TMetadata, TDataParts, TTools>()`. Supplying concrete types specialises the codec so `getMessages` (and a session's `view.getMessages()`) return messages whose `metadata`, data parts, and tool parts carry your types instead of the SDK defaults; omitting them preserves the default inference. The same parameters thread through [`createClientSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-client-session), [`createAgentSession`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-agent-session), and [`createChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport#create-chat-transport). See [Typed messages](/docs/ai-transport/frameworks/vercel-ai-sdk-ui#typed-messages) for the end-to-end pattern.
+
+`VercelInput`, `VercelOutput`, and `VercelProjection` are likewise generic over the same three parameters, each defaulting to the SDK default. The tables below show the default instantiation.
 
 <Table id='VercelInput'>
 
@@ -72,21 +77,22 @@ Decode a single Ably message and fold the resulting events into a fresh projecti
 
 <Code>
 ```javascript
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 
-const decoder = UIMessageCodec.createDecoder();
-let projection = UIMessageCodec.init();
+const codec = createUIMessageCodec();
+const decoder = codec.createDecoder();
+let projection = codec.init();
 
 channel.subscribe((message) => {
   if (!message.serial) return; // live channel-subscribe messages always carry one
   const { inputs, outputs } = decoder.decode(message);
   for (const input of inputs) {
-    projection = UIMessageCodec.fold(projection, input, { serial: message.serial });
+    projection = codec.fold(projection, input, { serial: message.serial });
   }
   for (const output of outputs) {
-    projection = UIMessageCodec.fold(projection, output, { serial: message.serial });
+    projection = codec.fold(projection, output, { serial: message.serial });
   }
-  render(UIMessageCodec.getMessages(projection).map((entry) => entry.message));
+  render(codec.getMessages(projection).map((entry) => entry.message));
 });
 ```
 </Code>
