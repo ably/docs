@@ -207,8 +207,8 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
           <ChevronLeftIcon className="size-[16px]" aria-hidden />
           <span className="ui-text-menu4 text-neutral-900 dark:text-neutral-400 font-semibold">All examples</span>
         </Link>
-        <h1 className="ui-text-title mb-4">{example.name}</h1>
-        <p className="ui-text-sub-header">{example.description}</p>
+        <h1 className="ui-text-h1 mb-4">{example.name}</h1>
+        <p className="ui-text-sub-head">{example.description}</p>
       </div>
       {apiKey ? (
         <ExamplesRenderer
