@@ -23,8 +23,8 @@ const StatusMessages = ({ messages, setMessages }: StatusMessagesProps) => {
   });
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-md rounded-md p-8 w-[50%] flex flex-col">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
+      <div className="bg-white dark:bg-gray-900 shadow-md rounded-md p-8 w-[50%] flex flex-col">
         <div className="flex-grow text-center">
           <h1 className="text-2xl font-bold mb-4">Authentication with Ably</h1>
           <p className="mb-8">The Ably client has been successfully initialized.</p>
@@ -92,8 +92,8 @@ export default function App() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-md rounded-md p-8 w-[50%] flex flex-col">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
+      <div className="bg-white dark:bg-gray-900 shadow-md rounded-md p-8 w-[50%] flex flex-col">
         <div className="flex-grow text-center">
           <h1 className="text-2xl font-bold mb-4">Authentication with Ably</h1>
           <p>Press the Connect button to initialize the client:</p>

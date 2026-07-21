@@ -15,7 +15,7 @@ const UserInfo: FunctionComponent<{ user: Member; isSelf?: boolean }> = ({ user,
 
   return (
     <div className="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-[200px]">
-      <div className="uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white">
+      <div className="uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white dark:bg-gray-800">
         <div className="flex items-center space-x-2">
           <div
             style={{
@@ -59,7 +59,7 @@ export function Avatar({ user, isSelf }: { user: Member; isSelf: boolean }) {
 
       {/* Single popup container */}
       <div className="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-[200px]">
-        <div className="uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white">
+        <div className="uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white dark:bg-gray-800">
           <div className="flex items-center space-x-2">
             <div
               style={{

@@ -120,19 +120,27 @@ const MarkdownOverrides = {
     ),
   },
   thead: {
-    component: ({ children }: PropsWithChildren) => <thead className="bg-gray-50 border-b">{children}</thead>,
+    component: ({ children }: PropsWithChildren) => (
+      <thead className="bg-gray-50 dark:bg-neutral-1200 border-b dark:border-neutral-1100">{children}</thead>
+    ),
   },
   tbody: {
-    component: ({ children }: PropsWithChildren) => <tbody className="border-b divide-neutral-300">{children}</tbody>,
+    component: ({ children }: PropsWithChildren) => (
+      <tbody className="border-b dark:border-neutral-1100 divide-neutral-300 dark:divide-neutral-1100">
+        {children}
+      </tbody>
+    ),
   },
   tr: {
     component: ({ children }: PropsWithChildren) => (
-      <tr className="hover:bg-gray-50 border-b divide-neutral-300">{children}</tr>
+      <tr className="hover:bg-gray-50 dark:hover:bg-neutral-1200 border-b dark:border-neutral-1100 divide-neutral-300 dark:divide-neutral-1100">
+        {children}
+      </tr>
     ),
   },
   th: {
     component: ({ children }: PropsWithChildren) => (
-      <th className="px-3 py-2 text-left ui-text-p1 font-bold text-neutral-1100 tracking-wider whitespace-nowrap">
+      <th className="px-3 py-2 text-left ui-text-p1 font-bold text-neutral-1100 dark:text-neutral-300 tracking-wider whitespace-nowrap">
         {children}
       </th>
     ),

@@ -129,9 +129,9 @@ export default function AuctionRoom() {
 
   return (
     <div className="h-max p-4 overflow-y-auto uk-text-primary">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
         <div className="p-4">
-          <p className="text-gray-600 text-sm mb-2">Auction item #1</p>
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">Auction item #1</p>
           <button
             className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px]"
             type="button"
@@ -141,7 +141,7 @@ export default function AuctionRoom() {
           </button>
 
           {currentBid ? (
-            <div className="bg-gray-100 p-2 rounded-lg mb-4">
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg mb-4">
               <h2 className="text-sm font-bold mb-1">Current Bid</h2>
               <div className="flex justify-between items-center text-xs">
                 <span className="font-medium w-1/3 text-left">
@@ -183,7 +183,7 @@ export default function AuctionRoom() {
                     {bid.clientId}
                     {bid.clientId === currentClientId ? ' (You)' : ''}
                   </span>
-                  <span className="text-gray-600 w-1/3 text-center">
+                  <span className="text-gray-600 dark:text-gray-300 w-1/3 text-center">
                     {bid.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                   <span className="font-bold w-1/3 text-right">${bid.amount}</span>
@@ -208,7 +208,7 @@ export default function AuctionRoom() {
 
               <p className="uk-text-right">
                 <button
-                  className="uk-btn uk-btn-default uk-btn-sm mr-2 border rounded-[1998px] border-black bg-transparent text-black"
+                  className="uk-btn uk-btn-default uk-btn-sm mr-2 border rounded-[1998px] border-black dark:border-gray-600 bg-transparent text-black dark:text-white"
                   type="button"
                   uk-toggle="target: #bid-modal"
                 >

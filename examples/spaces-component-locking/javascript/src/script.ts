@@ -62,17 +62,17 @@ function buildForm() {
     inputCellContainer.className = 'flex flex-col space-y-2';
 
     const entryLabel = document.createElement('label');
-    entryLabel.className = 'text-sm font-medium text-gray-700';
+    entryLabel.className = 'text-sm font-medium text-gray-700 dark:text-gray-300';
     entryLabel.setAttribute('for', entry.name);
     entryLabel.textContent = entry.label;
 
     const inputContainer = document.createElement('div');
-    inputContainer.className = 'relative rounded-md border border-gray-300 shadow-sm';
+    inputContainer.className = 'relative rounded-md border border-gray-300 dark:border-gray-700 shadow-sm';
 
     const formInput = document.createElement('input');
     formInput.id = entry.name;
     formInput.className =
-      'uk-input w-full p-3 rounded-md transition-colors duration-200 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+      'uk-input w-full p-3 rounded-md transition-colors duration-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
     formInput.placeholder = 'Click to lock and edit me';
     formInput.name = entry.name;
     formInput.onfocus = handleFocus;
@@ -149,7 +149,7 @@ async function updateComponent(componentUpdate: Lock) {
     lockedDiv.className = 'absolute top-2 right-2 flex items-center space-x-2';
     lockedDiv.innerHTML = `
       <span class="text-sm font-medium" style="color: ${memberColor}">${memberName}</span>
-      ${!lockedByYou ? createLockedFieldSvg('w-4 h-4 text-gray-500').outerHTML : ''}
+      ${!lockedByYou ? createLockedFieldSvg('w-4 h-4 text-gray-500 dark:text-gray-400').outerHTML : ''}
     `;
     inputContainer?.appendChild(lockedDiv);
 
@@ -157,7 +157,7 @@ async function updateComponent(componentUpdate: Lock) {
     inputElement.setAttribute('data-locked', 'true');
 
     if (readOnly) {
-      inputElement.classList.add('cursor-not-allowed', 'bg-gray-50');
+      inputElement.classList.add('cursor-not-allowed', 'bg-gray-50', 'dark:bg-gray-900');
       inputElement.disabled = true;
     }
   } else {
@@ -168,7 +168,7 @@ async function updateComponent(componentUpdate: Lock) {
 
     inputElement.removeAttribute('data-locked');
     inputElement.style.backgroundColor = '';
-    inputElement.classList.remove('cursor-not-allowed', 'bg-gray-50');
+    inputElement.classList.remove('cursor-not-allowed', 'bg-gray-50', 'dark:bg-gray-900');
     inputElement.disabled = false;
   }
 }

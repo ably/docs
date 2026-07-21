@@ -30,7 +30,7 @@ export default function Chat() {
       if (loadButton instanceof HTMLButtonElement) {
         loadButton.disabled = true;
         loadButton.className =
-          'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2 absolute top-2 left-1/2 transform -translate-x-1/2 p-2 cursor-not-allowed';
+          'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black dark:border-gray-600 bg-transparent text-black dark:text-white cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2 absolute top-2 left-1/2 transform -translate-x-1/2 p-2 cursor-not-allowed';
       }
     });
   };
@@ -44,7 +44,7 @@ export default function Chat() {
   return (
     <div
       id="chat-room-messages"
-      className="w-full flex justify-center items-center relative bg-[#f4f8fb] h-screen uk-text-primary"
+      className="w-full flex justify-center items-center relative bg-[#f4f8fb] dark:bg-[hsl(var(--background))] h-screen uk-text-primary"
     >
       <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
         <div
@@ -67,7 +67,7 @@ export default function Chat() {
             </div>
           ))}
         </div>
-        <div className="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0">
+        <div className="border-t-2 border-gray-200 dark:border-gray-700 px-4 pt-4 mb-2 sm:mb-0">
           <form className="flex" onSubmit={handleSubmit}>
             <input
               type="text"

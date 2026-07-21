@@ -39,7 +39,7 @@ channel.subscribe((message) => {
   newFlag.className = 'bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold mr-2';
   newFlag.textContent = 'NEW';
 
-  newMessage.className = 'p-3 bg-gray-50 rounded-lg flex items-center gap-2';
+  newMessage.className = 'p-3 bg-gray-50 dark:bg-gray-900 rounded-lg flex items-center gap-2';
   newMessage.appendChild(newFlag);
   const messageText = document.createElement('span');
   messageText.innerText = message.data;

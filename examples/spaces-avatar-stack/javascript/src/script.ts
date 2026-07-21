@@ -123,7 +123,7 @@ async function renderAvatar(member: Member, isSelf: boolean = false): Promise<vo
       'absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-[200px]';
 
     const popupCard = document.createElement('div');
-    popupCard.className = 'uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white';
+    popupCard.className = 'uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white dark:bg-gray-800';
 
     const userInfo = buildUserInfo(member, isSelf);
 

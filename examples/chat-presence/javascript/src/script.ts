@@ -91,7 +91,7 @@ async function addCard(onlineStatus: PresenceMember) {
   // Create an element to store status items
   const card = document.createElement('div');
   card.className =
-    'flex items-center p-4 bg-gray-100 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200';
+    'flex items-center p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200';
   card.id = onlineStatus.clientId;
 
   // Create element to store online status

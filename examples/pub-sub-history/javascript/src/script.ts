@@ -120,7 +120,7 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   historyItem.appendChild(clientId);
 
   const timestamp = document.createElement('span');
-  timestamp.className = 'text-gray-600 w-1/3 text-center';
+  timestamp.className = 'text-gray-600 dark:text-gray-300 w-1/3 text-center';
   timestamp.textContent = new Date(message.data.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',

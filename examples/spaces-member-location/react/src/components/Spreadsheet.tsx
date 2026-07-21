@@ -32,11 +32,11 @@ const Spreadsheet = ({
   };
 
   return (
-    <table className="uk-table uk-table-bordered uk-table-divider uk-table-middle border-collapse border-2 border-gray-300 uk-text-primary">
+    <table className="uk-table uk-table-bordered uk-table-divider uk-table-middle border-collapse border-2 border-gray-300 dark:border-gray-700 uk-text-primary">
       <tbody>
         {cellData.map((row: string[], rowIndex: number) => (
           <tr key={rowIndex} className="uk-table-middle">
-            <td key={rowIndex} className="uk-text-bold uk-text-center uk-background-muted border border-gray-300 p-2">
+            <td key={rowIndex} className="uk-text-bold uk-text-center uk-background-muted border border-gray-300 dark:border-gray-700 p-2">
               {rowIndex + 1}
             </td>
             {row.map((col, colIndex) => {

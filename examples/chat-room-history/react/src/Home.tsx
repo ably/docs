@@ -40,7 +40,7 @@ export default function Home() {
     if (messageCount >= 4 && enterChatButton) {
       (enterChatButton as HTMLButtonElement).disabled = false;
       enterChatButton.className =
-        'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black';
+        'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black dark:border-gray-600 bg-transparent text-black dark:text-white';
       enterChatButton.onclick = () => navigate('/chat');
     }
 
@@ -50,8 +50,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 uk-text-primary">
-      <div className="w-1/3 bg-gray-300 p-8 rounded-lg shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800 uk-text-primary">
+      <div className="w-1/3 bg-gray-300 dark:bg-gray-600 p-8 rounded-lg shadow-lg">
         <h2 className="text-sm mb-4 text-center">
           Use the 'Send message' button to send 5 messages before you enter and subscribe to the chat room.
         </h2>

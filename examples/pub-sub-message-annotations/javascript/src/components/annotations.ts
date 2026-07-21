@@ -27,7 +27,7 @@ function createAnnotationItem(annotation: Annotation) {
   const { color, label } = findAnnotationType(typeKey);
 
   const item = document.createElement('div');
-  item.className = `pl-3 pr-2 py-2 border-l-4 border-l-${color}-500 border-y border-r border-gray-200 bg-white shadow-sm flex flex-wrap items-center`;
+  item.className = `pl-3 pr-2 py-2 border-l-4 border-l-${color}-500 border-y border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm flex flex-wrap items-center`;
   item.setAttribute('data-id', annotation.id);
   item.setAttribute('data-timestamp', annotation.timestamp.toString());
   item.setAttribute('data-serial', annotation.messageSerial);
@@ -41,12 +41,12 @@ function createAnnotationItem(annotation: Annotation) {
   leftContent.className = 'flex items-center gap-2 min-w-0 flex-grow';
 
   const typeLabel = document.createElement('span');
-  typeLabel.className = `text-sm font-medium text-${color}-800`;
+  typeLabel.className = `text-sm font-medium text-${color}-800 dark:text-${color}-200`;
   typeLabel.textContent = label;
   leftContent.appendChild(typeLabel);
 
   const valueContent = document.createElement('span');
-  valueContent.className = 'text-sm text-gray-700 overflow-hidden text-ellipsis';
+  valueContent.className = 'text-sm text-gray-700 dark:text-gray-300 overflow-hidden text-ellipsis';
   valueContent.textContent = annotation.name || 'unknown';
   leftContent.appendChild(valueContent);
 
@@ -86,7 +86,7 @@ function createAnnotationItem(annotation: Annotation) {
   rightContent.appendChild(clientBadge);
 
   const timestamp = document.createElement('div');
-  timestamp.className = 'text-xs text-gray-500';
+  timestamp.className = 'text-xs text-gray-500 dark:text-gray-400';
   timestamp.textContent = formatTimestamp(annotation.timestamp);
   rightContent.appendChild(timestamp);
 
@@ -106,7 +106,7 @@ export function createAnnotationsListElement(messageSerial: string) {
   annotationsList.setAttribute('data-message-serial', messageSerial);
 
   const emptyState = document.createElement('div');
-  emptyState.className = 'text-center p-2 text-gray-500 text-sm';
+  emptyState.className = 'text-center p-2 text-gray-500 dark:text-gray-400 text-sm';
   emptyState.textContent = 'No annotations received yet.';
   emptyState.id = `annotations-empty-${messageSerial}`;
 

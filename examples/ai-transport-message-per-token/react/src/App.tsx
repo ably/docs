@@ -115,9 +115,9 @@ const AITransportDemo: React.FC = () => {
       {/* Response section with always visible status */}
       <div className="mb-4">
         <div className="flex-1">
-          <div className="text-sm text-gray-600 mt-4 mb-2 flex justify-end items-center">
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-4 mb-2 flex justify-end items-center">
             <div className="flex items-center gap-2">
-              <span className="text-xs bg-gray-200 px-2 py-1 rounded flex items-center gap-1">
+              <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded flex items-center gap-1">
                 <span
                   className={`w-2 h-2 rounded-full ${
                     isChannelDetached ? 'bg-red-500' : connectionState === 'connected' ? 'bg-green-500' : 'bg-red-500'
@@ -142,7 +142,7 @@ const AITransportDemo: React.FC = () => {
               </button>
             </div>
           </div>
-          <div className="p-4 border border-gray-300 rounded-lg bg-gray-50 h-48 overflow-y-auto whitespace-pre-wrap text-base leading-relaxed">
+          <div className="p-4 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 h-48 overflow-y-auto whitespace-pre-wrap text-base leading-relaxed">
             {currentResponse || (isProcessing ? 'Thinking...' : 'Select a prompt below to get started')}
             {isProcessing && <span className="text-blue-600">▋</span>}
           </div>
@@ -157,8 +157,8 @@ const AITransportDemo: React.FC = () => {
             disabled={isProcessing || connectionState !== 'connected' || isChannelDetached}
             className={`px-3 py-2 text-sm border rounded-md transition-colors ${
               isProcessing || connectionState !== 'connected' || isChannelDetached
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                : 'bg-white hover:bg-blue-50 border-gray-300 hover:border-blue-300 cursor-pointer'
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-900 hover:bg-blue-50 dark:hover:bg-blue-950 border-gray-300 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 cursor-pointer'
             }`}
           >
             What is Ably AI Transport?

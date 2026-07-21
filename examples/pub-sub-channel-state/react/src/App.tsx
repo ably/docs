@@ -45,7 +45,7 @@ function ChannelState() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 uk-text-primary">
+    <div className="max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 uk-text-primary">
       {isAttached ? (
         <div className="flex justify-center items-center">
           <button
@@ -82,7 +82,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-800">
       <AblyProvider client={client}>
         <ChannelProvider channelName={channelName}>
           <ChannelState />

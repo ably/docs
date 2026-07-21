@@ -30,7 +30,7 @@ async function initializeChat() {
     authorSpan.textContent = `${message.message.clientId === chatClient.clientId ? 'You' : message.message.clientId}:`;
     messageDiv.appendChild(authorSpan);
     const messageSpan = document.createElement('span');
-    messageSpan.className = 'text-gray-700';
+    messageSpan.className = 'text-gray-700 dark:text-gray-300';
     messageSpan.textContent = message.message.text;
     messageDiv.appendChild(messageSpan);
   });
