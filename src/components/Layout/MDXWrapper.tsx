@@ -199,7 +199,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
         lang={languageOverride || activePage.language}
         sdk={detectedSdkType || sdk}
         onChange={handleLanguageChange}
-        className={cn(props.className, 'mb-5')}
+        className={cn(props.className, 'my-6')}
         languageOrdering={
           activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
         }
