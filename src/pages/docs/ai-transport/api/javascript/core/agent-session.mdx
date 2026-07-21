@@ -147,6 +147,7 @@ const run = session.createRun(invocation, { signal: req.signal });
 | onCancelled | Called when the run is cancelled. Receives a `write` function to publish final outputs before cancellation finalises. | `(write: (output: TOutput) => Promise<void>) => void \| Promise<void>` |
 | onCancel | Called when a cancel arrives. Return `true` to accept, `false` to reject. Defaults to accepting all. | `(req: CancelRequest) => Promise<boolean>` |
 | onError | Called with non-fatal run-scoped errors. | `(error: Ably.ErrorInfo) => void` |
+| onSteer | Called once per steering message as it folds into this Run, so the agent can race the arrival against an in-flight model call and decide whether to interrupt it. A hint only; the SDK never interrupts the model call itself, and [`hasInput`](#has-input) remains the authoritative check. Keep it synchronous and cheap. | `() => void` |
 
 </Table>
 
@@ -246,6 +247,24 @@ Wait until the Run's triggering input has been observed on the channel (see [`lo
 
 There is no built-in deadline: `start()` does not time out waiting for the trigger. It rejects only if the run is cancelled or the session is closed before the trigger is observed. Race it against your own timeout if you need one.
 
+### Check for pending input <a id="has-input"/>
+
+<MethodSignature>{`hasInput(): boolean`}</MethodSignature>
+
+Drives the agent's loop: returns `true` before the Run has produced any output (the triggering input always needs a first response), and again whenever a steering message has folded into the Run since the previous check. Returns `false` once the Run has produced output and no steering message is pending, or once [`abortSignal`](#run) has fired.
+
+Calling `hasInput()` drains any pending steering messages: the next output the agent pipes stamps their codec-message-ids, resolving each steering client's [`outcome`](/docs/ai-transport/features/interruption-and-steering#steer) as consumed. There is no observe-only variant; treat every call as a commitment to respond to whatever it reports.
+
+<Code>
+```javascript
+while (run.hasInput()) {
+  const result = streamText({ messages: run.view.getMessages().map(({ message }) => message), model });
+  await run.pipe(result.toUIMessageStream());
+}
+await run.end({ reason: 'complete' });
+```
+</Code>
+
 ### Pipe the response stream <a id="pipe"/>
 
 <MethodSignature>{`pipe(stream: ReadableStream<TOutput>, options?: PipeOptions<TOutput>): Promise<StreamResult>`}</MethodSignature>
@@ -320,7 +339,7 @@ The Run must be open first, via [`start`](#run-start) or an adopting [`load`](#a
 | Property | Description | Type |
 | --- | --- | --- |
 | stepId | A stable identifier used to coalesce retries. A fresh attempt under an existing `stepId` supersedes the prior attempt's output. Omit for in-process work; supply the workflow engine's own stable per-activity id for cross-process retries. | String |
-| stepClientId | The `clientId` to attribute this Step to. Omit for the common case; the SDK inherits the prior Step's value (sticky), defaulting to the triggering input's publisher for the Run's first Step. Supply an explicit value when a steer incorporates a fresh input mid-run. | String |
+| stepClientId | The `clientId` to attribute this Step to. Omit for the common case; the SDK inherits the prior Step's value (sticky), defaulting to the triggering input's publisher for the Run's first Step. Supply an explicit value when a steering message incorporates a fresh input mid-run. | String |
 
 </Table>
 
