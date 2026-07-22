@@ -55,10 +55,31 @@ const { messages } = useChat({ transport: chatTransport });
 
 The integration has four parts:
 
-1. The `UIMessageCodec` encodes Vercel's `UIMessageChunk` events as Ably messages. Every chunk type (`text-delta`, `tool-input`, `finish`, and others) maps to an Ably message with headers that track its metadata. The codec encodes on the server, decodes on the client, and reassembles chunks into complete `UIMessage` objects.
+1. The Vercel codec (from `createUIMessageCodec()`) encodes Vercel's `UIMessageChunk` events as Ably messages. Every chunk type (`text-delta`, `tool-input`, `finish`, and others) maps to an Ably message with headers that track its metadata. The codec encodes on the server, decodes on the client, and reassembles chunks into complete `UIMessage` objects.
 2. `ChatTransportProvider` creates the underlying `ClientSession` and the `ChatTransport` adapter and makes both available through context. `useChatTransport` is a context reader that returns `{ session, chatTransport }`.
 3. `useMessageSync` subscribes to the transport's conversation tree and pushes updates into `useChat`'s `setMessages`. This is what brings multi-device sync and conversation branching into Vercel's local state without `useChat` natively supporting them. Pass a `messages` seed to reconcile a conversation loaded from your own database with the live channel; see [database hydration](/docs/ai-transport/features/database-hydration).
 4. On the server, `run.pipe(result.toUIMessageStream())` pipes the model's output through the codec encoder to the Ably channel. The HTTP response returns status 200 with an empty body. Tokens reach every connected client through the channel, not through the HTTP response. See [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) for the server-side detail.
+
+## Typed messages <a id="typed-messages"/>
+
+`createUIMessageCodec`, `createClientSession`, `createAgentSession`, and `createChatTransport` are generic over the AI SDK's three `UIMessage` type parameters: message metadata, custom data parts, and tools. Supply them once and your typed message flows through the session, so `view.getMessages()` returns messages whose `metadata`, data parts, and tool parts carry your types instead of the SDK defaults. Omit them and inference is unchanged.
+
+<Code>
+```typescript
+import { createClientSession } from '@ably/ai-transport/vercel';
+import type * as AI from 'ai';
+
+type Metadata = { userId: string };
+type DataParts = AI.UIDataTypes & { chart: { points: number[] } };
+type Tools = AI.UITools & { getWeather: { input: { city: string }; output: { tempC: number } } };
+
+const session = createClientSession<Metadata, DataParts, Tools>({ client: ably, channelName: 'ai:demo' });
+const [{ message }] = session.view.getMessages();
+message.metadata; // typed `Metadata | undefined`, not `unknown`
+```
+</Code>
+
+The React provider path (`ChatTransportProvider` and the hooks from `createSessionHooks`) stays at the SDK defaults, because those hooks are created once at module scope. To carry concrete types end-to-end, thread them through the imperative path: `createClientSession<Metadata, DataParts, Tools>()`, `createChatTransport<Metadata, DataParts, Tools>()`, and `useMessageSync<Metadata, DataParts, Tools>()`.
 
 ## Scope and trade-offs <a id="scope"/>
 
