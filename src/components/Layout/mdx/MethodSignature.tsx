@@ -48,12 +48,12 @@ export const MethodSignature: React.FC<MethodSignatureProps> = ({ children, clas
     <div ref={containerRef} className="relative pl-3 my-4">
       {/* L-shaped connector line */}
       <div
-        className="absolute left-0 w-3 border-l border-b border-orange-300 dark:border-orange-900 rounded-bl-md"
+        className="absolute left-0 w-3 border-l border-b border-orange-300 dark:border-orange-1000 rounded-bl-md"
         style={{ top: offset.top, height: offset.height }}
       />
       <code
         className={cn(
-          'bg-orange-100 dark:bg-orange-1000 border border-orange-300 dark:border-orange-900 px-3 py-1.5 rounded text-sm font-mono text-neutral-1000 dark:text-neutral-300 inline-block',
+          'bg-orange-100 dark:bg-orange-1100 border border-orange-300 dark:border-orange-1000 px-3 py-1.5 rounded text-sm font-mono text-neutral-1000 dark:text-neutral-300 inline-block',
           className,
         )}
       >
