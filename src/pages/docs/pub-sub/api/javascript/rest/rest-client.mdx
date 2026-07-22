@@ -1,0 +1,510 @@
+---
+title: Rest
+meta_description: "API reference for the Rest client class in the Ably Pub/Sub JavaScript REST SDK."
+meta_keywords: "Ably Pub/Sub SDK, JavaScript, Rest, Rest client, constructor, ClientOptions, auth, channels, push, time, stats, request, batchPublish, batchPresence, getDevice, ErrorInfo"
+---
+
+The `Rest` class is the entry point for using the Ably Pub/Sub JavaScript SDK in REST mode. It is a stateless client that interacts with the Ably REST API over HTTP, without maintaining a persistent connection, and provides access to channels, presence, push notifications, and authentication. It is well suited to server-side environments and to publishing or querying from contexts that don't need realtime updates.
+
+<Code>
+```javascript
+const rest = new Ably.Rest({ key: '{{API_KEY}}' });
+```
+</Code>
+
+This example uses [basic authentication](/docs/auth/basic) with an API key, which is appropriate for trusted, server-side environments. For browsers and other untrusted clients, use [token authentication](/docs/auth/token) instead, by supplying an [`authCallback`](#constructor-params) or [`authUrl`](#constructor-params) that fetches tokens from your own server, keeping your API key off the client.
+
+<Aside data-type='important'>
+Basic authentication exposes your API key to anyone with access to the client. Use it only for trusted, server-side environments. For browser and untrusted clients, use [token authentication](/docs/auth/token).
+</Aside>
+
+## Properties
+
+The `Rest` interface has the following properties:
+
+<Table id='RestProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| auth | The [`Auth`](/docs/pub-sub/api/javascript/rest/auth) object for this client. Manages tokens and authentication. | [Auth](/docs/pub-sub/api/javascript/rest/auth) |
+| channels | The [`Channels`](/docs/pub-sub/api/javascript/rest/channels) collection for this client. Used to obtain `Channel` instances. | [Channels](/docs/pub-sub/api/javascript/rest/channels) |
+| push | The [`Push`](/docs/pub-sub/api/javascript/rest/push) object for this client. Used for push notification device activation and admin operations. | [Push](/docs/pub-sub/api/javascript/rest/push) |
+| Crypto | Static access to the [`Crypto`](/docs/pub-sub/api/javascript/rest/crypto) utility. Accessed on the class: `Ably.Rest.Crypto`. | [Crypto](/docs/pub-sub/api/javascript/rest/crypto) |
+| Message | Static access to the [`Message`](/docs/pub-sub/api/javascript/rest/message) class for `fromEncoded()` factory methods. Accessed on the class: `Ably.Rest.Message`. | [Message](/docs/pub-sub/api/javascript/rest/message) |
+| PresenceMessage | Static access to the [`PresenceMessage`](/docs/pub-sub/api/javascript/rest/presence-message) class for `fromEncoded()` factory methods. Accessed on the class: `Ably.Rest.PresenceMessage`. | [PresenceMessage](/docs/pub-sub/api/javascript/rest/presence-message) |
+| Annotation | Static access to the [`Annotation`](/docs/pub-sub/api/javascript/rest/rest-annotations) type for `fromEncoded()` factory methods. Accessed on the class: `Ably.Rest.Annotation`. | [Annotation](/docs/pub-sub/api/javascript/rest/rest-annotations) |
+
+</Table>
+
+## Create a new Rest client <a id="constructor"/>
+
+<MethodSignature>{`new Ably.Rest(options: ClientOptions)`}</MethodSignature>
+
+Construct a client with a `ClientOptions` object. This is the most common form, allowing all available client options to be configured.
+
+<MethodSignature>{`new Ably.Rest(keyOrToken: string)`}</MethodSignature>
+
+A convenience constructor that takes a single API key or token string. Equivalent to passing `{ key: '<key>' }` or `{ token: '<token>' }` as `ClientOptions`. Useful for simple basic-authenticated or test setups.
+
+<Code>
+```javascript
+// With ClientOptions
+const rest = new Ably.Rest({
+  key: '{{API_KEY}}',
+  clientId: 'user-123',
+  logLevel: 3
+});
+
+// Or with just a key string
+const rest = new Ably.Rest('{{API_KEY}}');
+```
+</Code>
+
+### Parameters <a id="constructor-params"/>
+
+The `Rest()` constructor takes the following parameters:
+
+<Table id='ConstructorParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| options | Required | Configuration options for the client. All properties are optional unless noted. | <Table id='ClientOptions'/> |
+| keyOrToken | Required | A full API key string for basic authentication, or a token string. | String |
+
+</Table>
+
+<Table id='ClientOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| key | Optional | The full API key string, as obtained from the [Ably dashboard](https://ably.com/dashboard). Use this option to use [basic authentication](/docs/auth/basic), or to issue Ably Tokens without deferring to a separate entity to sign Ably `TokenRequest`s. Initializing with a `key` does not necessarily mean the client uses basic auth: it can also create and sign Ably `TokenRequest`s, and can use token authentication itself if it needs to or if `useTokenAuth` is enabled. | String |
+| token | Optional | An authenticated token (string) or `TokenDetails` for Token authentication. This option is mostly useful for testing: since tokens are short-lived, in production you almost always want to use an authentication method that lets the SDK renew the token automatically when the previous one expires, such as `authUrl` or `authCallback`. | String or <Table id='TokenDetails'/> |
+| tokenDetails | Optional | A `TokenDetails` object. Used primarily for testing. | <Table id='TokenDetails'/> |
+| authCallback | Optional | A function called when a new token is required. The role of the callback is to obtain a fresh token, one of: an Ably Token string (in plain text format), a signed `TokenRequest`, a `TokenDetails` (in JSON format), or an [Ably JWT](/docs/auth/token/jwt), per the [`AuthOptions`](/docs/pub-sub/api/javascript/rest/auth#authorize) contract. | Function |
+| authUrl | Optional | URL the SDK may call to obtain a token string, `TokenRequest`, or `TokenDetails`. | String |
+| authMethod | Optional | HTTP verb (`GET` or `POST`) for `authUrl` requests. Default: `GET`. | String |
+| authHeaders | Optional | Key-value headers added to `authUrl` requests. If the `authHeaders` object contains an `authorization` key, then `withCredentials` is set on the XHR request. | Object |
+| authParams | Optional | Key-value parameters added to `authUrl` requests as query string (GET) or form data (POST). | Object |
+| useTokenAuth | Optional | When `true`, forces token authentication. If no `clientId` is specified, the issued token is anonymous. | Boolean |
+| queryTime | Optional | When `true`, queries Ably for the current time when issuing `TokenRequest`s rather than using the local clock. Knowing the time accurately is needed to create valid signed Ably `TokenRequest`s, so this option is useful for SDK instances on auth servers whose clock cannot be kept synchronized through normal means, such as an NTP daemon. The server is queried once per client instance, which stores the offset from the local clock, so you should avoid instancing a new SDK instance per request. Default: `false`. | Boolean |
+| defaultTokenParams | Optional | The default `TokenParams` used when issuing tokens. | <Table id='TokenParams'/> |
+| clientId | Optional | A non-empty client ID for this client. Cannot contain `*`. Used for publishing and presence. A `clientId` may also be implicit in a token used to instantiate the SDK; an error is raised if a `clientId` specified here conflicts with the `clientId` implicit in the token. Find out more about [identified clients](/docs/auth/identified-clients). | String |
+| idempotentRestPublishing | Optional | Whether to enable client-side message ID assignment for idempotent REST publishing. Default: `true`. | Boolean |
+| endpoint | Optional | A custom routing policy or fully-qualified host name for the Ably service. Enables [enterprise customers](/docs/platform/account/enterprise-customization) to use their own custom endpoints, which support dedicated, isolated clusters and regional message routing and storage constraints. | String |
+| environment | Optional | Deprecated, use `endpoint` instead. Enables [enterprise customers](/docs/platform/account/enterprise-customization) to use their own custom environments, which support dedicated, isolated clusters and regional message routing and storage constraints. | String |
+| port | Optional | A non-default port for non-TLS connections. Default: `80`. | Number |
+| tls | Optional | Whether to use a secure TLS connection. An insecure connection cannot be used with basic authentication, as it could compromise the private API key in transit. Default: `true`. | Boolean |
+| tlsPort | Optional | A non-default port for TLS connections. Default: `443`. | Number |
+| fallbackHosts | Optional | An array of alternative hosts used for failover. When a custom environment or endpoint is specified, fallback host functionality is disabled; in that case, use any custom fallback hosts provided by your customer success manager. Default: the five `a`–`e` `.ably-realtime.com` hosts. | `String[]` |
+| logLevel | Optional | Logging verbosity: `0` (no logs), `1` (errors only), `2` (errors plus connection and channel state changes), `3` (high-level debug output), and `4` (full debug output). | Number |
+| logHandler | Optional | A custom log handler function. Default: `console.log`. | Function |
+| httpOpenTimeout | Optional | Timeout for opening an HTTP connection, in milliseconds. Default: 4000. | Number |
+| httpRequestTimeout | Optional | Timeout for an entire HTTP request, in milliseconds. Default: 10000. | Number |
+| httpMaxRetryCount | Optional | Maximum number of fallback host attempts for HTTP requests. Default: 3. | Number |
+| httpMaxRetryDuration | Optional | Maximum elapsed time for HTTP retries, in milliseconds. Default: 15000. | Number |
+| connectivityCheckUrl | Optional | A custom URL used to check internet availability. | String |
+| disableConnectivityCheck | Optional | When `true`, disables the internet connectivity check. Default: `false`. | Boolean |
+| useBinaryProtocol | Optional | Whether to use the binary MsgPack protocol. Disabled by default in browsers because browsers are optimized for decoding JSON. Default: `true` in Node.js, `false` elsewhere. | Boolean |
+| maxMessageSize | Optional | Maximum payload size in bytes. Default: 65536. | Number |
+| pushServiceWorkerUrl | Optional | The service worker URL used for push notifications. | String |
+| plugins | Optional | A map of plugin types to plugin instances. Used to load optional modular features. | Object |
+| restAgentOptions | Optional | Node.js HTTP/HTTPS agent configuration. | Object |
+
+</Table>
+
+<Table id='TokenParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| ttl | Optional | Requested time to live for the token in milliseconds. When omitted, the Ably REST API default of 60 minutes is applied. Default: 1 hour. | Number |
+| capability | Optional | The capabilities associated with this token. A JSON-encoded representation of the resource paths and associated operations. If the `TokenRequest` is successful, the capability of the returned token is the intersection of this capability with the capability of the issuing key. [Read more about capabilities](/docs/auth/capabilities). Default: `{"*":["*"]}`. | String or Object |
+| clientId | Optional | A client ID, used for identifying this client when publishing messages or for presence purposes. The `clientId` can be any non-empty string, except it cannot contain a `*`. | String |
+| timestamp | Optional | The timestamp of this request as milliseconds since the Unix epoch. `timestamp`, in conjunction with the `nonce`, is used to prevent token requests being replayed. It is a one-time value and is not valid as a member of any default token params, such as `defaultTokenParams`. | Number |
+| nonce | Optional | A cryptographically secure random string of at least 16 characters, used to ensure the `TokenRequest` cannot be reused. | String |
+
+</Table>
+
+<Table id='TokenDetails' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| token | The Ably Token itself. A typical Ably Token string appears with the form `xVLyHw.A-pwh7wicf3afTfgiw4k2Ku33kcnSA7z6y8FjuYpe3QaNRTEo4`. | String |
+| issued | The timestamp at which this token was issued as milliseconds since the Unix epoch. | Number |
+| expires | The timestamp at which this token expires as milliseconds since the Unix epoch. | Number |
+| capability | The capabilities associated with this token. A JSON-encoded representation of the resource paths and associated operations. | String |
+| clientId | The client ID, if any, bound to this token. If a client ID is included, the token may only be used to perform operations on behalf of that client ID. | String |
+
+</Table>
+
+## Get server time <a id="time"/>
+
+<MethodSignature>{`rest.time(): Promise<number>`}</MethodSignature>
+
+Returns the time from the Ably service as milliseconds since the Unix epoch. Clients that do not have access to a sufficiently well-maintained time source and wish to issue Ably `TokenRequest`s with a more accurate timestamp should use the [`clientOptions.queryTime`](#constructor-params) client option instead of this method.
+
+<Code>
+```javascript
+const now = await rest.time();
+```
+</Code>
+
+### Returns <a id="time-returns"/>
+
+`Promise<number>`
+
+Returns a promise. The promise is fulfilled with the server time as milliseconds since the Unix epoch, or rejected with an [`ErrorInfo`](#errorinfo) object.
+
+## Get account stats <a id="stats"/>
+
+<MethodSignature>{`rest.stats(params?: StatsParams): Promise<PaginatedResult<Stats>>`}</MethodSignature>
+
+Retrieves usage statistics for the account, filtered by the supplied query parameters. Returns a paginated set of `Stats` objects, each containing usage [metrics](/docs/metadata-stats/stats#metrics).
+
+<Code>
+```javascript
+const page = await rest.stats({ unit: 'hour', limit: 24 });
+```
+</Code>
+
+### Parameters <a id="stats-params"/>
+
+The `stats()` method takes the following parameters:
+
+<Table id='StatsParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Optional | Query parameters for the stats request. | <Table id='StatsParams'/> |
+
+</Table>
+
+<Table id='StatsParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| start | Optional | The start time for the query, in milliseconds since the Unix epoch. Default: the beginning of time. | Number |
+| end | Optional | The end time for the query, in milliseconds since the Unix epoch. Default: current time. | Number |
+| direction | Optional | The order of returned stats. `'backwards'` or `'forwards'`. Default: `'backwards'`. | String |
+| limit | Optional | An upper limit on the number of stats records returned. Default: 100. Maximum: 1000. | Number |
+| unit | Optional | The granularity of the returned stats: `'minute'`, `'hour'`, `'day'`, or `'month'`. Based on the unit selected, the given start or end times are rounded down to the start of the relevant interval. Default: `'minute'`. | String |
+
+</Table>
+
+### Returns <a id="stats-returns"/>
+
+`Promise<PaginatedResult<Stats>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](#PaginatedResult) of `Stats` objects, or rejected with an [`ErrorInfo`](#errorinfo) object.
+
+#### Stats <a id="Stats"/>
+
+Each `Stats` entry contains the following properties:
+
+<Table id='Stats'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| appId | The Ably application ID. | String |
+| intervalId | The UTC time period that this stats entry refers to. If `unit` was requested as `minute` this is in the format `YYYY-mm-dd:HH:MM`, if `hour` it is `YYYY-mm-dd:HH`, if `day` it is `YYYY-mm-dd:00`, and if `month` it is `YYYY-mm-01:00`. | String |
+| inProgress | For entries that are still in progress, such as the current month, the last sub-interval included in this stats entry, in the format `yyyy-mm-dd:hh:mm:ss`. | String |
+| entries | A map of statistics entries (for example `messages.all.count`, `messages.inbound.rest.count`) to their values. The `schema` property provides further information. | `Record<String, Number>` |
+| schema | A URL to the JSON Schema describing the structure of this object. | String |
+
+</Table>
+
+## Make a REST request <a id="request"/>
+
+<MethodSignature>{`rest.request(method: string, path: string, version: number, params?: any, body?: any, headers?: any): Promise<HttpPaginatedResponse>`}</MethodSignature>
+
+Makes a REST request to a provided path. Useful for accessing Ably APIs that do not have a dedicated method in the SDK, without having to handle authentication, paging, fallback hosts, and MsgPack or JSON support yourself.
+
+<Code>
+```javascript
+const response = await rest.request(
+  'GET',
+  '/channels/{{RANDOM_CHANNEL_NAME}}/messages',
+  3,
+  { limit: 10 }
+);
+```
+</Code>
+
+### Parameters <a id="request-params"/>
+
+The `request()` method takes the following parameters:
+
+<Table id='RequestParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| method | Required | The HTTP method (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`). | String |
+| path | Required | The path of the API endpoint to call. | String |
+| version | Required | The API version (e.g. `3`). | Number |
+| params | Optional | Query parameters. | Object |
+| body | Optional | The request body, for `POST`, `PUT`, and `PATCH` methods only. Must be anything that can be serialized into JSON, such as an object or array. | Any |
+| headers | Optional | Custom HTTP headers. | Object |
+
+</Table>
+
+### Returns <a id="request-returns"/>
+
+`Promise<HttpPaginatedResponse>`
+
+Returns a promise. The promise is fulfilled with an `HttpPaginatedResponse`, or rejected with an [`ErrorInfo`](#errorinfo) object. Note that if a response is obtained, any response, even one with a non-2xx status code, resolves as an `HttpPaginatedResponse` rather than rejecting.
+
+#### HttpPaginatedResponse <a id="HttpPaginatedResponse"/>
+
+`HttpPaginatedResponse` contains the following properties:
+
+<Table id='HttpPaginatedResponseProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| statusCode | The HTTP status code of the response. | Number |
+| success | `true` if the status code is in the 200-299 range. | Boolean |
+| errorCode | The error code, derived from the `X-Ably-Errorcode` HTTP header, if sent in the response. | Number |
+| errorMessage | The error message, derived from the `X-Ably-Errormessage` HTTP header, if sent in the response. | String |
+| errorDetail | A map of structured error metadata. | Object or Undefined |
+| headers | The response headers. | Object |
+| items | The current page of results. | `Array` |
+
+</Table>
+
+`HttpPaginatedResponse` also contains the following methods to handle pagination:
+
+##### Check for more pages <a id="HttpPaginatedResponse-hasNext"/>
+
+<MethodSignature>hasNext(): boolean</MethodSignature>
+
+Returns `true` if there are more pages available by calling `next()`.
+
+##### Check if last page <a id="HttpPaginatedResponse-isLast"/>
+
+<MethodSignature>isLast(): boolean</MethodSignature>
+
+Returns `true` if this is the last page of results.
+
+##### Get next page <a id="HttpPaginatedResponse-next"/>
+
+<MethodSignature>{`next(): Promise<PaginatedResult | null>`}</MethodSignature>
+
+Returns a promise. The promise is fulfilled with the next page of results as a [`PaginatedResult`](#PaginatedResult), or `null` if there are no more pages. Rejected with an [`ErrorInfo`](#errorinfo) object on failure.
+
+##### Get first page <a id="HttpPaginatedResponse-first"/>
+
+<MethodSignature>{`first(): Promise<PaginatedResult>`}</MethodSignature>
+
+Returns a promise. The promise is fulfilled with the first page of results as a [`PaginatedResult`](#PaginatedResult), or rejected with an [`ErrorInfo`](#errorinfo) object.
+
+##### Get current page <a id="HttpPaginatedResponse-current"/>
+
+<MethodSignature>{`current(): Promise<PaginatedResult>`}</MethodSignature>
+
+Returns a promise. The promise is fulfilled with the current page of results as a [`PaginatedResult`](#PaginatedResult), or rejected with an [`ErrorInfo`](#errorinfo) object.
+
+## Batch publish to multiple channels <a id="batch-publish"/>
+
+<MethodSignature>{`rest.batchPublish(spec: BatchPublishSpec): Promise<BatchResult>`}</MethodSignature>
+
+Publish using a single `BatchPublishSpec`, fulfilled with a single `BatchResult`.
+
+<MethodSignature>{`rest.batchPublish(specs: BatchPublishSpec[]): Promise<BatchResult[]>`}</MethodSignature>
+
+Publish using an array of `BatchPublishSpec` objects, fulfilled with one `BatchResult` per spec.
+
+Each spec publishes one or more messages to up to 100 channels in a single [batch publish](/docs/messages/batch) request.
+
+<Code>
+```javascript
+const result = await rest.batchPublish({
+  channels: ['channel1', 'channel2'],
+  messages: [{ name: 'event', data: 'hello' }]
+});
+```
+</Code>
+
+### Parameters <a id="batch-publish-params"/>
+
+The `batchPublish()` method takes the following parameters:
+
+<Table id='BatchPublishParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| spec | Required | A single batch publish spec. | <Table id='BatchPublishSpec'/> |
+| specs | Required | An array of batch publish specs. | <Table id='BatchPublishSpec'/>[] |
+
+</Table>
+
+<Table id='BatchPublishSpec' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| channels | Required | The names of the channels to publish the messages to. | `String[]` |
+| messages | Required | An array of [`Message`](/docs/pub-sub/api/javascript/rest/message) objects. | [Message](/docs/pub-sub/api/javascript/rest/message)[] |
+
+</Table>
+
+### Returns <a id="batch-publish-returns"/>
+
+`Promise<BatchResult | BatchResult[]>`
+
+Returns a promise. For a single spec, the promise is fulfilled with a `BatchResult`. For an array of specs, the promise is fulfilled with an array of `BatchResult`s. Rejected with an [`ErrorInfo`](#errorinfo) object on failure.
+
+<Table id='BatchResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| successCount | The number of successful operations in the request. | Number |
+| failureCount | The number of unsuccessful operations in the request. | Number |
+| results | The per-channel results, one entry per channel. | Array of <Table id='BatchPublishSuccessResult'/> or <Table id='BatchPublishFailureResult'/> |
+
+</Table>
+
+<Table id='BatchPublishSuccessResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| channel | The channel name. | String |
+| messageId | A unique ID prefixed to the `Message.id` of each published message. | String |
+| serials | An array of message serials corresponding 1:1 to the messages that were published. A serial may be `null` if the message was discarded due to [message conflation](/docs/messages#conflation). | Array of String or Null |
+
+</Table>
+
+<Table id='BatchPublishFailureResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| channel | The channel name. | String |
+| error | The error describing why the publish to this channel failed. | [ErrorInfo](#errorinfo) |
+
+</Table>
+
+## Batch presence query <a id="batch-presence"/>
+
+<MethodSignature>{`rest.batchPresence(channels: string[]): Promise<BatchResult[]>`}</MethodSignature>
+
+Retrieves the presence set for up to 100 channels in a single REST request. The presence state includes the `clientId` of members and their current [presence action](/docs/presence-occupancy/presence#trigger-events).
+
+### Parameters <a id="batch-presence-params"/>
+
+The `batchPresence()` method takes the following parameters:
+
+<Table id='BatchPresenceParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| channels | Required | The names of the channels to query. | `String[]` |
+
+</Table>
+
+### Returns <a id="batch-presence-returns"/>
+
+`Promise<BatchResult[]>`
+
+Returns a promise. The promise is fulfilled with an array of `BatchResult` objects, one per channel, where each `results` entry is a `BatchPresenceSuccessResult` or a `BatchPresenceFailureResult`. Rejected with an [`ErrorInfo`](#errorinfo) object on failure.
+
+<Table id='BatchPresenceResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| successCount | The number of successful operations in the request. | Number |
+| failureCount | The number of unsuccessful operations in the request. | Number |
+| results | The per-channel results, one entry per channel. | Array of <Table id='BatchPresenceSuccessResult'/> or <Table id='BatchPresenceFailureResult'/> |
+
+</Table>
+
+<Table id='BatchPresenceSuccessResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| channel | The channel name the presence state was retrieved for. | String |
+| presence | An array of [`PresenceMessage`](/docs/pub-sub/api/javascript/rest/presence-message) objects describing the members present on the channel. | [PresenceMessage](/docs/pub-sub/api/javascript/rest/presence-message)[] |
+
+</Table>
+
+<Table id='BatchPresenceFailureResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| channel | The channel name the presence state failed to be retrieved for. | String |
+| error | The error describing why the presence query for this channel failed. | [ErrorInfo](#errorinfo) |
+
+</Table>
+
+## Get the local device <a id="get-device"/>
+
+<MethodSignature>{`rest.getDevice(): Promise<LocalDevice>`}</MethodSignature>
+
+Retrieves a [`LocalDevice`](/docs/pub-sub/api/javascript/rest/push#LocalDevice) object representing the current device as a push notification target, loading its state from persistent storage if necessary.
+
+### Returns <a id="get-device-returns"/>
+
+`Promise<LocalDevice>`
+
+Returns a promise. The promise is fulfilled with the [`LocalDevice`](/docs/pub-sub/api/javascript/rest/push#LocalDevice), or rejected with an [`ErrorInfo`](#errorinfo) object.
+
+## PaginatedResult <a id="PaginatedResult"/>
+
+A `PaginatedResult` represents a page of results from a paginated query such as [`stats()`](#stats), [`channel.history()`](/docs/pub-sub/api/javascript/rest/channel#history), [`presence.history()`](/docs/pub-sub/api/javascript/rest/presence#history), or [`channel.getMessageVersions()`](/docs/pub-sub/api/javascript/rest/channel#get-message-versions).
+
+### Properties
+
+`PaginatedResult` contains the following properties:
+
+<Table id='PaginatedResultProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| items | The current page of results. | `Array` |
+
+</Table>
+
+`PaginatedResult` also contains the following methods to handle pagination:
+
+### Check for more pages <a id="PaginatedResult-hasNext"/>
+
+<MethodSignature>hasNext(): boolean</MethodSignature>
+
+Returns `true` if there are more pages available.
+
+### Check if last page <a id="PaginatedResult-isLast"/>
+
+<MethodSignature>isLast(): boolean</MethodSignature>
+
+Returns `true` if this is the last page of results.
+
+### Get next page <a id="PaginatedResult-next"/>
+
+<MethodSignature>{`next(): Promise<PaginatedResult | null>`}</MethodSignature>
+
+Returns a promise fulfilled with the next page of results, or `null` if there are no more pages. Rejected with an [`ErrorInfo`](#errorinfo) object on failure.
+
+### Get first page <a id="PaginatedResult-first"/>
+
+<MethodSignature>{`first(): Promise<PaginatedResult>`}</MethodSignature>
+
+Returns a promise fulfilled with the first page of results, or rejected with an [`ErrorInfo`](#errorinfo) object.
+
+### Get current page <a id="PaginatedResult-current"/>
+
+<MethodSignature>{`current(): Promise<PaginatedResult>`}</MethodSignature>
+
+Returns a promise fulfilled with the current page of results, or rejected with an [`ErrorInfo`](#errorinfo) object.
+
+## ErrorInfo <a id="errorinfo"/>
+
+A standardized, generic Ably error object that contains an Ably-specific error code, a generic HTTP status code, and a human-readable message. All errors emitted by Ably are `ErrorInfo` instances.
+
+<Table id='ErrorInfo'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| code | The Ably-specific error code. | Number |
+| statusCode | The HTTP status code corresponding to this error, where applicable. | Number |
+| message | A human-readable description of what went wrong. | String |
+| cause | The underlying error that caused this error, where applicable. | ErrorInfo or Undefined |
+| detail | An optional map of string key-value pairs containing structured metadata associated with the error. | Object or Undefined |
+| remediation | Actionable guidance describing how to fix the error, as distinct from `message`, which describes what went wrong. Present only on SDK-originating errors with meaningful remediation steps. | String or Undefined |
+
+</Table>
