@@ -617,6 +617,39 @@ export default {
                 },
               ],
             },
+            {
+              name: 'REST interface',
+              pages: [
+                { name: 'Rest', link: '/docs/pub-sub/api/javascript/rest/rest-client' },
+                { name: 'Auth', link: '/docs/pub-sub/api/javascript/rest/auth' },
+                { name: 'Crypto', link: '/docs/pub-sub/api/javascript/rest/crypto' },
+                {
+                  name: 'Channels and messages',
+                  pages: [
+                    { name: 'Channels', link: '/docs/pub-sub/api/javascript/rest/channels' },
+                    { name: 'Channel', link: '/docs/pub-sub/api/javascript/rest/channel' },
+                    { name: 'ChannelDetails', link: '/docs/pub-sub/api/javascript/rest/channel-details' },
+                    { name: 'Message', link: '/docs/pub-sub/api/javascript/rest/message' },
+                    { name: 'RestAnnotations', link: '/docs/pub-sub/api/javascript/rest/rest-annotations' },
+                  ],
+                },
+                {
+                  name: 'Presence',
+                  pages: [
+                    { name: 'Presence', link: '/docs/pub-sub/api/javascript/rest/presence' },
+                    { name: 'PresenceMessage', link: '/docs/pub-sub/api/javascript/rest/presence-message' },
+                  ],
+                },
+                {
+                  name: 'Push notifications',
+                  pages: [
+                    { name: 'Push', link: '/docs/pub-sub/api/javascript/rest/push' },
+                    { name: 'PushChannel', link: '/docs/pub-sub/api/javascript/rest/push-channel' },
+                    { name: 'PushAdmin', link: '/docs/pub-sub/api/javascript/rest/push-admin' },
+                  ],
+                },
+              ],
+            },
           ],
         },
         {
