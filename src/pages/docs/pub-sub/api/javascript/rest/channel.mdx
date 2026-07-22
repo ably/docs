@@ -1,0 +1,312 @@
+---
+title: Channel
+meta_description: "API reference for the Channel interface in the Ably Pub/Sub JavaScript REST SDK."
+meta_keywords: "Ably Pub/Sub SDK, JavaScript, Channel API, publish, history, status, getMessage, getMessageVersions, updateMessage, appendMessage, deleteMessage, presence, push, annotations"
+---
+
+A `Channel` represents a single channel, obtained via the [`channels.get()`](/docs/pub-sub/api/javascript/rest/channels#get) method. Use it to publish messages, retrieve message history, query the presence set, and access channel features such as push notifications and annotations.
+
+The REST channel is stateless: each operation is a single HTTP request to Ably. Attaching, subscribing, and managing channel state require the [realtime SDK's `RealtimeChannel`](/docs/pub-sub/api/javascript/realtime/realtime-channel) interface.
+
+<Code>
+```javascript
+const channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+## Properties
+
+The `Channel` interface has the following properties:
+
+<Table id='ChannelProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| name | The name of this channel. | String |
+| presence | Access the [`Presence`](/docs/pub-sub/api/javascript/rest/presence) object for this channel, used to query the presence set and its history. | [Presence](/docs/pub-sub/api/javascript/rest/presence) |
+| push | Access the [`PushChannel`](/docs/pub-sub/api/javascript/rest/push-channel) object for this channel, used to manage push notification subscriptions. | [PushChannel](/docs/pub-sub/api/javascript/rest/push-channel) |
+| annotations | Access the [`RestAnnotations`](/docs/pub-sub/api/javascript/rest/rest-annotations) object for this channel, used to publish, delete, and retrieve [annotations](/docs/messages/annotations) on messages. | [RestAnnotations](/docs/pub-sub/api/javascript/rest/rest-annotations) |
+
+</Table>
+
+## Publish a message <a id="publish"/>
+
+<MethodSignature>{`channel.publish(name: string, data: any, options?: PublishOptions): Promise<PublishResult>`}</MethodSignature>
+
+Publish a single message on the channel based on a given event name and payload.
+
+<MethodSignature>{`channel.publish(message: Message, options?: PublishOptions): Promise<PublishResult>`}</MethodSignature>
+
+Publish a single message object on the channel.
+
+<MethodSignature>{`channel.publish(messages: Message[], options?: PublishOptions): Promise<PublishResult>`}</MethodSignature>
+
+Publish multiple messages atomically on the channel. This means that:
+
+* Either all messages will be successfully published or none of them will.
+* The [max message size](/docs/platform/pricing/limits#message) limit applies to the total size of all messages in the array.
+* The publish counts as a single message for the purpose of [per-channel rate limit](/docs/platform/pricing/limits#message).
+* If you are using client-specified message IDs, they must conform to certain restrictions.
+
+Each call results in a single REST request to Ably. It is also possible to publish to multiple channels at once using the [batch publish](/docs/messages/batch#batch-publish) feature.
+
+<Code>
+```javascript
+await channel.publish('greeting', 'Hello, World!');
+
+// Or with a Message object
+await channel.publish({ name: 'greeting', data: 'Hello' });
+
+// Or atomic batch
+await channel.publish([
+  { name: 'event1', data: 'one' },
+  { name: 'event2', data: 'two' }
+]);
+```
+</Code>
+
+### Parameters <a id="publish-params"/>
+
+The `publish()` method takes the following parameters:
+
+<Table id='PublishParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| name | Required | The event name. | String |
+| data | Required | The data payload for the message. Supported payload types are strings, JSON-serializable objects and arrays, buffers containing arbitrary binary data, and `null`. If sending binary data, that binary should be the entire payload; an object with a binary field within it may not be correctly encoded. | Any |
+| message | Required | A single [`Message`](/docs/pub-sub/api/javascript/rest/message) object to publish. | [Message](/docs/pub-sub/api/javascript/rest/message) |
+| messages | Required | An array of [`Message`](/docs/pub-sub/api/javascript/rest/message) objects to publish atomically. | [Message](/docs/pub-sub/api/javascript/rest/message)[] |
+| options | Optional | An open map of server-defined publish options (string, number, or boolean values), such as `quickAck`. The SDK passes these through as publish parameters; the set of valid options is defined by the Ably service, not the SDK. | <Table id='PublishOptions'/> |
+
+</Table>
+
+<Table id='PublishOptions' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| quickAck | Optional | Reduces the latency of REST publishes, though provides a slightly lower quality of service. | Boolean |
+
+</Table>
+
+### Returns <a id="publish-returns"/>
+
+`Promise<PublishResult>`
+
+Returns a promise. The promise is fulfilled with a `PublishResult` when the message(s) have been delivered to Ably, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
+
+<Table id='PublishResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| serials | An array of message serials corresponding 1:1 to the messages that were published. A serial may be `null` if the message was discarded due to a [message conflation](/docs/messages#conflation). | Array of String or Null |
+
+</Table>
+
+## Get message history <a id="history"/>
+
+<MethodSignature>{`channel.history(params?: RestHistoryParams): Promise<PaginatedResult<InboundMessage>>`}</MethodSignature>
+
+Retrieve a [`PaginatedResult`](/docs/pub-sub/api/javascript/rest/rest-client#PaginatedResult) of historical messages for this channel. If the channel is [configured to persist messages](/docs/storage-history/storage), message history is available for the duration configured for your account. If not, messages are only retained in memory by the Ably service for two minutes.
+
+<Code>
+```javascript
+const page = await channel.history({ limit: 50, direction: 'backwards' });
+page.items.forEach((message) => console.log(message.data));
+```
+</Code>
+
+### Parameters <a id="history-params"/>
+
+The `history()` method takes the following parameters:
+
+<Table id='HistoryParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | Optional | Query parameters to filter and control retrieval, as specified in the [message history API documentation](/docs/storage-history/history#retrieve-channel). | <Table id='RestHistoryParams'/> |
+
+</Table>
+
+<Table id='RestHistoryParams' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| start | Optional | The time from which messages are retrieved, as milliseconds since the Unix epoch. Default: the beginning of time. | Number |
+| end | Optional | The time until which messages are retrieved, as milliseconds since the Unix epoch. Default: current time. | Number |
+| direction | Optional | The order of returned messages. `'backwards'` orders from most recent to oldest; `'forwards'` orders from oldest to most recent. Default: `'backwards'`. | String |
+| limit | Optional | An upper limit on the number of messages returned. Default: 100. Maximum: 1000. | Number |
+
+</Table>
+
+### Returns <a id="history-returns"/>
+
+`Promise<PaginatedResult<InboundMessage>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](/docs/pub-sub/api/javascript/rest/rest-client#PaginatedResult) containing an array of received [`Message`](/docs/pub-sub/api/javascript/rest/message) objects (typed `InboundMessage`), or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
+
+## Get channel status <a id="status"/>
+
+<MethodSignature>{`channel.status(): Promise<ChannelDetails>`}</MethodSignature>
+
+Retrieve the current status of the channel, including whether it is active and its [occupancy](/docs/presence-occupancy/occupancy) metrics, as a [`ChannelDetails`](/docs/pub-sub/api/javascript/rest/channel-details) object. This is the canonical, typed way to fetch a channel's current metadata on demand.
+
+<Code>
+```javascript
+const details = await channel.status();
+console.log(details.status.occupancy.metrics.connections);
+```
+</Code>
+
+### Returns <a id="status-returns"/>
+
+`Promise<ChannelDetails>`
+
+Returns a promise. The promise is fulfilled with a [`ChannelDetails`](/docs/pub-sub/api/javascript/rest/channel-details#ChannelDetails) object describing the channel's current state, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
+
+## Get a single message by serial <a id="get-message"/>
+
+<MethodSignature>{`channel.getMessage(serialOrMessage: string | Message): Promise<Message>`}</MethodSignature>
+
+Retrieve the [latest version](/docs/messages/updates-deletes#get) of a message by its serial. Requires the `history` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="get-message-params"/>
+
+The `getMessage()` method takes the following parameters:
+
+<Table id='GetMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serialOrMessage | Required | Either the serial identifier string of the message to retrieve, or a [`Message`](/docs/pub-sub/api/javascript/rest/message) object containing a populated `serial` field. | String or [Message](/docs/pub-sub/api/javascript/rest/message) |
+
+</Table>
+
+### Returns <a id="get-message-returns"/>
+
+`Promise<Message>`
+
+Returns a promise. The promise is fulfilled with the [`Message`](/docs/pub-sub/api/javascript/rest/message), or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
+
+## Get all versions of a message <a id="get-message-versions"/>
+
+<MethodSignature>{`channel.getMessageVersions(serialOrMessage: string | Message, params?: Record<string, any>): Promise<PaginatedResult<Message>>`}</MethodSignature>
+
+Retrieve all historical [versions](/docs/messages/updates-deletes#versions) of a message identified by its serial, ordered by version. This includes the original message and all subsequent updates and delete operations. Requires the `history` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="get-message-versions-params"/>
+
+The `getMessageVersions()` method takes the following parameters:
+
+<Table id='GetMessageVersionsParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| serialOrMessage | Required | Either the serial identifier string of the message whose versions are to be retrieved, or a [`Message`](/docs/pub-sub/api/javascript/rest/message) object containing a populated `serial` field. | String or [Message](/docs/pub-sub/api/javascript/rest/message) |
+| params | Optional | Query parameters sent as part of the request, such as `limit`. | Object |
+
+</Table>
+
+### Returns <a id="get-message-versions-returns"/>
+
+`Promise<PaginatedResult<Message>>`
+
+Returns a promise. The promise is fulfilled with a [`PaginatedResult`](/docs/pub-sub/api/javascript/rest/rest-client#PaginatedResult) of message versions, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
+
+## Update a message <a id="update-message"/>
+
+<MethodSignature>{`channel.updateMessage(message: Message, operation?: MessageOperation, options?: PublishOptions): Promise<UpdateDeleteResult>`}</MethodSignature>
+
+Publish an [update](/docs/messages/updates-deletes#update) to an existing message using shallow mixin semantics. Non-null `name`, `data`, and `extras` fields in the provided message replace the corresponding fields in the existing message; null fields are left unchanged. Requires the `message-update-own` or `message-update-any` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="update-message-params"/>
+
+The `updateMessage()` method takes the following parameters:
+
+<Table id='UpdateMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| message | Required | The message to update. Must include the `serial` of the message being updated. | [Message](/docs/pub-sub/api/javascript/rest/message) |
+| operation | Optional | Metadata about the update operation. | <Table id='MessageOperation'/> |
+| options | Optional | Server-defined options affecting the publish of the update. | <Table id='PublishOptions'/> |
+
+</Table>
+
+<Table id='MessageOperation' hidden>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| clientId | Optional | The client ID performing the operation. | String |
+| description | Optional | A human-readable description of why the operation was performed. | String |
+| metadata | Optional | Additional metadata associated with the operation. | `Record<String, String>` |
+
+</Table>
+
+### Returns <a id="update-message-returns"/>
+
+`Promise<UpdateDeleteResult>`
+
+Returns a promise. The promise is fulfilled with an `UpdateDeleteResult` containing the updated version metadata, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
+
+<Table id='UpdateDeleteResult'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| versionSerial | The serial of the new version of the message produced by the update, delete, or append operation. `null` if the message was superseded by a subsequent update before it could be published. | String or Null |
+
+</Table>
+
+## Append to a message <a id="append-message"/>
+
+<MethodSignature>{`channel.appendMessage(message: Message, operation?: MessageOperation, options?: PublishOptions): Promise<UpdateDeleteResult>`}</MethodSignature>
+
+[Append](/docs/messages/updates-deletes#append) data to an existing message on the channel. The supplied `data` is appended to the previous message's data, while `name` and `extras` replace the previous values if provided. Requires the `message-update-own` or `message-update-any` [capability](/docs/auth/capabilities).
+
+For publishing a high rate of appends, you typically want to use a realtime client rather than a REST client, in order to preserve [append ordering](/docs/messages/updates-deletes#append-ordering).
+
+### Parameters <a id="append-message-params"/>
+
+The `appendMessage()` method takes the following parameters:
+
+<Table id='AppendMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| message | Required | The message to append data to. Must include the `serial` of the target message. | [Message](/docs/pub-sub/api/javascript/rest/message) |
+| operation | Optional | Metadata about the append operation. | <Table id='MessageOperation'/> |
+| options | Optional | Server-defined options affecting the publish of the append. | <Table id='PublishOptions'/> |
+
+</Table>
+
+### Returns <a id="append-message-returns"/>
+
+`Promise<UpdateDeleteResult>`
+
+Returns a promise. The promise is fulfilled with an `UpdateDeleteResult`, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
+
+## Delete a message <a id="delete-message"/>
+
+<MethodSignature>{`channel.deleteMessage(message: Message, operation?: MessageOperation, options?: PublishOptions): Promise<UpdateDeleteResult>`}</MethodSignature>
+
+Mark a message as [deleted](/docs/messages/updates-deletes#delete) by publishing an update with an action of `MESSAGE_DELETE`. This does not remove the message from the server, and the full message history remains accessible. Uses shallow mixin semantics: non-null `name`, `data`, and `extras` fields in the provided message replace the corresponding fields in the existing message; null fields are left unchanged. Requires the `message-delete-own` or `message-delete-any` [capability](/docs/auth/capabilities).
+
+### Parameters <a id="delete-message-params"/>
+
+The `deleteMessage()` method takes the following parameters:
+
+<Table id='DeleteMessageParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| message | Required | The message to delete. Must include the `serial` of the message being deleted. | [Message](/docs/pub-sub/api/javascript/rest/message) |
+| operation | Optional | Metadata about the delete operation. | <Table id='MessageOperation'/> |
+| options | Optional | Server-defined options affecting the publish of the delete. | <Table id='PublishOptions'/> |
+
+</Table>
+
+### Returns <a id="delete-message-returns"/>
+
+`Promise<UpdateDeleteResult>`
+
+Returns a promise. The promise is fulfilled with an `UpdateDeleteResult`, or rejected with an [`ErrorInfo`](/docs/pub-sub/api/javascript/rest/rest-client#errorinfo) object.
