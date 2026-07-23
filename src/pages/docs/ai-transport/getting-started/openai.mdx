@@ -1,0 +1,274 @@
+---
+title: "Get started with OpenAI"
+meta_description: "Build a streaming AI chat app with the OpenAI Responses API and Ably AI Transport. The ResponsesCodec streams model output over a durable session with multi-device sync and cancellation."
+meta_keywords: "AI Transport, OpenAI, Responses API, ResponsesCodec, streaming, realtime, Ably, chat, LLM, durable sessions"
+intro: "Build a working chat app with the OpenAI Responses API and AI Transport. The ResponsesCodec streams model output over a durable session, so the conversation survives reconnects and syncs across tabs."
+---
+
+## What you build <a id="what-you-build"/>
+
+A Next.js chat app where:
+
+- Output from OpenAI's Responses API streams into a durable [session](/docs/ai-transport/concepts/sessions) that outlives the HTTP response.
+- Closing a tab and reopening it resumes the in-progress response.
+- A second tab on the same session sees the same conversation in realtime.
+- A stop button cancels the in-progress [Run](/docs/ai-transport/concepts/runs).
+
+The [`ResponsesCodec`](/docs/ai-transport/frameworks/openai) maps the raw Responses event stream onto an Ably channel. You read the conversation with the core [`useView`](/docs/ai-transport/api/react/core/use-view) hook, which gives you branching, edit, regenerate, and pagination directly.
+
+## Prerequisites <a id="prerequisites"/>
+
+- Node.js 22 or later.
+- An [Ably account](https://ably.com/sign-up) with an API key.
+- An OpenAI API key set as `OPENAI_API_KEY`.
+
+## Install dependencies <a id="install-dependencies"/>
+
+Install the AI Transport SDK, the Ably client, the OpenAI SDK, and Next.js:
+
+<Code>
+```shell
+npm install @ably/ai-transport ably openai next react react-dom
+```
+</Code>
+
+## Set up authentication <a id="set-up-authentication"/>
+
+Create an auth endpoint at `/api/auth/token` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
+
+The client below uses `authUrl: '/api/auth/token'` to fetch tokens from this endpoint.
+
+## Configure the channel rule <a id="configure-the-channel-rule"/>
+
+AI Transport streams each response by appending tokens to a single channel message. That requires the **Message annotations, updates, deletes, and appends** channel rule (`mutableMessages`) on the namespace your conversations live on.
+
+In your Ably dashboard, enable **Message annotations, updates, deletes, and appends** on the `conversations` namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+
+<Aside data-type='important'>
+This is a one-time setup per Ably app. Without the rule, the first token append fails with error `93002` and no tokens stream. The `channelName` you set below must live in a namespace with this rule enabled.
+</Aside>
+
+## Create the agent route <a id="create-the-agent-route"/>
+
+Create `app/api/chat/route.ts`. The agent receives an [Invocation](/docs/ai-transport/concepts/invocations), creates an [AgentSession](/docs/ai-transport/api/javascript/core/agent-session) bound to the `ResponsesCodec`, starts a [Run](/docs/ai-transport/concepts/runs), rebuilds the conversation, opens a Responses stream, pipes it, and ends the Run:
+
+<Code>
+```javascript
+import { after } from 'next/server';
+import OpenAI from 'openai';
+import * as Ably from 'ably';
+import { createAgentSession, Invocation } from '@ably/ai-transport';
+import { ResponsesCodec, toResponsesInput } from '@ably/ai-transport/openai';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+const openai = new OpenAI();
+
+export async function POST(req) {
+  const invocation = Invocation.fromJSON(await req.json());
+
+  const session = createAgentSession({
+    client: ably,
+    channelName: invocation.sessionName,
+    codec: ResponsesCodec,
+  });
+
+  await session.connect();
+
+  const run = session.createRun(invocation, { signal: req.signal });
+
+  after(async () => {
+    try {
+      // Load the full conversation from history before starting the Run.
+      // run.start() needs to have seen this Run's triggering input; draining it
+      // from history means run.start() resolves at once instead of waiting for
+      // that input to arrive live on the channel.
+      while (run.view.hasOlder()) {
+        await run.view.loadOlder();
+      }
+
+      await run.start();
+
+      // Flatten the conversation into the Responses `input` array. Each stored
+      // message already holds valid model input, so no conversion is needed.
+      const input = toResponsesInput(run.view.getMessages().map(({ message }) => message));
+
+      const stream = await openai.responses.create(
+        { model: 'gpt-5.5', input, stream: true },
+        { signal: run.abortSignal },
+      );
+
+      // The Responses stream is an async iterable, and each raw event is valid
+      // codec output, so pipe it straight through. run.pipe watches
+      // run.abortSignal, so a cancel ends the Run with no extra handling here.
+      const { reason } = await run.pipe(stream);
+
+      await run.end({ reason });
+    } catch (err) {
+      await run.end({ reason: 'error' });
+      throw err;
+    } finally {
+      session.end();
+    }
+  });
+
+  return Response.json({ runId: run.runId, invocationId: run.invocationId });
+}
+```
+</Code>
+
+<Aside data-type='note'>
+`after()` is a Next.js function that extends the serverless function's lifetime beyond the HTTP response. The HTTP request only triggers the agent, and the response reaches the client over the Ably channel.
+</Aside>
+
+This route handles a single model turn. To configure server-side tools and run the agentic loop (model turn, run tools, continue), see [OpenAI Responses](/docs/ai-transport/frameworks/openai).
+
+## Create the chat component <a id="create-the-chat-component"/>
+
+Create `app/chat.tsx`. The component reads the conversation with [`useView`](/docs/ai-transport/api/react/core/use-view) and sends a user turn with `ResponsesCodec.createUserMessage`. Because the core SDK never sends HTTP itself, the component POSTs to the agent endpoint after `view.send` resolves.
+
+An OpenAI message holds a list of `items`, so rendering flattens each message's text content parts:
+
+<Code>
+```javascript
+'use client';
+
+import { useState } from 'react';
+import { useClientSession, useView } from '@ably/ai-transport/react';
+import { ResponsesCodec } from '@ably/ai-transport/openai';
+
+async function wakeAgent(run) {
+  await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(run.toInvocation().toJSON()),
+  });
+}
+
+// Flatten an OpenAI message's items into rendered text.
+function messageText(message) {
+  let text = '';
+  for (const item of message.items) {
+    if (item.type !== 'message') continue;
+    for (const part of item.content) {
+      if (part.type === 'output_text' || part.type === 'input_text') text += part.text;
+    }
+  }
+  return text;
+}
+
+export function Chat() {
+  const [input, setInput] = useState('');
+
+  const { session } = useClientSession();
+  const view = useView({ limit: 30 });
+  const { messages, runOf } = view;
+
+  // The Stop button shows only while the latest message's Run is streaming.
+  const latestRun = runOf(messages.at(-1)?.codecMessageId ?? '');
+  const isStreaming = latestRun?.status === 'active';
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const text = input;
+    setInput('');
+    const run = await view.send(
+      ResponsesCodec.createUserMessage({
+        role: 'user',
+        items: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text }] }],
+      }),
+    );
+    await wakeAgent(run);
+  };
+
+  const stop = () => {
+    if (latestRun) void session.cancel(latestRun.runId);
+  };
+
+  return (
+    <div>
+      {messages.map(({ codecMessageId, message }) => (
+        <div key={codecMessageId}>
+          <strong>{message.role}:</strong> {messageText(message)}
+        </div>
+      ))}
+      <form onSubmit={handleSubmit}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." />
+        {isStreaming ? (
+          <button type="button" onClick={stop}>Stop</button>
+        ) : (
+          <button type="submit">Send</button>
+        )}
+      </form>
+    </div>
+  );
+}
+```
+</Code>
+
+## Wire it together <a id="wire-it-together"/>
+
+Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers) binds the channel and the `ResponsesCodec` into AI Transport. `ResponsesCodec` is a ready-made codec, so you pass it directly with no factory call.
+
+Update `channelName` to match a namespace with the AIT [channel rule](/docs/ai-transport/getting-started/channel-rules) configured:
+
+<Code>
+```javascript
+'use client';
+
+import { useEffect, useState } from 'react';
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { ClientSessionProvider } from '@ably/ai-transport/react';
+import { ResponsesCodec } from '@ably/ai-transport/openai';
+import { Chat } from './chat';
+
+function Providers({ children }) {
+  const [client, setClient] = useState(null);
+
+  useEffect(() => {
+    const ably = new Ably.Realtime({ authUrl: '/api/auth/token', clientId: 'user' });
+    setClient(ably);
+    return () => ably.close();
+  }, []);
+
+  if (!client) return null;
+  return <AblyProvider client={client}>{children}</AblyProvider>;
+}
+
+export default function Page() {
+  const channelName = 'conversations:my-chat-session';
+  return (
+    <Providers>
+      <ClientSessionProvider channelName={channelName} codec={ResponsesCodec}>
+        <Chat />
+      </ClientSessionProvider>
+    </Providers>
+  );
+}
+```
+</Code>
+
+Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the same URL; both tabs share the same durable session.
+
+## What is happening <a id="what-is-happening"/>
+
+1. The user types a message. `view.send(...)` publishes the message on the channel and returns a `ClientRun`. The SDK does not POST to your agent endpoint itself.
+2. Your client code calls `clientRun.toInvocation().toJSON()` and POSTs the resulting [`InvocationData`](/docs/ai-transport/concepts/invocations) to your agent endpoint. The body identifies the session and the input event the agent should respond to.
+3. The agent endpoint creates an `AgentSession` bound to the `ResponsesCodec` and starts a Run. `run.start()` waits until it has seen the triggering input on the channel, whether loaded from history or arriving live.
+4. The agent reads the full conversation from `run.view` and calls `toResponsesInput` to build the Responses `input` array. Each stored message is already valid Responses input.
+5. The agent opens a streaming Responses API call and pipes the event stream through `run.pipe()`, which encodes each Responses event onto the channel.
+6. Every client subscribed to the channel decodes the streamed events in realtime. `useView` re-renders as the visible Run accumulates OpenAI items.
+7. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the SDK rehydrates the view without losing tokens.
+
+## Understand the architecture <a id="understand-the-architecture"/>
+
+The OpenAI SDK handles the model call and the typed event stream. AI Transport handles the durable session between agent and devices, encoding the Responses stream onto an Ably channel through the `ResponsesCodec`. See [OpenAI Responses](/docs/ai-transport/frameworks/openai) for how the codec works and how to run server-side tools.
+
+## Explore next <a id="explore-next"/>
+
+- [OpenAI Responses](/docs/ai-transport/frameworks/openai): the codec, `toResponsesInput`, and the server-side tool loop.
+- [Cancellation](/docs/ai-transport/features/cancellation): the stop button pattern and the agent-side `onCancel` authorisation hook.
+- [Multi-device sessions](/docs/ai-transport/features/multi-device): open another tab to see realtime sync.
+- [Branching, edit, and regenerate](/docs/ai-transport/features/branching): fork the conversation and navigate alternative branches.
+- [Codecs](/docs/ai-transport/concepts/codecs): how a codec translates a framework's events into Ably messages.
