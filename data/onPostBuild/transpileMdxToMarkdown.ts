@@ -135,6 +135,7 @@ interface MdxQueryResult {
 
 interface FrontMatterAttributes {
   title?: string;
+  identifier?: string;
   [key: string]: any;
 }
 
@@ -572,6 +573,7 @@ function transformMdxToMarkdown(
 
   const title = parsed.attributes.title;
   const intro = parsed.attributes.intro;
+  const identifier = parsed.attributes.identifier;
   let content = parsed.body;
 
   // Stage 2: Remove import/export statements
@@ -616,8 +618,11 @@ function transformMdxToMarkdown(
   // Stage 15: Add language subheadings to code blocks within <Code> tags
   content = addLanguageSubheadingsToCodeBlocks(content);
 
-  // Stage 16: Prepend title as markdown heading
-  let finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
+  // Stage 16: Prepend title as markdown heading. Error-code pages carry a stable
+  // `identifier`; surface it beneath the title for LLM consumption (the `.md`
+  // otherwise loses it, since it is rendered from frontmatter on the HTML page).
+  const identifierBlock = identifier ? `Identifier: \`${identifier}\`\n\n` : '';
+  let finalContent = `# ${title}\n\n${identifierBlock}${intro ? `${intro}\n\n` : ''}${content}`;
 
   // Stage 17: Append navigation footer (after all transformations to avoid double-processing)
   if (navContext) {

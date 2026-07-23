@@ -67,7 +67,7 @@ await session.connect();
 ```
 </Code>
 
-`createClientSession` from `@ably/ai-transport/vercel` is pre-bound with the Vercel `UIMessageCodec`. The core entry point at `@ably/ai-transport` exposes the same factory with `codec` required. The core SDK never POSTs; the application wakes its agent by POSTing `run.toInvocation().toJSON()` (or by using `createChatTransport`, which does it for you). See [Set up authentication](/docs/ai-transport/getting-started/authentication) for how `authUrl` is wired up.
+`createClientSession` from `@ably/ai-transport/vercel` is pre-bound with the Vercel codec. The core entry point at `@ably/ai-transport` exposes the same factory with `codec` required. The core SDK never POSTs; the application wakes its agent by POSTing `run.toInvocation().toJSON()` (or by using `createChatTransport`, which does it for you). See [Set up authentication](/docs/ai-transport/getting-started/authentication) for how `authUrl` is wired up.
 
 ## Share a session across participants <a id="sharing"/>
 
@@ -94,6 +94,16 @@ When channel history retention covers the session's lifetime, the channel is suf
 When you store completed messages in your own database, the external store provides historical session data and the channel provides live and in-progress activity. The session is hydrated from the external store for past messages and from the channel subscription for current activity. This is appropriate when channel retention is limited, the conversation is long-lived, or you need to enrich or index conversation data in your own systems.
 
 In both cases, the channel carries all live activity: in-progress streams, turn lifecycle events, cancel signals, and newly published messages.
+
+## Detach or end a session <a id="detach-vs-end"/>
+
+An `AgentSession` exposes two teardown methods. Pick the one that matches whether the current process owns the Run's terminal.
+
+Use [`session.detach()`](/docs/ai-transport/api/javascript/core/agent-session#detach) when the Run is intentionally left open on the channel for another process to continue. It unsubscribes from cancels, aborts local abort controllers, and releases the channel without publishing any Run terminal. This is the teardown a durable-workflow activity uses between Steps so the next activity can adopt the Run.
+
+Use [`session.end()`](/docs/ai-transport/api/javascript/core/agent-session#session-end) for the final teardown of a turn that runs in a single process, or the outermost catch of a workflow when activity retries are exhausted. It closes every still-open Run this session owns as `'cancelled'` and then detaches. A fire-and-forget turn that forgets its own `run.end()` still unsticks every observer's UI this way.
+
+The two are not interchangeable. Calling `end()` mid-workflow marks the Run terminal, so the next activity's `adoptRun` rejects with `InvalidArgument` because the Run is read-only. See [Durable execution](/docs/ai-transport/features/durable-execution) for the full pattern.
 
 ## Read next <a id="next"/>
 

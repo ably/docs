@@ -106,6 +106,29 @@ jobs:
           name: Validate llms.txt
           command: yarn validate-llms-txt
 
+  check-error-docs:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - run:
+          name: Fetch error code registry (ably-common submodule)
+          command: git submodule update --init ably-common
+      - run:
+          name: Regenerate error code pages from the registry
+          command: node bin/generate-error-pages.ts
+      - run:
+          name: Ensure committed error pages match the registry
+          command: |
+            CHANGES="$(git status --porcelain src/pages/docs/platform/errors/codes src/pages/docs/platform/errors/codes.mdx)"
+            if [ -n "$CHANGES" ]; then
+              echo "❌ Generated error code pages are out of date or were hand-edited:"
+              echo "$CHANGES"
+              echo "Run 'yarn generate:errors' and commit the result."
+              exit 1
+            fi
+            echo "✓ Error code pages are up to date"
+
   test-nginx:
     docker:
       - image: heroku/heroku:24-build
@@ -174,6 +197,7 @@ workflows:
     unless: << pipeline.parameters.content-update >>
     jobs:
       - install-dependencies
+      - check-error-docs
       - security-audit:
           requires:
             - install-dependencies

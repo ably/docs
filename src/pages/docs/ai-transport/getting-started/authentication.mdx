@@ -5,7 +5,11 @@ meta_keywords: "AI Transport, authentication setup, Ably JWT, authCallback, toke
 intro: "AI Transport authenticates through your existing auth: your server validates the user and signs an Ably token, and the browser's Ably client fetches it through `authCallback`and refreshes it before expiry."
 ---
 
+<Aside data-type='note'>
 This page is the practical setup. For the conceptual model (the three auth layers, capabilities, token lifecycle, cancel authorisation), see the [authentication concept](/docs/ai-transport/concepts/authentication).
+</Aside>
+
+AI Transport reuses the authentication you already have. Your server validates the user and signs a short-lived Ably JWT, scoped to the channels that user can reach. The browser's Ably client fetches that token through an `authCallback` and refreshes it before it expires, so the connection stays authenticated for the whole conversation. The steps below wire up the server endpoint, the client, and the separate POST that wakes the agent.
 
 <Aside data-type='important'>
 Never embed an Ably API key in client-side code. API keys do not expire and are not suitable for untrusted clients.
@@ -19,15 +23,25 @@ Create an endpoint that authenticates the user and returns a short-lived Ably JW
 ```javascript
 import jwt from 'jsonwebtoken';
 
-const [keyName, keySecret] = process.env.ABLY_API_KEY.split(':');
+// Replace with your app's auth: validate the request (session cookie, bearer
+// token) and return the authenticated user's id.
+async function authenticateUser(req: Request): Promise<string> {
+  return 'user-abc';
+}
 
-export async function GET(req) {
+export async function GET(req: Request) {
+  const apiKey = process.env.ABLY_API_KEY;
+  if (!apiKey) {
+    return new Response('ABLY_API_KEY is not set', { status: 500 });
+  }
+  const [keyName, keySecret] = apiKey.split(':');
+
   const userId = await authenticateUser(req);
 
   const ablyJwt = jwt.sign(
     {
       'x-ably-capability': JSON.stringify({
-        [`conversations:${userId}`]: ['publish', 'subscribe', 'history'],
+        'conversations:*': ['publish', 'subscribe', 'history'],
       }),
       'x-ably-clientId': userId,
     },
@@ -40,7 +54,7 @@ export async function GET(req) {
 ```
 </Code>
 
-Scope the capability to the channel namespace the user is allowed to access, `conversations:${userId}` here. The `x-ably-clientId` claim binds the token to a specific user identity that the Ably service verifies on every publish.
+The capability grants `conversations:*`, every channel in the `conversations` namespace, because a session's channel name (`conversations:my-chat-session` in these guides) is not known when the token is signed. The `x-ably-clientId` claim binds the token to a specific user identity that the Ably service verifies on every publish. In production, scope the capability more tightly to the channels each user may access.
 
 ## Fetch tokens from the client <a id="client"/>
 
@@ -77,7 +91,10 @@ import { useEffect, useState } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider } from 'ably/react';
 import { ClientSessionProvider, useClientSession } from '@ably/ai-transport/react';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
+
+// A stable codec instance (hold it at module scope or via useMemo).
+const uiMessageCodec = createUIMessageCodec();
 
 export function Providers({ children }) {
   const [client, setClient] = useState(null);
@@ -103,7 +120,7 @@ export function Providers({ children }) {
 
 function App({ conversationId }) {
   return (
-    <ClientSessionProvider channelName={conversationId} codec={UIMessageCodec}>
+    <ClientSessionProvider channelName={conversationId} codec={uiMessageCodec}>
       <Chat />
     </ClientSessionProvider>
   );

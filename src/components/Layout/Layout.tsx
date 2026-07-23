@@ -25,6 +25,9 @@ export type Frontmatter = {
   last_updated?: string;
   intro?: string;
   json_ld?: Record<string, unknown>;
+  // Error-code pages (generated from the ably-common registry) carry the stable
+  // snake_case identifier, rendered as a soft sub-title beneath the title.
+  identifier?: string;
 };
 
 export type PageContextType = {

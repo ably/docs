@@ -9,7 +9,7 @@ import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks/use-on-click-outside';
 import { navigate } from 'gatsby';
-import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { ProductName } from 'src/components/ui/ProductTile/data';
 import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Matches Tailwind's `sm` screen (768px), where the filter switches from the
@@ -155,7 +155,7 @@ const ExamplesFilter = ({
           },
         )}
       >
-        <div className="flex justify-between items-center sm:hidden h-16 px-4 py-2 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-t-2xl sm:rounded-none">
+        <div className="flex justify-between items-center sm:hidden h-16 px-4 py-2 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 rounded-t-2xl sm:rounded-none">
           <p className="ui-text-p1 font-bold text-neutral-1300 dark:text-neutral-000">Filters</p>
           <button onClick={closeFilterMenu} aria-label="Close filter menu">
             <XMarkIcon className="size-[24px]" aria-hidden />

@@ -6,6 +6,7 @@ import { PostHogProvider } from 'posthog-js/react';
 import posthog from 'posthog-js';
 
 import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
+import { ThemeProvider } from './src/contexts/theme-context';
 import { useSiteMetadata } from './src/hooks/use-site-metadata';
 
 const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
@@ -56,9 +57,11 @@ const InsightsWrapper = ({ children }) => {
 
 export const wrapRootElement = ({ element }) => {
   return (
-    <InsightsWrapper>
-      <UserContextWrapper element={element} />
-    </InsightsWrapper>
+    <ThemeProvider>
+      <InsightsWrapper>
+        <UserContextWrapper element={element} />
+      </InsightsWrapper>
+    </ThemeProvider>
   );
 };
 

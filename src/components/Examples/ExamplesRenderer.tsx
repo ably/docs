@@ -1,12 +1,14 @@
-import React, { PropsWithChildren, useMemo } from 'react';
+import React, { PropsWithChildren, useEffect, useMemo, useState } from 'react';
 import { SandpackProvider, SandpackPreview } from '@codesandbox/sandpack-react';
 import { githubLight } from '@codesandbox/sandpack-themes';
-import { CodeEditor } from 'src/components/CodeEditor';
+import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
+import { useTheme } from 'src/contexts/theme-context';
 import { LanguageKey } from 'src/data/languages/types';
 import { ExampleFiles, ExampleWithContent } from 'src/data/examples/types';
 import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
+import Icon from 'src/components/Icon';
 import { IconName } from 'src/components/Icon/types';
-import SegmentedControl from '@ably/ui/core/SegmentedControl';
+import SegmentedControl from 'src/components/ui/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
 import cn from 'src/utilities/cn';
 import { getRandomChannelName } from '../../utilities/get-random-channel-name';
@@ -51,6 +53,9 @@ const getDependencies = (id: string, products: string[], activeLanguage: Languag
       ? { '@ably/chat': '~1.3.1', '@ably/chat-react-ui-kit': '~0.3.0', clsx: '^2.1.1' }
       : {}),
     ...(products.includes('spaces') ? { '@ably/spaces': '~0.4.0' } : {}),
+    ...(products.includes('ai_transport')
+      ? { ably: '~2.23.0', '@ably/ai-transport': '~0.5.0', ai: '^6', zod: '^3.25.76' }
+      : {}),
     ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
     ...(id === 'pub-sub-live-voting' ? { qrcode: '^1.5.4' } : {}),
     ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
@@ -73,6 +78,14 @@ const ExamplesRenderer = ({
   children,
 }: PropsWithChildren<ExamplesRendererProps>) => {
   const { id, files, visibleFiles, layout, products } = example;
+  const { resolvedTheme } = useTheme();
+  // Sandpack/Chrome take the theme as JS values (not CSS `dark:` variants), so
+  // gate on mount: render light (matching the server) until hydrated, then
+  // follow the resolved theme. Avoids a hydration mismatch for dark-mode users
+  // when the editor is server-rendered.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const editorTheme = mounted ? resolvedTheme : 'light';
 
   const rewrittenFiles = useMemo<ExampleFiles>(() => {
     const result: ExampleFiles = {};
@@ -148,7 +161,7 @@ const ExamplesRenderer = ({
             : []),
         ],
       }}
-      theme={githubLight}
+      theme={editorTheme === 'dark' ? sandpackTheme : githubLight}
       template={determineSandpackTemplate(activeLanguage as LanguageKey)}
     >
       <div
@@ -164,7 +177,7 @@ const ExamplesRenderer = ({
               variant="subtle"
               active={activeLanguage === languageKey}
               rounded
-              leftIcon={`icon-tech-${languageKey}` as IconName}
+              leftIcon={<Icon name={`icon-tech-${languageKey}` as IconName} />}
               onClick={() => setActiveLanguage(languageKey as LanguageKey)}
             >
               {languageKey.charAt(0).toUpperCase() + languageKey.slice(1)}
@@ -180,7 +193,7 @@ const ExamplesRenderer = ({
         >
           <div className={cn('min-w-0 overflow-hidden', isVerticalLayout && 'md:flex-1')}>
             <CodeEditor
-              theme="light"
+              theme={editorTheme}
               editor={{
                 className: '',
                 showLineNumbers: true,

@@ -6,7 +6,7 @@ import { ImageProps } from '../Image';
 import { examples, products } from '../../data/examples/';
 import { filterSearchExamples } from './filter-search-examples';
 import ExamplesNoResults from './ExamplesNoResults';
-import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { ProductName } from 'src/components/ui/ProductTile/data';
 import { useLocation } from '@reach/router';
 
 export type SelectedFilters = { products: ProductName[]; useCases: string[] };
@@ -80,7 +80,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         width={660}
         height={282}
         alt="Grid Pattern"
-        className="!absolute -z-10 right-0 top-16 !hidden sm:!block w-[60%] md:w-[40%]"
+        className="!absolute -z-10 right-0 top-16 !hidden sm:!block dark:!hidden w-[60%] md:w-[40%]"
       />
 
       <StaticImage
@@ -88,7 +88,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         placeholder="blurred"
         width={260}
         alt="Grid Pattern"
-        className="-z-10 right-0 top-16 !absolute !block sm:!hidden"
+        className="-z-10 right-0 top-16 !absolute !block sm:!hidden dark:!hidden"
       />
     </>
   );

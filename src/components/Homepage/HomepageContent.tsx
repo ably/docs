@@ -23,14 +23,14 @@ export const HomepageContent = ({
       {mobileImage && (
         <Image
           image={mobileImage}
-          className="absolute top-[3.9375rem] right-0 z-[-1] block sm:hidden w-auto h-auto pointer-events-none"
+          className="absolute top-[3.9375rem] right-0 z-[-1] block sm:hidden dark:hidden w-auto h-auto pointer-events-none"
           aria-hidden="true"
         />
       )}
       {desktopImage && (
         <Image
           image={desktopImage}
-          className="absolute top-[3.9375rem] right-0 z-[-1] hidden sm:block w-auto h-auto pointer-events-none"
+          className="absolute top-[3.9375rem] right-0 z-[-1] hidden sm:block dark:hidden w-auto h-auto pointer-events-none"
           aria-hidden="true"
         />
       )}

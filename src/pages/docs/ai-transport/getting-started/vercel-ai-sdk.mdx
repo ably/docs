@@ -24,7 +24,7 @@ For direct access to the conversation tree, branching, and pagination, see [Get 
 
 ## Prerequisites <a id="prerequisites"/>
 
-- Node.js 20 or later.
+- Node.js 22 or later.
 - An [Ably account](https://ably.com/sign-up) with an API key.
 - An Anthropic API key, or any other model provider supported by Vercel AI SDK.
 
@@ -42,9 +42,19 @@ Create an auth endpoint at `/api/auth/token` that returns an Ably JWT to the cli
 
 The client below uses `authUrl: '/api/auth/token'` to fetch tokens from this endpoint.
 
+## Configure the channel rule <a id="configure-the-channel-rule"/>
+
+AI Transport streams each response by appending tokens to a single channel message. That requires the **Message annotations, updates, deletes, and appends** channel rule (`mutableMessages`) on the namespace your conversations live on.
+
+In your Ably dashboard, enable **Message annotations, updates, deletes, and appends** on the `conversations` namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+
+<Aside data-type='important'>
+This is a one-time setup per Ably app. Without the rule, the first token append fails with error `93002` and no tokens stream. The `channelName` you set below must live in a namespace with this rule enabled.
+</Aside>
+
 ## Create the agent route <a id="create-the-agent-route"/>
 
-Create `app/api/chat/route.ts`. The agent receives an [Invocation](/docs/ai-transport/concepts/invocations), creates an [AgentSession](/docs/ai-transport/api/javascript/core/agent-session) pre-bound to `UIMessageCodec`, starts a Run, hydrates the conversation, pipes the LLM stream, and ends the Run.
+Create `app/api/chat/route.ts`. The agent receives an [Invocation](/docs/ai-transport/concepts/invocations), creates an [AgentSession](/docs/ai-transport/api/javascript/core/agent-session) pre-bound to the Vercel codec, starts a Run, hydrates the conversation, pipes the LLM stream, and ends the Run.
 
 <Code>
 ```javascript
@@ -71,13 +81,19 @@ export async function POST(req) {
 
   after(async () => {
     try {
+      // Rebuild the conversation from run.view before run.start(): draining pages
+      // in this run's triggering input (otherwise run.start() awaits it live).
+      while (run.view.hasOlder()) {
+        await run.view.loadOlder();
+      }
+      const conversation = run.view.getMessages().map(({ message }) => message);
+
       await run.start();
-      await run.loadConversation();
 
       const result = streamText({
         model: anthropic('claude-sonnet-4-20250514'),
         system: 'You are a helpful assistant.',
-        messages: await convertToModelMessages(run.messages),
+        messages: await convertToModelMessages(conversation),
         abortSignal: run.abortSignal,
       });
 
@@ -92,7 +108,7 @@ export async function POST(req) {
       await run.end({ reason: 'error' });
       throw err;
     } finally {
-      session.close();
+      session.end();
     }
   });
 
@@ -107,29 +123,36 @@ export async function POST(req) {
 
 ## Create the chat component <a id="create-the-chat-component"/>
 
-Create `app/chat.tsx`. The component uses Vercel's `useChat` hook with `createChatTransport` from `@ably/ai-transport/vercel`. The Vercel wrapper owns the agent-invocation POST; `useChat` calls into it as if it were the default HTTP transport.
+Create `app/chat.tsx`. The component reads the chat transport from the nearest [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) with [`useChatTransport`](/docs/ai-transport/api/react/vercel/use-chat-transport) and passes it to Vercel's `useChat` hook. The transport owns the agent-invocation POST; `useChat` calls into it as if it were the default HTTP transport. [`useMessageSync`](/docs/ai-transport/api/react/vercel/use-message-sync) feeds channel updates back into `useChat`, so other clients see messages they did not publish.
 
 <Code>
 ```javascript
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { useClientSession } from '@ably/ai-transport/react';
-import { createChatTransport } from '@ably/ai-transport/vercel';
+import { useChatTransport, useMessageSync } from '@ably/ai-transport/vercel/react';
 
-export function Chat({ chatId }) {
+export function Chat() {
   const [input, setInput] = useState('');
-  const { session } = useClientSession();
+  const { session, chatTransport, chatTransportError } = useChatTransport();
 
-  const chatTransport = useMemo(() => createChatTransport(session), [session]);
-
-  const { messages, sendMessage, status, stop } = useChat({
-    id: chatId,
+  const { messages, setMessages, sendMessage, status } = useChat({
     transport: chatTransport,
   });
 
+  useMessageSync({ setMessages });
+
+  if (chatTransportError) {
+    return <div>Failed to connect: {chatTransportError.message}</div>;
+  }
+
   const isStreaming = status === 'submitted' || status === 'streaming';
+
+  const stop = () => {
+    const activeRun = session.view.runs().find((run) => run.status === 'active');
+    if (activeRun) void session.cancel(activeRun.runId);
+  };
 
   return (
     <div>
@@ -164,7 +187,7 @@ export function Chat({ chatId }) {
 
 ## Wire it together <a id="wire-it-together"/>
 
-Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers) constructs the underlying [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session) bound to the channel.
+Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) constructs the underlying [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session) bound to the channel and the [`ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport) over it. It POSTs invocations to `/api/chat` by default, matching the agent route above; set `api` to point elsewhere.
 
 Update `channelName` to match a namespace with the AIT [channel rules](/docs/ai-transport/getting-started/channel-rules) configured.
 
@@ -172,15 +195,14 @@ Update `channelName` to match a namespace with the AIT [channel rules](/docs/ai-
 ```javascript
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider } from 'ably/react';
-import { ClientSessionProvider } from '@ably/ai-transport/react';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { ChatTransportProvider } from '@ably/ai-transport/vercel/react';
 import { Chat } from './chat';
 
-function Providers({ children }) {
-  const [client, setClient] = useState(null);
+function Providers({ children }: { children: ReactNode }) {
+  const [client, setClient] = useState<Ably.Realtime | null>(null);
 
   useEffect(() => {
     const ably = new Ably.Realtime({ authUrl: '/api/auth/token', clientId: 'user-abc' });
@@ -193,12 +215,11 @@ function Providers({ children }) {
 }
 
 export default function Page() {
-  const chatId = 'conversations:my-chat-session';
   return (
     <Providers>
-      <ClientSessionProvider channelName={chatId} codec={UIMessageCodec}>
-        <Chat chatId={chatId} />
-      </ClientSessionProvider>
+      <ChatTransportProvider channelName="conversations:my-chat-session">
+        <Chat />
+      </ChatTransportProvider>
     </Providers>
   );
 }
@@ -209,8 +230,8 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 
 ## What is happening <a id="what-is-happening"/>
 
-1. `sendMessage({ text })` calls the `ChatTransport`'s `sendMessages`. Under the hood, the AI Transport client SDK mints `inputEventId` and the message's `codecMessageId`, stamps them on the channel publish under `extras.ai.transport`, and returns an `ActiveRun` carrying the synchronous `inputCodecMessageId`. The `ChatTransport` then calls `activeRun.toInvocation().toJSON()` and POSTs the resulting `InvocationData` body (`{ inputEventId, sessionName }`) to your agent endpoint.
-2. The agent route receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a Run. `session.createRun(invocation)` mints `runId` (for a fresh run) and `invocationId` (one per HTTP request); the agent stamps both on every event it publishes and returns them on the response. `run.start()` waits for the trigger input event on the channel (rewind plus live).
+1. `sendMessage({ text })` calls the `ChatTransport`'s `sendMessages`. Under the hood, the AI Transport client SDK mints `inputEventId` and the message's `codecMessageId`, stamps them on the channel publish under `extras.ai.transport`, and returns a `ClientRun` carrying the synchronous `inputCodecMessageId`. The `ChatTransport` then calls `clientRun.toInvocation().toJSON()` and POSTs the resulting `InvocationData` body (`{ inputEventId, sessionName }`) to your agent endpoint.
+2. The agent route receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a Run. `session.createRun(invocation)` mints `runId` (for a fresh run) and `invocationId` (one per HTTP request); the agent stamps both on every event it publishes and returns them on the response. `run.start()` waits until the trigger input event has been observed on the channel, whether paged in from history (as the drain above does) or arriving live.
 3. The agent streams the LLM response through `run.pipe()` to the channel. Outputs carry `input-codec-message-id` so the client can correlate by an id it owned at send time.
 4. Every client subscribed to the channel decodes the streamed messages in real time. `useChat` re-renders as `UIMessage` parts accumulate.
 5. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the session rehydrates without losing tokens.

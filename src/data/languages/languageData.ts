@@ -44,7 +44,7 @@ export default {
     android: '1.2',
   },
   aiTransport: {
-    javascript: '0.2',
+    javascript: '0.6',
   },
   spaces: {
     javascript: '0.5',
@@ -53,7 +53,7 @@ export default {
   liveObjects: {
     javascript: '2.21',
     swift: '0.4',
-    java: '1.7',
+    java: '1.8',
   },
   liveSync: {
     javascript: '0.4',

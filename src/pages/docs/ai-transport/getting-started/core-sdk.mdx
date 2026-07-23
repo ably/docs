@@ -18,7 +18,7 @@ To use AI Transport with Vercel's `useChat` for message management, see [Get sta
 
 ## Prerequisites <a id="prerequisites"/>
 
-- Node.js 20 or later.
+- Node.js 22 or later.
 - An [Ably account](https://ably.com/sign-up) with an API key.
 - An Anthropic API key, or any other model provider you prefer.
 
@@ -36,6 +36,16 @@ Create an auth endpoint at `/api/auth/token` that returns an Ably JWT to the cli
 
 The client below uses `authUrl: '/api/auth/token'` to fetch tokens from this endpoint.
 
+## Configure the channel rule <a id="channel-rule"/>
+
+AI Transport streams each response by appending tokens to a single channel message. That requires the **Message annotations, updates, deletes, and appends** channel rule (`mutableMessages`) on the namespace your conversations live on.
+
+In your Ably dashboard, enable **Message annotations, updates, deletes, and appends** on the `conversations` namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+
+<Aside data-type='important'>
+This is a one-time setup per Ably app. Without the rule, the first token append fails with error `93002` and no tokens stream. The `channelName` you set below must live in a namespace with this rule enabled.
+</Aside>
+
 ## Create the agent route <a id="agent-route"/>
 
 Create `app/api/chat/route.ts`. The agent receives an [Invocation](/docs/ai-transport/concepts/invocations), creates an [AgentSession](/docs/ai-transport/api/javascript/core/agent-session), starts a [Run](/docs/ai-transport/concepts/runs), hydrates the conversation, pipes the LLM stream, and ends the Run.
@@ -47,7 +57,7 @@ import { streamText, convertToModelMessages } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import * as Ably from 'ably';
 import { createAgentSession, Invocation } from '@ably/ai-transport';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 
 const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
 
@@ -57,7 +67,7 @@ export async function POST(req) {
   const session = createAgentSession({
     client: ably,
     channelName: invocation.sessionName,
-    codec: UIMessageCodec,
+    codec: createUIMessageCodec(),
   });
 
   await session.connect();
@@ -66,13 +76,19 @@ export async function POST(req) {
 
   after(async () => {
     try {
+      // Rebuild the conversation from run.view before run.start(): draining pages
+      // in this run's triggering input (otherwise run.start() awaits it live).
+      while (run.view.hasOlder()) {
+        await run.view.loadOlder();
+      }
+      const conversation = run.view.getMessages().map(({ message }) => message);
+
       await run.start();
-      await run.loadConversation();
 
       const result = streamText({
         model: anthropic('claude-sonnet-4-20250514'),
         system: 'You are a helpful assistant.',
-        messages: await convertToModelMessages(run.messages),
+        messages: await convertToModelMessages(conversation),
         abortSignal: run.abortSignal,
       });
 
@@ -82,7 +98,7 @@ export async function POST(req) {
       await run.end({ reason: 'error' });
       throw err;
     } finally {
-      session.close();
+      session.end();
     }
   });
 
@@ -101,7 +117,7 @@ Create `app/chat.tsx`. The component uses [`useView`](/docs/ai-transport/api/rea
 
 import { useState } from 'react';
 import { useClientSession, useView } from '@ably/ai-transport/react';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 
 async function wakeAgent(run) {
   const res = await fetch('/api/chat', {
@@ -133,7 +149,7 @@ export function Chat() {
     if (!input.trim()) return;
     const text = input;
     setInput('');
-    const run = await view.send(UIMessageCodec.createUserMessage({
+    const run = await view.send(createUIMessageCodec().createUserMessage({
       id: crypto.randomUUID(),
       role: 'user',
       parts: [{ type: 'text', text }],
@@ -186,8 +202,11 @@ import { useEffect, useState } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider } from 'ably/react';
 import { ClientSessionProvider } from '@ably/ai-transport/react';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 import { Chat } from './chat';
+
+// A stable codec instance held at module scope, passed to the provider below.
+const uiMessageCodec = createUIMessageCodec();
 
 function Providers({ children }) {
   const [client, setClient] = useState(null);
@@ -206,7 +225,7 @@ export default function Page() {
   const channelName = 'conversations:my-chat-session';
   return (
     <Providers>
-      <ClientSessionProvider channelName={channelName} codec={UIMessageCodec}>
+      <ClientSessionProvider channelName={channelName} codec={uiMessageCodec}>
         <Chat />
       </ClientSessionProvider>
     </Providers>
@@ -219,18 +238,18 @@ Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the sam
 
 ## What is happening <a id="whats-happening"/>
 
-1. The user types a message. `view.send(...)` mints `inputEventId` and the message's `codecMessageId`, publishes the user input on the channel with those ids stamped under `extras.ai.transport`, and returns an `ActiveRun` carrying the `inputCodecMessageId` the client owns synchronously. The SDK does not POST to your agent endpoint itself.
-2. Your client code calls `activeRun.toInvocation().toJSON()` to get an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ inputEventId, sessionName }`), and POSTs it to your agent endpoint.
-3. The agent endpoint receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a `Run` from the Invocation. `session.createRun(invocation)` mints a fresh `runId` (for a fresh run) and a fresh `invocationId`; the agent returns both on the response so callers can observe them. `Run.start()` waits for the trigger input event on the channel (rewind + live).
+1. The user types a message. `view.send(...)` mints `inputEventId` and the message's `codecMessageId`, publishes the user input on the channel with those ids stamped under `extras.ai.transport`, and returns a `ClientRun` carrying the `inputCodecMessageId` the client owns synchronously. The SDK does not POST to your agent endpoint itself.
+2. Your client code calls `clientRun.toInvocation().toJSON()` to get an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ inputEventId, sessionName }`), and POSTs it to your agent endpoint.
+3. The agent endpoint receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a `Run` from the Invocation. `session.createRun(invocation)` mints a fresh `runId` (for a fresh run) and a fresh `invocationId`; the agent returns both on the response so callers can observe them. `run.start()` waits until the trigger input event has been observed on the channel, whether paged in from history (as the drain above does) or arriving live.
 4. The agent streams the LLM response through `run.pipe(...)` to the channel. Every output carries `input-codec-message-id` so the client can correlate by an id it owned at send time.
 5. Every client subscribed to the channel receives the streamed messages in real time. `useView` re-renders as the visible Run's projection updates.
 6. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the SDK rehydrates the view automatically.
 
-`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. The hook exposes `messages`, `hasOlder`, `loading`, `loadError`, `loadOlder`, `runOf`, `run`, `runs`, `branchSelection`, `selectSibling`, `send`, `regenerate`, and `edit`. It is the reactive mirror of the [`View` interface](/docs/ai-transport/api/javascript/core/client-session#view).
+`useView` subscribes to the conversation tree and returns the visible messages along the currently selected branch. The hook exposes `messages`, `hasOlder`, `loading`, `loadError`, `loadOlder`, `runOf`, `run`, `runs`, `branchSelection`, `send`, `regenerate`, and `edit`. Switch siblings through the `branchSelection` handle's `select`. It is the reactive mirror of the [`ClientView` interface](/docs/ai-transport/api/javascript/core/client-session#properties).
 
 ## Explore next <a id="next"/>
 
-- [Branching, edit, and regenerate](/docs/ai-transport/features/branching): fork the conversation and navigate alternative branches with `view.regenerate`, `view.edit`, and `view.selectSibling`.
+- [Branching, edit, and regenerate](/docs/ai-transport/features/branching): fork the conversation and navigate alternative branches with `view.regenerate`, `view.edit`, and the `view.branchSelection` handle's `select`.
 - [History and replay](/docs/ai-transport/features/history): `useView` loads history on mount via the `limit` option.
 - [Cancellation](/docs/ai-transport/features/cancellation): the Stop button pattern and the agent-side `onCancel` authorisation hook.
 - [Concepts: Runs](/docs/ai-transport/concepts/runs): the SDK primitive each turn becomes.

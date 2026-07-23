@@ -15,12 +15,12 @@ Turns are multiplexed on the Ably channel via `runId`. Every message published d
 
 <Code>
 ```javascript
-const run1 = await view.send(UIMessageCodec.createUserMessage({
+const run1 = await view.send(createUIMessageCodec().createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'Summarize the report' }],
 }));
-const run2 = await view.send(UIMessageCodec.createUserMessage({
+const run2 = await view.send(createUIMessageCodec().createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'What are the key risks?' }],
@@ -40,22 +40,28 @@ On the agent side, each Run is handled independently. The agent session creates 
 ```javascript
 app.post('/api/chat', async (req, res) => {
   const invocation = Invocation.fromJSON(await req.json());
-  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: createUIMessageCodec() });
   await session.connect();
   const run = session.createRun(invocation, { signal: req.signal });
 
+  // Rebuild the conversation from run.view before run.start(): draining pages in
+  // this run's triggering input (otherwise run.start() awaits it arriving live).
+  while (run.view.hasOlder()) {
+    await run.view.loadOlder();
+  }
+  const conversation = run.view.getMessages().map(({ message }) => message);
+
   await run.start();
-  await run.loadConversation();
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-20250514'),
-    messages: run.messages,
+    messages: conversation,
     abortSignal: run.abortSignal,
   });
 
   const { reason } = await run.pipe(result.toUIMessageStream());
   await run.end({ reason });
-  session.close();
+  await session.end();
   res.json({ ok: true });
 });
 ```
@@ -105,7 +111,7 @@ See [cancellation](/docs/ai-transport/features/cancellation) for the full cancel
 
 ## Wait for runs to complete <a id="waiting-for-runs"/>
 
-Each `ActiveRun` exposes `runId: Promise<string>` (resolves with the agent-minted id once `ai-run-start` is observed). To wait for a Run to terminate, await the id and then subscribe to the session tree's `run` events:
+Each `ClientRun` exposes a synchronous `runId` (empty until `ai-run-start` is observed) and a `started` promise that resolves once it is. To wait for a Run to terminate, await `started`, read `runId`, then subscribe to the session tree's `run` events:
 
 <Code>
 ```javascript
@@ -120,12 +126,13 @@ function whenRunEnds(session, runId) {
   });
 }
 
-const run1 = await view.send(UIMessageCodec.createUserMessage({
+const run1 = await view.send(createUIMessageCodec().createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'Hello' }],
 }));
-const run1Id = await run1.runId;
+await run1.started;
+const run1Id = run1.runId;
 await whenRunEnds(session, run1Id);
 ```
 </Code>
@@ -143,7 +150,7 @@ Cancel the current turn and immediately start a new one:
 const active = session.view.runs().filter((r) => r.status === 'active');
 await Promise.all(active.map((r) => session.cancel(r.runId)));
 
-const newRun = await view.send(UIMessageCodec.createUserMessage({
+const newRun = await view.send(createUIMessageCodec().createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'Actually, focus on the budget instead' }],
@@ -151,7 +158,7 @@ const newRun = await view.send(UIMessageCodec.createUserMessage({
 ```
 </Code>
 
-See [Interruption](/docs/ai-transport/features/interruption) for the full pattern.
+See [Interruption and steering](/docs/ai-transport/features/interruption-and-steering) for the full pattern.
 
 ### Multi-user sessions <a id="multi-user"/>
 
@@ -159,13 +166,13 @@ Two users prompting the same session at the same time. Each user's Run is indepe
 
 <Code>
 ```javascript
-const runA = await viewA.send(UIMessageCodec.createUserMessage({
+const runA = await viewA.send(createUIMessageCodec().createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'What does section 3 mean?' }],
 }));
 
-const runB = await viewB.send(UIMessageCodec.createUserMessage({
+const runB = await viewB.send(createUIMessageCodec().createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'Summarize section 5' }],
@@ -183,7 +190,7 @@ An orchestrator dispatches work to multiple sub-agents, each streaming concurren
 ```javascript
 app.post('/api/chat', async (req, res) => {
   const invocation = Invocation.fromJSON(await req.json());
-  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: createUIMessageCodec() });
   await session.connect();
 
   // The orchestrator creates additional Invocations for sub-agents and POSTs
@@ -215,7 +222,7 @@ There is no hard limit on the channel side. Practical limits come from your appl
 
 ### Does the client need to track run IDs? <a id="faq-track-ids"/>
 
-The session tracks Run identity internally. Hold onto the `ActiveRun` returned by `view.send()` only if you need to cancel it specifically or wait for it specifically.
+The session tracks Run identity internally. Hold onto the `ClientRun` returned by `view.send()` only if you need to cancel it specifically or wait for it specifically.
 
 ### How do I tell which run a message belongs to? <a id="faq-message-turn"/>
 
@@ -232,5 +239,5 @@ A Run is one unit of agent work that produces multiple messages. The `runId` gro
 ## Related features <a id="related"/>
 
 - [Cancellation](/docs/ai-transport/features/cancellation): scoped cancel signals and server-side abort handling.
-- [Interruption](/docs/ai-transport/features/interruption): cancel and immediately send a new message.
+- [Interruption and steering](/docs/ai-transport/features/interruption-and-steering): steer the active Run, cancel and re-prompt, or send alongside.
 - [Multi-device sessions](/docs/ai-transport/features/multi-device): concurrent turns across devices.

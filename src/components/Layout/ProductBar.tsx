@@ -51,7 +51,7 @@ const tabBaseClassName = cn(
   'focus-base',
 );
 
-const activeTabClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1000';
+const activeTabClassName = 'text-neutral-1300 dark:text-neutral-000 bg-orange-100 dark:bg-orange-1100';
 
 const inactiveTabClassName = cn(
   'text-neutral-1000 dark:text-neutral-500',
@@ -81,7 +81,7 @@ const ProductBar = ({ className, onSelectProduct, selectedProduct }: ProductBarP
   return (
     <nav
       className={cn(
-        'z-30 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000',
+        'z-30 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1100',
         selectionMode ? 'sticky top-0' : 'sticky top-16',
         className,
       )}

@@ -1,6 +1,6 @@
 ---
 title: "Token streaming"
-meta_description: "Stream AI-generated tokens to clients in realtime using AI Transport, with support for message-per-response and message-per-token patterns."
+meta_description: "Stream AI-generated tokens to clients in realtime using AI Transport. Tokens are appended to a single durable message, and the full response is served to clients that join later."
 meta_keywords: "AI Transport, token streaming, LLM streaming, message appends, real-time AI, durable streaming, Ably"
 intro: "Tokens are streamed to subscribing clients in realtime, as the model generates them. The same response is available as a single aggregated message to clients connecting later. AI Transport streams tokens by appending to a durable channel message."
 redirect_from:
@@ -83,18 +83,24 @@ const session = createAgentSession({ client: ably, channelName: invocation.sessi
 await session.connect();
 const run = session.createRun(invocation, { signal: req.signal });
 
+// Rebuild the conversation from run.view before run.start(): draining pages in
+// this run's triggering input (otherwise run.start() awaits it arriving live).
+while (run.view.hasOlder()) {
+  await run.view.loadOlder();
+}
+const conversation = run.view.getMessages().map(({ message }) => message);
+
 await run.start();
-await run.loadConversation();
 
 const result = streamText({
   model: anthropic('claude-sonnet-4-20250514'),
-  messages: run.messages,
+  messages: conversation,
   abortSignal: run.abortSignal,
 });
 
 const { reason } = await run.pipe(result.toUIMessageStream());
 await run.end({ reason });
-session.close();
+await session.end();
 ```
 </Code>
 

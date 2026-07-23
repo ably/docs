@@ -296,6 +296,11 @@ export default {
           name: 'Publish',
           link: '/docs/push/publish',
         },
+        {
+          name: 'iOS Live Activities',
+          link: '/docs/push/live-activities',
+          languages: [],
+        },
       ],
     },
     {

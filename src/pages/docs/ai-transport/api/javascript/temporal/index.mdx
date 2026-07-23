@@ -1,0 +1,109 @@
+---
+title: "Temporal helpers"
+meta_description: "API reference for @ably/ai-transport/temporal: the stepIdFor helper that derives a workflow-scoped stepId from the current Temporal activity."
+meta_keywords: "AI Transport, Temporal, stepIdFor, activityId, workflowId, invocationId, durable execution, Ably"
+---
+
+`@ably/ai-transport/temporal` is a codec-agnostic subpath that ships helpers for building durable agents on top of [Temporal](https://temporal.io/). Import it from inside a Temporal activity.
+
+<Code>
+```javascript
+import { stepIdFor } from '@ably/ai-transport/temporal';
+```
+</Code>
+
+The subpath declares `@temporalio/activity` as an optional peer dependency; install it alongside the SDK when you consume the helpers.
+
+## Derive a workflow-scoped stepId <a id="step-id-for"/>
+
+<MethodSignature>{`stepIdFor(invocationId: string): string`}</MethodSignature>
+
+Read the current Temporal activity's id and combine it with the Run's invocation id to produce a `stepId` that survives retries and never collides across workflows. Pass the result to [`AgentRun.createStep`](/docs/ai-transport/api/javascript/core/agent-session#create-step).
+
+Temporal's `activityId` is unique within a single workflow. AI Transport's Step supersede semantics operate at the whole-Run lifetime, so bare `activityId`s would collide when two workflows publish to the same Run (a suspend followed by a continuation), and the SDK would treat the two workflows' first Steps as retries of the same Step. Prefixing with the Run's invocation id keeps each Step's identity globally distinct while still letting a retry of the same activity coalesce cleanly.
+
+The helper reads `Context.current().info.activityId` internally. Call it from inside a Temporal activity, not from workflow code.
+
+<Code>
+```javascript
+import { Context } from '@temporalio/activity';
+import { createAgentSession } from '@ably/ai-transport';
+import { stepIdFor } from '@ably/ai-transport/temporal';
+
+export async function runInferenceStep(input) {
+  const session = createAgentSession({ /* ... */ });
+  await session.connect();
+
+  const run = session.adoptRun({
+    runId: input.ids.runId,
+    invocationId: input.ids.invocationId,
+    triggerEventId: input.ids.triggerEventId,
+  });
+  await run.load();
+
+  const step = run.createStep({ stepId: stepIdFor(input.ids.invocationId) });
+  await step.start();
+  await step.pipe(llmStream);
+  await step.end();
+
+  await session.detach();
+}
+```
+</Code>
+
+### Parameters <a id="step-id-for-params"/>
+
+<Table id='StepIdForParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| invocationId | required | The Run's invocation id, sourced from the SDK-supplied `input.ids.invocationId`. This value is also typically used as the Temporal `workflowId` when the workflow is started, so the two ids match. | String |
+
+</Table>
+
+### Returns <a id="step-id-for-returns"/>
+
+`String`. A workflow-scoped stepId in the shape `${invocationId}-${activityId}`. Stable across retries of the same activity, and unique across different workflows.
+
+## Example <a id="example"/>
+
+A worker registering an activity that adopts an in-flight Run, opens a Step under the Temporal-derived id, and publishes a discrete tool result:
+
+<Code>
+```javascript
+import { Context } from '@temporalio/activity';
+import Ably from 'ably';
+import { createAgentSession } from '@ably/ai-transport/vercel';
+import { stepIdFor } from '@ably/ai-transport/temporal';
+
+export async function runToolStep({ ids, invocation, toolCall, output }) {
+  const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName });
+  await session.connect();
+
+  const run = session.adoptRun(
+    {
+      runId: ids.runId,
+      invocationId: ids.invocationId,
+      triggerEventId: ids.triggerEventId,
+    },
+    { signal: Context.current().cancellationSignal },
+  );
+  await run.load();
+
+  const step = run.createStep({ stepId: stepIdFor(ids.invocationId) });
+  await step.start();
+  await step.send({
+    type: 'tool-output-available',
+    toolCallId: toolCall.toolCallId,
+    output,
+  });
+  await step.end();
+
+  await session.detach();
+  ably.close();
+}
+```
+</Code>
+
+A retry of the same activity re-enters the code with the same Temporal `activityId`, so `stepIdFor` returns the same id and the retry's `ai-step-start` supersedes the failed attempt's output on the channel. See [Durable execution](/docs/ai-transport/features/durable-execution) for the full pattern.

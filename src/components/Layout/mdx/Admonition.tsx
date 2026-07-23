@@ -24,13 +24,13 @@ const admonitionConfig: Record<
     title: 'Category',
   },
   note: {
-    borderColor: 'border-l-blue-500 dark:border-l-blue-400',
-    backgroundColor: 'bg-blue-100 dark:bg-blue-800',
+    borderColor: 'border-l-blue-500 dark:border-l-blue-500',
+    backgroundColor: 'bg-blue-100 dark:bg-blue-900',
     title: 'Note',
   },
   'further-reading': {
-    borderColor: 'border-l-green-500 dark:border-l-green-400',
-    backgroundColor: 'bg-green-100 dark:bg-green-800',
+    borderColor: 'border-l-green-500 dark:border-l-green-500',
+    backgroundColor: 'bg-green-100 dark:bg-green-900',
     title: 'Further reading',
   },
   important: {
@@ -40,12 +40,12 @@ const admonitionConfig: Record<
   },
   // Unused for now, but available for another type if needed in future.
   warning: {
-    borderColor: 'border-l-yellow-500 dark:border-l-yellow-400',
-    backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
+    borderColor: 'border-l-yellow-500 dark:border-l-yellow-500',
+    backgroundColor: 'bg-yellow-100 dark:bg-yellow-900',
     title: 'Warning',
   },
   usp: {
-    borderColor: 'border-l-orange-600 dark:border-l-orange-600',
+    borderColor: 'border-l-orange-700 dark:border-l-orange-500',
     backgroundColor: '',
     title: '', // USP callouts don't use a title prefix - the content includes the headline
   },
@@ -66,13 +66,13 @@ const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note',
         {...rest}
         data-type={dataType}
         className={cn(
-          'border-l px-6 py-3.5 my-4 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
+          'border-l px-6 py-3 my-6 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
           borderColor,
           backgroundColor,
           className,
         )}
       >
-        <div className="ui-text-p3 [&>p:first-child]:ui-text-p1 [&>p:first-child]:font-bold [&>p:first-child]:text-neutral-1300 [&>p:first-child]:mb-2 [&>*:last-child]:mb-0">
+        <div className="ui-text-p3 [&>p]:text-p3 [&>p:first-child]:text-p1 [&>p:first-child]:font-bold [&>p:first-child]:text-neutral-1300 dark:[&>p:first-child]:text-neutral-000 [&>p:first-child]:mb-2 [&>*:last-child]:mb-0">
           {children}
         </div>
       </aside>
@@ -84,14 +84,14 @@ const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note',
       {...rest}
       data-type={dataType}
       className={cn(
-        'border-l px-6 py-4 my-4 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
+        'border-l px-6 py-4 my-6 rounded-r-lg text-neutral-1000 dark:text-neutral-300',
         borderColor,
         backgroundColor,
         className,
       )}
     >
-      <div className="text-sm leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>*:nth-child(2)]:inline [&>*:nth-child(3)]:mt-5">
-        <strong className="font-bold ui-text-p2">{title}: </strong>
+      <div className="text-p3 leading-relaxed [&>p]:text-p3 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>*:nth-child(2)]:inline [&>*:nth-child(3)]:mt-5">
+        <strong className="font-bold text-p3">{title}: </strong>
         {children}
       </div>
     </aside>

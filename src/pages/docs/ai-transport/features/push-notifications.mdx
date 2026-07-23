@@ -38,22 +38,28 @@ app.post('/api/chat', async (req, res) => {
   const body = await req.json()
   const { userId } = body
   const invocation = Invocation.fromJSON(body)
-  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec })
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: createUIMessageCodec() })
   await session.connect()
   const run = session.createRun(invocation, { signal: req.signal })
 
+  // Rebuild the conversation from run.view before run.start(): draining pages in
+  // this run's triggering input (otherwise run.start() awaits it arriving live).
+  while (run.view.hasOlder()) {
+    await run.view.loadOlder()
+  }
+  const conversation = run.view.getMessages().map(({ message }) => message)
+
   await run.start()
-  await run.loadConversation()
 
   const result = streamText({
     model: openai('gpt-4o'),
-    messages: run.messages,
+    messages: conversation,
     abortSignal: run.abortSignal,
   })
 
   const { reason } = await run.pipe(result.toUIMessageStream())
   await run.end({ reason })
-  session.close()
+  await session.end()
 
   if (reason === 'complete') {
     // Publish a push-eligible event on a notification channel

@@ -40,38 +40,38 @@ The app has three roles.
 
 1. The admin starts a poll by publishing a message:
 
-   ```javascript
-   await channel.publish('poll', { pollId, question, type, options });
-   ```
+    ```javascript
+    await channel.publish('poll', { pollId, question, type, options });
+    ```
 
 2. A voter attaches a `vote:unique.v1` annotation to that message's `serial`,
    naming the chosen option:
 
-   ```javascript
-   await channel.annotations.publish(pollSerial, {
-     type: 'vote:unique.v1',
-     name: optionId,
-   });
-   ```
+    ```javascript
+    await channel.annotations.publish(pollSerial, {
+      type: 'vote:unique.v1',
+      name: optionId,
+    });
+    ```
 
 3. Ably aggregates the votes and delivers a summary on the poll message. Voters
    read it to render live percentages:
 
-   ```javascript
-   channel.subscribe((message) => {
-     const summary = message.annotations?.summary?.['vote:unique.v1'];
-     // summary[optionId].total === votes for that option
-   });
-   ```
+    ```javascript
+    channel.subscribe((message) => {
+      const summary = message.annotations?.summary?.['vote:unique.v1'];
+      // summary[optionId].total === votes for that option
+    });
+    ```
 
 4. The presenter additionally subscribes to the individual events for its vote
    and suggestion bubbles:
 
-   ```javascript
-   channel.annotations.subscribe('vote:unique.v1', (annotation) => {
-     // one event per vote — annotation.name is the option, annotation.clientId the voter
-   });
-   ```
+    ```javascript
+    channel.annotations.subscribe('vote:unique.v1', (annotation) => {
+      // one event per vote — annotation.name is the option, annotation.clientId the voter
+    });
+    ```
 
 That annotation type string, `vote:unique.v1`, follows the `namespace:summarization.version` convention; `unique` is one of [five aggregation types](/docs/messages/annotations#aggregation) (`unique`, `distinct`, `multiple`, `total`, `flag`), each rolling up the same raw annotations a different way.
 

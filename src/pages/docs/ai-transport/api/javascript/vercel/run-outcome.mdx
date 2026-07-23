@@ -65,11 +65,11 @@ The rejection guard matters: Vercel AI SDK v6 rejects `streamText().finishReason
 
 `Promise<VercelRunOutcome>`. A `VercelRunOutcome` is an object discriminated on `reason` with three arms:
 
-- `{ reason: 'suspend' }` — the LLM requested tools the SDK did not auto-execute; call [`Run.suspend`](/docs/ai-transport/api/javascript/core/agent-session#run-suspend) so a continuation Invocation can resume the Run.
-- `{ reason: 'complete' | 'cancelled' }` — the run terminated normally; pass the outcome to [`Run.end`](/docs/ai-transport/api/javascript/core/agent-session#run-end).
-- `{ reason: 'error', error }` — the run failed; `error` is an `Ably.ErrorInfo`. Pass the outcome to [`Run.end`](/docs/ai-transport/api/javascript/core/agent-session#run-end).
+- `{ reason: 'suspend' }`: the LLM requested tools the SDK did not auto-execute. Call [`Run.suspend`](/docs/ai-transport/api/javascript/core/agent-session#run-suspend) so a continuation Invocation can resume the Run.
+- `{ reason: 'complete' | 'cancelled' }`: the run terminated normally. Pass the outcome to [`Run.end`](/docs/ai-transport/api/javascript/core/agent-session#run-end).
+- `{ reason: 'error', error }`: the run failed. `error` is an `Ably.ErrorInfo`. Pass the outcome to [`Run.end`](/docs/ai-transport/api/javascript/core/agent-session#run-end).
 
-`error` is present only on the `'error'` arm. The non-`'suspend'` arms are assignable to [`RunEndParams`](/docs/ai-transport/api/javascript/core/agent-session#run-end-params), so after a `'suspend'` guard the whole object passes straight to `Run.end(outcome)`.
+`error` is present only on the `'error'` arm. The non-`'suspend'` arms are assignable to [`RunEndParams`](/docs/ai-transport/api/javascript/core/agent-session#run-end-params), so after a `'suspend'` guard the whole object passes straight to `Run.end(outcome)`. <Table id='VercelRunOutcome'/>
 
 <Table id='VercelRunOutcome' hidden>
 
@@ -106,12 +106,18 @@ export async function POST(req: Request) {
   const run = session.createRun(invocation, { signal: req.signal });
 
   try {
+    // Rebuild the conversation from run.view before run.start(): draining pages
+    // in this run's triggering input (otherwise run.start() awaits it live).
+    while (run.view.hasOlder()) {
+      await run.view.loadOlder();
+    }
+    const conversation = run.view.getMessages().map(({ message }) => message);
+
     await run.start();
-    await run.loadConversation();
 
     const result = streamText({
       model: openai('gpt-4'),
-      messages: run.messages,
+      messages: conversation,
       tools: myTools,
     });
 
@@ -124,7 +130,7 @@ export async function POST(req: Request) {
       await run.end(outcome);
     }
   } finally {
-    session.close();
+    await session.end();
   }
 
   return Response.json({ invocationId: run.invocationId });

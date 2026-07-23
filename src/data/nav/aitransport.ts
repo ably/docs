@@ -27,6 +27,14 @@ export default {
               name: 'Vercel AI SDK',
               link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
             },
+            {
+              name: 'Vercel WDK',
+              link: '/docs/ai-transport/getting-started/vercel-wdk',
+            },
+            {
+              name: 'Temporal',
+              link: '/docs/ai-transport/getting-started/temporal',
+            },
           ],
         },
         {
@@ -74,6 +82,10 @@ export default {
           link: '/docs/ai-transport/concepts/runs',
         },
         {
+          name: 'Steps',
+          link: '/docs/ai-transport/concepts/steps',
+        },
+        {
           name: 'Invocations',
           link: '/docs/ai-transport/concepts/invocations',
         },
@@ -106,74 +118,90 @@ export default {
           name: 'Vercel AI SDK Core',
           link: '/docs/ai-transport/frameworks/vercel-ai-sdk-core',
         },
+        {
+          name: 'Vercel WDK',
+          link: '/docs/ai-transport/frameworks/vercel-wdk',
+        },
+        {
+          name: 'Temporal',
+          link: '/docs/ai-transport/frameworks/temporal',
+        },
       ],
     },
     {
       name: 'Features',
       pages: [
         {
-          name: 'Token streaming',
-          link: '/docs/ai-transport/features/token-streaming',
-        },
-        {
-          name: 'Cancellation',
-          link: '/docs/ai-transport/features/cancellation',
-        },
-        {
-          name: 'Reconnection and recovery',
-          link: '/docs/ai-transport/features/reconnection-and-recovery',
-        },
-        {
-          name: 'Multi-device sessions',
-          link: '/docs/ai-transport/features/multi-device',
-        },
-        {
-          name: 'History and replay',
-          link: '/docs/ai-transport/features/history',
+          name: 'Agent presence',
+          link: '/docs/ai-transport/features/agent-presence',
         },
         {
           name: 'Branching, edit, and regenerate',
           link: '/docs/ai-transport/features/branching',
         },
         {
-          name: 'Interruption',
-          link: '/docs/ai-transport/features/interruption',
-        },
-        {
-          name: 'Concurrent turns',
-          link: '/docs/ai-transport/features/concurrent-turns',
-        },
-        {
-          name: 'Tool calling',
-          link: '/docs/ai-transport/features/tool-calling',
-        },
-        {
-          name: 'Human-in-the-loop',
-          link: '/docs/ai-transport/features/human-in-the-loop',
-        },
-        {
-          name: 'Optimistic updates',
-          link: '/docs/ai-transport/features/optimistic-updates',
-        },
-        {
-          name: 'Agent presence',
-          link: '/docs/ai-transport/features/agent-presence',
-        },
-        {
-          name: 'LiveObjects State',
-          link: '/docs/ai-transport/features/liveobjects',
-        },
-        {
-          name: 'Push notifications',
-          link: '/docs/ai-transport/features/push-notifications',
+          name: 'Cancellation',
+          link: '/docs/ai-transport/features/cancellation',
         },
         {
           name: 'Chain of thought',
           link: '/docs/ai-transport/features/chain-of-thought',
         },
         {
+          name: 'Concurrent turns',
+          link: '/docs/ai-transport/features/concurrent-turns',
+        },
+        {
+          name: 'Database hydration',
+          link: '/docs/ai-transport/features/database-hydration',
+        },
+        {
           name: 'Double texting',
           link: '/docs/ai-transport/features/double-texting',
+        },
+        {
+          name: 'Durable execution',
+          link: '/docs/ai-transport/features/durable-execution',
+        },
+        {
+          name: 'History and replay',
+          link: '/docs/ai-transport/features/history',
+        },
+        {
+          name: 'Human-in-the-loop',
+          link: '/docs/ai-transport/features/human-in-the-loop',
+        },
+        {
+          name: 'Interruption and steering',
+          link: '/docs/ai-transport/features/interruption-and-steering',
+        },
+        {
+          name: 'LiveObjects State',
+          link: '/docs/ai-transport/features/liveobjects',
+        },
+        {
+          name: 'Multi-device sessions',
+          link: '/docs/ai-transport/features/multi-device',
+        },
+        {
+          name: 'Optimistic updates',
+          link: '/docs/ai-transport/features/optimistic-updates',
+        },
+        {
+          name: 'Push notifications',
+          link: '/docs/ai-transport/features/push-notifications',
+        },
+        {
+          name: 'Reconnection and recovery',
+          link: '/docs/ai-transport/features/reconnection-and-recovery',
+        },
+        {
+          name: 'Token streaming',
+          link: '/docs/ai-transport/features/token-streaming',
+        },
+        {
+          name: 'Tool calling',
+          link: '/docs/ai-transport/features/tool-calling',
         },
       ],
     },
@@ -183,6 +211,10 @@ export default {
         {
           name: 'Going to production',
           link: '/docs/ai-transport/going-to-production',
+        },
+        {
+          name: 'Roadmap',
+          link: '/docs/ai-transport/roadmap',
         },
         {
           name: 'Troubleshooting',
@@ -235,6 +267,15 @@ export default {
                 },
               ],
             },
+            {
+              name: 'Temporal',
+              pages: [
+                {
+                  name: 'stepIdFor',
+                  link: '/docs/ai-transport/api/javascript/temporal',
+                },
+              ],
+            },
           ],
         },
         {
@@ -258,6 +299,10 @@ export default {
                 {
                   name: 'useCreateView',
                   link: '/docs/ai-transport/api/react/core/use-create-view',
+                },
+                {
+                  name: 'useMessagesWithSeed',
+                  link: '/docs/ai-transport/api/react/core/use-messages-with-seed',
                 },
                 {
                   name: 'useTree',

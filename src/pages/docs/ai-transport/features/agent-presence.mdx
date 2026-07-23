@@ -25,19 +25,25 @@ The agent enters presence with its initial status, then updates that status as i
 ```javascript
 app.post('/api/chat', async (req, res) => {
   const invocation = Invocation.fromJSON(await req.json());
-  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: UIMessageCodec });
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName, codec: createUIMessageCodec() });
   await session.connect();
   const run = session.createRun(invocation, { signal: req.signal });
 
   // Enter presence so every connected client sees what the agent is doing.
   await session.presence.enter({ status: 'thinking' });
 
+  // Rebuild the conversation from run.view before run.start(): draining pages in
+  // this run's triggering input (otherwise run.start() awaits it arriving live).
+  while (run.view.hasOlder()) {
+    await run.view.loadOlder();
+  }
+  const conversation = run.view.getMessages().map(({ message }) => message);
+
   await run.start();
-  await run.loadConversation();
 
   const result = streamText({
     model: openai('gpt-4o'),
-    messages: run.messages,
+    messages: conversation,
     abortSignal: run.abortSignal,
   });
 
@@ -46,7 +52,7 @@ app.post('/api/chat', async (req, res) => {
   await run.end({ reason });
 
   await session.presence.leave();
-  await session.close();
+  await session.end();
   res.json({ ok: true });
 });
 ```
@@ -58,7 +64,7 @@ On the client, subscribe to presence events to track the agent's current state a
 
 <Code>
 ```javascript
-const session = createClientSession({ client: ably, channelName, codec: UIMessageCodec });
+const session = createClientSession({ client: ably, channelName, codec: createUIMessageCodec() });
 
 session.presence.subscribe((member) => {
   if (member.clientId === 'agent') {

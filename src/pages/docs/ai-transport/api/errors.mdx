@@ -48,10 +48,9 @@ The `ErrorInfo` type is exported from `ably`. AI Transport surfaces it as the re
 | 104003 | RunLifecycleError        | 500         | A publish within a Run failed (lifecycle event, message, or codec event).                                                                                                                                                         | Check channel permissions and connection state. Surface the error to the calling HTTP handler so the client's pending send fails.                                 |
 | 104004 | SessionClosed            | 400         | An operation was attempted on a session that has already been closed.                                                                                                                                                             | Create a new session. Do not reuse a closed session.                                                                                                              |
 | 104005 | SessionSendFailed        | 500         | A send failed: either the core's channel publish failed, or the Vercel chat transport's agent-invocation POST failed (network error or non-2xx response).                                                                                                                                                   | Check the API endpoint URL, network connectivity, and authentication. Inspect the underlying error for details.                                                   |
-| 104006 | ChannelContinuityLost    | 500         | The Ably channel lost message continuity. The channel entered `FAILED`, `SUSPENDED`, or `DETACHED`, or re-attached with `resumed: false`. Active streams can no longer be guaranteed to receive all events.                       | Surfaced via the session's `on('error')` and the agent session's `onError` option. End active Runs; subsequent operations can resume once the channel reattaches. |
+| 104006 | ChannelContinuityLost    | 500         | The Ably channel lost message continuity. The channel entered `FAILED`, `SUSPENDED`, or `DETACHED`, or re-attached with `resumed: false`. Active streams can no longer be guaranteed to receive all events.                       | Surfaced via the session's `on('error')` on both the client and the agent. End active Runs; subsequent operations can resume once the channel reattaches. |
 | 104007 | ChannelNotReady          | 400         | An operation was attempted but the channel is not in a usable state (not `ATTACHED` or `ATTACHING`).                                                                                                                              | Wait for the channel to attach before retrying, or inspect channel state and connection state for the underlying cause.                                           |
 | 104008 | StreamError              | 500         | An error occurred while piping a response stream to the channel. Either the source event stream threw (LLM provider rate limit, model error, network failure) or an underlying publish failed mid-stream.                         | Inspect `cause` for the provider error. End the Run with reason `'error'`. The error is also returned on `StreamResult.error` from `Run.pipe`.                    |
-| 104010 | InputEventNotFound       | 504         | The agent attached to the channel and waited for the input events the invocation points at (rewind + live wait) but `inputEventLookupTimeoutMs` lapsed without seeing them.                                                       | Surface the rejection from `Run.start()` as a non-2xx response so the client's pending send fails. The client retries with a fresh send.                          |
 
 ### Auth and channel errors <a id="platform"/>
 
@@ -63,8 +62,9 @@ Auth and channel errors come from the Ably platform, not AI Transport. The most 
 | 40300 | Forbidden. | The token is valid but not authorised for this resource. |
 | 80000 | Channel attach failed. | Check the channel name and capability. |
 | 90000 | Internal channel error. | Retry the operation. If the error persists, contact support. |
+| 93002 | `Can only update/delete/append messages on channels with mutableMessages enabled`. The namespace lacks the `mutableMessages` rule, so AI Transport cannot append stream tokens. This is the most common AI Transport setup failure. | Enable the **Message annotations, updates, deletes, and appends** rule on the namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules). |
 
-The full Ably error code list lives at [Ably error codes](/docs/sdks/error-codes).
+The full Ably error code list lives at [Ably error codes](/docs/platform/errors/codes).
 
 ## Match an ErrorInfo against a code <a id="error-info-is"/>
 
@@ -86,7 +86,7 @@ session.on('error', (error) => {
 
 ## Example <a id="example"/>
 
-Handle session-level and run-level errors separately. The client subscribes to session errors. The agent uses the `onError` option on `AgentSessionOptions` for session-wide events and the run runtime's `onError` for per-Run failures.
+Handle session-level and run-level errors separately. Both the client and the agent subscribe to session errors with `session.on('error')`. The agent additionally uses the run runtime's `onError` for per-Run failures.
 
 <Code>
 ```javascript
@@ -101,16 +101,13 @@ session.on('error', (error) => {
 });
 
 // Agent side: handle session and run-level errors separately.
-const agentSession = createAgentSession({
-  client: ably,
-  channelName,
-  codec,
-  onError(error) {
-    console.error('Session error:', error);
-  },
-});
+const agentSession = createAgentSession({ client: ably, channelName, codec });
 
 await agentSession.connect();
+
+agentSession.on('error', (error) => {
+  console.error('Session error:', error);
+});
 
 const run = agentSession.createRun(invocation, {
   signal: req.signal,

@@ -1,4 +1,4 @@
-import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { ProductName } from 'src/components/ui/ProductTile/data';
 
 export type ContentLink = {
   text: string;

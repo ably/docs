@@ -1,12 +1,7 @@
 // docs design tokens — originally @ably/ui's Tailwind theme, now owned locally
 // (DX-1128). gui-disabled-* alias gui-unavailable for the disabled-state classes.
 module.exports = {
-  content: [
-    './src/pages/docs/*.{ts,tsx}',
-    './src/components/**/*.{ts,tsx}',
-    './src/templates/**/*.{ts,tsx}',
-    './node_modules/@ably/ui/core/**/*.{js,json}',
-  ],
+  content: ['./src/pages/docs/*.{ts,tsx}', './src/components/**/*.{ts,tsx}', './src/templates/**/*.{ts,tsx}'],
   safelist: [{ pattern: /^hljs.*/ }],
   darkMode: ['selector', '.ui-theme-dark'],
   theme: {
@@ -174,15 +169,15 @@ module.exports = {
         title: ['var(--fs-title)', 'var(--lh-min-normal)'],
         'title-xl': ['var(--fs-title-xl)', 'var(--lh-min-normal)'],
         'title-xs': ['var(--fs-title-xs)', 'var(--lh-min-normal)'],
-        h1: ['var(--fs-h1)', 'var(--lh-dense)'],
+        h1: ['var(--fs-h1)', '1.25'],
         'h1-xl': ['var(--fs-h1-xl)', 'var(--lh-min-normal)'],
         'h1-xs': ['var(--fs-h1-xs)', 'var(--lh-min-normal)'],
-        h2: ['var(--fs-h2)', 'var(--lh-min-normal)'],
+        h2: ['var(--fs-h2)', '1.33'],
         'h2-xl': ['var(--fs-h2-xl)', 'var(--lh-min-normal)'],
         'h2-xs': ['var(--fs-h2-xs)', 'var(--lh-min-normal)'],
-        h3: ['var(--fs-h3)', 'var(--lh-min-normal)'],
-        h4: ['var(--fs-h4)', 'var(--lh-min-normal)'],
-        h5: ['var(--fs-h5)', 'var(--lh-min-normal)'],
+        h3: ['var(--fs-h3)', '1.4'],
+        h4: ['var(--fs-h4)', '1.44'],
+        h5: ['var(--fs-h5)', '1.5'],
         p1: ['var(--fs-p1)', 'var(--lh-relaxed)'],
         p2: ['var(--fs-p2)', 'var(--lh-relaxed)'],
         p3: ['var(--fs-p3)', 'var(--lh-relaxed)'],

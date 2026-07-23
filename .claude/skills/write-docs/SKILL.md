@@ -46,7 +46,7 @@ Eighteen principles govern Ably docs pages, distilled from the AI Transport wire
 14. **Layer 0 hook in the first 5 seconds.** Every page opens with a hook that answers "what is this, why should I care?". The `intro:` frontmatter feeds the auto-generated PageHeader; the body's first paragraph reinforces it. On feature pages, the hook is two sentences: outcome first ("Your users can change direction mid-response"), mechanism second ("AI Transport's session layer lets a client cancel and re-prompt without breaking the stream"). **Per-interface API reference pages are the one exception**: they drop `intro:` and let the opening paragraph carry the hook. Navigational API pages (the API reference hub, the errors page) keep `intro:` like every other page type. See the `## API reference pages` section for the full standard.
 15. **Cover unhappy paths.** Every feature page has an edge-cases section. Race conditions, timeouts, network drops, capability-missing failures, what happens when the LLM errors. This is what separates trusted docs from marketing.
 16. **FAQ with three to five real entries on feature pages.** Surface what developers actually ask. Do not pad to meet a count.
-17. **No API keys in client code.** Ever. Use `authUrl: '/auth'` as the placeholder and link out to `concepts/authentication` (or the equivalent setup page) once.
+17. **No API keys in client code — but server-side agent code is the opposite.** In client (browser) code, never show an API key; use `authUrl: '/auth'` as the placeholder and link out to `concepts/authentication` (or the equivalent setup page) once. In **server-side or agent code** (durable-execution activities, agent routes, workers, anything that runs on your own infrastructure), do the reverse: construct the Realtime client with `new Ably.Realtime({ key: process.env.ABLY_API_KEY })`. An `authUrl` on the server is wrong — there is no browser to fetch a token, and the key is already trusted in that environment. When you see `authUrl` in an agent/server snippet, that is a bug to fix, not a rule to preserve. (The line 380 verification grep excludes `process.env`-sourced keys, so this pattern passes it.)
 18. **Visual rhythm.** Diagram, code block, card layout, or icon table every few paragraphs. No walls of text.
 
 ### Cross-product orientation
@@ -354,6 +354,21 @@ The canonical source is [`writing-style-guide.md`](../../../writing-style-guide.
 
 The style guide takes precedence over anything else in this skill. If a rule here ever conflicts with the style guide, the style guide wins.
 
+Spelling to enforce on every page:
+
+- **"realtime", one word.** Never "real time" or "real-time" when describing Ably delivery ("sees the same conversation in realtime", "realtime messaging"). This is Ably house spelling. Sweep with `grep -rn "real[- ]time" "$P"` and expect zero hits.
+
+### Stay inside the product vocabulary
+
+Use the terms the product actually defines. Do not introduce vocabulary that is not part of the AI Transport domain — not internal-codebase jargon, and not generic AI/ML terms the docs have chosen not to use. A reader who has read the concept pages should never hit a word the docs never taught them.
+
+- **Prefer the named primitives.** The concept pages define the vocabulary: [Session](/docs/ai-transport/concepts/sessions), [Connection](/docs/ai-transport/concepts/connections), [Run](/docs/ai-transport/concepts/runs), [Step](/docs/ai-transport/concepts/steps), [Invocation](/docs/ai-transport/concepts/invocations), [Codec](/docs/ai-transport/concepts/codecs), [conversation tree](/docs/ai-transport/concepts/conversation-tree), and view. Reach for these before inventing a synonym.
+- **Do not leak internal jargon.** Words that name SDK internals but never appear in the concept or API docs (for example `projection`, `RunNode`, or other type names not documented for readers) read as jargon. Use the documented term instead: "the conversation" or "the Run's view", not "the projection"; "the Run" or "the conversation tree", not "`RunNode`".
+- **Do not smuggle in generic AI/ML vocab the docs avoid.** Describe a loop cycle as an "iteration", not a "pass". Describe a model invocation as a "model call" or "response", not an "inference pass". The verb "pass" (to pass an argument, hook, or signal) is fine; the noun "pass" (meaning a loop cycle) is not.
+- **Respect the Run/turn split.** "Run" is the only primitive the docs explain. Use "turn" only in jobs-to-be-done framing (titles, intros, the "concurrent turns" feature name), never as a defined primitive alongside Run.
+
+When a word is genuinely new and needed, define it on first use or link to the concept page that does. If you cannot point to where it is defined, it does not belong on the page.
+
 ## Per-page workflow
 
 1. **Identify the page type.** Pick the matching template above.
@@ -376,7 +391,9 @@ for field in title meta_description meta_keywords intro; do
   find "$P" -name "*.mdx" -exec grep -L "^$field:" {} \;
 done
 
-# No API keys in client code (excluding authUrl)
+# No API keys in client code: flags string-literal keys only.
+# `key: process.env.ABLY_API_KEY` (correct in server/agent code, principle 17) has no
+# quoted literal so it passes. A quoted key in a browser snippet is the real violation.
 grep -rn -E "key\s*:\s*['\"][^'\"]+['\"]" "$P" | grep -v authUrl
 
 # No "docs under construction" / WIP markers
@@ -391,6 +408,14 @@ done
 
 # No em dashes (style guide forbids)
 grep -rn "—" "$P"
+
+# "realtime" is one word (no "real time" / "real-time")
+grep -rn "real[- ]time" "$P"
+
+# No off-vocabulary terms. Noun "pass" (loop cycle), "inference pass", and internal
+# jargon that never appears in the concept/API docs. The verb "pass" (an argument,
+# hook, signal) is fine, so this targets the noun forms and known jargon only.
+grep -rniE "inference pass|\b(this|that|next|current|each|one|its|a|the|per|another) (pass|passes)\b|\bprojection\b|\bRunNode\b" "$P"
 
 # No bold-prefix bullets
 grep -rnE "^\s*[\*\-]\s+\*\*[^*]+:\*\*" "$P"
@@ -472,7 +497,7 @@ When reviewing someone else's docs PR (or your own at PR time), walk this list. 
 **Writing standards**
 
 9. Page complies with the rules in [`writing-style-guide.md`](../../../writing-style-guide.md). Use the verification greps above to spot the common violations (em dashes, bold-prefix bullets, Latin abbreviations, subjective phrases, vague modals, "we" as the subject, AI-fingerprint patterns).
-10. Author ran `/deslop` (or equivalent AI-pattern check).
+10. Page stays inside the product vocabulary — no internal-codebase jargon (`projection`, `RunNode`) and no generic AI/ML terms the docs avoid (noun "pass", "inference pass"). Every non-obvious term is defined on first use or links to the concept page that defines it. Use the off-vocabulary grep above.
 
 **Code accuracy**
 

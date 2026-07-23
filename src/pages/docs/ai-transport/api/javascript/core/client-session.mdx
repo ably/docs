@@ -1,7 +1,7 @@
 ---
 title: "ClientSession"
-meta_description: "API reference for the AI Transport ClientSession: factory, properties, lifecycle methods, and the View interface returned by createView()."
-meta_keywords: "AI Transport, ClientSession, createClientSession, View, Tree, connect, createView, cancel, Ably"
+meta_description: "API reference for the AI Transport ClientSession: factory, properties, lifecycle methods, the ClientRun handle with steer, and the View interface returned by createView()."
+meta_keywords: "AI Transport, ClientSession, createClientSession, ClientRun, steer, View, Tree, connect, createView, cancel, Ably"
 redirect_from:
   - /docs/ai-transport/api-reference/client-transport
   - /docs/ai-transport/api/javascript/client-transport
@@ -15,14 +15,14 @@ Construct one with `createClientSession` from the core entry point. For Vercel `
 ```javascript
 import * as Ably from 'ably';
 import { createClientSession } from '@ably/ai-transport';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 
 const ably = new Ably.Realtime({ authUrl: '/api/auth/token' });
 
 const session = createClientSession({
   client: ably,
   channelName: 'conversation-42',
-  codec: UIMessageCodec,
+  codec: createUIMessageCodec(),
 });
 
 await session.connect();
@@ -61,13 +61,13 @@ await session.connect();
 | runs | `() => RunInfo[]`. Visible Runs along the selected branch. | Function |
 | runOf | `(codecMessageId: string) => RunInfo \| undefined`. Run that owns the message. | Function |
 | run | `(runId: string) => RunInfo \| undefined`. Direct Run lookup by id. | Function |
-| branchSelection | `(codecMessageId: string) => BranchSelection`. Branch siblings at the anchor. | Function |
-| selectSibling | `(codecMessageId: string, index: number) => void`. Select a sibling at the anchor. | Function |
-| hasOlder | `() => boolean`. Whether older Runs can be loaded. | Function |
-| loadOlder | `(limit?: number) => Promise<void>`. Reveal older Runs. | Function |
-| send | `(events, options?) => Promise<ActiveRun>`. Send one or more `TInput`s on the channel and fire a POST. Wrap a domain message via `codec.createUserMessage` to send a fresh user message. | Function |
-| regenerate | `(messageId, options?) => Promise<ActiveRun>`. Regenerate an assistant message. | Function |
-| edit | `(messageId, inputs, options?) => Promise<ActiveRun>`. Edit a user message. | Function |
+| branchSelection | `(codecMessageId: string) => BranchHandle`. The branch siblings at the anchor, plus a `select(index)` verb to switch between them. | Function |
+| hasOlder | `() => boolean`. Whether older messages can be revealed. | Function |
+| loadOlder | `(limit?: number) => Promise<CodecMessage<TMessage>[]>`. Reveal older messages, resolving to the revealed page (oldest-first); `[]` when nothing older was revealed. | Function |
+| loadUntil | `(predicate, signal?) => Promise<CodecMessage<TMessage>[]>`. Page older history back until `predicate` matches a message (the seam), then resolve to the messages newer than it. Drives database-backed hydration. | Function |
+| send | `(events, options?) => Promise<ClientRun<TMessage>>`. Send an input on the channel and fire a POST. At most one new message per send (it mints a fresh Run); the array form carries only wire-only inputs (tool results, approvals) for a continuation. Wrap a domain message via `codec.createUserMessage` to send a fresh user message. | Function |
+| regenerate | `(messageId, options?) => Promise<ClientRun<TMessage>>`. Regenerate an assistant message. | Function |
+| edit | `(messageId, inputs, options?) => Promise<ClientRun<TMessage>>`. Edit a user message. | Function |
 | on | `(event: 'update' \| 'ably-message' \| 'run', handler) => () => void`. Subscribe to view updates, raw Ably messages for visible nodes, or run lifecycle events. Returns an unsubscribe function. | Function |
 | close | `() => void`. Tear down the view. | Function |
 
@@ -83,14 +83,14 @@ Construct a `ClientSession` bound to an Ably channel. The session does not attac
 ```javascript
 import * as Ably from 'ably';
 import { createClientSession } from '@ably/ai-transport';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 
 const ably = new Ably.Realtime({ authUrl: '/api/auth/token' });
 
 const session = createClientSession({
   client: ably,
   channelName: 'conversation-42',
-  codec: UIMessageCodec,
+  codec: createUIMessageCodec(),
 });
 ```
 </Code>
@@ -104,8 +104,8 @@ const session = createClientSession({
 | client | required | The Ably Realtime client. The caller owns its lifecycle; `session.close()` does not close the client. The session's identity is read from this client's `auth.clientId` at publish time, stamped on the wire as the run-owner / input-owner id so other clients can attribute messages. A connection with no concrete clientId (anonymous, or a wildcard `*` token) publishes without one. | `Ably.Realtime` |
 | channelName | required | The channel to subscribe to and publish cancel signals on. The session owns this channel; do not also resolve it elsewhere with conflicting options. | String |
 | codec | required | The codec used to encode and decode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
-| messages | optional | Initial messages to seed the conversation tree with. Forms a linear chain. | `TMessage[]` |
 | channelModes | optional | Extra channel modes to request on top of the modes AI Transport always needs. Pass `OBJECT_MODES` to use Ably LiveObjects via [`object`](#properties). Omit to attach with the default mode set. The session requests the union, so extra modes never drop the modes AI Transport relies on. See [LiveObjects State](/docs/ai-transport/features/liveobjects). | `Ably.ChannelMode[]` |
+| historyPageSize | optional | Wire-message limit fetched per channel-history round trip when paging older history through `view.loadOlder()`, shared by every view on the session. Independent of `loadOlder`'s reveal `limit`: it tunes fetch cost, not reveal granularity. Defaults to 100. | Number |
 | logger | optional | Logger instance for diagnostic output. | `Logger` |
 
 </Table>
@@ -120,7 +120,7 @@ const session = createClientSession({
 
 Subscribe to the channel and implicitly attach. Idempotent: subsequent calls return the same promise.
 
-All write methods on [`view`](/docs/ai-transport/api/javascript/core/client-session#view) and [`cancel`](#cancel) throw `InvalidArgument` until `connect()` resolves.
+All write methods on [`view`](/docs/ai-transport/api/javascript/core/client-session#properties) and [`cancel`](#cancel) throw `InvalidArgument` until `connect()` resolves.
 
 <Code>
 ```javascript
@@ -134,7 +134,7 @@ await session.connect();
 
 ## Create an additional view <a id="create-view"/>
 
-<MethodSignature>{`createView(): View<TInput, TMessage>`}</MethodSignature>
+<MethodSignature>{`createView(): ClientView<TInput, TMessage>`}</MethodSignature>
 
 Create an additional view over the same conversation tree. Each view has independent branch selections and pagination state.
 
@@ -143,7 +143,7 @@ The caller owns the returned view's lifecycle: call its `close()` when it is no 
 <Code>
 ```javascript
 const secondaryView = session.createView();
-secondaryView.selectSibling(messageId, 1);
+secondaryView.branchSelection(messageId).select(1);
 
 // the default view is unaffected
 session.view.branchSelection(messageId).index; // 0
@@ -152,7 +152,7 @@ session.view.branchSelection(messageId).index; // 0
 
 ### Returns <a id="create-view-returns"/>
 
-`View<TInput, TMessage>`. A new view with its own pagination window and branch selection state.
+`ClientView<TInput, TMessage>`. A new view with its own pagination window and branch selection state.
 
 ## Cancel a run <a id="cancel"/>
 
@@ -162,7 +162,7 @@ Publish a cancel signal for the specified Run. The agent receives the cancel thr
 
 <Code>
 ```javascript
-const activeRun = await session.view.send({
+const clientRun = await session.view.send({
   kind: 'user-message',
   message: {
     id: crypto.randomUUID(),
@@ -172,9 +172,9 @@ const activeRun = await session.view.send({
 });
 
 // later, cancel from the UI.
-// activeRun.cancel() works immediately, even before the runId
-// promise on activeRun has resolved.
-await activeRun.cancel();
+// clientRun.cancel() works immediately, even before the agent's
+// run-start has been observed (so clientRun.runId is still empty).
+await clientRun.cancel();
 
 // Or, when you already have a resolved runId (for example from a
 // RunInfo in view.runs()):
@@ -188,13 +188,96 @@ await activeRun.cancel();
 
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
-| runId | required | The Run to cancel. Typically obtained from `ActiveRun.runId` returned by a send. | String |
+| runId | required | The Run to cancel. Typically obtained from `ClientRun.runId` (after awaiting `clientRun.started`), or from a `RunInfo.runId` in `view.runs()`. | String |
 
 </Table>
 
 ### Returns <a id="cancel-returns"/>
 
 `Promise<void>`. Resolves once the cancel message has been published. The cancel is best-effort: if the agent has already ended the Run, the cancel is a no-op.
+
+## ClientRun <a id="client-run"/>
+
+The handle returned by [`view.send`](#properties), `regenerate`, and `edit`. It extends the shared `BaseRun` read-model (`runId`, `status`, `error`, `messages`) with the client's control surface, including the run-scoped [`steer`](#steer) verb.
+
+### Properties <a id="client-run-properties"/>
+
+<Table id='ClientRunProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| runId | The Run's unique identifier, minted by the agent. Empty until the agent's `ai-run-start` is observed; await [`started`](#client-run-properties) before reading it. | String |
+| status | The Run's lifecycle status, read live off the tree. | `RunStatus` |
+| error | The terminal error, present exactly when `status` is `'error'`. | `Ably.ErrorInfo` or Undefined |
+| messages | This Run's whole turn: its originating input followed by the Run's output, deduplicated by `codecMessageId`. | `TMessage[]` |
+| started | Resolves when the agent's `ai-run-start` (or `ai-run-resume`) is observed, the point at which `runId` is populated. No built-in deadline; race it against your own timeout. | `Promise<void>` |
+| inputCodecMessageId | The triggering input's codec-message-id, owned by the client the moment it publishes. Stream routing and cancel key on this, so it is known synchronously, unlike `runId`. | String |
+| inputEventId | The input event's unique identifier, stamped on the published input event and forwarded in the POST body so the agent can locate the trigger. | String |
+
+</Table>
+
+### Steer the run <a id="steer"/>
+
+<MethodSignature>{`steer(input: TInput): SteerResult`}</MethodSignature>
+
+Publish a codec input event that targets this Run. The steering message carries this Run's `run-id` so the agent folds it into the active Run rather than starting a new Run. Pass the same shape [`view.send`](#properties) accepts, typically `codec.createUserMessage(...)`. The SDK awaits `runId` internally, so this is safe to call as soon as the handle is returned. Once an `ai-run-end` has folded for this Run the handle is dead and further `steer()` calls return immediately-rejected promises. See [Interruption and steering](/docs/ai-transport/features/interruption-and-steering).
+
+<Code>
+```javascript
+const { published, outcome } = activeRun.steer(createUIMessageCodec().createUserMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Also include vegan options.' }],
+}));
+
+const { serial } = await published;
+const { consumed, runTerminalReason } = await outcome;
+```
+</Code>
+
+#### Parameters <a id="steer-params"/>
+
+<Table id='SteerParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| input | required | The codec input event to publish, in the codec's input shape. Wrap a domain message via `codec.createUserMessage` for a follow-up user message. | `TInput` |
+
+</Table>
+
+#### Returns <a id="steer-returns"/>
+
+`SteerResult`. Two promises: `published` for the channel-publish acknowledgement, and `outcome` for the consumed determination resolved at the Run's next terminal event. <Table id='SteerResult'/>
+
+<Table id='SteerResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| published | Resolves when the steering message is published to the channel, carrying the Ably-assigned `serial`. Rejects if the publish (or the internal `runId` await) fails. | `Promise<{ serial: string \| undefined }>` |
+| outcome | A `Promise` that resolves once a terminal lifecycle event (`ai-run-end`, or `ai-run-suspend` for a consumed steering message) folds for the Run. Rejects if the handle dies first (for example the session closes). | <Table id='SteerOutcome'/> |
+
+</Table>
+
+<Table id='SteerOutcome' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| consumed | `true` when the steering message's codec-message-id appears in the union of `steer-codec-message-ids` stamps on the Run's responses (the agent's loop had it visible when it produced that response), `false` when it never appeared before `ai-run-end`. For an `ai-run-suspend` a not-consumed steering message stays pending. | Boolean |
+| runTerminalReason | How the Run ended, present when the outcome was determined by an `ai-run-end`. Absent when determined by an `ai-run-suspend`, since the Run has not ended. | `RunEndReason` |
+
+</Table>
+
+### Cancel the run <a id="client-run-cancel"/>
+
+<MethodSignature>{`cancel(): Promise<void>`}</MethodSignature>
+
+Cancel this specific Run. Keyed by [`inputCodecMessageId`](#client-run-properties), which the client owns synchronously, so a cancel issued before the agent mints the `runId` is still honoured (the agent buffers it and fires it once its input-event watcher matches the trigger). Resolves once the cancel is published; it does not wait for [`started`](#client-run-properties).
+
+### Build the invocation <a id="to-invocation"/>
+
+<MethodSignature>{`toInvocation(): Invocation`}</MethodSignature>
+
+Build the [`Invocation`](/docs/ai-transport/api/javascript/core/agent-session#invocation) pointer for this Run, carrying only `inputEventId` and the session's channel name. POST `run.toInvocation().toJSON()` to your agent endpoint to wake the agent; run identity lives on the channel, not in the invocation body.
 
 ## Subscribe to session errors <a id="on"/>
 
@@ -259,14 +342,14 @@ End-to-end usage covering construction, connect, send, and teardown.
 ```javascript
 import * as Ably from 'ably';
 import { createClientSession } from '@ably/ai-transport';
-import { UIMessageCodec } from '@ably/ai-transport/vercel';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
 
 const ably = new Ably.Realtime({ authUrl: '/api/auth/token' });
 
 const session = createClientSession({
   client: ably,
   channelName: 'conversation-42',
-  codec: UIMessageCodec,
+  codec: createUIMessageCodec(),
 });
 
 await session.connect();
@@ -275,7 +358,7 @@ session.view.on('update', () => {
   render(session.view.getMessages().map(({ message }) => message));
 });
 
-const activeRun = await session.view.send(UIMessageCodec.createUserMessage({
+const clientRun = await session.view.send(createUIMessageCodec().createUserMessage({
   id: crypto.randomUUID(),
   role: 'user',
   parts: [{ type: 'text', text: 'Plan a 3-day trip to Lisbon.' }],
@@ -285,12 +368,13 @@ const activeRun = await session.view.send(UIMessageCodec.createUserMessage({
 await fetch('/api/chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(activeRun.toInvocation().toJSON()),
+  body: JSON.stringify(clientRun.toInvocation().toJSON()),
 });
 
-// The agent assigns the runId on the server, so activeRun.runId is a
-// Promise. Await it to read the id.
-const runId = await activeRun.runId;
+// The agent mints the runId on the server, so clientRun.runId is empty
+// until run-start is observed. Await `started`, then read it.
+await clientRun.started;
+const runId = clientRun.runId;
 
 await session.close();
 ably.close();

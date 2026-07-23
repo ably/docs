@@ -7,6 +7,7 @@ import cn from 'src/utilities/cn';
 import type { PageContextType } from './Layout';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Button from 'src/components/ui/Button';
+import ThemeToggle from './ThemeToggle';
 import { HandRaisedIcon, HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline';
 import {
   HandRaisedIcon as HandRaisedSolidIcon,
@@ -171,6 +172,17 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
     let path = '#';
     const pathName = location.pathname.replace('docs/', '');
 
+    // Error-code pages are generated from the ably-common registry, not authored
+    // in this repo. Point edits at the source file there; hide the link for the
+    // generated aggregate index (no single source file).
+    const errorCodeMatch = pathName.match(/^\/platform\/errors\/codes\/(\d+)\/?$/);
+    if (errorCodeMatch) {
+      return `https://github.com/ably/ably-common/blob/main/errors/codes/${errorCodeMatch[1]}.md`;
+    }
+    if (pathName === '/platform/errors/codes' || pathName === '/platform/errors/codes/') {
+      return null;
+    }
+
     if (customGithubPaths[pathName]) {
       path = customGithubPaths[pathName];
     } else if (activePage.template === 'mdx') {
@@ -280,7 +292,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
 
         <div className="flex flex-wrap items-center gap-5">
           {lastUpdated && (
-            <span className="ui-text-p4 text-neutral-800 dark:text-neutral-500 border-r border-neutral-300 dark:border-neutral-1000 pr-5">
+            <span className="ui-text-p4 text-neutral-800 dark:text-neutral-500 border-r border-neutral-300 dark:border-neutral-1100 pr-5">
               Last updated: {lastUpdated}
             </span>
           )}
@@ -293,7 +305,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
         </div>
       </div>
 
-      <div className="mt-8 border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
+      <div className="mt-8 border border-x-0 border-y-neutral-300 dark:border-y-neutral-1100 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
         <div className="flex gap-5 items-center flex-1">
           <span className="ui-text-p3 font-semibold text-neutral-1300 dark:text-neutral-000">Find us on</span>
           <div className="flex gap-1 items-center">
@@ -329,11 +341,14 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
             </div>
           ))}
         </div>
-        <Status
-          additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
-          statusUrl={StatusUrl}
-          showDescription
-        />
+        <div className="flex flex-col items-end gap-3">
+          <Status
+            additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1100 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
+            statusUrl={StatusUrl}
+            showDescription
+          />
+          <ThemeToggle />
+        </div>
       </div>
     </footer>
   );
