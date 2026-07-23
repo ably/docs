@@ -2,10 +2,9 @@ import React, { useCallback } from 'react';
 import Badge from 'src/components/ui/Badge';
 import Icon from 'src/components/Icon';
 import { IconName } from 'src/components/Icon/types';
-import { ProductName, products as dataProducts } from 'src/components/ui/ProductTile/data';
 import cn from 'src/utilities/cn';
 import { Image, ImageProps } from '../Image';
-import { DEFAULT_EXAMPLE_LANGUAGES } from '../../data/examples/';
+import { DEFAULT_EXAMPLE_LANGUAGES, products as dataProducts } from '../../data/examples/';
 import { Example } from '../../data/examples/types';
 
 const ExamplesGrid = ({
@@ -22,17 +21,17 @@ const ExamplesGrid = ({
     return productImage ? <Image image={productImage} alt={name} className="h-full" /> : null;
   }, []);
 
-  const badgeColorForProduct = useCallback((product: ProductName) => {
+  const badgeColorForProduct = useCallback((product: string) => {
     switch (product) {
+      case 'platform':
+        return 'text-slate-600';
       case 'chat':
         return 'text-violet-400';
       case 'spaces':
         return 'text-pink-500';
-      case 'liveSync':
-        return 'text-blue-600';
-      case 'liveObjects':
+      case 'liveobjects':
         return 'text-green-600';
-      case 'aiTransport':
+      case 'ai_transport':
         return 'text-cyan-500';
       default:
         return 'text-orange-700';
@@ -40,7 +39,7 @@ const ExamplesGrid = ({
   }, []);
 
   const displayProductLabel = useCallback(
-    (product: ProductName, dataProducts: { [key: string]: { label: string } }) =>
+    (product: string, dataProducts: { [key: string]: { label: string } }) =>
       dataProducts[product] ? (
         <Badge key={product} className={cn('uppercase', badgeColorForProduct(product))}>
           {dataProducts[product].label}
@@ -100,7 +99,7 @@ const ExamplesGrid = ({
             <p className="ui-text-h4 text-neutral-1300 dark:text-neutral-000">{highlightSearchTerm(name)}</p>
             <p className="ui-text-p3 mt-2 text-neutral-900 dark:text-neutral-500">{highlightSearchTerm(description)}</p>
             <div className="mt-4 flex gap-x-1">
-              {products ? products.map((product) => displayProductLabel(product as ProductName, dataProducts)) : null}
+              {products ? products.map((product) => displayProductLabel(product, dataProducts)) : null}
               {/* {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase)) : null} */}
             </div>
           </div>
