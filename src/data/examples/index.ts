@@ -17,7 +17,7 @@ export const examples: Example[] = [
     id: 'auth-generate-jwt',
     name: 'Generate JWT',
     description: 'Generate a JSON Web Token (JWT) for authenticating users.',
-    products: ['auth'],
+    products: ['platform'],
     layout: 'single-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
     metaTitle: `Authenticate with Ably using JWTs`,
@@ -27,7 +27,7 @@ export const examples: Example[] = [
     id: 'auth-request-token',
     name: 'Request an Ably Token',
     description: 'Request an Ably Token for authenticating users. JWTs are recommended for most use cases.',
-    products: ['auth'],
+    products: ['platform'],
     layout: 'single-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
     metaTitle: `Authenticate with Ably Token`,
@@ -342,8 +342,8 @@ export const examples: Example[] = [
 ];
 
 export const products = {
-  auth: {
-    label: 'Authentication',
+  platform: {
+    label: 'Platform',
   },
   pubsub: {
     label: 'Pub/Sub',
@@ -351,14 +351,14 @@ export const products = {
   chat: {
     label: 'Chat',
   },
-  liveobjects: {
-    label: 'LiveObjects',
+  ai_transport: {
+    label: 'AI Transport',
   },
   spaces: {
     label: 'Spaces',
   },
-  ai_transport: {
-    label: 'AI Transport',
+  liveobjects: {
+    label: 'LiveObjects',
   },
 };
 
