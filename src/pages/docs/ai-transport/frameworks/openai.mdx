@@ -1,0 +1,114 @@
+---
+title: "OpenAI Responses"
+meta_description: "How Ably AI Transport integrates with the OpenAI Responses API. The ResponsesCodec encodes the Responses event stream onto an Ably channel, and toResponsesInput feeds the conversation back to the model."
+meta_keywords: "AI Transport, OpenAI, Responses API, ResponsesCodec, toResponsesInput, function calling, reasoning, durable sessions, server"
+intro: "The OpenAI Responses API streams model output as typed events over HTTP. AI Transport's ResponsesCodec encodes that stream onto an Ably channel, so the same server code feeds durable sessions instead of an ephemeral HTTP response."
+---
+
+The [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) is OpenAI's interface for calling a model and getting back a stream of typed events: output text, reasoning, refusals, function-call arguments, and lifecycle events. AI Transport writes that stream to an Ably channel, so reconnects, multi-device, and bidirectional control come for free.
+
+The `ResponsesCodec` from `@ably/ai-transport/openai` passes each raw Responses event through to the channel and reassembles the conversation on the client. There is no OpenAI-specific transport, so you use the generic [`createAgentSession`](/docs/ai-transport/api/javascript/core/agent-session) from `@ably/ai-transport` and pass it the codec.
+
+To build a working app with this codec, see [Get started with OpenAI](/docs/ai-transport/getting-started/openai).
+
+## What the OpenAI Responses API brings <a id="openai-brings"/>
+
+The `openai` npm package owns the model call and the typed event model:
+
+| Capability | Description |
+| --- | --- |
+| Responses streaming | `client.responses.create({ stream: true })` returns a stream of `ResponseStreamEvent`s: output-text deltas, reasoning, refusals, function-call arguments, and item lifecycle events. |
+| Server-side tools | You advertise function tools on the request. The model emits function calls, you run them, and you feed the outputs back on the next Responses API call. |
+| Reasoning models | Reasoning items carry the model's summarised thinking, and `encrypted_content` for the no-store, zero-data-retention round trip. |
+| Round-trippable items | Each output item the codec stores is also valid Responses API input, so the conversation feeds the next turn without conversion. |
+| Typed SDK | The official SDK owns auth, the HTTP call, streaming, and the Responses type definitions. |
+
+## What AI Transport adds <a id="ait-adds"/>
+
+AI Transport adds to the Responses API, writing the model stream to a durable session that outlives any single connection:
+
+| Capability | Description |
+| --- | --- |
+| Durable sessions | Tokens flow through an Ably channel that outlives any single connection. A client reconnects and resumes from where it left off. |
+| Multi-device sync | Every device subscribed to the session sees the same conversation in realtime. |
+| Bidirectional control | Cancel, steer, and interrupt the agent from any client. No separate control channel. |
+| Active run tracking | `view.runs()` exposes which clients have Runs streaming and which Runs are in progress. |
+| Conversation branching | Edit and regenerate create forks in the conversation tree, not destructive replacements. |
+| History and replay | Load the full conversation on reconnect, page refresh, or new device join. |
+| Token compaction | Reconnecting clients receive accumulated responses, not a replay of every token. |
+
+These are the same capability bullets used on the [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) page; the session surface is the same whichever model layer you integrate against.
+
+## Where they connect <a id="how-they-connect"/>
+
+On the server, AI Transport swaps the HTTP response sink for `Run.pipe()`. Without it, the OpenAI SDK gives you no helper for forwarding a Responses stream over HTTP, so you serialise each event into a Server-Sent Events response by hand:
+
+<Code>
+```javascript
+const encoder = new TextEncoder();
+return new Response(
+  new ReadableStream({
+    async start(controller) {
+      for await (const event of stream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      }
+      controller.close();
+    },
+  }),
+  { headers: { 'Content-Type': 'text/event-stream' } },
+);
+```
+</Code>
+
+With AI Transport, a raw `ResponseStreamEvent` is already valid codec output and `run.pipe` takes the SDK's async iterable directly, so the same stream reaches a durable session in two lines, and every subscribed client resumes, syncs, and cancels it:
+
+<Code>
+```javascript
+const { reason } = await run.pipe(stream);
+await run.end({ reason });
+```
+</Code>
+
+The integration has three pieces:
+
+1. The `ResponsesCodec` from `@ably/ai-transport/openai` encodes each `ResponseStreamEvent` as Ably messages and reassembles them into `OpenAIMessage`s on the client. It streams assistant text, refusals, reasoning, and function-call arguments, and repairs a client that joins a stream mid-way. The codec passes the raw events through, so the wire tracks OpenAI's own event model.
+2. `createAgentSession({ client, channelName, codec: ResponsesCodec })` from `@ably/ai-transport` constructs the agent session bound to the channel from the invocation.
+3. `run.pipe()` reads the model's event stream, encodes each event, and publishes the resulting Ably messages. `run.abortSignal` wires cancellation through from the client to the Responses API request.
+
+To feed the next turn, `toResponsesInput` flattens the conversation read from `run.view` back into the Responses `input` array. Each stored `OpenAIMessage` already holds valid Responses input items, so the flatten needs no conversion:
+
+<Code>
+```javascript
+import { toResponsesInput } from '@ably/ai-transport/openai';
+
+while (run.view.hasOlder()) {
+  await run.view.loadOlder();
+}
+const input = toResponsesInput(run.view.getMessages().map(({ message }) => message));
+```
+</Code>
+
+## Run server-side tools <a id="tools"/>
+
+A Responses stream never carries a function call's *output*. OpenAI surfaces tool output only as model input on the next turn, so the codec adds one event of its own, `function_call_output`, for the agent to publish after it runs a tool.
+
+Server-executed tools do not suspend the Run. The agent runs an agentic loop: call the Responses API, and if the model emits function calls, run them, append the model's output items and the tool outputs to the input, and call it again. The loop continues until the model produces a reply with no tool calls. Each unit of work publishes under its own `run.pipe`, so a Run that calls one tool produces three messages: the turn that emitted the calls, the tool outputs, and the final text turn.
+
+For reasoning models, the loop must re-append the whole turn's output items, including the reasoning items that preceded a function call, since reasoning models expect that reasoning to travel with the call on the next request. The [runnable demo](https://github.com/ably/ably-ai-transport-js) implements the full loop.
+
+<Aside data-type='note'>
+The Run outcome for the OpenAI codec is text-only today: `complete`, `cancelled`, or `error`. A run-outcome mapper that forwards an in-band model failure lands with the client-side tool and approval increments.
+</Aside>
+
+## Scope and trade-offs <a id="scope"/>
+
+The `ResponsesCodec` is scoped to the streamed shapes the Responses API produces: assistant text, refusals, reasoning (summary and raw), and server-executed function calls. Client-side tools, hosted tools, and approval-gated tools are not yet supported; the codec exposes the user-message and regenerate input variants, with the tool variants to follow.
+
+The codec transmits the raw Responses events rather than a normalised abstraction. The wire therefore tracks OpenAI's own event model, which keeps stored items round-trippable to the Responses API but ties a conversation to the Responses shape. To integrate a different model provider behind one abstraction, use [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) instead.
+
+## Read next <a id="next"/>
+
+- [Get started with OpenAI](/docs/ai-transport/getting-started/openai): build a working app.
+- [Codecs](/docs/ai-transport/concepts/codecs): how a codec translates a framework's events into Ably messages.
+- [Tool calling](/docs/ai-transport/features/tool-calling): the tool-calling model across the SDK.
+- [Agent session API reference](/docs/ai-transport/api/javascript/core/agent-session): the full API surface for the agent session.
