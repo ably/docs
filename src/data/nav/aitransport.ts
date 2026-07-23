@@ -24,6 +24,10 @@ export default {
               link: '/docs/ai-transport/getting-started/core-sdk',
             },
             {
+              name: 'OpenAI',
+              link: '/docs/ai-transport/getting-started/openai',
+            },
+            {
               name: 'Vercel AI SDK',
               link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
             },
@@ -86,6 +90,10 @@ export default {
     {
       name: 'Frameworks',
       pages: [
+        {
+          name: 'OpenAI',
+          link: '/docs/ai-transport/frameworks/openai',
+        },
         {
           name: 'Vercel AI SDK UI',
           link: '/docs/ai-transport/frameworks/vercel-ai-sdk-ui',
