@@ -1,0 +1,14 @@
+import * as React from "react";
+import type { SVGProps } from "react";
+import { Ref, forwardRef } from "react";
+interface SVGRProps {
+  title?: string;
+  titleId?: string;
+}
+const IconTechPython = ({
+  title,
+  titleId,
+  ...props
+}: SVGProps<SVGSVGElement> & SVGRProps, ref: Ref<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" width={48} height={48} fill="none" viewBox="0 0 48 48" ref={ref} aria-labelledby={titleId} {...props}>{title ? <title id={titleId}>{title}</title> : null}<defs><radialGradient id="paint0_radial_1031_1963" cx={0} cy={0} r={1} gradientTransform="matrix(0 -2.48291 56.2936 0 23.895 45.735)" gradientUnits="userSpaceOnUse"><stop stopColor="#C6C6C6" /><stop offset={1} stopColor="#fff" /></radialGradient><radialGradient id="paint1_radial_1031_1963" cx={0} cy={0} r={1} gradientTransform="matrix(0 -2.48291 56.2936 0 23.895 45.735)" gradientUnits="userSpaceOnUse"><stop stopColor="#C6C6C6" /><stop offset={1} stopColor="#fff" /></radialGradient><linearGradient id="paint2_linear_1031_1963" x1={38.828} x2={30.863} y1={27.877} y2={16.841} gradientUnits="userSpaceOnUse"><stop stopColor="#FFD33A" /><stop offset={1} stopColor="#FFE873" /></linearGradient><clipPath id="clip0_1031_1963"><path fill="#fff" d="M0 0h48v48H0z" /></clipPath></defs><g fillRule="evenodd" clipPath="url(#clip0_1031_1963)" clipRule="evenodd"><path fill="url(#paint0_radial_1031_1963)" d="M23.895 48.218c-7.073 0-12.807-1.112-12.807-2.483s5.734-2.483 12.807-2.483 12.807 1.112 12.807 2.483-5.734 2.483-12.807 2.483" /><path fill="url(#paint1_radial_1031_1963)" d="M23.895 48.218c-7.073 0-12.807-1.112-12.807-2.483s5.734-2.483 12.807-2.483 12.807 1.112 12.807 2.483-5.734 2.483-12.807 2.483" /><path fill="url(#paint2_linear_1031_1963)" d="M29.156 33.479c.99 0 1.793.811 1.793 1.815 0 1.007-.803 1.827-1.794 1.827-.987 0-1.793-.82-1.793-1.827 0-1.004.806-1.815 1.794-1.815m5.368-23.046v4.244c0 3.29-2.79 6.059-5.97 6.059h-9.546c-2.614 0-4.778 2.238-4.778 4.857v9.1c0 2.59 2.252 4.113 4.778 4.856 3.025.89 5.926 1.05 9.546 0 2.406-.696 4.778-2.099 4.778-4.856V31.05h-9.546v-1.215H38.11c2.778 0 3.813-1.937 4.78-4.845.997-2.993.954-5.872 0-9.713-.687-2.765-1.998-4.845-4.78-4.845z" /><path fill="#4786CF" d="M4 20.149v-.052c.003-1.506.232-2.99.673-4.819.76-3.176 3.193-4.845 5.97-4.845h13.143V9.22H14.23V5.577c0-2.758.734-4.254 4.778-4.968a27.3 27.3 0 0 1 4.567-.39 30 30 0 0 1 4.979.39c2.593.432 4.778 2.378 4.778 4.968v9.1c0 2.669-2.121 4.856-4.778 4.856h-9.546c-3.24 0-5.97 2.782-5.97 5.937v4.366H9.752c-2.778 0-4.4-2.015-5.08-4.845-.45-1.869-.67-3.368-.672-4.842M18.407 3.148c-.991 0-1.794.82-1.794 1.827 0 1.003.803 1.815 1.794 1.815.987 0 1.793-.812 1.793-1.815 0-1.008-.806-1.827-1.793-1.827" /></g></svg>;
+const ForwardRef = forwardRef(IconTechPython);
+export default ForwardRef;

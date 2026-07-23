@@ -1,0 +1,129 @@
+---
+title: "Errors"
+meta_description: "ErrorInfo type and numeric error codes for Ably AI Transport. Codes, descriptions, HTTP status, and recovery guidance."
+meta_keywords: "AI Transport errors, ErrorInfo, error codes, error handling, errorInfoIs, Ably"
+intro: "The ErrorInfo type that every AI Transport failure path surfaces, the numeric codes you match against, and the patterns for handling errors on the client and the agent."
+redirect_from:
+  - /docs/ai-transport/api-reference/error-codes
+  - /docs/ai-transport/api-reference/errors
+---
+
+Every failure surfaces as an `ErrorInfo` object. The same type covers AI Transport-specific failures, Ably platform errors (auth, channel attach, rate limits), and underlying network errors. Match against a specific code with the `errorInfoIs` utility.
+
+## ErrorInfo <a id="errorinfo"/>
+
+The `ErrorInfo` type is exported from `ably`. AI Transport surfaces it as the rejection reason on every promise that can fail, and as the argument to every `on('error')` listener.
+
+### Properties
+
+<Table id='ErrorInfoProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| code | Ably error code. Match against this with `errorInfoIs` to identify a specific failure. | Number |
+| message | Human-readable description of the error. | String |
+| statusCode | HTTP-equivalent status code for the error. | Number |
+| cause | The underlying cause of the error, when applicable. | `ErrorInfo` or Undefined |
+| detail | Structured metadata associated with the error. | `Record<string, string>` or Undefined |
+
+</Table>
+
+## AI Transport error codes <a id="reference"/>
+
+### General errors <a id="general"/>
+
+| Code  | Name                   | HTTP status | Description                                                                                          | Recovery                                                                                          |
+| ----- | ---------------------- | ----------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 40000 | BadRequest             | 400         | The request was malformed or missing required fields.                                                | Check the request payload and ensure all required fields are present.                             |
+| 40003 | InvalidArgument        | 400         | An argument passed to a session or run method was invalid.                                           | Verify the arguments match the expected types and constraints.                                    |
+| 40160 | InsufficientCapability | 401         | The Ably channel rejected a publish for a capability reason. The token does not permit the operation. | Add the missing capability to the token. See [authentication](/docs/ai-transport/concepts/authentication). |
+
+### Session and run errors <a id="session-run"/>
+
+| Code   | Name                     | HTTP status | Description                                                                                                                                                                                                                       | Recovery                                                                                                                                                          |
+| ------ | ------------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 104000 | EncoderRecoveryFailed    | 500         | The encoder failed to recover after a publish error. One or more `updateMessage` calls could not recover a failed append pipeline.                                                                                                | End the Run with reason `'error'` and start a new one. The client sees the partial response up to the failure point.                                              |
+| 104001 | SessionSubscriptionError | 500         | A session-level channel subscription callback threw unexpectedly.                                                                                                                                                                 | Check the subscription callback for unhandled exceptions. Inspect the underlying error for details.                                                               |
+| 104002 | CancelListenerError      | 500         | The cancel listener or `onCancel` hook threw while processing a cancel message.                                                                                                                                                   | Check the `onCancel` hook for unhandled exceptions. The Run may not respond to subsequent cancels.                                                                |
+| 104003 | RunLifecycleError        | 500         | A publish within a Run failed (lifecycle event, message, or codec event).                                                                                                                                                         | Check channel permissions and connection state. Surface the error to the calling HTTP handler so the client's pending send fails.                                 |
+| 104004 | SessionClosed            | 400         | An operation was attempted on a session that has already been closed.                                                                                                                                                             | Create a new session. Do not reuse a closed session.                                                                                                              |
+| 104005 | SessionSendFailed        | 500         | A send failed: either the core's channel publish failed, or the Vercel chat transport's agent-invocation POST failed (network error or non-2xx response).                                                                                                                                                   | Check the API endpoint URL, network connectivity, and authentication. Inspect the underlying error for details.                                                   |
+| 104006 | ChannelContinuityLost    | 500         | The Ably channel lost message continuity. The channel entered `FAILED`, `SUSPENDED`, or `DETACHED`, or re-attached with `resumed: false`. Active streams can no longer be guaranteed to receive all events.                       | Surfaced via the session's `on('error')` on both the client and the agent. End active Runs; subsequent operations can resume once the channel reattaches. |
+| 104007 | ChannelNotReady          | 400         | An operation was attempted but the channel is not in a usable state (not `ATTACHED` or `ATTACHING`).                                                                                                                              | Wait for the channel to attach before retrying, or inspect channel state and connection state for the underlying cause.                                           |
+| 104008 | StreamError              | 500         | An error occurred while piping a response stream to the channel. Either the source event stream threw (LLM provider rate limit, model error, network failure) or an underlying publish failed mid-stream.                         | Inspect `cause` for the provider error. End the Run with reason `'error'`. The error is also returned on `StreamResult.error` from `Run.pipe`.                    |
+
+### Auth and channel errors <a id="platform"/>
+
+Auth and channel errors come from the Ably platform, not AI Transport. The most common codes you encounter:
+
+| Code | Description | Recovery |
+| --- | --- | --- |
+| 40142 | Token expired. | Refresh the token (handled automatically with `authUrl`/`authCallback`). |
+| 40300 | Forbidden. | The token is valid but not authorised for this resource. |
+| 80000 | Channel attach failed. | Check the channel name and capability. |
+| 90000 | Internal channel error. | Retry the operation. If the error persists, contact support. |
+| 93002 | `Can only update/delete/append messages on channels with mutableMessages enabled`. The namespace lacks the `mutableMessages` rule, so AI Transport cannot append stream tokens. This is the most common AI Transport setup failure. | Enable the **Message annotations, updates, deletes, and appends** rule on the namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules). |
+
+The full Ably error code list lives at [Ably error codes](/docs/platform/errors/codes).
+
+## Match an ErrorInfo against a code <a id="error-info-is"/>
+
+<MethodSignature>{`errorInfoIs(errorInfo: Ably.ErrorInfo, error: ErrorCode): boolean`}</MethodSignature>
+
+`errorInfoIs` returns `true` if the `ErrorInfo`'s `code` matches the supplied `ErrorCode`. Use it in error handlers to branch on specific failures without writing string comparisons against the message.
+
+<Code>
+```javascript
+import { errorInfoIs, ErrorCode } from '@ably/ai-transport';
+
+session.on('error', (error) => {
+  if (errorInfoIs(error, ErrorCode.SessionClosed)) {
+    reconnect();
+  }
+});
+```
+</Code>
+
+## Example <a id="example"/>
+
+Handle session-level and run-level errors separately. Both the client and the agent subscribe to session errors with `session.on('error')`. The agent additionally uses the run runtime's `onError` for per-Run failures.
+
+<Code>
+```javascript
+import { errorInfoIs, ErrorCode } from '@ably/ai-transport';
+
+// Client side: subscribe to session-level errors.
+session.on('error', (error) => {
+  console.error(`Error ${error.code}: ${error.message}`);
+  if (errorInfoIs(error, ErrorCode.ChannelContinuityLost)) {
+    showReconnectBanner();
+  }
+});
+
+// Agent side: handle session and run-level errors separately.
+const agentSession = createAgentSession({ client: ably, channelName, codec });
+
+await agentSession.connect();
+
+agentSession.on('error', (error) => {
+  console.error('Session error:', error);
+});
+
+const run = agentSession.createRun(invocation, {
+  signal: req.signal,
+  onError(error) {
+    console.error('Run error:', error);
+  },
+});
+
+// End a Run with reason 'error' when piping fails.
+try {
+  const result = await run.pipe(llmStream);
+  await run.end({ reason: result.reason });
+} catch (error) {
+  await run.end({ reason: 'error' });
+}
+```
+</Code>
+
+To give clients specific detail, optionally pass an `Ably.ErrorInfo`: `run.end({ reason: 'error', error: new Ably.ErrorInfo(message, code, statusCode) })`. Omit `error` to end in error without detail and the client sees a generic fallback; either way clients read it from `RunInfo.error` and the session `error` event.

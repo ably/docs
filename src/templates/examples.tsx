@@ -1,8 +1,9 @@
-import React, { PropsWithChildren, useContext, useEffect, useRef } from 'react';
+import React, { PropsWithChildren, isValidElement, useContext, useEffect, useRef } from 'react';
 import Markdown from 'markdown-to-jsx/react';
 import { Link } from 'gatsby';
-import Icon from '@ably/ui/core/Icon';
-import LinkButton from '@ably/ui/core/LinkButton';
+import LinkButton from 'src/components/ui/LinkButton';
+import Icon from 'src/components/Icon';
+import PlainCodeView from 'src/components/ui/CodeSnippet/PlainCodeView';
 import { UnstyledOpenInCodeSandboxButton } from '@codesandbox/sandpack-react';
 
 import { Head } from '../components/Head';
@@ -12,37 +13,97 @@ import UserContext from 'src/contexts/user-context';
 import { getApiKey } from 'src/utilities/update-ably-connection-keys';
 import ExamplesRenderer from 'src/components/Examples/ExamplesRenderer';
 import { LanguageKey } from 'src/data/languages/types';
+import { ChevronLeftIcon } from '@heroicons/react/16/solid';
+import { CodeBracketIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 
 const MarkdownOverrides = {
+  // Headings map to the docs type scale + vertical rhythm. Elements are shifted down
+  // one level (h1->h2, h2->h3, ...) because the example name is already the page <h1>.
   h1: {
-    component: ({ children }: PropsWithChildren) => <h2 className="ui-text-h1">{children}</h2>,
+    component: ({ children }: PropsWithChildren) => <h2 className="ui-text-h1 mb-6">{children}</h2>,
   },
   h2: {
-    component: ({ children }: PropsWithChildren) => <h3 className="ui-text-h3">{children}</h3>,
+    component: ({ children }: PropsWithChildren) => <h3 className="ui-text-h2 mt-12 mb-6">{children}</h3>,
   },
   h3: {
-    component: ({ children }: PropsWithChildren) => <h4 className="ui-text-h4">{children}</h4>,
+    component: ({ children }: PropsWithChildren) => <h4 className="ui-text-h3 mt-8 mb-5">{children}</h4>,
+  },
+  h4: {
+    component: ({ children }: PropsWithChildren) => <h5 className="ui-text-h4 mt-7 mb-4">{children}</h5>,
   },
   p: {
-    component: ({ children }: PropsWithChildren) => <p className="ui-text-p1">{children}</p>,
+    component: ({ children }: PropsWithChildren) => <p className="ui-text-p1 mb-3">{children}</p>,
   },
   ul: {
-    component: ({ children }: PropsWithChildren) => <ul className="ui-text-p1 list-disc ml-6">{children}</ul>,
+    component: ({ children }: PropsWithChildren) => <ul className="ui-unordered-list">{children}</ul>,
   },
   ol: {
-    component: ({ children }: PropsWithChildren) => (
-      <ol className="ui-text-p1 list-decimal ml-6 [&_pre]:-ml-5 [&_pre]:mt-3 [&_pre]:mb-6">{children}</ol>
+    // markdown-to-jsx splits the list into one <ol> per step when code fences sit
+    // between items (README fences are indented 4 spaces). It sets `start` on each <ol> to keep numbering continuous, so forward it.
+    component: ({ children, ...props }: PropsWithChildren<{ start?: number }>) => (
+      <ol {...props} className="ui-ordered-list">
+        {children}
+      </ol>
     ),
+  },
+  li: {
+    component: ({ children }: PropsWithChildren) => <li className="ui-text-p1 mb-1">{children}</li>,
   },
   pre: {
-    component: ({ children }: PropsWithChildren) => (
-      <pre className="ui-text-code flex bg-neutral-100 dark:bg-neutral-1200 px-4 py-6 rounded-lg w-full">
-        {children}
-      </pre>
-    ),
+    // Shell/terminal commands render through the shared terminal component (PlainCodeView),
+    // matching the docs. Anything else falls back to a plain styled <pre>.
+    component: ({ children }: PropsWithChildren) => {
+      const codeEl = children as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
+      const language = isValidElement(codeEl)
+        ? (codeEl.props.className?.match(/lang(?:uage)?-([\w-]+)/)?.[1] ?? '')
+        : '';
+      const kids = isValidElement(codeEl) ? codeEl.props.children : undefined;
+      const content =
+        typeof kids === 'string'
+          ? kids
+          : Array.isArray(kids)
+            ? kids.filter((c): c is string => typeof c === 'string').join('')
+            : '';
+      const isTerminal = ['sh', 'bash', 'zsh', 'shell', 'text'].includes(language);
+
+      // `!mb-6` is important because when a code block is the last child of a list
+      // item, `.ui-ordered-list li > *:last-of-type` (specificity 0,2,3) zeroes its
+      // bottom margin. We want code to keep a full 24px top and bottom like elsewhere.
+      if (content && isTerminal) {
+        return (
+          <PlainCodeView
+            content={content}
+            language={language}
+            icon={language === 'text' ? null : <CommandLineIcon aria-hidden />}
+            className="mt-6 !mb-6"
+          />
+        );
+      }
+
+      return (
+        <pre className="ui-text-code flex bg-neutral-100 dark:bg-neutral-1200 px-4 py-6 rounded-lg w-full mt-6 !mb-6">
+          {children}
+        </pre>
+      );
+    },
   },
   code: {
-    component: ({ children }: PropsWithChildren) => <code className="ui-text-code font-bold">{children}</code>,
+    // Fenced (block) code carries a language className and inherits the <pre> styling;
+    // inline code (no className) gets the docs inline-code chip.
+    component: ({ children, className }: PropsWithChildren<{ className?: string }>) =>
+      className ? (
+        <code className={className}>{children}</code>
+      ) : (
+        <code className="ui-text-code-inline">{children}</code>
+      ),
+  },
+  blockquote: {
+    component: ({ children }: PropsWithChildren) => (
+      <blockquote className="border-l-4 border-neutral-300 dark:border-neutral-1000 pl-4 my-6">{children}</blockquote>
+    ),
+  },
+  hr: {
+    component: () => <hr className="my-8 border-neutral-300 dark:border-neutral-1000" />,
   },
   a: {
     component: ({ children, href }: PropsWithChildren<{ href: string }>) => (
@@ -53,7 +114,7 @@ const MarkdownOverrides = {
   },
   table: {
     component: ({ children }: PropsWithChildren) => (
-      <div className="overflow-x-auto mb-2">
+      <div className="overflow-x-auto my-6">
         <table className="border-0 border-collapse mb-1 border-spacing-0 ui-text-p2 text-left">{children}</table>
       </div>
     ),
@@ -143,11 +204,11 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
       <Head title={meta_title} canonical={canonical} description={meta_description} />
       <div className="my-10">
         <Link to="/examples" className="flex gap-1 items-center mb-5">
-          <Icon name="icon-gui-chevron-left-micro" size="16px" />
+          <ChevronLeftIcon className="size-[16px]" aria-hidden />
           <span className="ui-text-menu4 text-neutral-900 dark:text-neutral-400 font-semibold">All examples</span>
         </Link>
-        <h1 className="ui-text-title mb-4">{example.name}</h1>
-        <p className="ui-text-sub-header">{example.description}</p>
+        <h1 className="ui-text-h1 mb-4">{example.name}</h1>
+        <p className="ui-text-sub-head">{example.description}</p>
       </div>
       {apiKey ? (
         <ExamplesRenderer
@@ -158,7 +219,7 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
         >
           <div className="flex md:flex-row flex-col justify-between gap-10 mt-16">
             {content ? (
-              <div className="flex flex-col gap-10 max-w-[50rem] order-2 md:order-1">
+              <article className="max-w-[50rem] order-2 md:order-1">
                 <Markdown
                   options={{
                     wrapper: React.Fragment,
@@ -167,19 +228,26 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
                 >
                   {content}
                 </Markdown>
-              </div>
+              </article>
             ) : null}
             <div className="flex flex-col gap-2 w-full md:w-[16.25rem] order-1 md:order-2 md:sticky md:top-20 self-start">
               <LinkButton
-                href={`https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`}
+                href={
+                  example.githubUrl ?? `https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`
+                }
                 target="_blank"
                 variant="secondary"
-                rightIcon="icon-social-github"
+                rightIcon={<Icon name="icon-social-github" />}
               >
                 View on GitHub
               </LinkButton>
               <UnstyledOpenInCodeSandboxButton className="p-0">
-                <LinkButton href={'#'} variant="secondary" rightIcon="icon-gui-code-bracket-outline" className="w-full">
+                <LinkButton
+                  href={'#'}
+                  variant="secondary"
+                  rightIcon={<CodeBracketIcon aria-hidden />}
+                  className="w-full"
+                >
                   View on CodeSandbox
                 </LinkButton>
               </UnstyledOpenInCodeSandboxButton>

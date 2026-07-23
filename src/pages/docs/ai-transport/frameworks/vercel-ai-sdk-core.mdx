@@ -1,0 +1,124 @@
+---
+title: "Vercel AI SDK Core"
+meta_description: "How Ably AI Transport integrates with Vercel AI SDK Core (the `ai` library) on the server. Codec, streamText, and the UI message stream."
+meta_keywords: "AI Transport, Vercel AI SDK Core, streamText, UIMessage, createUIMessageCodec, durable sessions, server"
+intro: "Vercel AI SDK Core gives you streamText for orchestrating LLMs on the server. AI Transport encodes the resulting stream onto an Ably channel, so the same server code feeds durable sessions instead of an ephemeral HTTP response."
+---
+
+[Vercel AI SDK Core](https://ai-sdk.dev/docs/ai-sdk-core) is Vercel's server library for orchestrating LLM calls. `streamText` is the workhorse: pass a model, system prompt, and conversation history, and get back a stream of events. The default deployment writes that stream to an HTTP response over Server-Sent Events. AI Transport writes it to an Ably channel instead, so reconnects, multi-device, and bidirectional control come for free.
+
+Ready to build? See [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk).
+
+## What Vercel AI SDK Core brings <a id="vercel-brings"/>
+
+| Capability | Description |
+| --- | --- |
+| Provider system | Abstracts model providers (Anthropic, OpenAI, Google) behind a unified interface. Switching models is a one-line change. |
+| `streamText` | Calls the model and returns a stream of `UIMessageChunk` events: text deltas, tool calls, tool results, reasoning content, and lifecycle events. |
+| `UIMessage` model | Messages with role and parts (text, reasoning, tool calls, tool results, files, sources). Each part tracks its own streaming state. |
+| Tool calling | Models invoke tools you define with a schema and an execute function. The SDK feeds the result back to the model. |
+| `result.toUIMessageStream()` | Converts the model's event stream into a `ReadableStream` of `UIMessageChunk` events for transport. |
+
+AI Transport composes with each of these. It does not replace them. It is the layer that writes the stream to a session instead of a connection.
+
+## What AI Transport adds <a id="ait-adds"/>
+
+| Capability | Description |
+| --- | --- |
+| Durable sessions | Tokens flow through an Ably channel that outlives any single connection. A client reconnects and resumes from where it left off. |
+| Multi-device sync | Every device subscribed to the session sees the same conversation in real time. |
+| Bidirectional control | Cancel, steer, and interrupt the agent from any client. No separate control channel. |
+| Active run tracking | `view.runs()` exposes which clients have Runs streaming and which Runs are in progress. |
+| Conversation branching | Edit and regenerate create forks in the conversation tree, not destructive replacements. |
+| Approval gates that reach the user anywhere | Pending tool approvals persist on the session until someone acts on them. |
+| History and replay | Load the full conversation on reconnect, page refresh, or new device join. |
+| Token compaction | Reconnecting clients receive accumulated responses, not a replay of every token. |
+
+These are the same capability bullets used on the [Vercel AI SDK UI](/docs/ai-transport/frameworks/vercel-ai-sdk-ui) page; the capability surface is the same whichever layer you integrate against.
+
+## Where they connect <a id="how-they-connect"/>
+
+On the server, AI Transport replaces `createUIMessageStreamResponse()` with `Run.pipe()`. The HTTP response returns immediately; tokens flow to clients through the Ably channel instead of the HTTP body:
+
+<Code>
+```javascript
+// Before: default HTTP transport
+return createUIMessageStreamResponse({ stream: result.toUIMessageStream() });
+
+// After: Ably transport
+const pipeResult = await run.pipe(result.toUIMessageStream());
+const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+await run.end(outcome);
+
+return Response.json({ invocationId: run.invocationId });
+```
+</Code>
+
+A full agent route:
+
+<Code>
+```javascript
+import { after } from 'next/server';
+import { streamText, convertToModelMessages } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
+import * as Ably from 'ably';
+import { Invocation } from '@ably/ai-transport';
+import { createAgentSession, vercelRunOutcome } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+export async function POST(req) {
+  const invocation = Invocation.fromJSON(await req.json());
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName });
+  await session.connect();
+  const run = session.createRun(invocation, { signal: req.signal });
+
+  after(async () => {
+    // Rebuild the conversation from run.view before run.start(): draining pages
+    // in this run's triggering input (otherwise run.start() awaits it live).
+    while (run.view.hasOlder()) {
+      await run.view.loadOlder();
+    }
+    const conversation = run.view.getMessages().map(({ message }) => message);
+
+    await run.start();
+
+    const result = streamText({
+      model: anthropic('claude-sonnet-4-20250514'),
+      messages: await convertToModelMessages(conversation),
+      abortSignal: run.abortSignal,
+    });
+
+    const pipeResult = await run.pipe(result.toUIMessageStream());
+    const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+    if (outcome.reason === 'suspend') {
+      await run.suspend();
+    } else {
+      await run.end(outcome);
+    }
+    await session.end();
+  });
+
+  return Response.json({ runId: run.runId, invocationId: run.invocationId });
+}
+```
+</Code>
+
+The integration has three pieces:
+
+1. The Vercel codec (from `createUIMessageCodec()`) encodes Vercel's `UIMessageChunk` events as Ably messages. Every chunk type maps to an Ably operation with headers that track the metadata. The codec encodes on the agent and decodes on the client.
+2. `createAgentSession({ client, channelName })` from `@ably/ai-transport/vercel` constructs the agent session bound to the channel from the invocation. The default codec is the Vercel codec (`createUIMessageCodec()`).
+3. `run.pipe()` reads the model's `UIMessageChunk` stream, encodes each chunk, and publishes the resulting Ably messages. `run.abortSignal` wires cancellation through from the client. [`vercelRunOutcome()`](/docs/ai-transport/api/javascript/vercel/run-outcome) then maps the pipe result and Vercel's `finishReason` to the right lifecycle action: suspend the Run when the model requested tools the SDK did not auto-execute, otherwise end it with the matching reason.
+
+## Scope and trade-offs <a id="scope"/>
+
+Vercel AI SDK Core is intentionally focused on model orchestration. By design, it does not handle session continuity across reconnects, multi-device fan-out, or stream resumability. AI Transport adds those without changing how you call `streamText`. The same model, the same messages, the same tool definitions; the destination of the stream moves from an HTTP response to a durable session.
+
+If you are building the client side, see [Vercel AI SDK UI](/docs/ai-transport/frameworks/vercel-ai-sdk-ui).
+
+## Read next <a id="next"/>
+
+- [Get started with Vercel AI SDK](/docs/ai-transport/getting-started/vercel-ai-sdk): build a working app.
+- [Vercel AI SDK UI](/docs/ai-transport/frameworks/vercel-ai-sdk-ui): the client-side integration that pairs with this page.
+- [Agent session API reference](/docs/ai-transport/api/javascript/core/agent-session): the full API surface for the agent session.
+- [Codec API reference](/docs/ai-transport/api/javascript/core/codec): the codec interface that the Vercel codec implements.

@@ -1,0 +1,96 @@
+---
+title: "Steps"
+meta_description: "Understand Steps in AI Transport: the sub-bracket within a Run that carries one publishable unit of agent output. Steps have their own start and end lifecycle, an addressable stepId, and supersede-on-retry semantics."
+meta_keywords: "AI Transport, Step, RunStep, createStep, stepId, supersede, run structure, retry"
+intro: "A Step is a bracket around one publishable unit of agent output inside a Run. It has its own start and end lifecycle on the channel, an addressable stepId, and a terminal reason of complete, failed, or cancelled."
+---
+
+A [Run](/docs/ai-transport/concepts/runs) does not publish output directly. It publishes through Steps. A Step is the inner bracket a Run uses to group one contiguous unit of output: the tokens for one LLM inference, the payload for one tool result, or any other burst of channel writes the agent code frames as a single unit. Every output message an agent publishes carries a `step-id` that names the Step it belongs to.
+
+A Step has its own lifecycle events on the channel (`ai-step-start` and `ai-step-end`), its own addressable identity (`stepId`), and its own terminal reason (`'complete'`, `'failed'`, or `'cancelled'`). It is to the Run what the Run is to the Session: a nested bracket with a stable identity and a defined start and end, carrying a portion of the outer bracket's output.
+
+Two properties of the Step layer sit on top of that structural role. Every Step in a Run is ordered relative to the others (exactly one Step is active on a Run at a time). And two `ai-step-start` events under the same `stepId` coalesce: the later one supersedes the earlier one's output rather than appending beside it, which is what makes a Step the safe boundary for a retry.
+
+![Diagram of a Run on the channel between an agent that publishes and a client that subscribes. The Run contains three Steps: Step s1 attempt A ends failed, Step s1 attempt B retries and supersedes attempt A to end complete, then Step s2 publishes a tool result and ends complete, before the Run ends complete.](../../../../images/content/diagrams/ait-concepts-steps.png)
+
+## Why Steps exist <a id="why-steps"/>
+
+A Run is rarely one continuous stream. A single turn typically produces several discrete pieces of output: the tokens of an initial LLM response, the payload of a tool result, the tokens of a follow-up LLM response, and so on. The channel needs to represent each of those as a distinct, addressable unit rather than an undifferentiated slab of `ai-output` messages between `ai-run-start` and `ai-run-end`.
+
+The Step is the SDK's answer. Every output message carries a `step-id` naming the Step it was produced in, and every Step is bracketed by `ai-step-start` and `ai-step-end` events so an observer can tell one unit from the next. The Run becomes a container of Steps rather than a container of raw output.
+
+That structure is what makes a retry safe. Because a Step has stable identity, two `ai-step-start` events under the same `stepId` are the same Step re-attempting rather than two distinct pieces of output. Between the two attempts, the message that was published later wins, so a retry's output supersedes the failed attempt on the channel rather than appending beside it. Without a sub-Run unit with its own identity, there would be no safe place to draw a retry boundary within a Run.
+
+## Understand the Step model <a id="model"/>
+
+Every Step within a Run has four invariants:
+
+- A `stepId` that is stable across retry attempts of the same Step.
+- A bracketing pair of lifecycle events on the channel: `ai-step-start` and `ai-step-end`.
+- A terminal `StepEndReason` once it closes: `'complete'`, `'failed'`, or `'cancelled'`.
+- One Step active at a time on a given Run. The next Step opens after the previous one ends.
+
+The Run remains open across Steps. A Step ending is not a Run ending; the agent code drives the Run to [`suspend()`](/docs/ai-transport/api/javascript/core/agent-session#run-suspend) or [`end()`](/docs/ai-transport/api/javascript/core/agent-session#run-end) after the last Step closes.
+
+Two kinds of Steps sit on a Run:
+
+- Implicit Steps opened by [`AgentRun.pipe`](/docs/ai-transport/api/javascript/core/agent-session#pipe). Each `pipe` call opens its own fresh Step lazily at the first output, stamps the stream, and closes on stream end. Two `pipe` calls produce two independent Steps. Implicit Steps never supersede; each is a fresh Step with a fresh id.
+- Explicit Steps opened by [`AgentRun.createStep`](/docs/ai-transport/api/javascript/core/agent-session#create-step). Returns a `RunStep` handle. Pass `{ stepId }` to make the id stable across cross-process retries and gain the supersede semantics.
+
+## What the Step layer requires <a id="requires"/>
+
+| Property | Why it matters |
+| --- | --- |
+| Stable stepId | A retry's `ai-step-start` must land under the same `stepId` as the failed attempt. Otherwise the retry's output publishes under a fresh id and both attempts remain in the conversation. Supply the workflow engine's own stable id ([Temporal](/docs/ai-transport/frameworks/temporal) activity id, [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk) step id) on cross-process retries. |
+| Supersede on retry | When two attempts share a `stepId`, the message that was published later wins. The client's View surfaces only the winning attempt. |
+| One Step at a time | Exactly one Step may be active on a Run. [`RunStep.start`](/docs/ai-transport/api/javascript/core/agent-session#step-start) rejects if another Step is still open. |
+| Terminal auto-close | If agent code forgets to close a Step, [`AgentRun.end`](/docs/ai-transport/api/javascript/core/agent-session#run-end) auto-closes the open Step before publishing the Run terminal. No observer's UI is stranded on `streaming`. |
+| Independent from Run terminal | A Step ending as `'failed'` does not end the Run. The Run stays active for the next Step; the agent code decides whether to retry, suspend, or end the Run itself. |
+
+## Publish Steps across processes <a id="cross-process"/>
+
+The Steps of one Run are not always published from the same process. A workflow engine runs each Step as a separate activity, a retry lands in a fresh invocation, a suspended Run resumes its next Step in a background worker. Steps compose across those boundaries because a Step's output and lifecycle events live on the channel, not in the process that published them. Any process that attaches a session to the channel and enters the Run can publish the next Step.
+
+A process publishes its Steps through an [`AgentSession`](/docs/ai-transport/api/javascript/core/agent-session) bound to the channel: construct it with `createAgentSession`, attach with `connect`. Every `ai-step-start`, `ai-step-end`, and `ai-output` inside a Step goes out through that session. The session keeps no state of its own; the open Run and its Steps live on the channel, which is what makes them visible to the next process.
+
+A Step always belongs to a Run, so a process must be inside that Run before it can publish one. The process that publishes the first Step opens the Run with `session.createRun(invocation)` and `start()`. A later process enters the already-open Run with `session.adoptRun(...)` and `load()`, which recovers the Run's state from channel history so it can publish further Steps without re-opening the Run. Adoption also routes channel cancels to this process, so a cancel ends the Step it is currently publishing as `'cancelled'`. See [Runs](/docs/ai-transport/concepts/runs) for the identifiers this threads across the boundary.
+
+Once it has published its Step, the process releases the channel. `session.detach()` releases it without publishing anything, leaving the Run open so the next process can adopt it and publish the next Step. `session.end()` closes any Step and Run this session still holds open as `'cancelled'`, then detaches. A process handling one Step mid-Run uses `detach`; the process that publishes the final Step, and a failure-catch cleanup, uses `end`. See [Detach or end a session](/docs/ai-transport/concepts/sessions#detach-vs-end).
+
+## Coalesce retries under a stable stepId <a id="coalesce-retries"/>
+
+When a Run's Steps run across workflow-engine activities, each activity follows the same shape: adopt the Run, create the Step under the workflow's activity id, pipe the LLM stream, close the Step. A retry re-enters the same code with the same activity id, so the retry's Step lands under the same `stepId` and supersedes the earlier attempt.
+
+<Code>
+```javascript
+import { createAgentSession } from '@ably/ai-transport';
+import { stepIdFor } from '@ably/ai-transport/temporal';
+
+async function runInferenceStep({ runId, invocationId, triggerEventId }) {
+  const session = createAgentSession({ /* ... */ });
+  await session.connect();
+
+  const run = session.adoptRun({ runId, invocationId, triggerEventId });
+  await run.load();
+
+  const step = run.createStep({ stepId: stepIdFor(invocationId) });
+  await step.start();
+  await step.pipe(llmStream);
+  await step.end();
+
+  await session.detach();
+}
+```
+</Code>
+
+`stepIdFor(invocationId)` reads the Temporal activity id from the activity context and prefixes it with the Run's invocation id so it stays unique across workflows. Other durable execution frameworks pass their own stable id in the same slot.
+
+Omit `stepId` for the common in-process case. The SDK assigns an invocation-scoped id, and an in-process retry after a `'failed'` close reuses that id automatically.
+
+## Read next <a id="next"/>
+
+- [Runs](/docs/ai-transport/concepts/runs): the outer bracket a Step lives in.
+- [Durable execution](/docs/ai-transport/features/durable-execution): the pattern that makes cross-process Step retries safe.
+- [Temporal](/docs/ai-transport/frameworks/temporal): the reference workflow-engine integration.
+- [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk): the same pattern inside your Next.js app.
+- [RunStep API reference](/docs/ai-transport/api/javascript/core/agent-session#step): the surface `createStep` returns.

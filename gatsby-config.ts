@@ -67,7 +67,16 @@ const headerLinkIcon = `<svg aria-hidden="true" height="20" version="1.1" viewBo
 export const plugins = [
   'gatsby-plugin-postcss',
   'gatsby-plugin-image',
-  'gatsby-plugin-sharp',
+  process.env.NODE_ENV === 'production'
+    ? 'gatsby-plugin-sharp'
+    : {
+        resolve: 'gatsby-plugin-sharp',
+        options: {
+          defaults: {
+            formats: ['auto'],
+          },
+        },
+      },
   'gatsby-transformer-yaml',
   {
     resolve: 'gatsby-transformer-sharp',
@@ -141,6 +150,11 @@ export const plugins = [
     options: {
       name: `examples`,
       path: `${__dirname}/examples`,
+      // Examples can contain nested projects (e.g. a server) with their own
+      // installed deps and build output. Never source those — a node_modules
+      // under an `<id>/<language>/` dir would otherwise be picked up as example
+      // files for that language.
+      ignore: ['**/node_modules/**', '**/dist/**'],
     },
   },
   {

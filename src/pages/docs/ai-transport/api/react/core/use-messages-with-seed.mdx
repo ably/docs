@@ -1,0 +1,73 @@
+---
+title: "useMessagesWithSeed"
+meta_description: "Reconcile a persisted conversation seed with the live AI Transport channel from React and render the composed conversation."
+meta_keywords: "AI Transport, React, useMessagesWithSeed, seed, hydration, loadUntil, Ably"
+---
+
+`useMessagesWithSeed` reconciles a persisted conversation seed with the live Ably channel and returns the composed conversation, oldest-first: the seed followed by the live tail that has not yet been seeded. It is the core primitive behind database-backed [hydration](/docs/ai-transport/features/database-hydration), and the Vercel `useMessageSync` builds on it.
+
+Pass the `view` from a resolved session. [`useClientSession()`](/docs/ai-transport/api/react/core/providers#client-session-provider) returns a handle whose `session.view` is a `View`.
+
+<Code>
+```javascript
+import { useMessagesWithSeed } from '@ably/ai-transport/react';
+
+const messages = useMessagesWithSeed({
+  view: session?.view,
+  seed,
+  getMessageId: (message) => message.id,
+});
+```
+</Code>
+
+This hook is typically used within a [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers#client-session-provider), which resolves the session whose `view` you pass in.
+
+The hook takes the newest seed message's id, via `getMessageId`, as the seam and drives [`View.loadUntil`](/docs/ai-transport/api/javascript/core/client-session) to page the channel back until that id reappears. It then composes the seed followed by the live tail, dropping the single overlapping message at the seam. With no seed (an empty array) it surfaces the live channel window unchanged.
+
+## Parameters <a id="parameters"/>
+
+`useMessagesWithSeed` accepts a single `UseMessagesWithSeedOptions<TMessage>` object:
+
+<Table id='UseMessagesWithSeedOptions'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| view | optional | The view over the live channel to reconcile against, for example `session.view`, or `undefined` before the session or view resolves. The hook then surfaces the seed as-is. | `View<TMessage>` or Undefined |
+| seed | required | The persisted conversation, oldest-first. Compared by content, so passing a fresh array each render, for example `data ?? []`, is safe. An empty array is a loaded-but-empty conversation and surfaces the live channel window unchanged. While the seed is still loading, set `skip` instead of passing `[]`. | `TMessage[]` |
+| getMessageId | required | Returns a message's stable domain id, the seam key shared between your store and the channel. The transport's internal `codecMessageId` is never persisted. | `(message: TMessage) => string` |
+| skip | optional | Holds the reconciliation while the seed is still loading, for example during an async store fetch. When `true` the hook does not page the channel and returns `[]`. Clear it once the seed has loaded. Defaults to `false`. | Boolean |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+`TMessage[]`. The composed conversation, oldest-first: the seed followed by the live tail newer than the seam. While `skip` is `true`, or before a seed loads, the hook returns `[]`.
+
+## Example <a id="example"/>
+
+A component that fetches its seed from a store, reads the view from the resolved session, and renders the composed conversation:
+
+<Code>
+```javascript
+import { useClientSession, useMessagesWithSeed } from '@ably/ai-transport/react';
+
+function Conversation({ seed }) {
+  const { session } = useClientSession();
+  const messages = useMessagesWithSeed({
+    view: session?.view,
+    seed,
+    getMessageId: (message) => message.id,
+  });
+
+  return (
+    <>
+      {messages.map((message) => (
+        <Message key={message.id} message={message} />
+      ))}
+    </>
+  );
+}
+```
+</Code>
+
+For Vercel AI SDK applications, the pre-typed `useMessagesWithSeed` from `@ably/ai-transport/vercel/react` omits `getMessageId` because it keys on `UIMessage.id`, and `useMessageSync` wraps it for `useChat`.

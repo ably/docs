@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { TableData, TableProperty, useNestedTable } from './NestedTableContext';
 import { NestedTableExpandButton } from './NestedTableExpandButton';
 
@@ -29,7 +29,7 @@ export const NestedTablePropertyRow: React.FC<NestedTablePropertyRowProps> = ({ 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Property name in monospace box - always orange */}
           {property.name && (
-            <code className="bg-orange-100 dark:bg-orange-1000 border border-orange-300 dark:border-orange-900 px-2 py-0.5 rounded text-sm font-mono text-neutral-1000 dark:text-neutral-300">
+            <code className="bg-orange-100 dark:bg-orange-1100 border border-orange-300 dark:border-orange-1000 px-2 py-0.5 rounded text-sm font-mono text-neutral-1000 dark:text-neutral-300">
               {property.name}
             </code>
           )}

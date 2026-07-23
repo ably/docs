@@ -1,0 +1,163 @@
+---
+title: "Set up authentication"
+meta_description: "Wire AI Transport to your auth: a token-issuing endpoint that signs Ably JWTs, and an authenticated Ably client on the browser."
+meta_keywords: "AI Transport, authentication setup, Ably JWT, authCallback, token endpoint, getting started"
+intro: "AI Transport authenticates through your existing auth: your server validates the user and signs an Ably token, and the browser's Ably client fetches it through `authCallback`and refreshes it before expiry."
+---
+
+<Aside data-type='note'>
+This page is the practical setup. For the conceptual model (the three auth layers, capabilities, token lifecycle, cancel authorisation), see the [authentication concept](/docs/ai-transport/concepts/authentication).
+</Aside>
+
+AI Transport reuses the authentication you already have. Your server validates the user and signs a short-lived Ably JWT, scoped to the channels that user can reach. The browser's Ably client fetches that token through an `authCallback` and refreshes it before it expires, so the connection stays authenticated for the whole conversation. The steps below wire up the server endpoint, the client, and the separate POST that wakes the agent.
+
+<Aside data-type='important'>
+Never embed an Ably API key in client-side code. API keys do not expire and are not suitable for untrusted clients.
+</Aside>
+
+## Sign tokens on the server <a id="server"/>
+
+Create an endpoint that authenticates the user and returns a short-lived Ably JWT with the [capabilities](/docs/ai-transport/concepts/authentication#capabilities) AI Transport needs:
+
+<Code>
+```javascript
+import jwt from 'jsonwebtoken';
+
+// Replace with your app's auth: validate the request (session cookie, bearer
+// token) and return the authenticated user's id.
+async function authenticateUser(req: Request): Promise<string> {
+  return 'user-abc';
+}
+
+export async function GET(req: Request) {
+  const apiKey = process.env.ABLY_API_KEY;
+  if (!apiKey) {
+    return new Response('ABLY_API_KEY is not set', { status: 500 });
+  }
+  const [keyName, keySecret] = apiKey.split(':');
+
+  const userId = await authenticateUser(req);
+
+  const ablyJwt = jwt.sign(
+    {
+      'x-ably-capability': JSON.stringify({
+        'conversations:*': ['publish', 'subscribe', 'history'],
+      }),
+      'x-ably-clientId': userId,
+    },
+    keySecret,
+    { algorithm: 'HS256', keyid: keyName, expiresIn: '1h' },
+  );
+
+  return new Response(ablyJwt, { headers: { 'Content-Type': 'text/plain' } });
+}
+```
+</Code>
+
+The capability grants `conversations:*`, every channel in the `conversations` namespace, because a session's channel name (`conversations:my-chat-session` in these guides) is not known when the token is signed. The `x-ably-clientId` claim binds the token to a specific user identity that the Ably service verifies on every publish. In production, scope the capability more tightly to the channels each user may access.
+
+## Fetch tokens from the client <a id="client"/>
+
+Construct an Ably Realtime client with `authCallback`. The SDK calls it on first auth and again whenever a refresh is needed:
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+
+const realtimeClient = new Ably.Realtime({
+  authCallback: async (tokenParams, callback) => {
+    try {
+      const response = await fetch('/api/auth/token', { credentials: 'include' });
+      if (!response.ok) throw new Error('Auth failed');
+      const jwt = await response.text();
+      callback(null, jwt);
+    } catch (error) {
+      callback(error, null);
+    }
+  },
+});
+```
+</Code>
+
+## Wire it into the React provider stack <a id="react"/>
+
+In a React app, hold the client in state, wrap the tree in `AblyProvider`, then in `ClientSessionProvider` for the channel:
+
+<Code>
+```javascript
+'use client'
+
+import { useEffect, useState } from 'react';
+import * as Ably from 'ably';
+import { AblyProvider } from 'ably/react';
+import { ClientSessionProvider, useClientSession } from '@ably/ai-transport/react';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
+
+// A stable codec instance (hold it at module scope or via useMemo).
+const uiMessageCodec = createUIMessageCodec();
+
+export function Providers({ children }) {
+  const [client, setClient] = useState(null);
+
+  useEffect(() => {
+    const ably = new Ably.Realtime({
+      authCallback: async (_tokenParams, callback) => {
+        try {
+          const response = await fetch('/api/auth/token', { credentials: 'include' });
+          callback(null, await response.text());
+        } catch (err) {
+          callback(err instanceof Error ? err.message : String(err), null);
+        }
+      },
+    });
+    setClient(ably);
+    return () => ably.close();
+  }, []);
+
+  if (!client) return null;
+  return <AblyProvider client={client}>{children}</AblyProvider>;
+}
+
+function App({ conversationId }) {
+  return (
+    <ClientSessionProvider channelName={conversationId} codec={uiMessageCodec}>
+      <Chat />
+    </ClientSessionProvider>
+  );
+}
+
+function Chat() {
+  const { session, sessionError } = useClientSession();
+  // ...
+}
+```
+</Code>
+
+## Authenticate the agent POST <a id="agent-post"/>
+
+The application's POST that wakes the agent is a separate HTTP request from the channel auth. Authenticate it however you normally do (session cookie, bearer token, signed header) when you call `fetch` on the core flow:
+
+<Code>
+```javascript
+async function wakeAgent(run) {
+  await fetch('/api/chat', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${await getAccessToken()}`,
+    },
+    body: JSON.stringify(run.toInvocation().toJSON()),
+  });
+}
+```
+</Code>
+
+For the Vercel flow, [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) accepts a `credentials` prop and a `chatOptions.prepareSendMessagesRequest` hook that returns `{ body?, headers? }` per request. Use the hook to attach auth headers to every invocation POST it makes for you.
+
+## Read next <a id="next"/>
+
+- [Authentication concept](/docs/ai-transport/concepts/authentication): the three auth layers, capabilities, and token lifecycle.
+- [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules): the one-time namespace configuration AI Transport requires.
+- [Core SDK getting started](/docs/ai-transport/getting-started/core-sdk): build a chat app on the auth set up here.
+- [Vercel AI SDK getting started](/docs/ai-transport/getting-started/vercel-ai-sdk): build a chat app using the Vercel wrapper.

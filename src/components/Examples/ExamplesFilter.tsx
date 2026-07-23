@@ -1,15 +1,21 @@
 import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import Icon from '@ably/ui/core/Icon';
+import { Input } from 'src/components/ui/Input';
 import { products } from '../../data/examples';
-import Button from '@ably/ui/core/Button';
-import cn from '@ably/ui/core/utils/cn';
-import Badge from '@ably/ui/core/Badge';
+import Button from 'src/components/ui/Button';
+import cn from 'src/utilities/cn';
+import Badge from 'src/components/ui/Badge';
 import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks/use-on-click-outside';
 import { navigate } from 'gatsby';
-import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { ProductName } from 'src/components/ui/ProductTile/data';
+import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+// Matches Tailwind's `sm` screen (768px), where the filter switches from the
+// mobile drawer (with an Apply button) to the inline desktop sidebar. Above
+// this width selections must auto-commit, since no Apply button is rendered.
+const SM_BREAKPOINT = 768;
 
 const ExamplesFilter = ({
   selected,
@@ -84,7 +90,7 @@ const ExamplesFilter = ({
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1040) {
+      if (window.innerWidth >= SM_BREAKPOINT) {
         setExpandFilterMenu(false);
       }
     };
@@ -94,7 +100,7 @@ const ExamplesFilter = ({
   }, []);
 
   useEffect(() => {
-    if (window.innerWidth >= 1040) {
+    if (window.innerWidth >= SM_BREAKPOINT) {
       setSelected(localSelected);
     }
   }, [expandFilterMenu, localSelected, setSelected]);
@@ -111,22 +117,25 @@ const ExamplesFilter = ({
 
   return (
     <>
-      <div className="h-[2.125rem] sm:h-[1.875rem] w-5 absolute left-2 top-1 flex items-center justify-center select-none cursor-default">
-        <Icon name={'icon-gui-magnifying-glass-outline'} size="1rem" />
+      <div className="relative w-full">
+        <MagnifyingGlassIcon
+          className="size-[16px] absolute left-3 top-1/2 -translate-y-1/2 z-10 text-neutral-600 dark:text-neutral-700 pointer-events-none"
+          aria-hidden
+        />
+        <Input
+          type="search"
+          className="rounded bg-neutral-100 dark:bg-neutral-1200 pl-9 w-full h-10 sm:h-[2.125rem]"
+          placeholder="Find an example..."
+          autoComplete="off"
+          aria-label="Search examples"
+          role="searchbox"
+          onChange={(e) => handleSearch(e)}
+        />
       </div>
-      <input
-        type="search"
-        className="ui-input pl-9 w-full h-10 sm:h-[2.125rem] ui-text-p3"
-        placeholder="Find an example"
-        autoComplete="off"
-        aria-label="Search examples"
-        role="searchbox"
-        onChange={(e) => handleSearch(e)}
-      />
       <Button
         className="flex sm:hidden mt-4 w-full"
         variant="secondary"
-        leftIcon="icon-gui-adjustments-horizontal-outline"
+        leftIcon={<AdjustmentsHorizontalIcon aria-hidden />}
         onClick={() => setExpandFilterMenu(true)}
       >
         Filter
@@ -146,10 +155,10 @@ const ExamplesFilter = ({
           },
         )}
       >
-        <div className="flex justify-between items-center sm:hidden h-16 px-4 py-2 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-t-2xl sm:rounded-none">
+        <div className="flex justify-between items-center sm:hidden h-16 px-4 py-2 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1100 rounded-t-2xl sm:rounded-none">
           <p className="ui-text-p1 font-bold text-neutral-1300 dark:text-neutral-000">Filters</p>
           <button onClick={closeFilterMenu} aria-label="Close filter menu">
-            <Icon name="icon-gui-x-mark-outline" size="24px" />
+            <XMarkIcon className="size-[24px]" aria-hidden />
           </button>
         </div>
         {filters.map(({ key, selected, handleSelect, data }) => (

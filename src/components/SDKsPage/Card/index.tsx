@@ -1,7 +1,8 @@
-import Icon from '@ably/ui/core/Icon';
+import Icon from 'src/components/Icon';
 import Link from 'src/components/Link';
 import { btn_sdks } from '../sdks.module.css';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
+import { ArrowLongRightIcon } from '@heroicons/react/16/solid';
 
 type ImagesSDK = {
   src: string;
@@ -26,7 +27,7 @@ const Card = ({ githubRepoURL, setupLink, title, image, text }: CardProps) => {
       <p className="ui-text-p3 py-4">{text}</p>
       <div className="flex flex-col justify-center gap-2">
         <Link to={setupLink} rel="noreferrer" className={cn(btn_sdks, 'ui-button-primary gap-2')}>
-          Get started <Icon name="icon-gui-arrow-long-right-micro" size="1rem" />
+          Get started <ArrowLongRightIcon className="size-[1rem]" aria-hidden />
         </Link>
         {githubRepoURL && (
           <a

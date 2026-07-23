@@ -1,0 +1,468 @@
+---
+title: "Get started with Temporal"
+meta_description: "Build a streaming AI chat app whose agent side runs inside a Temporal workflow. Retryable Steps supersede failed attempts on the channel, and the user's stream never breaks."
+meta_keywords: "AI Transport, Temporal, durable execution, workflow, activity, stepIdFor, adoptRun, createStep, Next.js, Ably"
+intro: "Build a Next.js chat app whose agent side runs inside a Temporal workflow. Each Step is one retryable activity; a retry supersedes the failed attempt on the channel, and the user's stream never breaks."
+---
+
+## What you build <a id="what-you-build"/>
+
+A Next.js chat app where:
+
+- Every user turn starts a Temporal workflow. The workflow drives the agent loop as a sequence of activities.
+- Each activity opens one AI Transport [Step](/docs/ai-transport/concepts/steps) with the Temporal activity id as the `stepId`.
+- A crashed activity is retried by Temporal under the same activity id, so the retry's channel output supersedes the failed attempt's.
+- The client experience is identical to the [Vercel AI SDK getting-started](/docs/ai-transport/getting-started/vercel-ai-sdk); only the server-side execution model changes.
+
+## Prerequisites <a id="prerequisites"/>
+
+- Node.js 22 or later.
+- An [Ably account](https://ably.com/sign-up) with an API key.
+- An Anthropic API key, or any other model provider supported by Vercel AI SDK.
+- The [Temporal CLI](https://learn.temporal.io/getting_started/typescript/dev_environment/) installed locally (`brew install temporal` on macOS).
+
+## Set up the project <a id="project-setup"/>
+
+Install the dependencies:
+
+<Code>
+```shell
+npm install @ably/ai-transport@^0.6.0 ably ai@^6 \
+  @ai-sdk/react@^3 @ai-sdk/anthropic@^3 \
+  @temporalio/client @temporalio/worker @temporalio/workflow @temporalio/activity \
+  next react react-dom zod jsonwebtoken dotenv
+npm install -D tsx typescript @types/node @types/react @types/react-dom @types/jsonwebtoken
+```
+</Code>
+
+This is a standard Next.js app with one addition: the Temporal worker runs as a separate Node process. Two pieces of config make that work.
+
+Add a script to run the worker. In `package.json`:
+
+<Code>
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "worker": "tsx workflow/worker.ts"
+  }
+}
+```
+</Code>
+
+Keep the Temporal client out of the Next.js browser bundle. In `next.config.mjs`:
+
+<Code>
+```javascript
+/** @type {import('next').NextConfig} */
+export default {
+  serverExternalPackages: ['@temporalio/client'],
+};
+```
+</Code>
+
+Add your keys to `.env.local`. `next dev` generates `tsconfig.json` on first run.
+
+<Code>
+```shell
+# Ably API key in "keyName:keySecret" form, from your Ably dashboard.
+ABLY_API_KEY=
+# Anthropic API key used by the worker's inference activity.
+ANTHROPIC_API_KEY=
+```
+</Code>
+
+## Set up authentication <a id="set-up-authentication"/>
+
+Create an auth endpoint at `/api/auth/token` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
+
+The client below uses `authUrl: '/api/auth/token'` to fetch tokens from this endpoint.
+
+## Configure the channel rule <a id="configure-the-channel-rule"/>
+
+AI Transport streams each response by appending tokens to a single channel message. That requires the **Message annotations, updates, deletes, and appends** channel rule (`mutableMessages`) on the namespace your conversations live on.
+
+In your Ably dashboard, enable **Message annotations, updates, deletes, and appends** on the `conversations` namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+
+<Aside data-type='important'>
+This is a one-time setup per Ably app. Without the rule, the first token append fails with error `93002` and no tokens stream. The `channelName` you set below must live in a namespace with this rule enabled.
+</Aside>
+
+## Build the worker <a id="build-worker"/>
+
+The Temporal worker lives in a `workflow/` package: shared types, the workflow definition, one server tool, the activities that publish to Ably, and the worker entrypoint that hosts them. Create these five files.
+
+### Shared types <a id="shared-types"/>
+
+Create `workflow/shared.ts`. These types travel between the API route, the workflow, and the activities. Keep them plain data with no runtime side effects. Temporal loads workflow bundles in an isolated sandbox that has no access to Ably, the `ai` SDK, or `crypto` at import time.
+
+<Code>
+```javascript
+import type { InvocationData } from '@ably/ai-transport';
+
+export interface RunIds {
+  runId: string;
+  invocationId: string;
+  triggerEventId: string;
+}
+
+export interface ChatWorkflowInput {
+  invocation: InvocationData;
+  invocationId: string;
+}
+
+export interface ToolCallInfo {
+  toolCallId: string;
+  toolName: string;
+  input: unknown;
+}
+
+// The inference step either finishes the turn or asks to run a server tool.
+export type InferenceOutcome =
+  | { kind: 'done' }
+  | { kind: 'server-tools'; toolCalls: ToolCallInfo[] };
+
+export const TASK_QUEUE = 'ai-transport-demo';
+```
+</Code>
+
+### Workflow <a id="define-workflow"/>
+
+Create `workflow/workflows.ts`. `openRun` creates and starts the Run and returns its ids without running any inference. The workflow then drives every inference, the first and each follow-up, through the same `runInferenceStep` activity, scheduling a server-tool activity in between whenever the model calls a tool. Splitting the open from the first inference keeps the two independently retryable: an inference failure retries the inference alone and never re-opens the Run.
+
+<Code>
+```javascript
+import { proxyActivities } from '@temporalio/workflow';
+import type { ChatWorkflowInput } from './shared.js';
+import type * as activities from './activities.js';
+
+const { openRun, runInferenceStep } = proxyActivities<typeof activities>({
+  startToCloseTimeout: '5 minutes',
+  retry: { maximumAttempts: 3 },
+});
+
+// getStockPrice throws on odd prices (~half the time), so give the tool
+// activity enough attempts to show Temporal retrying it.
+const { runToolStep } = proxyActivities<typeof activities>({
+  startToCloseTimeout: '5 minutes',
+  retry: { maximumAttempts: 5 },
+});
+
+export async function chatWorkflow(input: ChatWorkflowInput): Promise<void> {
+  const ids = await openRun({
+    invocation: input.invocation,
+    invocationId: input.invocationId,
+  });
+
+  let outcome = await runInferenceStep({ ids, invocation: input.invocation });
+  while (outcome.kind === 'server-tools') {
+    for (const toolCall of outcome.toolCalls) {
+      await runToolStep({ ids, invocation: input.invocation, toolCall });
+    }
+    outcome = await runInferenceStep({ ids, invocation: input.invocation });
+  }
+}
+```
+</Code>
+
+### Tool <a id="define-tool"/>
+
+Create `workflow/tools.ts` with one server tool. It generates a whole-dollar price and throws when the price is odd, about half the time, so you can watch Temporal retry the activity in the Web UI and watch the retry's re-rolled output supersede the failed attempt on the Ably channel.
+
+<Code>
+```javascript
+import { z } from 'zod';
+import type { Tool } from 'ai';
+
+export const tools: Record<string, Tool> = {
+  getStockPrice: {
+    description: 'Get the current stock price for a ticker symbol.',
+    inputSchema: z.object({
+      symbol: z.string().describe('The ticker symbol, for example "AAPL"'),
+    }),
+    execute: async ({ symbol }: { symbol: string }) => {
+      // Intentionally flaky: throws on an odd price (~half the time) and
+      // succeeds on an even one. The retry re-rolls the price.
+      const priceUSD = Math.round(50 + Math.random() * 500);
+      if (priceUSD % 2 !== 0) {
+        throw new Error(`stock price service returned an odd price (${priceUSD}), retry me`);
+      }
+      return { symbol, priceUSD };
+    },
+  },
+};
+```
+</Code>
+
+### Activities <a id="define-activities"/>
+
+Create `workflow/activities.ts`. Each activity constructs its own `Ably.Realtime` and `AgentSession`. `openRun` creates and starts the Run; `runInferenceStep` and `runToolStep` adopt it and publish a Step whose `stepId` is derived from the Temporal activity id. Every activity detaches when done, leaving the Run open for the next to adopt. Retries re-enter the same code with the same activity id, so a retried Step lands under the same `stepId` and supersedes the failed attempt's output.
+
+<Code>
+```javascript
+import { Context } from '@temporalio/activity';
+import Ably from 'ably';
+import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
+import { Invocation, type AgentRun, type InvocationData } from '@ably/ai-transport';
+import {
+  createAgentSession,
+  pendingToolCalls,
+  stripToolExecutes,
+  vercelRunOutcome,
+} from '@ably/ai-transport/vercel';
+import type { VercelOutput, VercelProjection } from '@ably/ai-transport/vercel';
+import { stepIdFor } from '@ably/ai-transport/temporal';
+import type { InferenceOutcome, RunIds, ToolCallInfo } from './shared.js';
+import { tools } from './tools.js';
+
+type VercelAgentRun = AgentRun<VercelOutput, VercelProjection, UIMessage>;
+
+const makeAbly = () => new Ably.Realtime({ key: process.env.ABLY_API_KEY! });
+
+interface StepInput {
+  ids: RunIds;
+  invocation: InvocationData;
+}
+
+export async function openRun(input: {
+  invocation: InvocationData;
+  invocationId: string;
+}): Promise<RunIds> {
+  const ably = makeAbly();
+  const session = createAgentSession({ client: ably, channelName: input.invocation.sessionName });
+  try {
+    await session.connect();
+    const run = session.createRun(Invocation.fromJSON(input.invocation), {
+      invocationId: input.invocationId,
+      // Pin the Run id to the Temporal workflowId so a fresh-process retry of
+      // openRun re-enters the same Run instead of opening a parallel one.
+      runId: input.invocationId,
+      signal: Context.current().cancellationSignal,
+    });
+    while (run.view.hasOlder()) await run.view.loadOlder();
+    await run.start();
+
+    // Leave the Run open (detach, not end) for the first runInferenceStep to adopt.
+    await session.detach();
+
+    return {
+      runId: run.runId,
+      invocationId: run.invocationId,
+      triggerEventId: input.invocation.inputEventId,
+    };
+  } finally {
+    ably.close();
+  }
+}
+
+export async function runInferenceStep(input: StepInput): Promise<InferenceOutcome> {
+  const ably = makeAbly();
+  const session = createAgentSession({ client: ably, channelName: input.invocation.sessionName });
+  try {
+    await session.connect();
+    const run = session.adoptRun(input.ids, { signal: Context.current().cancellationSignal });
+    await run.load();
+    while (run.view.hasOlder()) await run.view.loadOlder();
+
+    const outcome = await runInference(run, stepIdFor(input.ids.invocationId));
+    await session.detach();
+    return outcome;
+  } finally {
+    ably.close();
+  }
+}
+
+export async function runToolStep(input: StepInput & { toolCall: ToolCallInfo }): Promise<void> {
+  const ably = makeAbly();
+  const session = createAgentSession({ client: ably, channelName: input.invocation.sessionName });
+  try {
+    await session.connect();
+    const run = session.adoptRun(input.ids, { signal: Context.current().cancellationSignal });
+    await run.load();
+
+    const step = run.createStep({ stepId: stepIdFor(input.ids.invocationId) });
+    await step.start();
+    const tool = tools[input.toolCall.toolName] as { execute: (input: unknown) => Promise<unknown> };
+    const output = await tool.execute(input.toolCall.input);
+    await step.send({
+      type: 'tool-output-available',
+      toolCallId: input.toolCall.toolCallId,
+      output,
+    });
+    await step.end();
+    await session.detach();
+  } finally {
+    ably.close();
+  }
+}
+
+async function runInference(run: VercelAgentRun, stepId: string): Promise<InferenceOutcome> {
+  const step = run.createStep({ stepId });
+  await step.start();
+
+  const conversation = run.view.getMessages().map((m) => m.message);
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-20250514'),
+    messages: await convertToModelMessages(conversation),
+    tools: stripToolExecutes(tools),
+    abortSignal: run.abortSignal,
+    // The workflow drives the loop; this call runs one step only.
+    stopWhen: stepCountIs(1),
+  });
+
+  const pipeResult = await step.pipe(result.toUIMessageStream());
+  const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+  await step.end();
+
+  if (outcome.reason === 'complete' || outcome.reason === 'cancelled') {
+    await run.end({ reason: outcome.reason });
+    return { kind: 'done' };
+  }
+  if (outcome.reason === 'error') {
+    await run.end({
+      reason: 'error',
+      error: new Ably.ErrorInfo(outcome.error.message, 104000, 500),
+    });
+    return { kind: 'done' };
+  }
+
+  // The model asked for a server tool: leave the Run open for runToolStep to adopt.
+  const toolCalls = pendingToolCalls(run.messages)
+    .filter((call) => typeof tools[call.toolName]?.execute === 'function')
+    .map((call) => ({ toolCallId: call.toolCallId, toolName: call.toolName, input: call.input }));
+  return { kind: 'server-tools', toolCalls };
+}
+```
+</Code>
+
+`stopWhen: stepCountIs(1)` prevents the Vercel AI SDK from running its own multi-step tool loop inside a single activity. The workflow drives the loop instead, one activity at a time, so each unit is retryable in isolation.
+
+### Worker entrypoint <a id="run-worker"/>
+
+Create `workflow/worker.ts`. The worker hosts the workflow and its activities on a single task queue.
+
+<Code>
+```javascript
+import path from 'node:path';
+import { config as loadDotenv } from 'dotenv';
+import { NativeConnection, Worker } from '@temporalio/worker';
+import * as activities from './activities.js';
+import { TASK_QUEUE } from './shared.js';
+
+// tsx does not auto-load .env.local the way `next dev` does.
+loadDotenv({ path: path.resolve(__dirname, '../.env.local') });
+
+async function main() {
+  const connection = await NativeConnection.connect({ address: 'localhost:7233' });
+  const worker = await Worker.create({
+    connection,
+    namespace: 'default',
+    taskQueue: TASK_QUEUE,
+    workflowsPath: require.resolve('./workflows'),
+    activities,
+  });
+  console.log(`worker listening on ${TASK_QUEUE}`);
+  await worker.run();
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+```
+</Code>
+
+## Create the agent route <a id="create-agent-route"/>
+
+Create `app/api/chat/route.ts`. The route starts a Temporal workflow and returns immediately with the ids the client observes.
+
+<Code>
+```javascript
+import { Client, Connection } from '@temporalio/client';
+import type { InvocationData } from '@ably/ai-transport';
+import type { ChatWorkflowInput } from '../../../workflow/shared';
+import { TASK_QUEUE } from '../../../workflow/shared';
+
+let cachedTemporal: Client | undefined;
+async function temporalClient() {
+  if (cachedTemporal) return cachedTemporal;
+  const connection = await Connection.connect({ address: 'localhost:7233' });
+  cachedTemporal = new Client({ connection, namespace: 'default' });
+  return cachedTemporal;
+}
+
+export async function POST(req: Request) {
+  const invocation = (await req.json()) as InvocationData;
+  const invocationId = crypto.randomUUID();
+
+  const client = await temporalClient();
+  const args: [ChatWorkflowInput] = [{ invocation, invocationId }];
+  await client.workflow.start('chatWorkflow', {
+    workflowId: invocationId,
+    taskQueue: TASK_QUEUE,
+    args,
+  });
+
+  return Response.json({ invocationId });
+}
+```
+</Code>
+
+`workflowId = invocationId` gives every HTTP POST its own workflow. A continuation POST (a tool result, a regenerate, a suspend resume) starts a fresh workflow on the same `runId`.
+
+## Create the chat component <a id="chat-component"/>
+
+The client is identical to the [Vercel AI SDK getting-started](/docs/ai-transport/getting-started/vercel-ai-sdk#create-the-chat-component). The `ChatTransport` POSTs to `/api/chat`; whether the server side is a single `streamText` call or a Temporal workflow is invisible to the client.
+
+## Wire it together <a id="wire-it-together"/>
+
+The page wrapper is identical to the [Vercel AI SDK getting-started](/docs/ai-transport/getting-started/vercel-ai-sdk#wire-it-together). Use the same `Providers` and `ChatTransportProvider` setup.
+
+## Run the app <a id="run"/>
+
+Open three terminals. `--db-filename` persists Temporal state across restarts, so a workflow you inspect in the Web UI survives a machine reboot.
+
+<Code>
+```shell
+# Terminal 1: Temporal dev server
+temporal server start-dev --db-filename ai-transport-demo.db
+```
+</Code>
+
+<Code>
+```shell
+# Terminal 2: Temporal worker
+npx tsx workflow/worker.ts
+```
+</Code>
+
+<Code>
+```shell
+# Terminal 3: Next.js
+npm run dev
+```
+</Code>
+
+Open the app at `http://localhost:3000`. Open the Temporal Web UI at `http://localhost:8233`. Every user turn appears as a new workflow in the UI; each activity is one Step on the Ably channel.
+
+## What is happening <a id="what-is-happening"/>
+
+1. `sendMessage({ text })` publishes the user input on the channel and POSTs an [Invocation](/docs/ai-transport/concepts/invocations) to `/api/chat`, which starts a Temporal workflow with `workflowId = invocationId`.
+2. `openRun` calls [`session.createRun`](/docs/ai-transport/api/javascript/core/agent-session#create-run) and publishes `ai-run-start`, then detaches without running any inference. The first `runInferenceStep` adopts the Run with [`session.adoptRun`](/docs/ai-transport/api/javascript/core/agent-session#adopt-run), opens a Step under `stepIdFor(invocationId)`, and pipes the LLM stream. When the model asks for a server tool, the workflow schedules `runToolStep` (which adopts the Run, publishes the tool result, and detaches), then loops back into `runInferenceStep` for the follow-up inference, which publishes `ai-run-end`.
+3. If an activity crashes, Temporal retries it under the same activity id. `stepIdFor` returns the same `stepId`, so the retry's `ai-step-start` supersedes the failed attempt's channel output. The user sees only the retried Step's output. The `getStockPrice` tool throws on odd prices to make this visible.
+4. Cancels arrive on the channel, not through a Temporal signal. Each activity's own session routes them to [`run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run), which flows into the LLM call.
+
+This guide's happy path ends the Run inside the final inference activity. When a turn exhausts its retries with the Run still open, your failure path must adopt the Run and publish `run.end({ reason: 'error' })` so every observer's UI unsticks. Splitting `openRun` from the first inference matters here: the Run's ids reach the workflow before any inference runs, so your failure path always has the ids to end the Run, even if the very first inference exhausts its retries. See [Durable execution](/docs/ai-transport/features/durable-execution#close-once) for that pattern.
+
+## Understand the architecture <a id="architecture"/>
+
+Temporal owns execution durability: worker crashes, activity retries, workflow history. AI Transport owns conversation state: what appears on the channel, how retries reconcile, how clients observe. See [Temporal framework](/docs/ai-transport/frameworks/temporal) for the composition model and [Durable execution](/docs/ai-transport/features/durable-execution) for the framework-agnostic pattern.
+
+## Explore next <a id="explore-next"/>
+
+- [Temporal framework](/docs/ai-transport/frameworks/temporal): scope, cancel routing, suspend-and-resume across workflows.
+- [Durable execution](/docs/ai-transport/features/durable-execution): the pattern behind the code.
+- [Steps](/docs/ai-transport/concepts/steps): the retry unit inside a Run.
+- [`stepIdFor` API reference](/docs/ai-transport/api/javascript/temporal): the helper that ties Temporal activity ids to AI Transport Steps.
+- [AgentSession API reference](/docs/ai-transport/api/javascript/core/agent-session): `adoptRun`, `createStep`, `detach`.

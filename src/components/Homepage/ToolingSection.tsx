@@ -4,7 +4,7 @@ import { navigate } from '../Link';
 const ToolingCard = ({ card }: { card: ToolingCardData }) => {
   return (
     <div
-      className="p-4 bg-white dark:bg-neutral-1300 rounded-lg border border-neutral-300 dark:border-neutral-1000 flex flex-col cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-1200"
+      className="p-4 bg-white dark:bg-neutral-1300 rounded-lg border border-neutral-300 dark:border-neutral-1100 flex flex-col cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-1200"
       onClick={() => {
         navigate(card.link);
       }}

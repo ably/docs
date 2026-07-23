@@ -1,16 +1,16 @@
 import type { ExamplesSectionData } from 'src/data/content/types';
 import { getImageFromList, ImageProps } from 'src/components/Image';
 import { Image } from 'src/components/Image';
-import FeaturedLink from '@ably/ui/core/FeaturedLink';
+import FeaturedLink from 'src/components/ui/FeaturedLink';
 
 export const ExamplesSection = ({ section, images }: { section: ExamplesSectionData; images: ImageProps[] }) => {
   const imageUrl = getImageFromList(images, section.image);
   const backgroundGrid = getImageFromList(images, 'examples_grid.png');
 
   return (
-    <div className="relative overflow-hidden flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-1000 pt-6 pl-6 md:p-6 lg:p-8 bg-gradient-to-b from-[#fff] to-[#F6F8FA]">
+    <div className="relative overflow-hidden flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-1100 pt-6 pl-6 md:p-6 lg:p-8 bg-gradient-to-b from-[#fff] to-[#F6F8FA] dark:bg-none">
       {backgroundGrid && (
-        <div className="w-full h-full absolute top-0 right-0 z-0">
+        <div className="w-full h-full absolute top-0 right-0 z-0 dark:hidden">
           <Image image={backgroundGrid} />
         </div>
       )}

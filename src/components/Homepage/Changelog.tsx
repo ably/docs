@@ -1,8 +1,8 @@
 import { useStaticQuery } from 'gatsby';
 import { graphql } from 'gatsby';
 import { Key } from 'react';
-import Badge from '@ably/ui/core/Badge';
-import FeaturedLink from '@ably/ui/core/FeaturedLink';
+import Badge from 'src/components/ui/Badge';
+import FeaturedLink from 'src/components/ui/FeaturedLink';
 import Link from '../Link';
 
 interface ChangelogFeedItemNode {
@@ -184,7 +184,7 @@ export const ChangelogSection = () => {
   `);
 
   return (
-    <div className="rounded-lg border border-neutral-300 dark:border-neutral-1000 p-6 lg:p-8 mt-6 md:mt-0">
+    <div className="rounded-lg border border-neutral-300 dark:border-neutral-1100 p-6 lg:p-8 mt-6 md:mt-0">
       <div className="flex justify-between items-center mb-6">
         <h3 className="ui-text-h3 text-neutral-1300 dark:text-neutral-000">Changelog</h3>
         <FeaturedLink

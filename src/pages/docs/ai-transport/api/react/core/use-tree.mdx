@@ -1,0 +1,121 @@
+---
+title: "useTree"
+meta_description: "Stable structural query callbacks for the AI Transport conversation tree from React."
+meta_keywords: "AI Transport, React, useTree, TreeHandle, getRunNode, getNodeByCodecMessageId, getSiblingNodes, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/use-tree
+  - /docs/ai-transport/api/react/use-tree
+---
+
+`useTree` exposes stable structural query callbacks backed by a session's [`Tree`](/docs/ai-transport/api/javascript/core/client-session). The returned methods are thin `useCallback` wrappers around `session.tree` and never trigger re-renders on their own.
+
+Use this hook when you need to inspect tree structure outside the visible branch (for example, to count edit or regenerate siblings on a node before showing navigation arrows). Branch navigation for the currently visible chain lives on [`useView`](/docs/ai-transport/api/react/core/use-view).
+
+<Code>
+```javascript
+import { useTree } from '@ably/ai-transport/react';
+
+function SiblingSwitcher({ nodeKey }) {
+  const { getSiblingNodes } = useTree();
+  const siblings = getSiblingNodes(nodeKey);
+
+  if (siblings.length <= 1) return null;
+  return <Siblings nodes={siblings} />;
+}
+```
+</Code>
+
+This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers#client-session-provider) unless `session` is supplied explicitly.
+
+## Parameters <a id="parameters"/>
+
+<Table id='UseTreeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| session | optional | A client session to read tree structure from. Defaults to the nearest provider. | `ClientSession<TInput, TOutput, TProjection, TMessage>` |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+<Table id='TreeHandle'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| getRunNode | Get a Run by `runId`, or `undefined` if not found. | <Table id='RunNode'/> |
+| getNodeByCodecMessageId | Get the input or run node that owns a given `codecMessageId`, or `undefined` if not observed. Narrow on `kind` (`'input'` or `'run'`) before reading kind-specific fields. | `(codecMessageId) => ConversationNode \| undefined` |
+| getSiblingNodes | Get the sibling group for a node key (edit versions for an input node, regenerate siblings for a reply run). Ordered oldest-first by serial; single-element array when the node has no siblings; empty when the key is unknown. | `(key) => ConversationNode[]` |
+
+</Table>
+
+<Table id='RunNode' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| kind | Discriminator. Always `'run'`. | `'run'` |
+| runId | The Run's unique identifier. Minted by the agent. | String |
+| parentCodecMessageId | The codec-message-id of the input node this Run is rooted at (the user prompt the agent replied to). `undefined` for the root Run. | String or Undefined |
+| forkOf | The node key of the node this Run replaces, or `undefined` if this Run is not a fork. | String or Undefined |
+| regeneratesCodecMessageId | The codec-message-id this Run regenerates, or `undefined` for non-regenerate Runs. | String or Undefined |
+| clientId | Identity of the Ably client that started this Run. | String |
+| state | Run lifecycle state, discriminated on `status`. `{ status }` is `'active'` while streaming, `'suspended'` while paused awaiting input, or a non-error terminal `RunEndReason`; the `'error'` arm pairs `status: 'error'` with the terminal `error`. | `RunNodeState` |
+| projection | Per-Run codec projection. Folded by the Tree from every event published under this run-id. | `TProjection` |
+| invocationId | The agent-minted `invocationId` observed for this Run, adopted from the `ai-run-start` event. Empty string until run-start arrives, or if the wire didn't carry an invocation-id. | String |
+| startSerial | Ably serial of the first observed message tagged with this run-id. | String or Undefined |
+| endSerial | Ably serial of the run-end lifecycle event. | String or Undefined |
+
+</Table>
+
+## Look up a Run by id <a id="get-run-node"/>
+
+<MethodSignature>{`getRunNode(runId: string): RunNode<TProjection> | undefined`}</MethodSignature>
+
+Return the full [`RunNode`](#returns) record for a given `runId`, or `undefined` if the Run has not been observed. Use this when you need fields the View's [`RunInfo`](/docs/ai-transport/api/react/core/use-view#returns) does not expose (parent / fork relationships, the raw projection, serials).
+
+## Look up a node by codec-message-id <a id="get-node-by-codec-message-id"/>
+
+<MethodSignature>{`getNodeByCodecMessageId(codecMessageId: string): ConversationNode<TProjection> | undefined`}</MethodSignature>
+
+Resolve the node that owns the given `codecMessageId` through the tree's index. The result is a `ConversationNode` union: an `InputNode` (user prompt) or a `RunNode` (agent reply). Narrow on `kind` (`'input'` or `'run'`) before reading kind-specific fields. Returns `undefined` when the message has not been observed.
+
+## Get sibling nodes <a id="get-sibling-nodes"/>
+
+<MethodSignature>{`getSiblingNodes(key: string): ConversationNode<TProjection>[]`}</MethodSignature>
+
+Return the sibling group the node keyed by `key` belongs to. The key is either a `RunNode.runId` or an `InputNode.codecMessageId`. The two sibling-group shapes are: input edits, where input nodes share a parent and chain via `forkOf` (the original user prompt plus every edit of it); and regenerate siblings, where reply runs share an input-node parent (the original reply plus every regenerate of it).
+
+Ordered oldest-first by serial. Returns a single-element array when the node has no siblings, an empty array when the key is unknown. Narrow each node on `kind` before reading kind-specific fields.
+
+## Example <a id="example"/>
+
+A run-history sidebar that lists every observed Run and lights up sibling navigation where alternatives exist.
+
+<Code>
+```javascript
+import { useTree, useView } from '@ably/ai-transport/react';
+
+function RunHistory() {
+  const { messages, runOf } = useView();
+  const { getSiblingNodes } = useTree();
+
+  const runs = messages
+    .map(({ codecMessageId }) => runOf(codecMessageId))
+    .filter((r): r is RunInfo => Boolean(r));
+
+  return (
+    <ul>
+      {runs.map((run) => {
+        const siblings = getSiblingNodes(run.runId);
+        return (
+          <li key={run.runId}>
+            <RunSummary run={run} />
+            {siblings.length > 1 && <SiblingPicker siblings={siblings} />}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+```
+</Code>

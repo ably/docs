@@ -114,6 +114,33 @@ Some content here.`;
     });
   });
 
+  describe('identifier frontmatter (error-code pages)', () => {
+    it('surfaces the identifier beneath the title for LLM consumption', () => {
+      const input = `---
+title: "40142: Token expired"
+identifier: token_expired
+---
+
+The token had expired.`;
+
+      const { content } = transformMdxToMarkdown(input, 'https://ably.com');
+
+      expect(content).toContain('# 40142: Token expired\n\nIdentifier: `token_expired`');
+    });
+
+    it('omits the identifier line when frontmatter has no identifier', () => {
+      const input = `---
+title: Test Page
+---
+
+Some content here.`;
+
+      const { content } = transformMdxToMarkdown(input, 'https://ably.com');
+
+      expect(content).not.toContain('Identifier:');
+    });
+  });
+
   describe('removeImportExportStatements', () => {
     it('should remove single-line imports', () => {
       const input = `import Foo from 'bar'\n\nContent here`;

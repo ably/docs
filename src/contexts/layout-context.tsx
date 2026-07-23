@@ -1,6 +1,6 @@
 import React, { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 import { useLocation } from '@reach/router';
-import { stripSdkType } from '@ably/ui/core/CodeSnippet/languages';
+import { stripSdkType } from 'src/components/ui/CodeSnippet/languages';
 import { ActivePage, determineActivePage, PageTemplate } from 'src/components/Layout/utils/nav';
 import { productData } from 'src/data';
 import { LanguageKey } from 'src/data/languages/types';
@@ -40,6 +40,7 @@ const LayoutContext = createContext<{
     clientLanguages: [],
     agentLanguages: [],
     isDualLanguage: false,
+    hasProductBar: false,
   },
 });
 
@@ -96,7 +97,14 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
   const location = useLocation();
 
   const activePage = useMemo(() => {
-    const activePageData = determineActivePage(productData, location.pathname);
+    const activePageData =
+      determineActivePage(productData, location.pathname) ??
+      // Error-code detail pages (/docs/platform/errors/codes/<code>) are generated
+      // from the ably-common registry and not individually in the nav; resolve them
+      // to the Error codes index so they inherit the Platform sidebar.
+      (/^\/docs\/platform\/errors\/codes\/[^/]+\/?$/.test(location.pathname)
+        ? determineActivePage(productData, '/docs/platform/errors/codes')
+        : null);
 
     let languages: LanguageKey[] = [];
     if (activePageData?.page.languages) {
@@ -117,18 +125,21 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
     const clientLanguage = isDualLanguage ? determineClientLanguage(location.search, clientLanguages) : undefined;
     const agentLanguage = isDualLanguage ? determineAgentLanguage(location.search, agentLanguages) : undefined;
 
+    const product = activePageData?.product ?? null;
+
     return {
       tree: activePageData?.tree ?? [],
       page: activePageData?.page ?? { name: '', link: '' },
       languages,
       language: languages.includes(language) ? language : null,
-      product: activePageData?.product ?? null,
+      product,
       template: 'mdx' as PageTemplate,
       clientLanguage,
       agentLanguage,
       clientLanguages,
       agentLanguages,
       isDualLanguage,
+      hasProductBar: product !== null && product !== 'platform',
     };
   }, [location.pathname, location.search, pageContext?.languages]);
 

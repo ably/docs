@@ -9,9 +9,14 @@ export default {
   },
   content: [
     {
-      name: 'About Spaces',
-      link: '/docs/spaces',
-      index: true,
+      name: 'Getting started',
+      pages: [
+        {
+          name: 'About Spaces',
+          link: '/docs/spaces',
+          index: true,
+        },
+      ],
     },
     {
       name: 'Setup',
@@ -56,6 +61,10 @@ export default {
           link: '/docs/spaces/locking',
         },
       ],
+    },
+    {
+      name: 'Spaces pricing',
+      link: '/docs/spaces/pricing',
     },
   ],
   api: [

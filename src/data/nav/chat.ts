@@ -9,49 +9,54 @@ export default {
   },
   content: [
     {
-      name: 'About Chat',
-      link: '/docs/chat',
-      index: true,
-    },
-    {
       name: 'Getting started',
       pages: [
         {
-          name: 'Overview',
-          link: '/docs/chat/getting-started',
+          name: 'About Chat',
+          link: '/docs/chat',
           index: true,
         },
         {
-          name: 'JavaScript',
-          link: '/docs/chat/getting-started/javascript',
-        },
-        {
-          name: 'React',
-          link: '/docs/chat/getting-started/react',
-        },
-        {
-          name: 'React Native',
-          link: '/docs/chat/getting-started/react-native',
-        },
-        {
-          name: 'Kotlin (Android)',
-          link: '/docs/chat/getting-started/android',
-        },
-        {
-          name: 'Kotlin (JVM)',
-          link: '/docs/chat/getting-started/jvm',
-        },
-        {
-          name: 'Swift',
-          link: '/docs/chat/getting-started/swift',
-        },
-        {
-          name: 'Swift (AsyncSequence)',
-          link: '/docs/chat/getting-started/swift-async-sequence',
-        },
-        {
-          name: 'React UI Kit',
-          link: '/docs/chat/getting-started/react-ui-kit',
+          name: 'By language',
+          pages: [
+            {
+              name: 'Overview',
+              link: '/docs/chat/getting-started',
+              index: true,
+            },
+            {
+              name: 'JavaScript',
+              link: '/docs/chat/getting-started/javascript',
+            },
+            {
+              name: 'React',
+              link: '/docs/chat/getting-started/react',
+            },
+            {
+              name: 'React Native',
+              link: '/docs/chat/getting-started/react-native',
+            },
+            {
+              name: 'Kotlin (Android)',
+              link: '/docs/chat/getting-started/android',
+            },
+            {
+              name: 'Kotlin (JVM)',
+              link: '/docs/chat/getting-started/jvm',
+            },
+            {
+              name: 'Swift',
+              link: '/docs/chat/getting-started/swift',
+            },
+            {
+              name: 'Swift (AsyncSequence)',
+              link: '/docs/chat/getting-started/swift-async-sequence',
+            },
+            {
+              name: 'React UI Kit',
+              link: '/docs/chat/getting-started/react-ui-kit',
+            },
+          ],
         },
       ],
     },
@@ -222,6 +227,10 @@ export default {
           ],
         },
       ],
+    },
+    {
+      name: 'Chat pricing',
+      link: '/docs/chat/pricing',
     },
     {
       name: 'Guides',

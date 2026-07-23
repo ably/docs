@@ -1,0 +1,652 @@
+---
+title: "AgentSession"
+meta_description: "API reference for the AI Transport AgentSession: factory, lifecycle methods, the Run interface, and the Invocation value object."
+meta_keywords: "AI Transport, AgentSession, createAgentSession, Run, Invocation, createRun, pipe, end, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/server-transport
+  - /docs/ai-transport/api/javascript/server-transport
+---
+
+The `AgentSession` is the server-side counterpart to [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session). It subscribes to the channel for cancel signals and creates `AgentRun` instances that publish lifecycle events, user messages, and streamed assistant output.
+
+Construct one with `createAgentSession` from the core entry point. For Vercel `UIMessage` channels, use the pre-bound factory from [`@ably/ai-transport/vercel`](/docs/ai-transport/api/javascript/vercel/chat-transport) instead.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createAgentSession, Invocation } from '@ably/ai-transport';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+const invocation = Invocation.fromJSON(await req.json());
+
+const session = createAgentSession({
+  client: ably,
+  channelName: invocation.sessionName,
+  codec: createUIMessageCodec(),
+});
+
+await session.connect();
+const run = session.createRun(invocation, { signal: req.signal });
+await run.start();
+```
+</Code>
+
+## Properties <a id="properties"/>
+
+<Table id='AgentSessionProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| presence | The Ably presence object for the session's channel. Use it to see which clients are connected, for example to detect whether the requesting user is still online (`enter`, `leave`, `get`, `subscribe`). The session adds no semantics of its own (it is the same instance the channel exposes), and presence operations implicitly attach, so they work without first awaiting [`connect()`](#connect). | `Ably.RealtimePresence` |
+| object | The Ably LiveObjects API for the session's channel. Use it to read and write shared `LiveMap` / `LiveCounter` state on the channel the session already uses; call `get()` to resolve the object. The session adds no semantics; it is the same instance the channel exposes. Operating on it requires the client to be constructed with the `LiveObjects` plugin from `ably/liveobjects` and the object modes to be requested via [`channelModes`](#constructor-params); without both, the underlying SDK throws. See [LiveObjects State](/docs/ai-transport/features/liveobjects). | `RealtimeObject` |
+
+</Table>
+
+## Create an agent session <a id="constructor"/>
+
+<MethodSignature>{`function createAgentSession<TInput, TOutput, TProjection, TMessage>(options: AgentSessionOptions<TInput, TOutput, TProjection, TMessage>): AgentSession<TOutput, TProjection, TMessage>`}</MethodSignature>
+
+Construct an `AgentSession` bound to an Ably channel. The session does not attach until [`connect()`](#connect) resolves.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createAgentSession } from '@ably/ai-transport';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+const session = createAgentSession({
+  client: ably,
+  channelName: 'conversation-42',
+  codec: createUIMessageCodec(),
+});
+```
+</Code>
+
+### Parameters <a id="constructor-params"/>
+
+<Table id='AgentSessionOptions'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| client | required | The Ably Realtime client. The caller owns its lifecycle; neither `session.end()` nor `session.detach()` closes the client. | `Ably.Realtime` |
+| channelName | required | The channel to publish to. The session owns this channel; do not also resolve it elsewhere with conflicting options. | String |
+| codec | required | The codec used to encode events and messages. | `Codec<TInput, TOutput, TProjection, TMessage>` |
+| channelModes | optional | Extra channel modes to request on top of the modes AI Transport always needs. Pass `OBJECT_MODES` to use Ably LiveObjects via [`object`](#properties). Omit to attach with the default mode set. The session requests the union, so extra modes never drop the modes AI Transport relies on. See [LiveObjects State](/docs/ai-transport/features/liveobjects). | `Ably.ChannelMode[]` |
+| historyPageSize | optional | Wire-message limit fetched per channel-history round trip, used by every `run.view` pagination on this session. Independent of `loadOlder`'s reveal `limit`: it tunes fetch cost, not reveal granularity. Defaults to 100. | Number |
+| logger | optional | Logger instance for diagnostic output. | `Logger` |
+
+</Table>
+
+Subscribe to non-fatal session errors with [`on('error')`](#on) rather than a constructor option.
+
+### Returns <a id="constructor-returns"/>
+
+`AgentSession<TOutput, TProjection, TMessage>`. The session instance. Call [`connect()`](#connect) before [`createRun`](#create-run).
+
+## Connect the session <a id="connect"/>
+
+<MethodSignature>{`connect(): Promise<void>`}</MethodSignature>
+
+Attaches and subscribes to the channel backing the session. Idempotent: subsequent calls return the same promise. All `AgentRun` methods (`start`, `pipe`, `suspend`, `end`) throw `InvalidArgument` until `connect()` has been called.
+
+<Code>
+```javascript
+await session.connect();
+```
+</Code>
+
+### Returns <a id="connect-returns"/>
+
+`Promise<void>`. Resolves when the channel is attached and the session is ready to create runs.
+
+## Create a run <a id="create-run"/>
+
+<MethodSignature>{`createRun(invocation: Invocation, runtime?: RunRuntime<TOutput>): AgentRun<TOutput, TProjection, TMessage>`}</MethodSignature>
+
+Create a new `AgentRun` for the input event named in the `Invocation`. Returns synchronously and publishes nothing to the channel until [`AgentRun.start`](#run-start) is called. The run is registered for cancel routing immediately so early cancels fire the `abortSignal`.
+
+<Code>
+```javascript
+const invocation = Invocation.fromJSON(await req.json());
+const run = session.createRun(invocation, { signal: req.signal });
+```
+</Code>
+
+### Parameters <a id="create-run-params"/>
+
+<Table id='CreateRunParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| invocation | required | The `Invocation` carrying run identity and conversation context. | <Table id='Invocation'/> |
+| runtime | optional | Per-run hooks and an external abort signal. | <Table id='RunRuntime'/> |
+
+</Table>
+
+<Table id='Invocation' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| inputEventId | The specific input event on the channel that triggered this invocation. Run identity is resolved from that event's wire headers. | String |
+| sessionName | Logical name of the session, used as the Ably channel name. | String |
+
+</Table>
+
+<Table id='RunRuntime' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| invocationId | Override the invocation id for this Run. Defaults to a fresh `crypto.randomUUID()` (the normal path; one per HTTP request). Supply a non-empty value for deterministic ids in tests. | String |
+| runId | Override the run id for a fresh run. Defaults to a fresh `crypto.randomUUID()`. Continuations ignore this and read the existing `runId` off the triggering input event. Supply a non-empty value for deterministic ids in tests. | String |
+| signal | External `AbortSignal` (typically the HTTP request's `req.signal`) that cancels the run when fired. | `AbortSignal` |
+| onMessage | Called before each Ably message is published. Mutate the message in place to add custom headers under `extras.ai`. | `(message: Ably.Message) => void` |
+| onCancelled | Called when the run is cancelled. Receives a `write` function to publish final outputs before cancellation finalises. | `(write: (output: TOutput) => Promise<void>) => void \| Promise<void>` |
+| onCancel | Called when a cancel arrives. Return `true` to accept, `false` to reject. Defaults to accepting all. | `(req: CancelRequest) => Promise<boolean>` |
+| onError | Called with non-fatal run-scoped errors. | `(error: Ably.ErrorInfo) => void` |
+| onSteer | Called once per steering message as it folds into this Run, so the agent can race the arrival against an in-flight model call and decide whether to interrupt it. A hint only; the SDK never interrupts the model call itself, and [`hasInput`](#has-input) remains the authoritative check. Keep it synchronous and cheap. | `() => void` |
+
+</Table>
+
+### Returns <a id="create-run-returns"/>
+
+An `AgentRun<TOutput, TProjection, TMessage>` handle for publishing lifecycle events, user messages, and streamed output. See [AgentRun interface](#run) below.
+
+## Adopt an existing run <a id="adopt-run"/>
+
+<MethodSignature>{`adoptRun(identity: AdoptIdentity, runtime?: RunRuntime<TOutput>): AdoptedRun<TOutput, TProjection, TMessage>`}</MethodSignature>
+
+Adopt an already-open Run by its identity so a fresh process can publish further Steps and lifecycle events for it. Returns synchronously and does no I/O; publishes nothing to the channel until [`AdoptedRun.load`](#adopted-load) resolves. Use it from a step, tool, or cleanup activity that runs in a separate process from the one that opened the Run. See [Durable execution](/docs/ai-transport/features/durable-execution).
+
+<Code>
+```javascript
+const run = session.adoptRun(
+  { runId, invocationId, triggerEventId },
+  { signal: Context.current().cancellationSignal },
+);
+await run.load();
+```
+</Code>
+
+### Parameters <a id="adopt-run-params"/>
+
+<Table id='AdoptRunParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| identity | required | The Run's identity, threaded across the process boundary by the workflow that opened it. | <Table id='AdoptIdentity'/> |
+| runtime | optional | Per-Run hooks and an external abort signal. `runId` and `invocationId` overrides do not apply here; identity comes from the `identity` argument. | <Table id='RunRuntime'/> |
+
+</Table>
+
+<Table id='AdoptIdentity' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| runId | The existing Run's id. Authoritative: unlike `createRun`'s continuation path, `AdoptedRun.load` does not re-key the Run from the trigger event's `run-id` header. | String |
+| invocationId | This activity's invocation id (a step activity's id, or a cancel-cleanup id). Stamped on every event this process publishes for the Run. Independent of the Run's owner identity. | String |
+| triggerEventId | The id of the event whose headers resolve the Run's write-time anchors, typically an `ai-input` for a normal turn. Every activity of an invocation resolves against the same trigger. | String |
+
+</Table>
+
+### Returns <a id="adopt-run-returns"/>
+
+An `AdoptedRun<TOutput, TProjection, TMessage>` handle. Call [`load`](#adopted-load) to resolve the Run's write context off the channel and adopt it for publishing.
+
+## AdoptedRun.load <a id="adopted-load"/>
+
+<MethodSignature>{`load(options?: { timeoutMs?: number }): Promise<void>`}</MethodSignature>
+
+Resolve the Run's write context from the channel and adopt the Run for publishing in this process without emitting a fresh opening event. Awaits the Run's `ai-run-start` on the channel (paging history as needed), pins [`run.view`](#run) to the triggering branch, and checks the Run's status: an active Run is adopted; a suspended or terminal Run rejects. Idempotent; a second call is a no-op.
+
+Rejects with `InvalidArgument` when the Run is suspended (resume via `createRun().start()` on a continuation invocation) or terminal (read-only). Rejects with `InputEventNotFound` when the Run's `ai-run-start` is not observed within `timeoutMs`, which is a workflow-ordering error: the adopting activity ran before the opener published. This is retryable.
+
+### Parameters <a id="adopted-load-params"/>
+
+<Table id='AdoptedLoadParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| options.timeoutMs | optional | How long to wait for the Run's `ai-run-start` before rejecting. Defaults to `30000`. | Number |
+
+</Table>
+
+### Returns <a id="adopted-load-returns"/>
+
+`Promise<void>`. Resolves once the Run is adopted for publishing. The returned `AdoptedRun` retains the full `AgentRun` publish surface (`createStep`, `pipe`, `suspend`, `end`) but omits `start` (the Run was opened elsewhere; publishing another opening event would corrupt its lifecycle).
+
+## AgentRun <a id="run"/>
+
+The handle returned by [`createRun`](#create-run). It extends the shared `BaseRun` read-model (`runId`, `status`, `error`, `messages`) with the agent's lifecycle surface.
+
+### Properties
+
+<Table id='RunProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| runId | The Run's unique identifier. Known synchronously on the agent (it mints the id for a fresh run, or reads it off the triggering input event for a continuation). | String |
+| status | The Run's lifecycle status, read live off the tree. | `RunStatus` |
+| error | The terminal error, present exactly when `status` is `'error'`. | `Ably.ErrorInfo` or Undefined |
+| messages | All of this Run's messages: its triggering input followed by its streamed output (across any suspend and resume), deduplicated by `codecMessageId`. The unit to persist. See [Hydrate the conversation](#conversation-hydration). | `TMessage[]` |
+| invocationId | The invocation id minted by the agent for this `createRun` call (one per HTTP request). Readable synchronously; the application returns it on the HTTP response. The agent stamps it on every event it publishes for this invocation. | String |
+| abortSignal | `AbortSignal` scoped to this Run. Fires when a cancel event arrives. | `AbortSignal` |
+| view | A read-only `View<TMessage>` of the conversation branch this Run belongs to, from its triggering input back to the conversation root. Use it to reconstruct the conversation to feed the model. See [Hydrate the conversation](#conversation-hydration). | `View<TMessage>` |
+| located | Resolves once the Run's triggering input (named in its invocation) has been observed on the channel, whether through the live subscription or by paging history with `view.loadOlder()`. [`start`](#run-start) awaits it internally; await it directly only to read the trigger before deciding how to start. | `Promise<void>` |
+
+</Table>
+
+### Start the run <a id="run-start"/>
+
+<MethodSignature>{`start(): Promise<void>`}</MethodSignature>
+
+Wait until the Run's triggering input has been observed on the channel (see [`located`](#run)), then publish the opening lifecycle event (`ai-run-start`, or `ai-run-resume` for a continuation). Must be called before `pipe`, `suspend`, or `end`.
+
+There is no built-in deadline: `start()` does not time out waiting for the trigger. It rejects only if the run is cancelled or the session is closed before the trigger is observed. Race it against your own timeout if you need one.
+
+### Check for pending input <a id="has-input"/>
+
+<MethodSignature>{`hasInput(): boolean`}</MethodSignature>
+
+Drives the agent's loop: returns `true` before the Run has produced any output (the triggering input always needs a first response), and again whenever a steering message has folded into the Run since the previous check. Returns `false` once the Run has produced output and no steering message is pending, or once [`abortSignal`](#run) has fired.
+
+Calling `hasInput()` drains any pending steering messages: the next output the agent pipes stamps their codec-message-ids, resolving each steering client's [`outcome`](/docs/ai-transport/features/interruption-and-steering#steer) as consumed. There is no observe-only variant; treat every call as a commitment to respond to whatever it reports.
+
+<Code>
+```javascript
+while (run.hasInput()) {
+  const result = streamText({ messages: run.view.getMessages().map(({ message }) => message), model });
+  await run.pipe(result.toUIMessageStream());
+}
+await run.end({ reason: 'complete' });
+```
+</Code>
+
+### Pipe the response stream <a id="pipe"/>
+
+<MethodSignature>{`pipe(stream: ReadableStream<TOutput>, options?: PipeOptions<TOutput>): Promise<StreamResult>`}</MethodSignature>
+
+Pipe a `ReadableStream` of outputs through the encoder to the channel. Returns when the stream completes, is cancelled, or errors. Does NOT call `end()`; the caller must call `end()` after `pipe()` returns.
+
+#### Parameters <a id="pipe-params"/>
+
+<Table id='PipeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| stream | required | The output stream from your LLM call. | `ReadableStream<TOutput>` |
+| options | optional | Branching and per-output hooks. | <Table id='PipeOptions'/> |
+
+</Table>
+
+<Table id='PipeOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| parent | The codec-message-id of the immediately preceding message in this branch. | String |
+| forkOf | The codec-message-id of the message this response replaces (for regeneration). | String |
+| resolveWriteOptions | Per-output hook returning `WriteOptions` overrides for a single encode call. | Function |
+
+</Table>
+
+#### Returns <a id="pipe-returns"/>
+
+`Promise<StreamResult>`. Resolves when the stream ends. Pass `result.reason` to [`Run.end`](#run-end). <Table id='StreamResult'/>
+
+<Table id='StreamResult' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| reason | Why the stream ended. | `RunEndReason` |
+| error | The original error when `reason` is `'error'`. | `Error` |
+
+</Table>
+
+### Create a step <a id="create-step"/>
+
+<MethodSignature>{`createStep(options?: StepOptions): RunStep<TOutput>`}</MethodSignature>
+
+Create a [`RunStep`](#step): a re-attemptable unit of agent work within this Run. Use it when a retry of the same logical unit must supersede the failed attempt's channel output rather than append beside it, typically inside a workflow-engine activity. Returns synchronously and does no I/O; [`RunStep.start`](#step-start) publishes the opening event.
+
+`options.stepId` controls retry coalescing. Omit it for the common in-process case: the SDK assigns an invocation-scoped id, and an in-process retry after a `'failed'` close reuses that id. Supply an explicit `stepId` when the same logical Step re-attempts in a separate process. Source it from the workflow engine's own stable per-activity id (a [Temporal](/docs/ai-transport/frameworks/temporal) activity id, a [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk) step id). See [Durable execution](/docs/ai-transport/features/durable-execution).
+
+<Code>
+```javascript
+const step = run.createStep({ stepId: stepIdFor(invocationId) });
+await step.start();
+await step.pipe(llmStream);
+await step.end();
+```
+</Code>
+
+The Run must be open first, via [`start`](#run-start) or an adopting [`load`](#adopted-load). Only one Step may be active on a Run at a time; `step.start()` rejects if another Step is still open. If a Step is left open, `run.end()` auto-closes it.
+
+#### Parameters <a id="create-step-params"/>
+
+<Table id='CreateStepParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| options | optional | Step configuration. | <Table id='StepOptions'/> |
+
+</Table>
+
+<Table id='StepOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| stepId | A stable identifier used to coalesce retries. A fresh attempt under an existing `stepId` supersedes the prior attempt's output. Omit for in-process work; supply the workflow engine's own stable per-activity id for cross-process retries. | String |
+| stepClientId | The `clientId` to attribute this Step to. Omit for the common case; the SDK inherits the prior Step's value (sticky), defaulting to the triggering input's publisher for the Run's first Step. Supply an explicit value when a steering message incorporates a fresh input mid-run. | String |
+
+</Table>
+
+#### Returns <a id="create-step-returns"/>
+
+A [`RunStep`](#step) handle whose lifecycle mirrors the Run: call `start()` to publish `ai-step-start`, `pipe()` or `send()` to publish output, then `end()` to publish `ai-step-end`.
+
+### Suspend the run <a id="run-suspend"/>
+
+<MethodSignature>{`suspend(): Promise<void>`}</MethodSignature>
+
+Publish the `ai-run-suspend` event to the channel, pausing the Run pending external input (a tool approval, a human-in-the-loop response). The Run is not terminal: `RunInfo.status` becomes `'suspended'`, and a continuation Invocation resumes it via `ai-run-resume`.
+
+Use `suspend` instead of `end` when you want the run to come back. Use `end` only for terminal outcomes.
+
+### End the run <a id="run-end"/>
+
+<MethodSignature>{`end(params: RunEndParams): Promise<void>`}</MethodSignature>
+
+Publish the `ai-run-end` event to the channel terminally and clean up. `params` is a [`RunEndParams`](#run-end-params) object carrying the terminal `reason` and, when `reason` is `'error'`, an optional `error`. To pause a Run instead of ending it, use [`suspend`](#run-suspend).
+
+#### Parameters <a id="run-end-params"/>
+
+`RunEndParams` is discriminated on `reason`:
+
+- `{ reason: 'complete' | 'cancelled' }`: a non-error terminal reason that carries no `error`.
+- `{ reason: 'error', error? }`: the run ended in error. `error` is an optional `Ably.ErrorInfo` to surface to clients. Omit it to end in error without detail.
+
+<Table id='RunEndParams'>
+
+| Property | Required | Description | Type |
+| --- | --- | --- | --- |
+| reason | required | The terminal reason. | `RunEndReason` |
+| error | optional | The terminal error to surface to clients. Allowed only when `reason` is `'error'`. | `Ably.ErrorInfo` |
+
+</Table>
+
+## RunStep <a id="step"/>
+
+The handle returned by [`AgentRun.createStep`](#create-step). A `RunStep` brackets one re-attemptable unit of agent output on the channel with an `ai-step-start` and an `ai-step-end`. Its `stepId` is stable across retries of the same Step: a retried `ai-step-start` under the same id supersedes the prior attempt's output instead of appending to it. See [Steps](/docs/ai-transport/concepts/steps).
+
+### Properties <a id="step-properties"/>
+
+<Table id='RunStepProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| stepId | This Step's id. Stable across retry attempts of the same Step. | String |
+| abortSignal | The Run's `AbortSignal` (the same instance as [`AgentRun.abortSignal`](#run)); there is no per-Step abort. Fires when a cancel arrives for this Run. | `AbortSignal` |
+
+</Table>
+
+### Start the step <a id="step-start"/>
+
+<MethodSignature>{`start(): Promise<void>`}</MethodSignature>
+
+Publish `ai-step-start`, opening the Step for output. Call once, after the Run is open (via [`start`](#run-start) or an adopting [`load`](#adopted-load)) and before [`pipe`](#step-pipe) or [`send`](#step-send). Idempotent; a second call is a no-op. Rejects if another Step is already active on the Run (only one Step may be open at a time), or if the Run has ended.
+
+### Pipe outputs <a id="step-pipe"/>
+
+<MethodSignature>{`pipe(stream: ReadableStream<TOutput>, options?: PipeOptions<TOutput>): Promise<StreamResult>`}</MethodSignature>
+
+Pipe an output stream through the encoder to the channel, stamping every output with this Step's `step-id` and its attempt's `start-serial`. Otherwise identical to [`AgentRun.pipe`](#pipe): resolves when the stream completes, is cancelled, or errors. A stream error returns `{ reason: 'error' }` rather than throwing, and marks the Step `'failed'` when [`end`](#step-end) closes it.
+
+#### Parameters <a id="step-pipe-params"/>
+
+<Table id='StepPipeParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| stream | required | The output stream from your LLM call. | `ReadableStream<TOutput>` |
+| options | optional | Per-stream overrides. A per-output `resolveWriteOptions` merges over the Step's default headers, so a normal override leaves `step-id` intact. | <Table id='PipeOptions'/> |
+
+</Table>
+
+#### Returns <a id="step-pipe-returns"/>
+
+`Promise<StreamResult>`. Resolves when the stream ends. The `reason` classification matches [`AgentRun.pipe`](#pipe-returns). <Table id='StreamResult'/>
+
+### Send a discrete output <a id="step-send"/>
+
+<MethodSignature>{`send(output: TOutput): Promise<void>`}</MethodSignature>
+
+Publish a single discrete output as one assistant message on the channel, stamped with this Step's `step-id` and its attempt's `start-serial`. Use it when the output is already resolved (a tool result, a data payload, a metadata event) rather than a streamed source. Each `send` mints its own `codec-message-id`, so N calls produce N assistant messages, not one. For streamed output from a long-running source, use [`pipe`](#step-pipe) instead.
+
+The Step must be active (started, not ended). Rejects otherwise. A publish failure throws.
+
+#### Parameters <a id="step-send-params"/>
+
+<Table id='StepSendParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| output | required | The single codec output to publish. | `TOutput` |
+
+</Table>
+
+### End the step <a id="step-end"/>
+
+<MethodSignature>{`end(params?: StepEndParams): Promise<void>`}</MethodSignature>
+
+Publish `ai-step-end`, closing the Step. Idempotent; a second call is a no-op. Omit `params` to derive the reason: `'cancelled'` if the Run was cancelled (its `abortSignal` fired), otherwise `'failed'` if any [`pipe`](#step-pipe) errored, otherwise `'complete'`. Pass an explicit `reason` to override.
+
+A Step terminal is not a Run terminal. Drive the Run to [`suspend`](#run-suspend) or [`end`](#run-end) afterwards. If a Step is left open, `run.end()` auto-closes it so observers are never stranded, but an explicit `end()` is clearer and lets you set the reason.
+
+#### Parameters <a id="step-end-params"/>
+
+<Table id='StepEndParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| params | optional | Step-end configuration. | <Table id='StepEndParams'/> |
+
+</Table>
+
+<Table id='StepEndParams' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| reason | The terminal reason. Omit to derive it: `'cancelled'` if the Run was cancelled (its `abortSignal` fired), otherwise `'failed'` if any `pipe` errored, otherwise `'complete'`. Pass an explicit value to override. | `'complete' \| 'failed' \| 'cancelled'` |
+
+</Table>
+
+## Subscribe to session errors <a id="on"/>
+
+<MethodSignature>{`on(event: 'error', handler: (error: Ably.ErrorInfo) => void): () => void`}</MethodSignature>
+
+Subscribe to non-fatal session-level errors not scoped to any run: channel continuity loss (a re-attach with `resumed: false`, or `FAILED` / `SUSPENDED` / `DETACHED`), cancel-listener or attach failures, and any run-scoped error whose run supplied no `onError`. Returns an unsubscribe function. Once the session is closed this is a no-op.
+
+<Code>
+```javascript
+const unsubscribe = session.on('error', (error) => {
+  console.error('Session error:', error.code, error.message);
+});
+
+// later, when the listener is no longer needed
+unsubscribe();
+```
+</Code>
+
+### Parameters <a id="on-params"/>
+
+<Table id='OnParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| event | required | The event to subscribe to. Currently only `'error'`. | `'error'` |
+| handler | required | Called with an [`ErrorInfo`](/docs/ai-transport/api/errors#errorinfo) for every non-fatal session error. | Function |
+
+</Table>
+
+### Returns <a id="on-returns"/>
+
+`() => void`. An unsubscribe function. Call it to remove the listener.
+
+## Detach the session <a id="detach"/>
+
+<MethodSignature>{`detach(): Promise<void>`}</MethodSignature>
+
+Unsubscribe from cancel messages, abort every active Run's controller (firing their `abortSignal`), detach the channel this session attached, and clean up. Publishes no Run terminal: any still-open Run is left as-is on the channel, to be resumed or cleaned up by another process. This is the escape hatch a durable in-flight activity uses to hand a Run off to the next activity mid-workflow. For a teardown that also closes open Runs, use [`end`](#session-end).
+
+The detach is best-effort: a failure (for example, the channel is already `FAILED`) is swallowed and does not reject. Idempotent.
+
+<Code>
+```javascript
+await session.detach();
+```
+</Code>
+
+### Returns <a id="detach-returns"/>
+
+`Promise<void>`. Resolves once the detach completes. See [Durable execution](/docs/ai-transport/features/durable-execution) for when to prefer `detach` over `end`.
+
+## End the session <a id="session-end"/>
+
+<MethodSignature>{`end(): Promise<void>`}</MethodSignature>
+
+Gracefully tear down the session. For every still-open Run this session owns, close its open Step (if any), then publish `ai-run-end` with `reason: 'cancelled'`, then do everything [`detach`](#detach) does. A forgotten `run.end()` on a fire-and-forget turn still closes every observer's stream this way, rather than leaving it stuck on `streaming`.
+
+An open Run ends `'cancelled'`. Not `'complete'` (that would falsely mark an unfinished turn as done), not `'suspend'` (that would hang observers with no resumer; preserve-for-resume is [`detach`](#detach)'s job), not `'error'`. Use `end` as the normal teardown for a non-durable agent. A durable in-flight activity uses [`detach`](#detach) instead, to hand a still-open Run off to the next activity without terminating it.
+
+<Code>
+```javascript
+await session.end();
+```
+</Code>
+
+### Returns <a id="session-end-returns"/>
+
+`Promise<void>`. Resolves once the terminals are published and the detach completes. Idempotent.
+
+## Invocation <a id="invocation"/>
+
+A value object wrapping the JSON body a client sends to the agent's HTTP endpoint to start a Run.
+
+### Build from JSON <a id="from-json"/>
+
+<MethodSignature>{`Invocation.fromJSON(data: InvocationData): Invocation`}</MethodSignature>
+
+The entry point used by agent handlers: parse the request body and pass it to `Invocation.fromJSON`, then hand the result to [`createRun`](#create-run).
+
+<Code>
+```javascript
+import { Invocation } from '@ably/ai-transport';
+
+const data = await req.json();
+const invocation = Invocation.fromJSON(data);
+```
+</Code>
+
+#### Parameters <a id="from-json-params"/>
+
+<Table id='FromJSONParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| data | required | The parsed JSON request body matching the `InvocationData` wire shape. | <Table id='InvocationData'/> |
+
+</Table>
+
+<Table id='InvocationData' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| inputEventId | Identifier for the input event on the channel that triggered this invocation. Run identity is resolved from that event's wire headers, not from the body. | String |
+| sessionName | Logical name of the session, used as the Ably channel name. | String |
+
+</Table>
+
+## Hydrate the conversation <a id="conversation-hydration"/>
+
+Two accessors expose conversation content, at different scopes:
+
+- `run.messages` is all of this Run's own messages: its triggering input plus its streamed output (across any suspend and resume). This is the unit to persist, not the value to feed the model in a multi-turn conversation.
+- `run.view` is a read-only, leaf-pinned `View` of this Run's full branch, from its triggering input back to the conversation root. This is the value to feed the model.
+
+`run.view` includes an ancestor turn only once its run has completed. An ancestor that is still active, suspended, cancelled, or errored is omitted, along with the input it replied to, so a dangling tool call from a concurrent or interrupted turn can't invalidate the prompt. The current run is always included, and an omitted ancestor reappears once it completes.
+
+To rebuild the prior conversation for the model, drain `run.view` with `loadOlder()` for as much ancestor context as you want, then read `getMessages()`:
+
+<Code>
+```javascript
+// Rebuild the conversation from run.view before run.start(): draining pages in
+// this run's triggering input (otherwise run.start() awaits it arriving live).
+while (run.view.hasOlder()) {
+  await run.view.loadOlder();
+}
+const conversation = run.view.getMessages().map(({ message }) => message);
+
+await run.start();
+```
+</Code>
+
+For database-backed hydration, page `run.view` back only to the newest stored message with [`loadUntil`](/docs/ai-transport/features/database-hydration) instead of draining to the root.
+
+## RunEndReason <a id="run-end-reason"/>
+
+`'complete' | 'cancelled' | 'error'`. The terminal-reason discriminant: it is the `reason` field of the [`RunEndParams`](#run-end-params) you pass to [`Run.end`](#run-end), the `reason` on [`StreamResult`](#pipe-returns), and the value reflected on `RunInfo.status` once the Run terminates.
+
+A Run that pauses for external input (tool approval, human-in-the-loop) uses [`Run.suspend`](#run-suspend) instead of `end`, which publishes `ai-run-suspend` and leaves the Run alive at `RunInfo.status === 'suspended'`. A continuation Invocation resumes it via `ai-run-resume`.
+
+## Example <a id="example"/>
+
+An HTTP handler that sets up the session, creates a Run, rebuilds the conversation from `run.view`, pipes the LLM stream, and ends the Run.
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { createAgentSession, Invocation } from '@ably/ai-transport';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+export async function POST(req: Request) {
+  const invocation = Invocation.fromJSON(await req.json());
+
+  const session = createAgentSession({
+    client: ably,
+    channelName: invocation.sessionName,
+    codec: createUIMessageCodec(),
+  });
+
+  await session.connect();
+
+  const run = session.createRun(invocation, { signal: req.signal });
+
+  try {
+    // Rebuild the conversation from run.view before run.start(): draining pages
+    // in this run's triggering input (otherwise run.start() awaits it live).
+    while (run.view.hasOlder()) {
+      await run.view.loadOlder();
+    }
+    const conversation = run.view.getMessages().map(({ message }) => message);
+
+    await run.start();
+
+    const llmStream = await callMyLLM(conversation);
+    const result = await run.pipe(llmStream);
+    await run.end({ reason: result.reason });
+  } catch (err) {
+    await run.end({ reason: 'error' });
+    throw err;
+  } finally {
+    await session.end();
+  }
+
+  return Response.json({ runId: run.runId, invocationId: run.invocationId });
+}
+```
+</Code>

@@ -78,7 +78,10 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=12288
     executor:
       name: default
-    resource_class: xlarge
+    # gen2 is ~1.4x faster CPU at +20% credits/min. Only this job runs the
+    # CPU-bound `yarn build`, so it's the one place the trade pays off (per
+    # Voltaire's gen2 rollout). Fall back to xlarge if gen2 is unavailable.
+    resource_class: xlarge.gen2
     steps:
       - checkout
       - attach_workspace:
@@ -102,6 +105,29 @@ jobs:
       - run:
           name: Validate llms.txt
           command: yarn validate-llms-txt
+
+  check-error-docs:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - run:
+          name: Fetch error code registry (ably-common submodule)
+          command: git submodule update --init ably-common
+      - run:
+          name: Regenerate error code pages from the registry
+          command: node bin/generate-error-pages.ts
+      - run:
+          name: Ensure committed error pages match the registry
+          command: |
+            CHANGES="$(git status --porcelain src/pages/docs/platform/errors/codes src/pages/docs/platform/errors/codes.mdx)"
+            if [ -n "$CHANGES" ]; then
+              echo "❌ Generated error code pages are out of date or were hand-edited:"
+              echo "$CHANGES"
+              echo "Run 'yarn generate:errors' and commit the result."
+              exit 1
+            fi
+            echo "✓ Error code pages are up to date"
 
   test-nginx:
     docker:
@@ -171,6 +197,7 @@ workflows:
     unless: << pipeline.parameters.content-update >>
     jobs:
       - install-dependencies
+      - check-error-docs
       - security-audit:
           requires:
             - install-dependencies

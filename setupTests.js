@@ -11,7 +11,7 @@ window.ResizeObserver = ResizeObserver;
 
 Element.prototype.scrollIntoView = jest.fn();
 
-jest.mock('@ably/ui/core/utils/syntax-highlighter', () => ({
+jest.mock('src/utilities/syntax-highlighter', () => ({
   highlightSnippet: jest.fn,
   LINE_HIGHLIGHT_CLASSES: {
     addition: 'code-line-addition',
@@ -23,12 +23,12 @@ jest.mock('@ably/ui/core/utils/syntax-highlighter', () => ({
   splitHtmlLines: (html) => html.split('\n'),
 }));
 
-jest.mock('@ably/ui/core/Code', () => ({
+jest.mock('src/components/ui/Code', () => ({
   __esModule: true,
   default: () => null,
 }));
 
-jest.mock('@ably/ui/core/utils/syntax-highlighter-registry', () => ({
+jest.mock('src/utilities/syntax-highlighter-registry', () => ({
   __esModule: true,
   default: [],
 }));

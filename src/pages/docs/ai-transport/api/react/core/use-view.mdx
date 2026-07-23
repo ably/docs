@@ -1,0 +1,212 @@
+---
+title: "useView"
+meta_description: "Subscribe to a paginated, branch-aware view of the AI Transport conversation tree from React."
+meta_keywords: "AI Transport, React, useView, ViewHandle, send, regenerate, edit, conversation, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/use-view
+  - /docs/ai-transport/api/react/use-view
+---
+
+`useView` subscribes to a session's default view and returns the visible messages, branch navigation, write operations, and pagination state. It is the primary hook for rendering a conversation UI.
+
+By default the hook subscribes to the nearest [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers#client-session-provider)'s default view. Pass `session` to use a different session's default view, or `view` to subscribe to a specific view created with [`useCreateView`](/docs/ai-transport/api/react/core/use-create-view) or [`session.createView()`](/docs/ai-transport/api/javascript/core/client-session#create-view).
+
+<Code>
+```javascript
+import { useView } from '@ably/ai-transport/react';
+
+function Conversation() {
+  const { messages, send } = useView({ limit: 30 });
+
+  return (
+    <>
+      {messages.map(({ codecMessageId, message }) => (
+        <Message key={codecMessageId} message={message} />
+      ))}
+      <Composer
+        onSubmit={(text) =>
+          send({ kind: 'user-message', message: { role: 'user', parts: [{ type: 'text', text }] } })
+        }
+      />
+    </>
+  );
+}
+```
+</Code>
+
+This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers#client-session-provider) unless `session` or `view` is supplied explicitly.
+
+## Parameters <a id="parameters"/>
+
+<Table id='UseViewParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| session | optional | A client session whose default view to subscribe to. Defaults to the nearest provider. | `ClientSession<TInput, TOutput, TProjection, TMessage>` |
+| view | optional | A specific view to subscribe to directly. Takes priority over `session`. | `ClientView<TInput, TMessage>` |
+| limit | optional | Number of older codecMessages to reveal per page (exactly `limit`, fewer only at the end of history). When provided, auto-loads the first page on mount. | Number |
+| skip | optional | When `true`, skip all subscriptions and return an empty handle immediately. | Boolean |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+<Table id='ViewHandle'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| messages | The visible messages along the selected branch, each paired with its `codecMessageId`. Read the domain object from each entry's `message` field. | `CodecMessage<TMessage>[]` |
+| hasOlder | Whether there are older messages that can be revealed via `loadOlder`. | Boolean |
+| loading | Whether a page load is currently in progress. | Boolean |
+| loadError | Set when the most recent `loadOlder` call failed. Cleared automatically on the next successful load. | `Ably.ErrorInfo` or Undefined |
+| loadOlder | Reveal older messages, resolving to the revealed page (oldest-first). Returns `[]` when nothing was revealed: already loading, no view resolved, history exhausted, or the load failed. | `() => Promise<CodecMessage<TMessage>[]>` |
+| runOf | Look up the `RunInfo` for the Run that owns the given `codecMessageId`. | <Table id='RunInfo'/> |
+| run | Direct lookup by Run id. | <Table id='RunInfo'/> |
+| runs | Snapshot of the visible Runs along the selected branch, in chronological order. Returns `[]` when the view isn't resolved. | `() => RunInfo[]` |
+| branchSelection | Resolve the `BranchHandle` anchored at `codecMessageId`: the sibling state plus a `select(index)` verb to navigate it. Always returns a safe handle. | <Table id='BranchHandle'/> |
+| send | Send an input on the channel and fire a POST. At most one new message per send; the array form carries only wire-only inputs (tool results, approvals). Wrap a domain message via `codec.createUserMessage` (or build the `{ kind: 'user-message', message }` literal) to send a fresh user message. Takes optional <Table id='SendOptions'/>. | `(events, options?) => Promise<ClientRun<TMessage>>` |
+| regenerate | Regenerate an assistant message using this view's branch for history. | `(messageId, options?) => Promise<ClientRun<TMessage>>` |
+| edit | Edit a user message, forking from this view's branch. | `(messageId, inputs, options?) => Promise<ClientRun<TMessage>>` |
+
+</Table>
+
+<Table id='RunInfo' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| runId | The Run's unique identifier. | String |
+| clientId | Identity of the Ably client that started this Run. Empty string when the wire didn't carry an owner client id. | String |
+| status | Run lifecycle status. `'active'` while streaming, `'suspended'` while paused awaiting input, otherwise the `RunEndReason` the Run terminated with. | `'active' \| 'suspended' \| RunEndReason` |
+| error | The terminal error, present exactly when `status` is `'error'`. Carries the agent-stamped error detail so a UI can show why a Run failed. | `Ably.ErrorInfo` |
+| invocationId | The agent-minted `invocationId` observed for this Run, adopted from `ai-run-start`. Empty string until run-start arrives, or if the wire didn't carry an invocation-id. | String |
+
+</Table>
+
+<Table id='BranchHandle' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| hasSiblings | True when the anchor has more than one sibling. | Boolean |
+| siblings | The selected sibling and any alternatives in tree-order. Always contains the currently rendered message for known ids. | `TMessage[]` |
+| index | Index of the selected sibling within `siblings`. `0` when there is no real branching. | Number |
+| selected | Convenience reference to `siblings[index]`. `undefined` only when `siblings` is empty. | `TMessage` or Undefined |
+| select | Select a sibling at this branch point. `index` is clamped to `[0, siblings.length - 1]`; a silent no-op when the anchor is not a branch anchor. | `(index: number) => void` |
+
+</Table>
+
+<Table id='SendOptions' hidden>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| forkOf | The codec-message-id of the message this send replaces (fork). | String |
+| parent | The codec-message-id of the predecessor in the conversation thread. Auto-computed when omitted. | String |
+| runId | Reuse an existing `runId` (for example to resume a suspended run). | String |
+
+</Table>
+
+## Reveal older messages <a id="load-older"/>
+
+<MethodSignature>{`loadOlder(): Promise<CodecMessage<TMessage>[]>`}</MethodSignature>
+
+Reveal older messages into the view, resolving to the revealed page (oldest-first). When `limit` is set on the hook, the first page auto-loads on mount. Call `loadOlder` again to reveal more. The call is gated so concurrent invocations collapse to one in-flight request; it returns `[]` when nothing was revealed (already loading, no view resolved, history exhausted, or the load failed).
+
+On failure, `loadError` is set. On the next successful load, `loadError` is cleared automatically.
+
+## Look up a Run by message id <a id="run-of"/>
+
+<MethodSignature>{`runOf(codecMessageId: string): RunInfo | undefined`}</MethodSignature>
+
+Look up the [`RunInfo`](#returns) for the Run that owns the given `codecMessageId`. Returns `undefined` when the codec-message-id has not been observed.
+
+## Look up a Run by id <a id="run"/>
+
+<MethodSignature>{`run(runId: string): RunInfo | undefined`}</MethodSignature>
+
+Direct lookup by Run id. Symmetric with [`runOf`](#run-of) for callers that already hold a `runId`.
+
+## Resolve a branch selection <a id="branch-selection"/>
+
+<MethodSignature>{`branchSelection(codecMessageId: string): BranchHandle<TMessage>`}</MethodSignature>
+
+Resolve the `BranchHandle` anchored at `codecMessageId`: the sibling state plus a `select(index)` verb to navigate it. Always returns a safe handle: for branch anchors with N siblings, `siblings` carries every sibling Run's view of the anchor slot; for non-anchor messages, `siblings` is `[thisMessage]` and `hasSiblings` is `false`.
+
+## Select a sibling <a id="select-sibling"/>
+
+Switch the visible sibling through the [`BranchHandle`](#branch-selection) the `branchSelection` call returns, rather than a separate hook method:
+
+<Code>
+```javascript
+view.branchSelection(codecMessageId).select(1);
+```
+</Code>
+
+`index` is clamped to `[0, siblings.length - 1]`. The call is a silent no-op when the message is not a branch anchor, and emits `'update'` on the underlying view when the visible output changes.
+
+## Send inputs <a id="send"/>
+
+<MethodSignature>{`send(events: TInput | TInput[], options?: SendOptions): Promise<ClientRun<TMessage>>`}</MethodSignature>
+
+Send an input on the channel and fire a POST. Each `TInput` carries its own routing metadata (`parent`, `target`, `codecMessageId`).
+
+To send a fresh user message, build a `UserMessage` input. Use the codec factory (`codec.createUserMessage(message)`) or build the literal directly: `{ kind: 'user-message', message }`. A send introduces at most one new message: exactly one `UserMessage` for a fresh send (which mints a new Run), or none for a continuation. The array form exists only to carry the wire-only inputs that resolve a single assistant turn (`tool-result`, `tool-result-error`, `tool-approval-response`); pair it with `options.runId` to extend a suspended Run. Passing more than one new message rejects with `InvalidArgument`.
+
+## Regenerate an assistant message <a id="regenerate"/>
+
+<MethodSignature>{`regenerate(messageId: string, options?: SendOptions): Promise<ClientRun<TMessage>>`}</MethodSignature>
+
+Regenerate an assistant message. Creates a new Run that targets the message and threads under its parent user message. Both ids are computed automatically from this view's branch.
+
+## Edit a user message <a id="edit"/>
+
+<MethodSignature>{`edit(messageId: string, inputs: TInput | TInput[], options?: SendOptions): Promise<ClientRun<TMessage>>`}</MethodSignature>
+
+Edit a user message. Creates a new Run that forks the target message with the replacement inputs. `forkOf`, `parent`, and history are computed automatically from this view's branch.
+
+## Example <a id="example"/>
+
+A conversation component that loads older messages on mount, renders branch navigation when a sibling is available, and offers a regenerate button on each assistant turn.
+
+<Code>
+```javascript
+import { useView } from '@ably/ai-transport/react';
+
+function Conversation() {
+  const {
+    messages,
+    hasOlder,
+    loadOlder,
+    branchSelection,
+    send,
+    regenerate,
+  } = useView({ limit: 30 });
+
+  return (
+    <>
+      {hasOlder && <button onClick={() => loadOlder()}>Load older</button>}
+      {messages.map(({ codecMessageId, message }) => {
+        const branch = branchSelection(codecMessageId);
+        return (
+          <div key={codecMessageId}>
+            <Message message={message} />
+            {branch.hasSiblings && (
+              <BranchControls
+                selection={branch}
+                onSelect={(i) => branch.select(i)}
+              />
+            )}
+            {message.role === 'assistant' && (
+              <button onClick={() => regenerate(codecMessageId)}>Regenerate</button>
+            )}
+          </div>
+        );
+      })}
+      <Composer
+        onSubmit={(text) =>
+          send({ kind: 'user-message', message: { role: 'user', parts: [{ type: 'text', text }] } })
+        }
+      />
+    </>
+  );
+}
+```
+</Code>

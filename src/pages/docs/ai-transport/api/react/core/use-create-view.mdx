@@ -1,0 +1,106 @@
+---
+title: "useCreateView"
+meta_description: "Create an independent View over the AI Transport conversation tree from React, with its own branch selections and pagination."
+meta_keywords: "AI Transport, React, useCreateView, ViewHandle, split-pane, comparison, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/use-create-view
+  - /docs/ai-transport/api/react/use-create-view
+---
+
+`useCreateView` creates a new [`ClientView`](/docs/ai-transport/api/javascript/core/client-session#create-view) over the same conversation tree as the session's default view, then subscribes to it the same way [`useView`](/docs/ai-transport/api/react/core/use-view) does. Each created view has its own branch selections and pagination state. The view is closed automatically on unmount or when the session reference changes.
+
+Use this hook when you need two independent renderings of the same conversation, for example, a split-pane diff between two regenerate siblings, or a secondary panel that pages older history without affecting the main scroll position.
+
+<Code>
+```javascript
+import { useCreateView } from '@ably/ai-transport/react';
+
+function Compare() {
+  const left = useCreateView({ limit: 30 });
+  const right = useCreateView({ limit: 30 });
+
+  return (
+    <SplitPane
+      left={<MessageList messages={left.messages} />}
+      right={<MessageList messages={right.messages} />}
+    />
+  );
+}
+```
+</Code>
+
+This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers#client-session-provider) unless `session` is supplied explicitly.
+
+## Parameters <a id="parameters"/>
+
+<Table id='UseCreateViewParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| session | optional | A client session to create a view from. Defaults to the nearest provider. Pass `null` to defer creation. | `ClientSession<TInput, TOutput, TProjection, TMessage>` |
+| limit | optional | Number of older codecMessages to reveal per page. When provided, auto-loads the first page on mount. | Number |
+| skip | optional | When `true`, skip view creation and return an empty handle immediately. | Boolean |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+Returns the same [`ViewHandle`](/docs/ai-transport/api/react/core/use-view#returns) shape as [`useView`](/docs/ai-transport/api/react/core/use-view), backed by a freshly created view.
+
+<Table id='ViewHandle'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| messages | The visible messages along the selected branch, each paired with its `codecMessageId`. Read the domain object from each entry's `message` field. | `CodecMessage<TMessage>[]` |
+| hasOlder | Whether there are older messages that can be revealed. | Boolean |
+| loading | Whether a page load is currently in progress. | Boolean |
+| loadError | Set when the most recent `loadOlder` call failed. | `Ably.ErrorInfo` or Undefined |
+| loadOlder | Reveal older messages, resolving to the revealed page (oldest-first); `[]` when nothing was revealed. | `() => Promise<CodecMessage<TMessage>[]>` |
+| runOf | Look up the `RunInfo` for the Run that owns a `codecMessageId`. | `(codecMessageId) => RunInfo \| undefined` |
+| run | Direct lookup by Run id. | `(runId) => RunInfo \| undefined` |
+| runs | Snapshot of the visible Runs along the selected branch, in chronological order. | `() => RunInfo[]` |
+| branchSelection | Resolve the `BranchHandle` anchored at `codecMessageId`: the sibling state plus a `select(index)` verb. | `(codecMessageId) => BranchHandle<TMessage>` |
+| send | Send an input on the channel and fire a POST (at most one new message per send). Wrap a domain message via `codec.createUserMessage` (or build the `{ kind: 'user-message', message }` literal) to send a fresh user message. | `(events, options?) => Promise<ClientRun<TMessage>>` |
+| regenerate | Regenerate an assistant message, using this view's branch. | `(messageId, options?) => Promise<ClientRun<TMessage>>` |
+| edit | Edit a user message, forking from this view's branch. | `(messageId, inputs, options?) => Promise<ClientRun<TMessage>>` |
+
+</Table>
+
+See [`useView`](/docs/ai-transport/api/react/core/use-view#returns) for the field-by-field behaviour of each property. Every method behaves the same way, scoped to the view this hook created.
+
+## Example <a id="example"/>
+
+A side-by-side comparison panel. Two `useCreateView` calls give the user independent branch selection for each pane while both views observe the same underlying conversation tree.
+
+<Code>
+```javascript
+import { useCreateView } from '@ably/ai-transport/react';
+
+function Compare({ messageId }: { messageId: string }) {
+  const leftView = useCreateView({ limit: 30 });
+  const rightView = useCreateView({ limit: 30 });
+
+  const leftBranch = leftView.branchSelection(messageId);
+  const rightBranch = rightView.branchSelection(messageId);
+
+  return (
+    <div className="grid grid-cols-2">
+      <div>
+        <BranchPicker
+          selection={leftBranch}
+          onSelect={(i) => leftBranch.select(i)}
+        />
+        <MessageList messages={leftView.messages} />
+      </div>
+      <div>
+        <BranchPicker
+          selection={rightBranch}
+          onSelect={(i) => rightBranch.select(i)}
+        />
+        <MessageList messages={rightView.messages} />
+      </div>
+    </div>
+  );
+}
+```
+</Code>

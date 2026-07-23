@@ -1,0 +1,113 @@
+---
+title: "useChatTransport"
+meta_description: "Read a ChatTransport and its underlying ClientSession from the nearest ChatTransportProvider in AI Transport."
+meta_keywords: "AI Transport, React, useChatTransport, ChatTransport, ChatTransportProvider, Vercel AI SDK, useChat, Ably"
+redirect_from:
+  - /docs/ai-transport/api-reference/use-chat-transport
+  - /docs/ai-transport/api/react/use-chat-transport
+---
+
+`useChatTransport` reads a [`ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport#chat-transport) and its underlying [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session) from the nearest `ChatTransportProvider`. Pass the returned `chatTransport` to Vercel AI SDK's `useChat({ transport })` and use `session` for everything else (cancel, tree inspection, raw message access).
+
+The hook is a thin context reader; it does not create or manage any session or transport state. When no provider is found or the session failed to construct, the hook returns stubs along with populated `sessionError` and `chatTransportError` so the component can render an error state without an error boundary.
+
+<Code>
+```javascript
+import { useChat } from '@ai-sdk/react';
+import { useChatTransport } from '@ably/ai-transport/vercel/react';
+
+function Chat() {
+  const { chatTransport, chatTransportError } = useChatTransport();
+  const { messages, sendMessage } = useChat({ transport: chatTransport });
+
+  if (chatTransportError) return <ErrorBanner error={chatTransportError} />;
+  return <Conversation messages={messages} onSend={sendMessage} />;
+}
+```
+</Code>
+
+This hook must be used within a `ChatTransportProvider` (exported from `@ably/ai-transport/vercel/react`). The provider wraps the subtree in a `ClientSessionProvider` baked to the Vercel types, so [`useClientSession`](/docs/ai-transport/api/react/core/use-client-session) and the other core hooks work inside the same subtree.
+
+## Parameters <a id="parameters"/>
+
+<Table id='UseChatTransportParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| channelName | optional | Look up a specific provider by channel name. Omit to use the innermost `ChatTransportProvider` in the tree. | String |
+| skip | optional | When `true`, return stubs that throw on any access instead of reading from context. | Boolean |
+
+</Table>
+
+## Returns <a id="returns"/>
+
+<Table id='ChatTransportHandle'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| session | The underlying client session. A throwing stub when `skip` is `true`, when no matching provider was found, or when session construction failed. | `ClientSession<VercelInput, VercelOutput, VercelProjection, UIMessage>` |
+| chatTransport | The chat transport adapter to pass to Vercel's `useChat`. A throwing stub in the same conditions as `session`. | `ChatTransport` |
+| sessionError | Set when no matching `ClientSessionProvider` was found or when session construction failed, and `skip` is `false`. | `Ably.ErrorInfo` or Undefined |
+| chatTransportError | Set when no matching `ChatTransportProvider` was found or when session construction failed, and `skip` is `false`. | `Ably.ErrorInfo` or Undefined |
+
+</Table>
+
+## Use the chat transport <a id="chat-transport"/>
+
+<MethodSignature>{`chatTransport: ChatTransport`}</MethodSignature>
+
+The [`ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport#chat-transport) adapter. Pass it to Vercel AI SDK's `useChat({ transport })`. It exposes `sendMessages`, `reconnectToStream`, `close`, `streaming`, and `onStreamingChange`. The companion [`useMessageSync`](/docs/ai-transport/api/react/vercel/use-message-sync) hook uses the streaming flag to gate `setMessages` calls during active own-run streams.
+
+## Use the session <a id="session"/>
+
+<MethodSignature>{`session: ClientSession<VercelInput, VercelOutput, VercelProjection, UIMessage>`}</MethodSignature>
+
+The underlying [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session). Use it for operations the chat transport does not expose, for example `session.cancel(runId)` from a stop button, or `session.tree` for branch inspection. The same session is available via [`useClientSession`](/docs/ai-transport/api/react/core/use-client-session) inside the provider's subtree.
+
+## Read error state <a id="errors"/>
+
+`chatTransportError` is set when no matching `ChatTransportProvider` is found, when session construction failed, and `skip` is `false`. `sessionError` is set under the same conditions. Both are `undefined` when the handle resolved cleanly.
+
+Post-construction errors (for example send failures or channel continuity loss) reach you via `session.on('error', ...)` or via the `onError` parameter on [`useClientSession`](/docs/ai-transport/api/react/core/use-client-session#parameters).
+
+## Example <a id="example"/>
+
+A chat component wired through `useChat` with a stop button that cancels the active Run through the underlying session.
+
+<Code>
+```javascript
+import { useChat } from '@ai-sdk/react';
+import { useChatTransport, useMessageSync } from '@ably/ai-transport/vercel/react';
+
+function Chat() {
+  const { session, chatTransport, chatTransportError } = useChatTransport();
+  const { messages, setMessages, sendMessage, status } = useChat({
+    transport: chatTransport,
+  });
+
+  useMessageSync({ setMessages });
+
+  if (chatTransportError) return <ErrorBanner error={chatTransportError} />;
+
+  return (
+    <>
+      {messages.map((m) => <Message key={m.id} message={m} />)}
+      <Composer
+        disabled={status !== 'ready'}
+        onSubmit={(text) => sendMessage({ role: 'user', parts: [{ type: 'text', text }] })}
+      />
+      {status === 'streaming' && (
+        <button
+          onClick={() => {
+            const activeRun = session.view.runs().find((r) => r.status === 'active');
+            if (activeRun) void session.cancel(activeRun.runId);
+          }}
+        >
+          Stop
+        </button>
+      )}
+    </>
+  );
+}
+```
+</Code>

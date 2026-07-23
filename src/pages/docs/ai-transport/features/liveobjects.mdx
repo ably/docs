@@ -1,0 +1,140 @@
+---
+title: "LiveObjects State"
+meta_description: "Give an AI agent live awareness of what the user is doing, and the user live awareness of what the agent is doing, with shared state on the AI Transport session channel via Ably LiveObjects."
+meta_keywords: "state sync, shared application state, LiveObjects, LiveMap, LiveCounter, session object, AI Transport, Ably, copilot"
+intro: "An agent reacts to what the user is doing, such as the page they're on or the record they've selected, without polling or extra tool calls. AI Transport session channels carry Ably LiveObjects, so agents and clients share the same live state on the channel they already use."
+redirect_from:
+  - /docs/ai-transport/sessions-identity/shared-state
+---
+
+LiveObjects State gives an agent live awareness of what its users are doing, and gives users live awareness of what the agent is doing. The agent sees the user's current state, such as the page they're on or the record they've selected, and reacts to it without polling or extra tool calls; every client sees the agent's own state change in real time. LiveObjects State uses Ably's [LiveObjects](/docs/liveobjects) through the `session.object` API on the AI Transport session, exposed on both [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session) and [`AgentSession`](/docs/ai-transport/api/javascript/core/agent-session).
+
+<Aside data-type='note'>
+The conversation and the shared state do different jobs. The conversation is the running message stream, what the agent says over time. The shared state is the current value of the things both sides care about, and a participant gets it in full the moment they attach rather than by replaying history. Share only what both sides need; the agent's private reasoning stays on the server.
+</Aside>
+
+## How state sync works <a id="how-it-works"/>
+
+`session.object` is the same `RealtimeObject` the channel exposes; the session doesn't wrap it or add behaviour. It's the LiveObjects API for the channel: call `get()` to resolve the object, then read and subscribe to it as you would on a plain Ably channel. On the agent, resolve the object on a channel once and let it react to every change:
+
+<Code>
+```javascript
+// On the agent: react whenever the user's state changes.
+const myObject = await session.object.get();
+myObject.subscribe(() => groundNextResponse(myObject.compactJson()));
+```
+</Code>
+
+The client works the same object from the other end. As the user moves around the app, the client writes their current state with `myObject.set(...)`, which fires the agent's subscription. Because object state syncs on attach, a client that joins late or reloads has the current state straight away, before any conversation history loads.
+
+## Enable LiveObjects <a id="enable"/>
+
+LiveObjects is not part of the default channel mode set, so it needs explicit opt-in. Three things must line up, or `session.object` operations throw:
+
+- Construct the Ably Realtime client with the `LiveObjects` plugin from `ably/liveobjects`.
+- Request the object channel modes on the session, by passing `OBJECT_MODES` as the session's `channelModes` option.
+- Grant the connection's token the `object-subscribe` and `object-publish` capabilities. See [authentication](/docs/ai-transport/concepts/authentication#capabilities).
+
+Pass the plugin when you create the client, and the modes when you create the session:
+
+<Code>
+```javascript
+import * as Ably from 'ably';
+import { LiveObjects } from 'ably/liveobjects';
+import { createClientSession, OBJECT_MODES } from '@ably/ai-transport';
+import { createUIMessageCodec } from '@ably/ai-transport/vercel';
+
+// Without the LiveObjects plugin, session.object throws.
+const ably = new Ably.Realtime({ authUrl: '/api/auth/token', plugins: { LiveObjects } });
+
+const session = createClientSession({
+  client: ably,
+  channelName: 'conversation-42',
+  codec: createUIMessageCodec(),
+  // Opt the session's channel into LiveObjects. The session requests these
+  // modes on top of the ones AI Transport always needs, so the transport
+  // itself is unaffected.
+  channelModes: OBJECT_MODES,
+});
+```
+</Code>
+
+`OBJECT_MODES` is `['OBJECT_SUBSCRIBE', 'OBJECT_PUBLISH']`. Channel modes replace the default set rather than adding to it, so the session requests `OBJECT_MODES` together with the modes it always needs. Opting into object modes never costs you the modes AI Transport depends on.
+
+## React to state changes on both sides <a id="read-write"/>
+
+The same object flows in both directions. The client writes the user's current state as they navigate, and renders whatever the agent sends back:
+
+<Code>
+```javascript
+const myObject = await session.object.get();
+
+// Publish the user's current view as they navigate.
+function onNavigate(path) {
+  myObject.set('currentPage', path);
+}
+
+// Render whatever the agent reports back.
+myObject.subscribe(() => renderAgentStatus(myObject.compactJson()?.agentStatus));
+```
+</Code>
+
+The agent subscribes to the same state and adapts to it. When the user opens a new page, the subscription fires with the new value, and the agent can ground its next response in the page they're actually looking at. It reports its own progress back through the same object:
+
+<Code>
+```javascript
+import { OBJECT_MODES, createAgentSession } from '@ably/ai-transport';
+
+const session = createAgentSession({
+  client: ably,
+  channelName: invocation.sessionName,
+  channelModes: OBJECT_MODES,
+});
+await session.connect();
+
+const myObject = await session.object.get();
+
+// Adapt to whatever the user is currently looking at.
+myObject.subscribe(() => {
+  const { currentPage } = myObject.compactJson() ?? {};
+  // Ground the next response in the page the user moved to.
+});
+
+// Report progress back; every subscribed client sees it.
+await myObject.set('agentStatus', 'searching flights');
+```
+</Code>
+
+Every write reaches all subscribed clients over the same channel. Concurrent writes are safe when the operation commutes: two clients calling `LiveCounter.increment` both count, but a `LiveMap.set` on the same key is last-write-wins. Partition writes by key so two writers don't race on one `set`.
+
+## Edge cases and unhappy paths <a id="edge-cases"/>
+
+- A client constructed without the `LiveObjects` plugin throws when you call `session.object`. The session does not suppress the error; construct the client with `plugins: { LiveObjects }`.
+- A session created without `channelModes: OBJECT_MODES` attaches without object modes, and object operations fail. Pass the modes when you create the session.
+- A token missing the `object-subscribe` or `object-publish` capability fails at the operation site, not at construction. The server grants only the permitted subset of requested modes. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication#capabilities).
+- A `LiveMap.set` on a key two clients write at once is last-write-wins, so one write is lost. Partition writes by key, or use a `LiveCounter` where the values need to merge.
+
+## FAQ <a id="faq"/>
+
+### What belongs in shared state, and what belongs in the conversation? <a id="faq-what-goes-where"/>
+
+Put the state both sides act on now in `session.object`: the page the user is on, the record they've selected, a form in progress, a counter. Leave the conversation itself in the message stream, and keep the agent's private reasoning on the server. It's a shared work surface, not a transcript and not a copy of the agent's internal state.
+
+### How does the agent react to a change instead of polling? <a id="faq-react"/>
+
+`session.object.get()` gives you the object, and `subscribe` fires on every change, nested ones included. In the callback the agent reads the latest value with `compactJson()` and works from that. There's no polling loop and no extra tool call.
+
+### Why does session.object throw? <a id="faq-throws"/>
+
+One of the three requirements is missing: the `LiveObjects` plugin on the client, `channelModes: OBJECT_MODES` on the session, or the `object-subscribe` / `object-publish` capabilities on the token. See [Enable LiveObjects](#enable).
+
+### Can both the agent and the client write to the same object? <a id="faq-concurrent-writes"/>
+
+Yes. Both call the same `LiveMap` and `LiveCounter` API on `session.object`. Concurrent writes merge when the operation commutes, as with `LiveCounter.increment`; a `LiveMap.set` on the same key is last-write-wins. Partition writes by key to avoid races.
+
+## Related features <a id="related"/>
+
+- [LiveObjects](/docs/liveobjects): the Ably LiveObjects API, including `LiveMap` and `LiveCounter`.
+- [Tool calling](/docs/ai-transport/features/tool-calling): the agent asks for specific data on demand, where state sync observes it continuously.
+- [Sessions](/docs/ai-transport/concepts/sessions): `session.object` on the client and agent sessions.
+- [Agent presence](/docs/ai-transport/features/agent-presence): the same pass-through pattern for Ably Presence.

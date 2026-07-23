@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
-import Badge from '@ably/ui/core/Badge';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
-import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
-import cn from '@ably/ui/core/utils/cn';
+import Badge from 'src/components/ui/Badge';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
+import { ProductName, products as dataProducts } from 'src/components/ui/ProductTile/data';
+import cn from 'src/utilities/cn';
 import { Image, ImageProps } from '../Image';
 import { DEFAULT_EXAMPLE_LANGUAGES } from '../../data/examples/';
 import { Example } from '../../data/examples/types';
@@ -65,7 +65,7 @@ const ExamplesGrid = ({
 
       return text.split(searchRegex).map((part, index) =>
         part.toLowerCase() === searchTerm.toLowerCase() ? (
-          <span key={index} className="bg-yellow-200">
+          <span key={index} className="bg-yellow-200 dark:bg-yellow-800">
             {part}
           </span>
         ) : (
@@ -86,19 +86,19 @@ const ExamplesGrid = ({
           role="button"
           aria-label={`View ${name} example`}
         >
-          <div className="z-0 bg-neutral-100 overflow-hidden h-64 sm:h-[12.5rem] relative flex justify-center items-center ">
+          <div className="z-0 bg-neutral-100 dark:bg-neutral-1200 overflow-hidden h-64 sm:h-[12.5rem] relative flex justify-center items-center ">
             <div className="group-hover/examples-index-card:scale-105 transition-transform">
               {exampleImages ? displayExampleImage(exampleImages, id, name) : null}
             </div>
-            <div className="flex bg-neutral-000 gap-x-1.5 py-1.5 px-2 absolute right-3 bottom-3 rounded border border-neutral-200 z-10">
+            <div className="flex bg-neutral-000 dark:bg-neutral-1300 gap-x-1.5 py-1.5 px-2 absolute right-3 bottom-3 rounded border border-neutral-300 dark:border-neutral-1100 z-10">
               {(languages ?? DEFAULT_EXAMPLE_LANGUAGES).map((language) => (
                 <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />
               ))}
             </div>
           </div>
           <div className="z-10 pt-4">
-            <p className="ui-text-h4 text-neutral-1300">{highlightSearchTerm(name)}</p>
-            <p className="ui-text-p3 mt-2 text-neutral-900">{highlightSearchTerm(description)}</p>
+            <p className="ui-text-h4 text-neutral-1300 dark:text-neutral-000">{highlightSearchTerm(name)}</p>
+            <p className="ui-text-p3 mt-2 text-neutral-900 dark:text-neutral-500">{highlightSearchTerm(description)}</p>
             <div className="mt-4 flex gap-x-1">
               {products ? products.map((product) => displayProductLabel(product as ProductName, dataProducts)) : null}
               {/* {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase)) : null} */}

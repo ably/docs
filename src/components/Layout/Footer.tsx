@@ -1,12 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { ComponentType, SVGProps, useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
-import Status, { StatusUrl } from '@ably/ui/core/Status';
-import cn from '@ably/ui/core/utils/cn';
+import Icon from 'src/components/Icon';
+import { IconName } from 'src/components/Icon/types';
+import Status, { StatusUrl } from 'src/components/ui/Status';
+import cn from 'src/utilities/cn';
 import type { PageContextType } from './Layout';
 import { useLayoutContext } from 'src/contexts/layout-context';
-import Button from '@ably/ui/core/Button';
+import Button from 'src/components/ui/Button';
+import ThemeToggle from './ThemeToggle';
+import { HandRaisedIcon, HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline';
+import {
+  HandRaisedIcon as HandRaisedSolidIcon,
+  HandThumbDownIcon as HandThumbDownSolidIcon,
+  HandThumbUpIcon as HandThumbUpSolidIcon,
+} from '@heroicons/react/24/solid';
 
 const ENABLE_FEEDBACK = false;
 
@@ -14,8 +21,8 @@ type FeedbackMode = 'yes' | 'no' | 'feedback';
 
 type FeedbackButton = {
   label: string;
-  monoIcon: IconName;
-  colorIcon: IconName;
+  monoIcon: ComponentType<SVGProps<SVGSVGElement>>;
+  colorIcon: ComponentType<SVGProps<SVGSVGElement>>;
   placeholder: string;
   description?: string;
 };
@@ -65,22 +72,22 @@ const socialLinks: { key: string; icon: IconName; link: string }[] = [
 const feedbackButtons: Record<FeedbackMode, FeedbackButton> = {
   yes: {
     label: 'Yes',
-    monoIcon: 'icon-gui-hand-thumb-up-outline',
-    colorIcon: 'icon-gui-hand-thumb-up-solid',
+    monoIcon: HandThumbUpIcon,
+    colorIcon: HandThumbUpSolidIcon,
     description: 'Great! Thanks for letting us know, what are we doing well?',
     placeholder: 'Optional feedback.',
   },
   no: {
     label: 'No',
-    monoIcon: 'icon-gui-hand-thumb-down-outline',
-    colorIcon: 'icon-gui-hand-thumb-down-solid',
+    monoIcon: HandThumbDownIcon,
+    colorIcon: HandThumbDownSolidIcon,
     description: 'Yikes! Thanks for letting us know, what can we do better?',
     placeholder: 'Optional feedback.',
   },
   feedback: {
     label: 'I have feedback',
-    monoIcon: 'icon-gui-hand-raised-outline',
-    colorIcon: 'icon-gui-hand-raised-solid',
+    monoIcon: HandRaisedIcon,
+    colorIcon: HandRaisedSolidIcon,
     placeholder: 'What would you like to say?',
   },
 };
@@ -165,6 +172,17 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
     let path = '#';
     const pathName = location.pathname.replace('docs/', '');
 
+    // Error-code pages are generated from the ably-common registry, not authored
+    // in this repo. Point edits at the source file there; hide the link for the
+    // generated aggregate index (no single source file).
+    const errorCodeMatch = pathName.match(/^\/platform\/errors\/codes\/(\d+)\/?$/);
+    if (errorCodeMatch) {
+      return `https://github.com/ably/ably-common/blob/main/errors/codes/${errorCodeMatch[1]}.md`;
+    }
+    if (pathName === '/platform/errors/codes' || pathName === '/platform/errors/codes/') {
+      return null;
+    }
+
     if (customGithubPaths[pathName]) {
       path = customGithubPaths[pathName];
     } else if (activePage.template === 'mdx') {
@@ -189,6 +207,8 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
             <div className="flex items-center gap-6">
               {Object.entries(feedbackButtons).map(([key, button]) => {
                 const isActive = feedbackMode === key;
+                const ColorIcon = button.colorIcon;
+                const MonoIcon = button.monoIcon;
 
                 return (
                   <button
@@ -198,22 +218,19 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
                       setFeedbackMode(key as FeedbackMode);
                     }}
                   >
-                    <Icon
-                      name={button.colorIcon}
-                      size="20px"
-                      additionalCSS="transition-colors"
-                      color={
+                    <ColorIcon
+                      aria-hidden
+                      className={cn(
+                        'size-5 transition-colors',
                         isActive
                           ? 'text-orange-600'
-                          : 'hidden group-hover/feedback-button:block text-neutral-1300 dark:text-neutral-000'
-                      }
+                          : 'hidden group-hover/feedback-button:block text-neutral-1300 dark:text-neutral-000',
+                      )}
                     />
                     {!isActive && (
-                      <Icon
-                        name={button.monoIcon}
-                        size="20px"
-                        additionalCSS="transition-colors"
-                        color="text-neutral-900 dark:text-neutral-400 group-hover/feedback-button:hidden"
+                      <MonoIcon
+                        aria-hidden
+                        className="size-5 transition-colors text-neutral-900 dark:text-neutral-400 group-hover/feedback-button:hidden"
                       />
                     )}
                     <span
@@ -275,7 +292,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
 
         <div className="flex flex-wrap items-center gap-5">
           {lastUpdated && (
-            <span className="ui-text-p4 text-neutral-800 dark:text-neutral-500 border-r border-neutral-300 dark:border-neutral-1000 pr-5">
+            <span className="ui-text-p4 text-neutral-800 dark:text-neutral-500 border-r border-neutral-300 dark:border-neutral-1100 pr-5">
               Last updated: {lastUpdated}
             </span>
           )}
@@ -288,7 +305,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
         </div>
       </div>
 
-      <div className="mt-8 border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
+      <div className="mt-8 border border-x-0 border-y-neutral-300 dark:border-y-neutral-1100 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
         <div className="flex gap-5 items-center flex-1">
           <span className="ui-text-p3 font-semibold text-neutral-1300 dark:text-neutral-000">Find us on</span>
           <div className="flex gap-1 items-center">
@@ -324,11 +341,14 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
             </div>
           ))}
         </div>
-        <Status
-          additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
-          statusUrl={StatusUrl}
-          showDescription
-        />
+        <div className="flex flex-col items-end gap-3">
+          <Status
+            additionalCSS="px-4 py-3 rounded-lg border border-neutral-300 dark:border-neutral-1100 hover:border-neutral-500 dark:hover:border-neutral-800 transition-colors"
+            statusUrl={StatusUrl}
+            showDescription
+          />
+          <ThemeToggle />
+        </div>
       </div>
     </footer>
   );

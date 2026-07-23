@@ -1,124 +1,139 @@
 ---
 title: "Transport patterns"
-meta_description: "Internal transport components in AI Transport. StreamRouter, TurnManager, pipeStream, and cancel routing."
-meta_keywords: "transport patterns, StreamRouter, TurnManager, pipeStream, cancel routing, AI Transport, Ably"
+meta_description: "Internal transport components in AI Transport. Stream router, input-event lookup, and cancel routing."
+meta_keywords: "transport patterns, stream router, input-event lookup, cancel routing, AI Transport, Ably"
+intro: "Internal transport components: the stream router on the client, the input-event lookup on the agent, and the cancel-routing pipeline. How the SDK coordinates between codec, channel, and application code."
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
+The transport layer contains several internal components that coordinate between the codec, the Ably channel, and application code. This page describes the key patterns and what each component owns.
 
-The transport layer contains several internal components that coordinate between the codec, the Ably channel, and your application code. This page describes the key patterns and what each component is responsible for.
+Inbound data flow on the client:
 
-## StreamRouter <a id="stream-router"/>
-
-The StreamRouter lives on the client side. It routes inbound Ably channel events to the correct stream, turning a flat subscription into per-turn `ReadableStream` instances.
-
-When the client transport subscribes to a channel, all messages arrive through a single callback. The StreamRouter dispatches each message to the appropriate turn based on the `x-ably-turn-id` header:
-
-1. When the client calls `send()` (during `_internalSend`), the router creates a new `ReadableStream` and its controller for that turn.
-2. Content messages are enqueued into the matching stream's controller.
-3. When a terminal event arrives (`turn-end`, `abort`, or `error`), the router closes the stream's controller.
-
-This gives each turn an independent stream that can be consumed, cancelled, or abandoned without affecting other turns.
-
-## TurnManager <a id="turn-manager"/>
-
-The TurnManager lives on the server side. It tracks active turns and manages their lifecycle events.
-
-When the server creates a new turn with `transport.newTurn()`, the TurnManager:
-
-1. Registers the turn with its ID, client ID, and optional fork metadata.
-2. Publishes a `turn-start` lifecycle event to the channel.
-3. Creates an `AbortController` wired to cancel signals for this turn.
-4. Returns a turn handle with `streamResponse()`, `addMessages()`, `end()`, and `abortSignal`.
-
-When the turn ends, the TurnManager publishes a `turn-end` event with the appropriate reason and cleans up internal state. If the turn is cancelled, the abort controller fires before cleanup.
-
-## pipeStream <a id="pipe-stream"/>
-
-The `pipeStream` function connects a `ReadableStream` (from the LLM) to the encoder. It reads from the stream and writes each chunk through the encoder's `appendEvent` method.
-
-The key responsibilities are:
-
-- **Reading**: pulls chunks from the `ReadableStream` as they become available.
-- **Encoding**: passes each chunk to the encoder, which publishes it to the channel.
-- **Abort handling**: if the turn's abort signal fires, `pipeStream` cancels the reader and calls `encoder.abort()`. This stops the LLM stream and publishes an abort marker to the channel.
-- **Completion**: when the stream ends naturally, `pipeStream` calls `encoder.close()` to finalize the message.
-
-<Code>
-```javascript
-// Simplified pipeStream flow
-async function pipeStream(stream, encoder, abortSignal) {
-  const reader = stream.getReader()
-
-  abortSignal.addEventListener('abort', () => {
-    reader.cancel()
-  })
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      await encoder.appendEvent(value)
-    }
-    await encoder.close()
-    return 'complete'
-  } catch (error) {
-    if (abortSignal.aborted) {
-      await encoder.abort()
-      return 'cancelled'
-    }
-    throw error
-  }
-}
+```text
+Ably channel
+      │
+      ▼
+Channel subscription
+   (ai-input, ai-output, ai-run-start, ai-run-suspend,
+    ai-run-resume, ai-run-end, ai-cancel)
+      │
+      ▼
+Decoder ── DecodedMessage<TInput, TOutput>
+      │
+      ▼
+Tree ── per-node Codec.fold (TProjection on InputNode or RunNode)
+      │
+      ▼
+Tree emits:  'update'      structural change (node insert / sort / lifecycle)
+             'run'         Run lifecycle event (start / suspend / resume / end)
+             'output'      decoded TOutput events with routing metadata
+                           (runId, inputCodecMessageId, codecMessageId, serial)
+      │
+      ▼
+View ── walks the selected branch, emits 'update' on visible changes
+ClientRun ── runId populated (started resolves) on the matching ai-run-start
 ```
-</Code>
 
-The actual implementation includes retry logic for transient errors and coordinates with the encoder's flush-and-recovery mechanism.
+Outbound data flow on the agent:
+
+```text
+Application code (streamText, your model handler)
+      │
+      ▼
+Run.pipe(stream) ── reads TOutput from ReadableStream
+      │
+      ▼
+Encoder.publishOutput ── stream or discrete via codec rules
+      │
+      ▼
+ChannelWriter ── channel.publish / appendMessage / updateMessage
+      │
+      ▼
+Ably channel (ai-output)
+
+Run.abortSignal ◄── cancel routing fires on matching ai-cancel
+```
+
+## Stream router <a id="stream-router"/>
+
+The stream router lives on the client. It routes inbound channel events to the correct per-Run state, turning a flat channel subscription into per-Run projections that the View exposes as visible messages.
+
+The router keys on the triggering input's `codec-message-id`, the synchronous handle the client owns from send time (the agent has not minted the `runId` yet). When the client calls a write method on the View (`send`, `regenerate`, `edit`), the View mints the input's `codec-message-id`, publishes the input on the channel, and registers an optimistic input node in the Tree. The returned `ClientRun` carries the synchronous `inputCodecMessageId`, the `inputEventId`, and a `started` promise that resolves (populating `runId`) when the agent's `ai-run-start` for this send lands.
+
+When inbound `ai-output` messages decode to `TOutput` events, the router folds them into the matching Run's per-Run projection by reading the output's `input-codec-message-id` header (the agent echoes the triggering input's id on every event it publishes). When `ai-run-end` arrives for the Run, the router marks the Run terminal. The View's `update` event fires; consumers re-read `getMessages()` / `runs()`.
+
+If the channel loses continuity (`ChannelContinuityLost`), the router surfaces the error via the session's `on('error', ...)` and active Runs are marked accordingly.
+
+## Input-event watcher <a id="input-event-lookup"/>
+
+The input-event watcher lives on the agent. `createRun` arms it: a passive pre-scan of the Tree plus a listener for the trigger's arrival. `AgentRun.start()` awaits `run.located`, which resolves when the triggering `event-id` carried in the invocation body folds into the Tree, whether it is already present or arrives live.
+
+The sequence:
+
+```text
+1. Client publishes ai-input with event-id=E1 on the channel.
+   Fresh send: no run-id on the input.
+   Continuation: existing run-id stamped on the input from clientRun.runId.
+2. Client POSTs InvocationData ({ inputEventId=E1, sessionName }) to the agent.
+3. Agent route receives the POST.
+4. Agent calls session.createRun(invocation, runtime). createRun mints the
+   invocationId, arms the input-event watcher (a passive Tree pre-scan plus a
+   listener), and registers the run for cancel routing so early cancels fire.
+5. Agent calls run.start(). It awaits run.located: the watcher matches E1
+   whether it is already folded into the Tree (a history page the agent paged
+   in, for example via run.view.loadOlder() on a cold start) or folds in live
+   after attach. There is no lookup timeout; located rejects only on cancel or
+   session close.
+6. The input event tells the agent which run-id to use: it mints a fresh
+   run-id when the input event omits one, or reuses the run-id stamped on
+   the input event for a continuation.
+7. run.start() resolves and publishes ai-run-start (or ai-run-resume). The
+   agent drains run.view for context and pipes the LLM stream. The agent route
+   returns { runId: run.runId, invocationId: run.invocationId } on the HTTP
+   response.
+```
+
+This is the mechanism that lets a serverless agent publish a Run reliably even when the channel publish and the HTTP POST race: the watcher resolves the trigger from the Tree whether it arrived before or after the agent attached. Without it, an agent that attached after the client published would never see the triggering event.
 
 ## Cancel routing <a id="cancel-routing"/>
 
-Cancel routing connects client cancel signals to the correct server-side turns. The flow is:
+Cancel routing connects client cancel signals to the correct agent-side Runs. The flow:
 
-1. The client publishes a `cancel` message to the channel with a filter (for example, `{ own: true }` or `{ turnId: 'abc' }`).
-2. The server transport receives the cancel message through its channel subscription.
-3. The transport evaluates the filter against all registered turns. For `{ own: true }`, it matches turns where the owner client ID matches the cancel message's client ID.
-4. Each matched turn's `onCancel` hook is called if one is registered. If the hook returns `false`, that turn is excluded.
-5. For authorized turns, the transport fires their `AbortController`, which triggers `pipeStream` to abort.
+1. The client calls `session.cancel(runId)` (when it has the resolved run id from `clientRun.runId`, after `clientRun.started`) or `clientRun.cancel()` (which keys on the triggering input's `codec-message-id`, the synchronous handle). The session publishes an `ai-cancel` message under `extras.ai.transport`, carrying whichever key the caller used.
+2. The agent session receives the cancel message through its channel subscription.
+3. The agent matches the cancel against its registered Runs. If the cancel arrives before run-start (the client cancelled before the agent minted the run id), the agent buffers it and fires once its input-event lookup resolves the input to the run.
+4. The matched Run's `onCancel` hook (if configured) is invoked. If the hook returns `false`, the cancel is rejected silently and the Run continues.
+5. If the cancel is accepted, the matched Run's `AbortController` fires. `run.abortSignal` flips to aborted; the LLM stream (if it was passed the same signal) stops; `Run.pipe()` resolves with `reason: 'cancelled'`; the encoder closes any in-flight streams with `status: 'cancelled'`.
+6. The agent code, in its `finally` block, calls `run.end({ reason: 'cancelled' })`. The agent publishes `ai-run-end` with `run-reason: cancelled`.
 
-Handler isolation ensures that a cancel for one turn does not affect other active turns. Each turn has its own `AbortController`, so aborting one turn leaves others running.
+Cancel routing is per-Run. A cancel for one Run does not affect other active Runs on the same session; each Run has its own `AbortController`.
 
-## buildTransportHeaders <a id="build-transport-headers"/>
+## Pipe stream <a id="pipe-stream"/>
 
-The `buildTransportHeaders` function constructs the `x-ably-*` headers for outbound messages. It is called by the encoder before every publish operation.
+`Run.pipe(stream, options)` connects a `ReadableStream<TOutput>` (from the LLM) to the encoder. It reads from the stream and writes each chunk through `Encoder.publishOutput`.
 
-The function takes the current turn state (turn ID, client ID, role, fork metadata) and produces a headers object. The codec can add domain headers, and the encoder merges them using the priority rules described in [codec architecture](/docs/ai-transport/internals/codec-architecture#header-merging).
+Responsibilities:
 
-<Aside data-type='note'>
-Stream-related headers (`x-ably-stream`, `x-ably-stream-id`, `x-ably-status`) are set by the codec-layer encoder, not by `buildTransportHeaders`. The transport layer only sets the headers shown below.
-</Aside>
+- Reading: pulls chunks from the `ReadableStream` as they become available.
+- Encoding: passes each chunk to the encoder, which writes it to the channel as stream or discrete based on codec rules.
+- Abort handling: if `run.abortSignal` fires, `pipe` cancels the reader and calls `encoder.cancel()`. This stops the LLM stream and publishes a final `updateMessage` with `status: 'cancelled'`.
+- Completion: when the stream ends naturally, `pipe` calls `encoder.close()` to flush any buffered appends and finalise the last stream.
 
-<Code>
-```javascript
-// Simplified buildTransportHeaders
-function buildTransportHeaders(turn, messageOptions) {
-  return {
-    'x-ably-role': messageOptions.role,
-    'x-ably-turn-id': turn.turnId,
-    'x-ably-msg-id': messageOptions.msgId,
-    ...(turn.clientId && { 'x-ably-turn-client-id': turn.clientId }),
-    ...(messageOptions.parent && { 'x-ably-parent': messageOptions.parent }),
-    ...(messageOptions.forkOf && { 'x-ably-fork-of': messageOptions.forkOf }),
-    ...(messageOptions.amend && { 'x-ably-amend': messageOptions.amend }),
-  }
-}
-```
-</Code>
+`pipe` returns a `StreamResult` with a `reason` field (`'complete'`, `'cancelled'`, or `'error'`) and an optional `error`. The caller passes the reason to `run.end({ reason })`. For runs that should pause awaiting input rather than end, use `run.suspend()` instead of `run.end(...)`.
+
+## Channel continuity <a id="channel-continuity"/>
+
+The session monitors the Ably channel state. If the channel transitions to `FAILED`, `SUSPENDED`, or `DETACHED`, or re-attaches with `resumed: false`, the session emits a `ChannelContinuityLost` error through the session's `on('error', ...)` callback. Active streams on the client are errored with the same `ErrorInfo`; the agent does not see this directly, but its `onError` runtime hook fires for stream failures.
+
+A continuity-lost session is still operational for new work after the channel re-attaches; the application decides whether to resume from history or to start a fresh session.
+
+## Build outbound headers <a id="building-outbound-headers"/>
+
+The transport layer composes the outbound headers under `extras.ai.transport` for every encoder publish. The encoder reads the per-Run state (`runId`, `clientId`, role defaults) and merges per-event options (`codecMessageId`, `parent`, `forkOf`, `target`). Stream-related headers (`stream`, `stream-id`, `status`) are stamped by the codec-core encoder under `extras.ai.codec`, not by the transport layer. The two tiers never mix; see [Wire protocol](/docs/ai-transport/internals/wire-protocol) for the tier contract.
 
 ## Related pages <a id="related"/>
 
-- [Wire protocol](/docs/ai-transport/internals/wire-protocol) - the headers and message format these components produce and consume.
-- [Codec architecture](/docs/ai-transport/internals/codec-architecture) - the encoder and decoder that `pipeStream` and `StreamRouter` drive.
-- [Cancellation](/docs/ai-transport/features/cancellation) - the user-facing cancel feature.
-- [Token streaming](/docs/ai-transport/features/token-streaming) - the feature that `pipeStream` enables.
+- [Wire protocol](/docs/ai-transport/internals/wire-protocol): the header tiers and event names these components produce and consume.
+- [Codec architecture](/docs/ai-transport/internals/codec-architecture): the encoder and decoder that `pipe` and the stream router drive.
+- [Cancellation](/docs/ai-transport/features/cancellation): the user-facing cancel feature.
+- [Token streaming](/docs/ai-transport/features/token-streaming): the feature that `Run.pipe` enables.

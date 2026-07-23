@@ -1,136 +1,198 @@
 ---
 title: "Wire protocol"
-meta_description: "The Ably channel wire format used by AI Transport. Headers, lifecycle events, content messages, and message identity."
-meta_keywords: "wire protocol, AI Transport, transport headers, lifecycle events, message identity, Ably"
+meta_description: "The Ably channel wire format used by AI Transport. Header tiers, lifecycle events, content event names, and message identity."
+meta_keywords: "wire protocol, AI Transport, extras.ai, transport headers, codec headers, lifecycle events, Ably"
+intro: "Wire-format detail for AI Transport over Ably channels. Header tiers, lifecycle events, content event names, and the Run sequence."
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
+AI Transport communicates through Ably channel messages. Every message carries headers under two tiers in the message's `extras.ai` object: `extras.ai.transport` for run identity and routing, and `extras.ai.codec` for stream and status metadata. The tiering isolates the two concerns so the codec layer cannot stamp transport routing headers and the transport layer cannot leak into codec stream state.
 
-AI Transport communicates through Ably channel messages. Every message carries headers that describe its role in the conversation: which turn it belongs to, who sent it, what kind of content it carries, and where it fits in the conversation tree. This page describes the wire format at a moderate level of detail.
+A typical Run produces the following sequence on the channel:
 
-## Transport headers <a id="transport-headers"/>
+```text
+Client publishes input event (no run-id on a fresh send)
+  name: ai-input
+  extras.ai.transport: { event-id=E1, codec-message-id=M1, role=user, parent=M0 }
+  extras.ai.codec:     { stream=false }
 
-Transport headers use the `x-ably-` prefix. They are managed by the SDK and carry the metadata that the transport layer needs to route, order, and reconcile messages.
+Agent publishes run-start (run-id and invocation-id minted by createRun)
+  name: ai-run-start
+  extras.ai.transport: { run-id=R1, invocation-id=I1, run-client-id=user-abc, input-client-id=user-abc, input-codec-message-id=M1 }
+
+Agent publishes step-start
+  name: ai-step-start
+  extras.ai.transport: { run-id=R1, invocation-id=I1, step-id=SP1, step-client-id=agent-1 }
+
+Agent publishes assistant stream create
+  name: ai-output
+  extras.ai.transport: { run-id=R1, invocation-id=I1, codec-message-id=M2, role=assistant, parent=M1, input-codec-message-id=M1, step-id=SP1, start-serial=<step-start serial> }
+  extras.ai.codec:     { stream=true, stream-id=S1, status=streaming }
+
+Agent appends text deltas to M2
+  channel.appendMessage on the assistant message's serial
+  extras.ai.codec:     { stream-id=S1, status=streaming }
+
+Agent closes the stream
+  name: ai-output  (channel.appendMessage with status=complete)
+  extras.ai.codec:     { stream-id=S1, status=complete }
+
+Agent publishes step-end
+  name: ai-step-end
+  extras.ai.transport: { run-id=R1, invocation-id=I1, step-id=SP1, step-reason=complete }
+
+Agent publishes run-end
+  name: ai-run-end
+  extras.ai.transport: { run-id=R1, invocation-id=I1, run-reason=complete }
+```
+
+A cancel inserts an `ai-cancel` message keyed by the triggering input's `codec-message-id` (which the client owns from send time, before the agent has minted the `run-id`). The agent's per-Run `AbortSignal` fires once the input lookup resolves the input to the run, the stream closes with `status=cancelled`, and the agent publishes `ai-run-end` with `run-reason=cancelled`.
+
+A continuation (a tool result follow-up, a regenerate, a suspend resume) is different in one wire detail: the client knows the existing `run-id` already, so it stamps it on the continuation input event under `extras.ai.transport.run-id`. The agent reads that header from the input event in its lookup and reuses it as the Run's id; on a fresh send the input event omits `run-id` and the agent mints one in `createRun`.
+
+## Header tiers <a id="header-tiers"/>
+
+Headers live under `extras.ai.transport` and `extras.ai.codec`. The tier prefix isolates transport-level routing from codec-defined payload metadata.
+
+### Transport headers
+
+Transport headers carry the routing and identity that the transport layer reads. They are stamped under `extras.ai.transport`.
 
 | Header | Description |
 | --- | --- |
-| `x-ably-turn-id` | Identifies the turn this message belongs to. All messages in a turn share the same turn ID. |
-| `x-ably-turn-client-id` | The client ID of the user who initiated the turn. |
-| `x-ably-turn-reason` | The reason a turn ended: `complete`, `cancelled`, or `error`. Present on `x-ably-turn-end` events. |
-| `x-ably-msg-id` | A unique identifier for the message. Used for optimistic update reconciliation and message identity. |
-| `x-ably-role` | The role of the message author: `user`, `assistant`, `system`, or `tool`. |
-| `x-ably-parent` | The message ID of this message's parent in the conversation tree. Establishes the tree structure. |
-| `x-ably-fork-of` | The message ID this message forks from. Present when an edit or regenerate creates a new branch. |
-| `x-ably-stream` | Whether the message is streamed (`true`) or discrete (`false`). |
-| `x-ably-stream-id` | Identifies the stream this message belongs to. All appends for the same streamed message share a stream ID. |
-| `x-ably-status` | The status of a streamed message: `streaming`, `finished`, or `aborted`. |
-| `x-ably-discrete` | Marks a message as a discrete (non-streamed) publish. Present on single-shot messages such as user prompts and tool results. |
-| `x-ably-amend` | Indicates this message amends (replaces) a previous message. Used for edits and regenerations. |
+| `run-id` | Run correlation. Minted by the agent inside `session.createRun(invocation)` for a fresh run, and stamped on every event the agent publishes. Continuation client publishes also carry it (the client knows the existing `run-id` from `clientRun.runId` and stamps it on the continuation input event); the agent reads it from the input event's wire headers to reuse the existing Run rather than minting a fresh one. Absent on the first `ai-input` of a fresh send. |
+| `invocation-id` | Per-HTTP-request identifier. Minted by the agent inside `session.createRun(invocation)` (one per HTTP request) and stamped on every event the agent publishes for that invocation (lifecycle + outputs). Not present on client `ai-input` events; the application returns it on the HTTP response so the caller can observe it. |
+| `event-id` | Per-event identifier on client publishes. The invocation body carries the triggering `event-id` so the agent's `Run.start()` knows which event to wait for. Distinct from `codec-message-id` so edits and retries that reuse the same `codec-message-id` still carry a fresh per-send identity. |
+| `codec-message-id` | Message identity in the conversation tree. Used for branch anchoring (edit forks at the user's `codec-message-id`, regenerate forks at the assistant's), for optimistic reconciliation, and for stream append targeting. |
+| `run-client-id` | The Ably `clientId` of the client that started the Run. Set on agent-side stream messages. |
+| `input-client-id` | The Ably `clientId` of the input event that drove the current invocation. May differ from `run-client-id` on continuation invocations driven by a non-owner (for example, a tool result from a different device). |
+| `role` | Message role: `user`, `assistant`, `system`, or `tool`. |
+| `parent` | The `codec-message-id` of the immediately preceding message in this branch. |
+| `fork-of` | The `codec-message-id` this message replaces. Present on edits. |
+| `msg-regenerate` | The `codec-message-id` of the assistant message this Run regenerates. Stamped on the regenerate input and echoed on `ai-run-start`. |
+| `run-reason` | The reason a Run ended. Present on `ai-run-end`. One of `complete`, `cancelled`, `error`. A suspended Run uses the `ai-run-suspend` event instead and is not terminal. |
+| `step-id` | Step correlation. Stable across retry attempts of the same [Step](/docs/ai-transport/concepts/steps): a retry publishes `ai-step-start` under the same `step-id` and the retry's output supersedes the failed attempt. Set on `ai-step-start`, `ai-step-end`, and every `ai-output` published inside the Step. |
+| `step-client-id` | The Ably `clientId` attributed to a Step. Sticky across Steps in a Run by default; a mid-run steer that incorporates a fresh input mid-run overrides it. |
+| `start-serial` | The Ably serial of the Step's own `ai-step-start`. Stamped on every `ai-output` inside the Step so the tree can elect the latest attempt when two attempts share a `step-id`. |
+| `step-reason` | The reason a Step ended. Present on `ai-step-end`. One of `complete`, `failed`, `cancelled`. |
+| `error-code` | Numeric error code on `ai-run-end` with `run-reason: error`. |
+| `error-message` | Human-readable error message on `ai-run-end` with `run-reason: error`. |
 
-## Domain headers <a id="domain-headers"/>
+### Codec headers
 
-Domain headers use the `x-domain-` prefix. They carry framework-specific metadata that the transport layer passes through without interpreting. A Vercel AI SDK codec might use domain headers to carry tool call IDs, content part indices, or other framework-specific identifiers.
+Codec headers carry the stream lifecycle the codec encoder and decoder read. They are stamped under `extras.ai.codec`.
 
-Domain headers are defined by the codec, not the transport. The transport merges them into the outbound message alongside transport headers.
-
-## Lifecycle events <a id="lifecycle-events"/>
-
-Lifecycle events signal the start and end of turns. They are published as Ably messages with specific names.
-
-| Event | Description |
+| Header | Description |
 | --- | --- |
-| `x-ably-turn-start` | A new turn has begun. Published before any content messages for the turn. |
-| `x-ably-turn-end` | The turn is complete. Includes `x-ably-turn-reason` to indicate how it ended. |
-| `x-ably-cancel` | A cancel request from a client. Includes a filter specifying which turns to cancel. |
-| `x-ably-abort` | The turn was forcefully terminated. May include partial content from an `onAbort` hook. |
-| `x-ably-error` | An error occurred during the turn. The turn ends with reason `error`. |
+| `stream` | `'true'` if the message uses streaming (appends), `'false'` for a discrete publish. |
+| `stream-id` | Stream identity. Set on every message that participates in a stream so the decoder can correlate appends. |
+| `status` | Lifecycle status of a streamed message. One of `streaming`, `complete`, `cancelled`. Set only when `stream` is `'true'`. |
+| `discrete` | Marks a message as a discrete part. Set by `publishDiscreteBatch`; not set on lifecycle events from `publishDiscrete`. |
 
-A normal turn follows the sequence: `x-ably-turn-start`, content messages, `x-ably-turn-end` with reason `complete`. A cancelled turn follows: `x-ably-turn-start`, content messages, `x-ably-turn-end` with reason `cancelled`.
+The following header constants are exported from `@ably/ai-transport` as `HEADER_*`:
+
+| Constant | Value |
+| --- | --- |
+| `HEADER_RUN_ID` | `'run-id'` |
+| `HEADER_CODEC_MESSAGE_ID` | `'codec-message-id'` |
+| `HEADER_RUN_CLIENT_ID` | `'run-client-id'` |
+| `HEADER_INPUT_CLIENT_ID` | `'input-client-id'` |
+| `HEADER_ROLE` | `'role'` |
+| `HEADER_PARENT` | `'parent'` |
+| `HEADER_FORK_OF` | `'fork-of'` |
+| `HEADER_MSG_REGENERATE` | `'msg-regenerate'` |
+| `HEADER_RUN_REASON` | `'run-reason'` |
+| `HEADER_STEP_ID` | `'step-id'` |
+| `HEADER_STEP_CLIENT_ID` | `'step-client-id'` |
+| `HEADER_START_SERIAL` | `'start-serial'` |
+| `HEADER_STEP_REASON` | `'step-reason'` |
+| `HEADER_ERROR_CODE` | `'error-code'` |
+| `HEADER_ERROR_MESSAGE` | `'error-message'` |
+| `HEADER_STREAM` | `'stream'` |
+| `HEADER_STREAM_ID` | `'stream-id'` |
+| `HEADER_STATUS` | `'status'` |
+
+The remaining wire headers (`invocation-id`, `event-id`, `input-codec-message-id`, `discrete`) are SDK internals and not part of the exported constant surface. The SDK reads and writes them through the `getTransportHeaders` and `getCodecHeaders` utilities.
+
+## Event names <a id="event-names"/>
+
+AI Transport uses nine Ably message names. The decoder dispatches on the Ably message `name` (and the `stream` header to distinguish discrete from streamed content), not on a separate codec-type header.
+
+| Event | Direction | Description |
+| --- | --- | --- |
+| `ai-input` | Client | Every client-published codec event (user-message parts, tool-approval responses, regenerate signals, tool results, edits). |
+| `ai-output` | Agent | Every agent-published codec event (text deltas, reasoning, tool calls, file or source parts, data chunks). |
+| `ai-run-start` | Agent | Run lifecycle. The agent publishes this once, for the first start of a Run, before any `ai-output`. |
+| `ai-run-suspend` | Agent | Run lifecycle. The agent pauses the Run pending external input (a tool approval, a human-in-the-loop response). The Run is not terminal; a continuation Invocation resumes it. |
+| `ai-run-resume` | Agent | Run lifecycle. The agent publishes this when a continuation Invocation re-activates a Run (tool-result follow-up, suspended-Run resume), instead of a second `ai-run-start`. The agent detects the continuation by reading the existing `run-id` off the triggering input event's wire headers; a fresh input event omits `run-id` and produces `ai-run-start`. |
+| `ai-run-end` | Agent | Run lifecycle. Closes the Run terminally with one of `complete`, `cancelled`, `error`. |
+| `ai-step-start` | Agent | [Step](/docs/ai-transport/concepts/steps) lifecycle. Opens a bracket for one re-attemptable unit of output. A fresh `ai-step-start` under an existing `step-id` supersedes the prior attempt. |
+| `ai-step-end` | Agent | Step lifecycle. Closes the Step with `step-reason: complete`, `step-reason: failed`, or `step-reason: cancelled`. A Step terminal is not a Run terminal; the Run stays active for the next Step or for its own `ai-run-end` / `ai-run-suspend`. |
+| `ai-cancel` | Client | Cancel intent, targeting a specific `run-id`. The agent matches against its registered Runs and fires the matching `AbortSignal`. |
 
 ## Content messages <a id="content-messages"/>
 
-Content messages carry the actual conversation data: user prompts, assistant responses, tool calls, and tool results. They come in two forms.
+Content rides `ai-input` or `ai-output` depending on the publisher. The codec layer is responsible for the payload; the wire layer cares only about whether the message is discrete or streamed.
 
-### Discrete messages <a id="discrete"/>
+### Discrete messages
 
-A discrete message is published as a single Ably message. The entire content is in one publish operation. User messages are typically discrete - the full text is known at publish time.
+A discrete message is published as a single Ably message. The entire content is in one `channel.publish` call. User messages are typically discrete.
 
 <Code>
 ```javascript
-// A discrete user message
-channel.publish('message.create', {
+channel.publish('ai-input', {
   data: { role: 'user', content: 'What is the weather?' },
   extras: {
-    headers: {
-      'x-ably-msg-id': 'msg_001',
-      'x-ably-role': 'user',
-      'x-ably-turn-id': 'turn_001',
-      'x-ably-stream': 'false',
-    }
-  }
-})
+    ai: {
+      transport: {
+        // No run-id on a fresh send (the agent mints it). Continuations stamp the
+        // existing run-id here so the agent reuses it instead of minting fresh.
+        'event-id': 'E1',
+        'codec-message-id': 'M1',
+        role: 'user',
+      },
+      codec: { stream: 'false' },
+    },
+  },
+});
 ```
 </Code>
 
-### Streamed messages <a id="streamed"/>
+### Streamed messages
 
-A streamed message is published incrementally as tokens arrive from the LLM. It uses three operations over its lifecycle:
+A streamed message is published incrementally. It uses three Ably operations:
 
-1. **Create** (`message.create`): starts the streamed message. Sets `x-ably-stream` to `true` and `x-ably-status` to `streaming`.
-2. **Append** (`message.append`): appends a token or chunk to the message. Published for each token in the stream.
-3. **Close** (`message.update`): finalizes the message with a terminal status (`finished` or `aborted`).
+1. `channel.publish('ai-output', ...)` with `stream: 'true'` and `status: 'streaming'`. The publish returns a serial that the encoder captures.
+2. `channel.appendMessage(...)` for each token, using the captured serial. The append carries the codec payload and the `stream-id`.
+3. A final `channel.appendMessage(...)` with `status: 'complete'` (or `'cancelled'`) closes the stream. `channel.updateMessage(...)` is only used as a recovery path when an intermediate append failed and the encoder needs to flush the accumulated payload.
 
-<Code>
-```javascript
-// 1. Create the streamed message
-channel.publish('message.create', {
-  data: { role: 'assistant', content: '' },
-  extras: {
-    headers: {
-      'x-ably-msg-id': 'msg_002',
-      'x-ably-stream': 'true',
-      'x-ably-stream-id': 'stream_001',
-      'x-ably-status': 'streaming',
-    }
-  }
-})
-
-// 2. Append tokens
-channel.appendMessage({ name: 'msg_002', data: 'The weather' })
-channel.appendMessage({ name: 'msg_002', data: ' is sunny.' })
-
-// 3. Close the stream
-channel.updateMessage({
-  name: 'msg_002',
-  extras: {
-    headers: { 'x-ably-status': 'finished' }
-  }
-})
-```
-</Code>
-
-Subscribers accumulate appends locally to build the complete message. If a subscriber joins mid-stream, the Ably message on the channel already contains all previous appends - only future appends arrive as live events.
+A subscriber that joins mid-stream sees the latest accumulated state of the message on attach (Ably stores the rollup) and then live appends after that. The decoder treats the on-attach state as the current full state and accumulates from there.
 
 ## Message identity <a id="message-identity"/>
 
-The `x-ably-msg-id` header is the primary identifier for a message in the conversation tree. It is distinct from the Ably message serial, which is assigned by the channel.
+The `codec-message-id` header is the primary identifier for a message in the conversation tree. It is distinct from the Ably channel serial: the serial is assigned by Ably and totally orders messages on the channel; the `codec-message-id` is assigned by the publisher and identifies the message across edits, retries, and optimistic reconciliation.
 
-### Generation <a id="id-generation"/>
+Edit and regenerate forks are message-anchored: the new Run's `fork-of` (for an edit) or `msg-regenerate` (for a regenerate) points at the `codec-message-id` being forked, not at the previous Run.
 
-Message IDs are generated by the sender. When the client sends a user message optimistically, the client generates the ID. When the server publishes messages from the LLM, the server generates the ID. The codec may generate IDs for streamed messages when the stream starts.
+## Input-event lookup <a id="input-event-lookup"/>
 
-### Stamping <a id="stamping"/>
+When a client sends, the SDK mints two identifiers on the publishing side:
 
-The server transport stamps the `x-ably-msg-id` header onto outbound messages. If the codec does not provide an ID, the transport generates one. This ensures every message on the channel has a consistent, unique identifier.
+- `inputEventId`: one per published input event. The last event in the send becomes the trigger the agent waits on.
+- `codecMessageId`: identity for the new message in the conversation tree. Surfaced on the returned `ClientRun` as `inputCodecMessageId` so the client can route the agent's outputs back to the input it owned at send time.
 
-### Reconciliation <a id="reconciliation"/>
+For continuations only, the client also stamps the existing `run-id` on the input event's wire headers (the client knows it from the previous `clientRun.runId`). Fresh sends omit `run-id` and leave the agent to mint it.
 
-When a client inserts a message optimistically, it assigns an `x-ably-msg-id`. The server publishes the same message with the same ID. When the client receives the published message through its subscription, it matches IDs and promotes the optimistic message to a confirmed one. The message keeps its position in the tree, but gains a real Ably serial for ordering.
+The SDK does not POST to the agent endpoint itself; the developer (or the bundled [Vercel `ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport)) calls `clientRun.toInvocation().toJSON()` to obtain an [`InvocationData`](/docs/ai-transport/concepts/invocations) body (`{ inputEventId, sessionName }`) and POSTs it to the agent.
+
+On the agent side, `session.createRun(invocation)` mints the `invocationId` (one per HTTP request) and either mints a fresh `runId` (no `run-id` on the input event) or reads the existing `runId` off the triggering input event's wire headers (continuation). Both are stamped on every event the agent publishes for this invocation. `AgentRun.start()` awaits `run.located`: the run's input-event watcher matches the trigger `event-id` carried in the invocation body, whether it is already folded into the Tree (from channel history the agent paged in) or arrives live. There is no lookup timeout.
+
+The agent's outputs carry `input-codec-message-id` (the `codec-message-id` of the triggering input) under `extras.ai.transport`. The client uses this to correlate outputs back to the input it owned at send time, so `clientRun.runId` is populated once `ai-run-start` lands (await `clientRun.started`). The application returns `run.runId` and `run.invocationId` on the HTTP response so the caller can observe the agent-minted ids directly.
+
+This is the mechanism that lets a serverless agent publish a Run reliably even when the channel publish and the HTTP POST race: the agent waits on the channel until the input event lands, then proceeds.
 
 ## Related pages <a id="related"/>
 
-- [Codec architecture](/docs/ai-transport/internals/codec-architecture) - how the codec uses the wire protocol to encode and decode messages.
-- [Conversation tree](/docs/ai-transport/internals/conversation-tree) - how `x-ably-parent` and `x-ably-fork-of` build the tree structure.
-- [Optimistic updates](/docs/ai-transport/features/optimistic-updates) - reconciliation from the user's perspective.
+- [Codec architecture](/docs/ai-transport/internals/codec-architecture): how the codec uses the wire protocol to encode and decode messages.
+- [Conversation tree](/docs/ai-transport/internals/conversation-tree): how `parent`, `fork-of`, and `msg-regenerate` build the tree.
+- [Transport patterns](/docs/ai-transport/internals/transport-patterns): the stream router, input-event lookup, and cancel routing.
+- [Errors](/docs/ai-transport/api/errors): error codes the wire layer surfaces.

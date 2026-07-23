@@ -1,12 +1,12 @@
 import React from 'react';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
-import Icon from '@ably/ui/core/Icon';
-import cn from '@ably/ui/core/utils/cn';
+import cn from 'src/utilities/cn';
 import { hierarchicalKey } from './utils/nav';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
 const linkStyles =
-  'ui-text-label4 font-semibold text-neutral-900 hover:text-neutral-1300 active:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-000 dark:active:text-neutral-500 focus-base transition-colors';
+  'ui-text-label4 font-semibold text-neutral-900 hover:text-neutral-1300 active:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-000 dark:active:text-neutral-500 focus-base transition-colors whitespace-nowrap';
 
 const Breadcrumbs: React.FC = () => {
   const { activePage } = useLayoutContext();
@@ -35,40 +35,36 @@ const Breadcrumbs: React.FC = () => {
   })();
 
   return (
-    <nav aria-label="breadcrumb" className="flex mt-8 items-center gap-1">
+    <nav aria-label="breadcrumb" className="flex items-center gap-1 min-w-0 flex-wrap">
       {lastActiveNodeIndex === null && (
-        <Icon
-          name="icon-gui-chevron-left-micro"
-          size="16px"
-          color="text-neutral-900 dark:text-neutral-400"
-          additionalCSS="sm:hidden"
+        <ChevronLeftIcon
+          className="size-[12px] text-neutral-900 dark:text-neutral-400 md:hidden shrink-0"
+          aria-hidden
         />
       )}
-      <Link to="/docs" className={cn(linkStyles, lastActiveNodeIndex !== null && 'hidden sm:block')}>
+      <Link to="/docs" className={cn(linkStyles, lastActiveNodeIndex !== null && 'hidden md:block')}>
         Home
       </Link>
-      <Icon
-        name="icon-gui-chevron-right-micro"
-        size="16px"
-        color="text-neutral-900 dark:text-neutral-400"
-        additionalCSS={cn('rotate-180 sm:rotate-0', { 'hidden sm:flex': lastActiveNodeIndex === null })}
+      <ChevronRightIcon
+        className={cn('size-[12px] text-neutral-900 dark:text-neutral-400 shrink-0 rotate-180 md:rotate-0', {
+          'hidden md:flex': lastActiveNodeIndex === null,
+        })}
+        aria-hidden
       />
       {activePage.tree.map((node, index) => (
         <React.Fragment key={hierarchicalKey(node.page.link, index, activePage.tree)}>
           {index > 0 ? (
-            <Icon
-              name="icon-gui-chevron-right-micro"
-              size="16px"
-              color="text-neutral-900 dark:text-neutral-400"
-              additionalCSS="hidden sm:flex"
+            <ChevronRightIcon
+              className="size-[12px] text-neutral-900 dark:text-neutral-400 hidden md:flex shrink-0"
+              aria-hidden
             />
           ) : null}
           <Link
             to={node.page.link}
             className={cn(linkStyles, {
-              'text-gui-unavailable dark:text-gui-unavailable-dark pointer-events-none':
+              'text-neutral-700 dark:text-neutral-700 pointer-events-none':
                 index === activePage.tree.length - 1 || node.page.link === '#',
-              'hidden sm:flex': index !== lastActiveNodeIndex,
+              'hidden md:flex': index !== lastActiveNodeIndex,
             })}
           >
             {node.page.name}

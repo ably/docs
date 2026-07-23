@@ -2,97 +2,144 @@
 title: "Double texting"
 meta_description: "Handle users sending multiple messages while the AI is streaming with Ably AI Transport. Queue or run messages concurrently."
 meta_keywords: "double texting, multiple messages, concurrent messages, queue messages, AI Transport, Ably"
+intro: "Your users send a follow-up before the previous response finishes. AI Transport gives you three patterns: run concurrently by default, queue the new message, or cancel and re-prompt."
 ---
 
-<Aside data-type='new'>
-The AI Transport docs are being actively written and developed. They are available early to explain how AI Transport functions.
-</Aside>
+Double texting is when a user sends a new message while the agent is still streaming a response. AI Transport supports this through [concurrent turns](/docs/ai-transport/features/concurrent-turns). The new message starts a new turn that runs alongside the existing one. Your application chooses between three patterns: concurrent, queued, or cancel-then-send.
 
-Double texting is when a user sends a new message while the agent is still streaming a response. AI Transport supports this through [concurrent turns](/docs/ai-transport/features/concurrent-turns) - the new message starts a new turn that runs alongside the existing one.
+![Diagram showing a user sending a follow-up message while the agent is still streaming a response](../../../../images/content/diagrams/ait-double-texting.png)
 
-## Default behavior <a id="default-behavior"/>
+## Default behaviour: concurrent <a id="default-behavior"/>
 
-By default, sending a message while the agent is streaming starts a new concurrent turn. Both the existing response and the new turn run in parallel:
+Sending a message while the agent is streaming starts a new concurrent turn. Both the existing response and the new turn run in parallel:
 
 <Code>
 ```javascript
-// User sends a message
-await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Explain quantum computing' }] }])
+await send(createUIMessageCodec().createUserMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Explain quantum computing' }],
+}));
 
-// Agent starts streaming a response...
+// Agent starts streaming a response.
+// User sends another message before the response finishes.
 
-// User sends another message before the response finishes
-await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: 'Also, what is superposition?' }] }])
+await send(createUIMessageCodec().createUserMessage({
+  id: crypto.randomUUID(),
+  role: 'user',
+  parts: [{ type: 'text', text: 'Also, what is superposition?' }],
+}));
 
-// Both turns stream concurrently
+// Both turns stream concurrently.
 ```
 </Code>
 
 Each turn has its own stream and cancel handle. The conversation tree contains both exchanges.
 
-## Queue-while-streaming <a id="queue-while-streaming"/>
+## Queue while streaming <a id="queue-while-streaming"/>
 
-If you want to prevent concurrent turns and instead queue messages, detect active turns and show a queued indicator in the UI:
+To prevent concurrent turns and queue messages instead, detect active turns and gate the send:
 
 <Code>
 ```javascript
-const activeTurns = useActiveTurns({ transport })
+const { session } = useClientSession();
+const view = useView();
+const isStreaming = session.view.runs().some((r) => r.status === 'active');
 
 const handleSend = async (text) => {
-  if (activeTurns.size > 0) {
-    // Show a queued indicator in the UI
-    addToQueue(text)
-    return
+  if (isStreaming) {
+    addToQueue(text);
+    return;
   }
 
-  await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }])
-}
+  await view.send(createUIMessageCodec().createUserMessage({
+    id: crypto.randomUUID(),
+    role: 'user',
+    parts: [{ type: 'text', text }],
+  }));
+};
 
-// When the active turn finishes, send the next queued message
 useEffect(() => {
-  if (activeTurns.size === 0 && queue.length > 0) {
-    const next = queue.shift()
-    send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text: next }] }])
+  if (!isStreaming && queue.length > 0) {
+    const next = queue.shift();
+    view.send(createUIMessageCodec().createUserMessage({
+      id: crypto.randomUUID(),
+      role: 'user',
+      parts: [{ type: 'text', text: next }],
+    }));
   }
-}, [activeTurns.size])
+}, [isStreaming]);
 ```
 </Code>
 
 This gives users feedback that their message was received and will be processed next, without interrupting the current response.
 
-## Cancel-then-send <a id="cancel-then-send"/>
+## Cancel and re-prompt <a id="cancel-then-send"/>
 
-An alternative is to cancel the current turn before sending the new message. This is the [interruption](/docs/ai-transport/features/interruption) pattern:
+To cancel the current Run before sending the new message, use the [interruption and steering](/docs/ai-transport/features/interruption-and-steering) pattern:
 
 <Code>
 ```javascript
-const handleSend = async (text) => {
-  if (activeTurns.size > 0) {
-    await transport.cancel()
-  }
+const { session } = useClientSession();
+const view = useView();
 
-  await send([{ id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] }])
-}
+const handleSend = async (text) => {
+  const active = session.view.runs().filter((r) => r.status === 'active');
+  await Promise.all(active.map((r) => session.cancel(r.runId)));
+
+  await view.send(createUIMessageCodec().createUserMessage({
+    id: crypto.randomUUID(),
+    role: 'user',
+    parts: [{ type: 'text', text }],
+  }));
+};
 ```
 </Code>
 
-The current response stops, and the new message starts a fresh turn. This works well when the user's new message supersedes the previous one.
+The current response stops, and the new message starts a fresh Run. Use this when the new message supersedes the previous one.
 
 ## Choose a pattern <a id="choosing-a-pattern"/>
 
-| Pattern | Behavior | Best for |
+| Pattern | Behaviour | Best for |
 | --- | --- | --- |
-| Concurrent (default) | Both turns run in parallel | Multi-topic conversations, research tasks |
-| Queue-while-streaming | New message waits for current turn to finish | Sequential conversations, chatbots |
-| Cancel-then-send | Current turn is aborted, new turn starts | Corrections, redirections |
+| Concurrent (default) | Both turns run in parallel. | Multi-topic conversations, research tasks. |
+| Queue while streaming | New message waits for the current turn to finish. | Sequential conversations, chatbots. |
+| Cancel and re-prompt | The current turn is aborted, the new turn starts. | Corrections, redirections. |
 
-The right pattern depends on your application. Concurrent turns work well for exploratory conversations. Queuing is better for sequential interactions where order matters. Cancel-then-send is best when the new message replaces the previous one.
+Concurrent turns work well for exploratory conversations. Queuing is better for sequential interactions where order matters. Cancel-then-send is the right pattern when the new message replaces the previous one.
+
+## Edge cases and unhappy paths <a id="edge-cases"/>
+
+- Queueing without a visible indicator confuses users who expect instant send. Show a queued state in the UI.
+- A queue that grows without bound during a long-running turn pressures channel and server limits. Cap the queue at a reasonable size.
+- Cancel-then-send races with the in-flight stream. A few tokens from the cancelled turn arrive after the cancel returns; treat them as part of the cancelled turn.
+- Concurrent turns share the connection's message rate. Many parallel streams approach the rate limit faster than one. See [token streaming](/docs/ai-transport/features/token-streaming#rollup).
+- A pattern choice that varies across devices in the same session leads to inconsistent behaviour. Decide the pattern at the application layer, not per device.
+
+## FAQ <a id="faq"/>
+
+### Can I mix patterns within one conversation? <a id="faq-mix"/>
+
+Yes. Decide per send. A user that hits stop and re-prompts uses cancel-then-send; a user that types fast and triggers queueing uses queue-while-streaming.
+
+### Does the agent know it received a follow-up while streaming? <a id="faq-agent-aware"/>
+
+Concurrent turns are independent on the server. If the agent should be aware of a follow-up, surface it through your own protocol; AI Transport does not inject messages into an in-flight turn.
+
+### What if the LLM hits a rate limit during a concurrent burst? <a id="faq-rate-limit"/>
+
+The corresponding turn fails with reason `'error'`. Other turns are unaffected.
+
+### How do I show typing-paused indicators while queued? <a id="faq-indicator"/>
+
+Track `queue.length` and `activeTurns.size` in your UI state. Show a queued chip while the queue is non-empty and the active turn is still streaming.
+
+### Does double texting break the conversation tree? <a id="faq-tree"/>
+
+No. Each user message is a sibling under the same parent. The tree records both exchanges; the view's branch selection determines what renders.
 
 ## Related features <a id="related"/>
 
-- [Concurrent turns](/docs/ai-transport/features/concurrent-turns) - the underlying mechanism for parallel turns
-- [Interruption and barge-in](/docs/ai-transport/features/interruption) - the cancel-then-send pattern in detail
-- [Cancellation](/docs/ai-transport/features/cancellation) - cancel signals and scoped cancellation
-- [Client transport API](/docs/ai-transport/api-reference/client-transport) - reference for `send`, `cancel`, and other client methods.
-- [Turns](/docs/ai-transport/concepts/turns) - how concurrent turns are managed within a session.
-- [Get started](/docs/ai-transport/getting-started/vercel-ai-sdk) - build your first AI Transport application.
+- [Concurrent turns](/docs/ai-transport/features/concurrent-turns): the underlying mechanism for parallel turns.
+- [Interruption and steering](/docs/ai-transport/features/interruption-and-steering): steer, cancel-then-send, and send-alongside in detail.
+- [Cancellation](/docs/ai-transport/features/cancellation): cancel signals and scoped cancellation.

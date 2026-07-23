@@ -9,12 +9,12 @@ jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: jest.fn(),
 }));
 
-jest.mock('@ably/ui/core/Icon', () => ({
+jest.mock('src/components/Icon', () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <div>{name}</div>,
 }));
 
-jest.mock('@ably/ui/core/Badge', () => ({
+jest.mock('src/components/ui/Badge', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -72,7 +72,7 @@ describe('LanguageSelector', () => {
 
   it('renders the LanguageSelector component with default language (JS)', () => {
     render(<LanguageSelector />);
-    expect(screen.getByText('icon-gui-chevron-down-micro')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /select code language/i })).toBeInTheDocument();
     expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
   });
@@ -83,7 +83,7 @@ describe('LanguageSelector', () => {
     fireEvent.click(trigger);
 
     await waitFor(() => {
-      expect(screen.getByText('Code Language')).toBeInTheDocument();
+      expect(screen.getByText('Python')).toBeInTheDocument();
     });
   });
 
@@ -106,13 +106,13 @@ describe('LanguageSelector', () => {
     fireEvent.click(trigger);
 
     await waitFor(() => {
-      expect(screen.getByText('Code Language')).toBeInTheDocument();
+      expect(screen.getByText('Python')).toBeInTheDocument();
     });
 
     fireEvent.keyDown(trigger, { key: 'Escape', code: 'Escape' });
 
     await waitFor(() => {
-      expect(screen.queryByText('Code Language')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     });
   });
 
@@ -140,6 +140,24 @@ describe('LanguageSelector', () => {
     render(<LanguageSelector />);
     expect(screen.getByText('icon-tech-python')).toBeInTheDocument();
     expect(screen.getByText('Python')).toBeInTheDocument();
+  });
+
+  it('renders a static label without a dropdown when only one language is available', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        tree: [0],
+        languages: ['javascript'],
+        language: 'javascript',
+      },
+      products: [['pubsub']],
+    });
+
+    render(<LanguageSelector />);
+
+    expect(screen.getByText('JavaScript')).toBeInTheDocument();
+    expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
+    // No combobox trigger (and so no dropdown chevron) when there is nothing to choose between.
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('navigates when a language option is selected', async () => {

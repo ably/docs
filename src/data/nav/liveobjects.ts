@@ -9,25 +9,30 @@ export default {
   },
   content: [
     {
-      name: 'About LiveObjects',
-      link: '/docs/liveobjects',
-      index: true,
-      languages: ['javascript', 'swift', 'java'],
-    },
-    {
       name: 'Getting started',
       pages: [
         {
-          name: 'JavaScript',
-          link: '/docs/liveobjects/quickstart/javascript',
+          name: 'About LiveObjects',
+          link: '/docs/liveobjects',
+          index: true,
+          languages: ['javascript', 'swift', 'java'],
         },
         {
-          name: 'Swift',
-          link: '/docs/liveobjects/quickstart/swift',
-        },
-        {
-          name: 'Java',
-          link: '/docs/liveobjects/quickstart/java',
+          name: 'By language',
+          pages: [
+            {
+              name: 'JavaScript',
+              link: '/docs/liveobjects/quickstart/javascript',
+            },
+            {
+              name: 'Swift',
+              link: '/docs/liveobjects/quickstart/swift',
+            },
+            {
+              name: 'Java',
+              link: '/docs/liveobjects/quickstart/java',
+            },
+          ],
         },
       ],
     },
@@ -55,11 +60,6 @@ export default {
           link: '/docs/liveobjects/concepts/synchronization',
           languages: ['javascript', 'swift', 'java'],
         },
-        {
-          name: 'Billing',
-          link: '/docs/liveobjects/concepts/billing',
-          languages: ['javascript', 'swift', 'java'],
-        },
       ],
     },
     {
@@ -81,6 +81,7 @@ export default {
         {
           name: 'Batch operations',
           link: '/docs/liveobjects/batch',
+          languages: ['javascript', 'swift', 'java'],
         },
         {
           name: 'Lifecycle events',
@@ -97,6 +98,7 @@ export default {
         {
           name: 'Object storage',
           link: '/docs/liveobjects/storage',
+          languages: ['javascript', 'swift', 'java'],
         },
         {
           name: 'Using the REST SDK',
@@ -107,6 +109,10 @@ export default {
           link: '/docs/liveobjects/rest-api-usage',
         },
       ],
+    },
+    {
+      name: 'LiveObjects pricing',
+      link: '/docs/liveobjects/pricing',
     },
   ],
   api: [
@@ -124,7 +130,8 @@ export default {
           external: true,
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-java/main/javadoc/io/ably/lib/objects/RealtimeObjects.html',
+          // TODO: verify this URL resolves once the path-based API javadoc is published
+          link: 'https://sdk.ably.com/builds/ably/ably-java/main/javadoc/io/ably/lib/liveobjects/RealtimeObject.html',
           name: 'Java SDK',
           external: true,
         },

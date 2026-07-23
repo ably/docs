@@ -3,7 +3,7 @@ import { WindowLocation } from '@reach/router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Helmet } from 'react-helmet';
 import If from './mdx/If';
-import CodeSnippet from '@ably/ui/core/CodeSnippet';
+import CodeSnippet from 'src/components/ui/CodeSnippet';
 import UserContext from 'src/contexts/user-context';
 import MDXWrapper from './MDXWrapper';
 
@@ -38,7 +38,7 @@ jest.mock('src/hooks/use-site-metadata', () => ({
 }));
 
 // We need to mock minimal implementation of other dependencies that CodeSnippet might use
-jest.mock('@ably/ui/core/Icon', () => {
+jest.mock('src/components/Icon', () => {
   return {
     __esModule: true,
     default: ({ name, size, additionalCSS, color }: any) => (
@@ -54,7 +54,7 @@ jest.mock('@ably/ui/core/Icon', () => {
 });
 
 // Mock Code component used by CodeSnippet
-jest.mock('@ably/ui/core/Code', () => {
+jest.mock('src/components/ui/Code', () => {
   return {
     __esModule: true,
     default: ({ language, snippet }: any) => (
@@ -383,5 +383,80 @@ describe('MDXWrapper structured data', () => {
     expect(structuredData.hasPart[1].programmingLanguage).toBe('Python');
     expect(structuredData.hasPart[0].url).toBe('https://example.com/docs/test-page?lang=javascript');
     expect(structuredData.hasPart[1].url).toBe('https://example.com/docs/test-page?lang=python');
+  });
+
+  const renderWithJsonLd = (jsonLd: unknown) =>
+    render(
+      <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
+        <MDXWrapper
+          pageContext={{ ...defaultPageContext, frontmatter: { ...defaultPageContext.frontmatter, json_ld: jsonLd } }}
+          location={defaultLocation}
+        >
+          <div>Test content</div>
+        </MDXWrapper>
+      </UserContext.Provider>,
+    );
+
+  const peekJsonLd = () => {
+    const helmet = Helmet.peek();
+    const tag = helmet.scriptTags?.find((tag: { type?: string }) => tag.type === 'application/ld+json');
+    return tag ? JSON.parse(tag.innerHTML || '{}') : undefined;
+  };
+
+  it('uses json_ld frontmatter verbatim, overriding the auto-generated language schema', async () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        product: 'pubsub',
+        language: 'javascript',
+        languages: ['javascript', 'python'],
+        page: { name: 'Test Page', link: '/docs/test-page' },
+        tree: [],
+        template: 'mdx' as const,
+      },
+    });
+
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [{ '@type': 'Question', name: 'What is Ably?' }],
+    };
+
+    renderWithJsonLd(jsonLd);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test content')).toBeInTheDocument();
+    });
+
+    expect(peekJsonLd()).toEqual(jsonLd);
+  });
+
+  it('supports json_ld using an @graph with no top-level @type', async () => {
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@graph': [{ '@type': 'TechArticle', headline: 'Durable sessions' }],
+    };
+
+    renderWithJsonLd(jsonLd);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test content')).toBeInTheDocument();
+    });
+
+    expect(peekJsonLd()).toEqual(jsonLd);
+  });
+
+  it('falls back to existing behaviour and warns when json_ld is not an object', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    // Only one language, so the auto-generated schema is also absent: the page
+    // should emit no structured data and log a warning about the invalid value.
+    renderWithJsonLd('not-an-object');
+
+    await waitFor(() => {
+      expect(screen.getByText('Test content')).toBeInTheDocument();
+    });
+
+    expect(peekJsonLd()).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Ignoring invalid json_ld frontmatter'));
   });
 });

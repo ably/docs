@@ -76,13 +76,13 @@ LiveObjects provides specialized object types to model your application state. T
 <Code>
 ```javascript
 // Create and assign a LiveMap
-await myObject.set('settings', LiveMap.create({
+await rootObject.set('settings', LiveMap.create({
   theme: 'dark',
   notifications: true
 }));
 
 // Access via path
-const settings = myObject.get('settings');
+const settings = rootObject.get('settings');
 await settings.set('fontSize', 14);
 ```
 
@@ -96,12 +96,19 @@ try await userSettings.set(key: "notifications", value: true)
 ```
 
 ```java
-// Create a LiveMap
-LiveMap userSettings = channel.getObjects().createMap();
+// rootObject obtained from channel.object.get()
 
-// Set primitive values
-userSettings.set("theme", LiveMapValue.of("dark"));
-userSettings.set("notifications", LiveMapValue.of(true));
+// Create a LiveMap with initial entries
+LiveMap initialSettings = LiveMap.create(Map.of(
+    "theme", LiveMapValue.of("dark"),
+    "notifications", LiveMapValue.of(true)));
+
+// Assign it to the 'settings' key on the channel object
+rootObject.set("settings", LiveMapValue.of(initialSettings)).join();
+
+// Access and update it through its path
+LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
+settings.set("fontSize", LiveMapValue.of(14)).join();
 ```
 </Code>
 
@@ -115,10 +122,10 @@ userSettings.set("notifications", LiveMapValue.of(true));
 <Code>
 ```javascript
 // Create and assign a LiveCounter
-await myObject.set('visits', LiveCounter.create(0));
+await rootObject.set('visits', LiveCounter.create(0));
 
 // Access via path
-const visits = myObject.get('visits');
+const visits = rootObject.get('visits');
 await visits.increment(1);
 ```
 
@@ -131,15 +138,19 @@ try await visitsCounter.increment(amount: 1);
 ```
 
 ```java
-// Create a LiveCounter
-LiveCounter visitsCounter = channel.getObjects().createCounter();
+// Create a LiveCounter with initial value 0
+LiveCounter visitsCounter = LiveCounter.create(0);
 
-// Increment the counter
-visitsCounter.increment(1);
+// Assign it to the 'visits' key on the channel object
+rootObject.set("visits", LiveMapValue.of(visitsCounter)).join();
+
+// Access and update it through its path
+LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
+visits.increment(1).join();
 ```
 </Code>
 
-<If lang="javascript">
+<If lang="javascript,java">
 ## Channel object <a id="channel-object"/>
 
 The channel object is a special `LiveMap` instance which:
@@ -149,20 +160,40 @@ The channel object is a special `LiveMap` instance which:
 * Cannot be deleted
 * Serves as the [entry point](#reachability) for accessing all other objects on a channel
 
-Access the channel object using `channel.object.get()`, which returns a [PathObject](/docs/liveobjects/concepts/path-object) that resolves to the root `LiveMap`:
+<If lang="javascript">
+Access the channel object using `channel.object.get()`, which returns a [`PathObject`](/docs/liveobjects/concepts/path-object) that resolves to the root `LiveMap`:
+</If>
+<If lang="java">
+Access the channel object using `channel.object.get()`, which returns a future that completes with a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object?lang=java) resolving to the root `LiveMap`:
+</If>
 
 <Code>
 ```javascript
 // Get the channel object.
 // This implicitly attaches to the channel if not already attached.
 // The promise resolves when the channel object data has been synchronized to the client.
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // Use it like any other LiveMap
-await myObject.set('app-version', '1.0.0');
-await myObject.set('config', LiveMap.create({
+await rootObject.set('app-version', '1.0.0');
+await rootObject.set('config', LiveMap.create({
   apiUrl: 'https://api.example.com'
 }));
+```
+
+```java
+// Implicitly attaches the channel; the future completes once state is SYNCED
+LiveMapPathObject rootObject = channel.object.get().join();
+
+// Use it like any other LiveMap
+rootObject.set("app-version", LiveMapValue.of("1.0.0")).join();
+
+// Create a config map
+LiveMap config = LiveMap.create(Map.of(
+    "apiUrl", LiveMapValue.of("https://api.example.com")));
+
+// Assign it to the 'config' key on the channel object
+rootObject.set("config", LiveMapValue.of(config)).join();
 ```
 </Code>
 
@@ -177,14 +208,26 @@ Calling `channel.object.get()` implicitly attaches to the channel if not already
 <Code>
 ```javascript
 // Get the channel object
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // Navigate to nested paths
-const theme = myObject.get('settings').get('theme');
+const theme = rootObject.get('settings').get('theme');
 
 // The path evaluates to an object instance when you call a method on it
-await myObject.get('visits').increment(5);
-await myObject.get('settings').set('notifications', true);
+await rootObject.get('visits').increment(5);
+await rootObject.get('settings').set('notifications', true);
+```
+
+```java
+// Get the channel object
+LiveMapPathObject rootObject = channel.object.get().join();
+
+// Purely navigational - nothing is resolved yet
+PathObject visits = rootObject.get("visits");
+
+// Resolution happens when a terminal method is called
+visits.asLiveCounter().increment(5).join();
+rootObject.get("settings").asLiveMap().set("notifications", LiveMapValue.of(true)).join();
 ```
 </Code>
 
@@ -202,14 +245,33 @@ See the [PathObject documentation](/docs/liveobjects/concepts/path-object) for d
 <Code>
 ```javascript
 // Get the channel object
-const myObject = await channel.object.get();
+const rootObject = await channel.object.get();
 
 // Navigate to nested paths and get the instance
-const theme = myObject.get('settings').get('theme').instance();
+const themeInstance = rootObject.get('settings').get('theme').instance();
 
 // Work directly with the instance
-await myObject.get('visits').instance()?.increment(5);
-await myObject.get('settings').instance()?.set('notifications', true);
+await rootObject.get('visits').instance()?.increment(5);
+await rootObject.get('settings').instance()?.set('notifications', true);
+```
+
+```java
+// Get the channel object
+LiveMapPathObject rootObject = channel.object.get().join();
+
+// Navigate to nested paths and get the instance
+Instance themeInstance = rootObject.get("settings").asLiveMap().get("theme").instance();
+
+// Work directly with the instance
+Instance visitsInstance = rootObject.get("visits").instance(); // null only if nothing exists at the path
+if (visitsInstance != null) {
+    visitsInstance.asLiveCounter().increment(5).join();
+}
+
+Instance settingsInstance = rootObject.get("settings").instance();
+if (settingsInstance != null) {
+    settingsInstance.asLiveMap().set("notifications", LiveMapValue.of(true)).join();
+}
 ```
 </Code>
 
@@ -221,7 +283,7 @@ See the [Instance documentation](/docs/liveobjects/concepts/instance) for detail
 
 </If>
 
-<If lang="swift,java">
+<If lang="swift">
 ### Root object <a id="root-object"/>
 
 The root object is a special `LiveMap` instance which:
@@ -241,14 +303,6 @@ let root = try await channel.objects.getRoot()
 // Use it like any other LiveMap
 try await root.set(key: "app-version", value: "1.0.0")
 ```
-
-```java
-// Get the Root Object
-LiveMap root = channel.getObjects().getRoot();
-
-// Use it like any other LiveMap
-root.set("app-version", LiveMapValue.of("1.0.0"));
-```
 </Code>
 </If>
 
@@ -262,7 +316,7 @@ Specifically, a [LiveMap](/docs/liveobjects/map) can store references to other `
 <Code>
 ```javascript
 // Create a nested structure in a single operation
-await myObject.set('profile', LiveMap.create({
+await rootObject.set('profile', LiveMap.create({
   name: 'Alice',
   preferences: LiveMap.create({
     theme: 'dark',
@@ -272,7 +326,7 @@ await myObject.set('profile', LiveMap.create({
 }));
 
 // Resulting structure:
-// myObject (LiveMap - channel object)
+// rootObject (LiveMap - channel object)
 // └── profile (LiveMap)
 //     ├── name: "Alice" (string)
 //     ├── preferences (LiveMap)
@@ -281,8 +335,8 @@ await myObject.set('profile', LiveMap.create({
 //     └── activity (LiveCounter)
 
 // Access and update nested values via paths
-await myObject.get('profile').get('activity').increment(5);
-await myObject.get('profile').get('preferences').set('theme', 'light');
+await rootObject.get('profile').get('activity').increment(5);
+await rootObject.get('profile').get('preferences').set('theme', 'light');
 ```
 
 ```swift
@@ -306,31 +360,47 @@ try await root.set(key: "profile", value: .liveMap(profileMap))
 ```
 
 ```java
-// Create LiveObjects
-LiveMap profileMap = channel.getObjects().createMap();
-LiveMap preferencesMap = channel.getObjects().createMap();
-LiveCounter activityCounter = channel.getObjects().createCounter();
+// Create a map for the nested preferences
+LiveMap preferences = LiveMap.create(Map.of(
+    "theme", LiveMapValue.of("dark"),
+    "fontSize", LiveMapValue.of(14)));
 
-// Build a composite structure
-preferencesMap.set("theme", LiveMapValue.of("dark"));
-profileMap.set("preferences", LiveMapValue.of(preferencesMap));
-profileMap.set("activity", LiveMapValue.of(activityCounter));
-root.set("profile", LiveMapValue.of(profileMap));
+// Create a counter for the nested activity
+LiveCounter activity = LiveCounter.create(0);
+
+// Compose the profile entries, referencing the nested objects
+Map<String, LiveMapValue> profileData = Map.of(
+    "name", LiveMapValue.of("Alice"),
+    "preferences", LiveMapValue.of(preferences),
+    "activity", LiveMapValue.of(activity));
+
+// Create the profile map from the composed entries
+LiveMap profile = LiveMap.create(profileData);
+
+// Assign the profile map to the channel object.
+// The whole tree publishes as a single operation.
+rootObject.set("profile", LiveMapValue.of(profile)).join();
 
 // Resulting structure:
-// root (LiveMap)
+// rootObject (LiveMap - channel object)
 // └── profile (LiveMap)
+//     ├── name: "Alice" (string)
 //     ├── preferences (LiveMap)
-//     │   └── theme: "dark" (string)
+//     │   ├── theme: "dark" (string)
+//     │   └── fontSize: 14 (number)
 //     └── activity (LiveCounter)
+
+// Update nested values through their paths
+rootObject.at("profile.activity").asLiveCounter().increment(5).join();
+rootObject.at("profile.preferences").asLiveMap().set("theme", LiveMapValue.of("light")).join();
 ```
 </Code>
 
 <Aside data-type='note'>
-Internally, a `LiveMap` instance only stores a _reference_ to another object (by its [object ID](#object-ids)), rather than the value of the nested object itself. <If lang="javascript">When using a client SDK, object references are automatically resolved when resolving paths using the [PathObject](/docs/liveobjects/concepts/path-object), or when navigating the object tree using the `Instance.get()` [method](/docs/liveobjects/concepts/instance#get).</If><If lang="swift,java">When using a client SDK, object references are automatically resolved when using the `get()` [method](/docs/liveobjects/map#get).</If>
+Internally, a `LiveMap` instance only stores a _reference_ to another object (by its [object ID](#object-ids)), rather than the value of the nested object itself. <If lang="javascript,java">When using a client SDK, object references are automatically resolved when resolving paths using the [PathObject](/docs/liveobjects/concepts/path-object), or when navigating the object tree using the `Instance.get()` [method](/docs/liveobjects/concepts/instance#get).</If><If lang="swift">When using a client SDK, object references are automatically resolved when using the `get()` [method](/docs/liveobjects/map#get).</If>
 </Aside>
 
-<If lang="swift,java">
+<If lang="swift">
 It is possible for the same object instance to be accessed from multiple places in your object tree:
 
 <Code>
@@ -370,33 +440,6 @@ try mapB.get(key: "count")?.liveCounterValue?.subscribe { _, _ in
 // Increment the counter
 try await counter.increment(amount: 1)
 ```
-
-```java
-// Create a counter
-LiveCounter counter = channel.getObjects().createCounter();
-
-// Create two different maps
-LiveMap mapA = channel.getObjects().createMap();
-LiveMap mapB = channel.getObjects().createMap();
-root.set("a", LiveMapValue.of(mapA));
-root.set("b", LiveMapValue.of(mapB));
-
-// Reference the same counter from both maps
-mapA.set("count", LiveMapValue.of(counter));
-mapB.set("count", LiveMapValue.of(counter));
-
-// The counter referenced from each location shows the same
-// value, since they refer to the same underlying counter
-mapA.get("count").asLiveCounter().subscribe((counterUpdate) -> {
-    System.out.println(mapA.get("count").asLiveCounter().value()); // 1.0
-});
-mapB.get("count").asLiveCounter().subscribe((counterUpdate) -> {
-    System.out.println(mapB.get("count").asLiveCounter().value()); // 1.0
-});
-
-// Increment the counter
-counter.increment(1);
-```
 </Code>
 
 It is also possible that object references form a cycle:
@@ -419,24 +462,6 @@ _ = try root.get(key: "a")? // mapA
     .liveMapValue?.get(key: "ref")? // mapB
     .liveMapValue?.get(key: "ref") // mapA
 ```
-
-```java
-// Create two different maps
-LiveMap mapA = channel.getObjects().createMap();
-LiveMap mapB = channel.getObjects().createMap();
-
-// Set up a circular reference
-mapA.set("ref", LiveMapValue.of(mapB));
-mapB.set("ref", LiveMapValue.of(mapA));
-
-// Add one map to root (both are now reachable)
-root.set("a", LiveMapValue.of(mapA));
-
-// We can traverse the cycle
-LiveMap result = root.get("a").asLiveMap() // mapA
-    .get("ref").asLiveMap()                // mapB
-    .get("ref").asLiveMap();               // mapA
-```
 </Code>
 </If>
 
@@ -444,16 +469,16 @@ LiveMap result = root.get("a").asLiveMap() // mapA
 
 All objects must be reachable from the channel object (directly or indirectly). Objects that cannot be reached from the channel object will eventually [be deleted](/docs/liveobjects/lifecycle#objects-deleted).
 
-<If lang="javascript">
+<If lang="javascript,java">
 When you replace or remove an object reference, it may become unreachable and will eventually be [deleted](/docs/liveobjects/lifecycle#objects-deleted):
 
 <Code>
 ```javascript
 // Create and assign a counter
-await myObject.set('visits', LiveCounter.create(0));
+await rootObject.set('visits', LiveCounter.create(0));
 
 // Get the counter instance to track it
-const oldCounter = myObject.get('visits').instance();
+const oldCounter = rootObject.get('visits').instance();
 
 if (oldCounter) {
   oldCounter.subscribe(({ object, message }) => {
@@ -463,14 +488,36 @@ if (oldCounter) {
   });
 
   // Replace with a new counter - old counter becomes unreachable
-  await myObject.set('visits', LiveCounter.create(0));
+  await rootObject.set('visits', LiveCounter.create(0));
   // The subscription will fire with the delete notification
 }
+```
+
+```java
+// Create and assign a counter
+LiveCounter visitsCounter = LiveCounter.create(0);
+rootObject.set("visits", LiveMapValue.of(visitsCounter)).join();
+
+// Get the counter instance to track it
+Instance oldCounter = rootObject.get("visits").instance();
+if (oldCounter != null) {
+    oldCounter.asLiveCounter().subscribe(event -> {
+        ObjectMessage msg = event.getMessage();
+        if (msg != null && msg.getOperation().getAction() == ObjectOperationAction.OBJECT_DELETE) {
+            System.out.println("Old counter was deleted");
+        }
+    });
+}
+
+// Replace with a new counter - the old instance becomes unreachable
+LiveCounter replacementCounter = LiveCounter.create(0);
+rootObject.set("visits", LiveMapValue.of(replacementCounter)).join();
+// The subscription will fire with the delete notification
 ```
 </Code>
 </If>
 
-<If lang="swift,java">
+<If lang="swift">
 In the example below, the only reference to the `counterOld` object is replaced on the `root`. This makes `counterOld` unreachable and it will eventually be [deleted](/docs/liveobjects/lifecycle#objects-deleted).
 
 <Code>
@@ -487,21 +534,6 @@ counterOld.on(event: .deleted) { _ in
 // Create a new counter and replace the old one referenced from the root
 let counterNew = try await channel.objects.createCounter()
 try await root.set(key: "myCounter", value: .liveCounter(counterNew))
-```
-
-```java
-// Create a counter and reference it from the root
-LiveCounter counterOld = channel.getObjects().createCounter();
-root.set("myCounter", LiveMapValue.of(counterOld));
-
-// counterOld will eventually be deleted
-counterOld.on(ObjectLifecycleEvent.DELETED, (lifecycleEvent) -> {
-    System.out.println("counterOld has been deleted and can no longer be used");
-});
-
-// Create a new counter and replace the old one referenced from the root
-LiveCounter counterNew = channel.getObjects().createCounter();
-root.set("myCounter", LiveMapValue.of(counterNew));
 ```
 </Code>
 </If>
@@ -522,17 +554,27 @@ When using a client library, metadata is handled internally. However, this infor
 
 Every object has a unique identifier that distinguishes it from all other objects.
 
-<If lang="javascript">
+<If lang="javascript,java">
 You can access an object's ID using the [Instance](/docs/liveobjects/concepts/instance) API:
 
 <Code>
 ```javascript
-const counterInstance = myObject.get('visits').instance();
+const counterInstance = rootObject.get('visits').instance();
 
 if (counterInstance) {
-  const objectId = counterInstance.id();
+  const objectId = counterInstance.id;
   console.log('Object ID:', objectId);
   // e.g., "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000"
+}
+```
+
+```java
+Instance counterInstance = rootObject.get("visits").instance();
+
+if (counterInstance != null) {
+    String objectId = counterInstance.asLiveCounter().getId();
+    System.out.println("Object ID: " + objectId);
+    // e.g., "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000"
 }
 ```
 </Code>
@@ -544,12 +586,12 @@ Object IDs are opaque strings that uniquely identify each object instance. The c
 
 Tombstones are markers indicating an object or map entry has been deleted.
 
-<If lang="javascript">
+<If lang="javascript,java">
 * A tombstone is created for an object when it becomes [unreachable](#reachability) from the channel object.
 * A tombstone is created for a map entry when it is [removed](/docs/liveobjects/map#remove)
 </If>
 
-<If lang="swift,java">
+<If lang="swift">
 * A tombstone is created for an object when it becomes [unreachable](#reachability) from the root object.
 * A tombstone is created for a map entry when it is [removed](/docs/liveobjects/map#remove)
 </If>

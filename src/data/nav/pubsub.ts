@@ -9,81 +9,82 @@ export default {
   },
   content: [
     {
-      name: 'About Pub/Sub',
-      link: '/docs/basics',
-      index: true,
-    },
-    {
       name: 'Getting started',
       pages: [
         {
-          name: 'Overview',
-          link: '/docs/getting-started',
+          name: 'About Pub/Sub',
+          link: '/docs/basics',
           index: true,
         },
         {
-          name: 'JavaScript',
-          link: '/docs/getting-started/javascript',
-        },
-        {
-          name: 'Node.js',
-          link: '/docs/getting-started/node',
-        },
-        {
-          name: 'Next.js',
-          link: '/docs/getting-started/nextjs',
-        },
-        {
-          name: 'React',
-          link: '/docs/getting-started/react',
-        },
-        {
-          name: 'React Native',
-          link: '/docs/getting-started/react-native',
-        },
-        {
-          name: 'Kotlin',
-          link: '/docs/getting-started/kotlin',
-        },
-        {
-          name: 'Swift',
-          link: '/docs/getting-started/swift',
-        },
-        {
-          name: 'Flutter',
-          link: '/docs/getting-started/flutter',
-        },
-        {
-          name: 'Java',
-          link: '/docs/getting-started/java',
-        },
-        {
-          name: 'Go',
-          link: '/docs/getting-started/go',
-        },
-        {
-          name: 'Python',
-          link: '/docs/getting-started/python',
-        },
-        {
-          name: 'Ruby',
-          link: '/docs/getting-started/ruby',
-        },
-        {
-          name: 'C# .NET',
-          link: '/docs/getting-started/dotnet',
-        },
-        {
-          name: 'Objective C',
-          link: '/docs/getting-started/objective-c',
-        },
-        {
-          name: 'PHP',
-          link: '/docs/getting-started/php',
-        },
-        {
-          name: 'Laravel',
-          link: '/docs/getting-started/laravel',
+          name: 'By language',
+          pages: [
+            {
+              name: 'Overview',
+              link: '/docs/getting-started',
+              index: true,
+            },
+            {
+              name: 'JavaScript',
+              link: '/docs/getting-started/javascript',
+            },
+            {
+              name: 'Node.js',
+              link: '/docs/getting-started/node',
+            },
+            {
+              name: 'React',
+              link: '/docs/getting-started/react',
+            },
+            {
+              name: 'React Native',
+              link: '/docs/getting-started/react-native',
+            },
+            {
+              name: 'Kotlin',
+              link: '/docs/getting-started/kotlin',
+            },
+            {
+              name: 'Swift',
+              link: '/docs/getting-started/swift',
+            },
+            {
+              name: 'Flutter',
+              link: '/docs/getting-started/flutter',
+            },
+            {
+              name: 'Java',
+              link: '/docs/getting-started/java',
+            },
+            {
+              name: 'Go',
+              link: '/docs/getting-started/go',
+            },
+            {
+              name: 'Python',
+              link: '/docs/getting-started/python',
+            },
+            {
+              name: 'Ruby',
+              link: '/docs/getting-started/ruby',
+            },
+            {
+              name: 'C# .NET',
+              link: '/docs/getting-started/dotnet',
+            },
+            {
+              name: 'Objective C',
+              link: '/docs/getting-started/objective-c',
+            },
+            {
+              name: 'PHP',
+              link: '/docs/getting-started/php',
+            },
+            {
+              name: 'Laravel',
+              link: '/docs/getting-started/laravel',
+            },
+          ],
         },
       ],
     },
@@ -276,14 +277,6 @@ export default {
               name: 'FCM',
               link: '/docs/push/getting-started/fcm',
             },
-            {
-              name: 'React Native',
-              link: '/docs/push/getting-started/react-native',
-            },
-            {
-              name: 'Flutter',
-              link: '/docs/push/getting-started/flutter',
-            },
           ],
         },
         {
@@ -302,6 +295,11 @@ export default {
         {
           name: 'Publish',
           link: '/docs/push/publish',
+        },
+        {
+          name: 'iOS Live Activities',
+          link: '/docs/push/live-activities',
+          languages: [],
         },
       ],
     },
@@ -371,6 +369,10 @@ export default {
           link: '/docs/faq/push-faqs',
         },
       ],
+    },
+    {
+      name: 'Pub/Sub pricing',
+      link: '/docs/pub-sub/pricing',
     },
     {
       name: 'Guides',

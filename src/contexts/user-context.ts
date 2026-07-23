@@ -50,20 +50,13 @@ export type SessionState = {
   hubspot?: AblyHubspotData;
 } & SessionData;
 
-type WildcardCapability = Record<string, string[]>;
-
-export type AppApiKey = {
-  ui_compatible_capabilities: boolean;
-  capability: WildcardCapability;
-  revocableTokens: boolean;
-  paas_linked: boolean;
-  is_webhook: boolean;
-  webhook_url: string;
-  whole_key: string;
-  created: string;
+// Only the two fields the docs site actually reads. The upstream endpoint
+// returns more, but the api-key fetcher narrows down to this pair before
+// publishing to UserContext.
+export interface AppApiKey {
   name: string;
-  id: string;
-};
+  whole_key: string;
+}
 
 export type App = {
   name: string;

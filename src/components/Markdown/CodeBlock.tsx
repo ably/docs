@@ -1,20 +1,20 @@
 import React, { FC, useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import Icon from '@ably/ui/core/Icon';
 import {
   highlightSnippet,
   LINE_HIGHLIGHT_CLASSES,
   registerDefaultLanguages,
   parseLineHighlights,
   splitHtmlLines,
-} from '@ably/ui/core/utils/syntax-highlighter';
-import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
+} from 'src/utilities/syntax-highlighter';
+import languagesRegistry from 'src/utilities/syntax-highlighter-registry';
 
 registerDefaultLanguages(languagesRegistry);
 
 import { ButtonWithTooltip } from 'src/components/ButtonWithTooltip';
 import { safeWindow } from 'src/utilities';
 import { copyCodeBlockContentTracker } from 'src/external-scripts/google-tag-manager/events';
+import { Square2StackIcon } from '@heroicons/react/16/solid';
 
 const sanitize = (html: string) =>
   DOMPurify.sanitize
@@ -76,7 +76,7 @@ export const CodeBlock: FC<{ children: React.ReactNode; language: string }> = ({
       </div>
       <div className="absolute top-4 right-2">
         <ButtonWithTooltip tooltip="Copy" notification="Copied!" onClick={handleCopy} className="text-white">
-          <Icon name="icon-gui-square-2-stack-micro" size="1rem" color="text-neutral-000" />
+          <Square2StackIcon className="size-[1rem] text-neutral-000" aria-hidden />
         </ButtonWithTooltip>
       </div>
     </pre>

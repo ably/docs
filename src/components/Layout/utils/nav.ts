@@ -20,6 +20,7 @@ export type ActivePage = {
   clientLanguages?: LanguageKey[];
   agentLanguages?: LanguageKey[];
   isDualLanguage?: boolean;
+  hasProductBar: boolean;
 };
 
 /**
