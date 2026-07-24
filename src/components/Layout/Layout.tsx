@@ -28,6 +28,10 @@ export type Frontmatter = {
   // Error-code pages (generated from the ably-common registry) carry the stable
   // snake_case identifier, rendered as a soft sub-title beneath the title.
   identifier?: string;
+  date?: string;
+  products?: string[];
+  meta_image?: string;
+  meta_image_alt?: string;
 };
 
 export type PageContextType = {
@@ -43,6 +47,9 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
   const { activePage } = useLayoutContext();
   const { leftSidebar, rightSidebar, template } = pageContext.layout ?? {};
   const showProductBar = activePage.hasProductBar;
+  // Changelog entries have no product left-nav, but are prose like docs articles,
+  // so they use the same constrained reading width rather than the wide landing width.
+  const isChangelogEntry = template === 'changelog-entry';
   const isRedocPage =
     location.pathname === '/docs/api/control-api' ||
     location.pathname === '/docs/api/chat-rest' ||
@@ -59,8 +66,8 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
             as="main"
             className={cn(
               'flex-1 min-w-0 px-6 sm:px-8 md:px-10 lg:pl-12 lg:pr-12',
-              { 'max-w-[800px] box-content mx-auto lg:mr-0': !isRedocPage && leftSidebar },
-              { 'max-w-screen-lg mx-auto': !isRedocPage && !leftSidebar },
+              { 'max-w-[800px] box-content mx-auto lg:mr-0': !isRedocPage && (leftSidebar || isChangelogEntry) },
+              { 'max-w-screen-lg mx-auto': !isRedocPage && !leftSidebar && !isChangelogEntry },
               { 'overflow-x-clip': !isRedocPage },
             )}
           >
