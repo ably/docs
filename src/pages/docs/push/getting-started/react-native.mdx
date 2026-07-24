@@ -4,15 +4,19 @@ meta_description: "Get started with Ably Push Notifications in React Native. Lea
 meta_keywords: "Push Notifications React Native, Ably Push, FCM, Android Push, iOS Push, React Native push notifications, Firebase Cloud Messaging, Ably Push Notifications guide, realtime push React Native, push notification example, Ably tutorial React Native, device registration, push messaging"
 ---
 
-This guide will get you started with Ably Push Notifications in a new React Native application.
+This guide will get you started with Ably Push Notifications in a new React Native application, using the [`ably/react-native-push`](https://github.com/ably/ably-js#push-notifications-on-react-native) plugin.
 
-You'll learn how to set up your application with Firebase Cloud Messaging (FCM), register devices with Ably, publish push notifications, subscribe to channel-based push, and handle incoming notifications on both iOS and Android.
+You'll learn how to set up your application with Firebase Cloud Messaging (FCM), activate push notifications on the device, publish push notifications, subscribe to channel-based push, and handle incoming notifications on both iOS and Android.
+
+<Aside data-type='note'>
+The `ably/react-native-push` plugin requires version 2.25.0 or later of the Ably JavaScript SDK.
+</Aside>
 
 ## Prerequisites <a id="prerequisites"/>
 
 1. [Sign up](https://ably.com/signup) for an Ably account.
 2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
-  * Your API key needs the `publish`, `subscribe` capabilities.
+  * Your API key needs the `publish`, `subscribe`, and `push-subscribe` capabilities.
   * Also add the `push-admin` capability if you're using the same API key to publish a push notification. In production this would more likely be a server using a different API key.
 3. Add a rule to a channel so you can test sending push notification via a channel. Select [**Rules**](https://ably.com/accounts/any/apps/any/app_namespaces) in the Ably dashboard, add a new rule and enable the **Push notifications** option.
 4. Install [Node.js](https://nodejs.org/) 18 or higher.
@@ -56,7 +60,7 @@ Create a new React Native project and install the required dependencies:
 ```shell
 npx react-native@latest init PushTutorial
 cd PushTutorial
-npm install ably @react-native-firebase/app @react-native-firebase/messaging @notifee/react-native
+npm install ably @react-native-firebase/app @react-native-firebase/messaging @react-native-async-storage/async-storage @notifee/react-native
 ```
 </Code>
 
@@ -137,11 +141,11 @@ Add all further code to `App.tsx`.
 
 ## Step 1: Set up Ably <a id="step-1"/>
 
-Replace the contents of `App.tsx` with the following to initialize the Ably Pub/Sub client, wrap the app in `AblyProvider` and `ChannelProvider`, and subscribe to realtime messages on the channel with `useChannel`:
+Replace the contents of `App.tsx` with the following to create the push plugin with `ReactNativePush.create()`, initialize the Ably Pub/Sub client with it, wrap the app in `AblyProvider` and `ChannelProvider`, and subscribe to realtime messages on the channel with `useChannel`:
 
 <Code>
 ```react
-import React, {useRef, useState} from 'react';
+import React, {useState} from 'react';
 import {
   Platform,
   ScrollView,
@@ -152,16 +156,29 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import * as Ably from 'ably';
+import ReactNativePush from 'ably/react-native-push';
 import {AblyProvider, ChannelProvider, useAbly, useChannel} from 'ably/react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
 import notifee, {AuthorizationStatus} from '@notifee/react-native';
 
 const CHANNEL_NAME = 'my-first-push-channel';
 
+// The push plugin persists device state in the storage you supply and calls
+// requestToken whenever it needs a push token during activation
+const Push = ReactNativePush.create({
+  storage: AsyncStorage,
+  requestToken: async () => ({
+    transportType: 'fcm', // messaging().getToken() returns an FCM token on both Android and iOS
+    token: await messaging().getToken(),
+  }),
+});
+
 // Use token authentication in production
 const client = new Ably.Realtime({
   key: '{{API_KEY}}',
   clientId: 'push-tutorial-client',
+  plugins: {Push},
 });
 
 function PushScreen() {
@@ -224,23 +241,18 @@ Key configuration options:
 
 - `key`: Your Ably API key.
 - `clientId`: A unique identifier for this client.
+- `plugins`: The push plugin created with `ReactNativePush.create()`. Your app supplies the two things the SDK cannot provide itself on React Native: persistent storage (any implementation of the `@react-native-async-storage/async-storage` interface) and a `requestToken` callback that returns a push token. Return `transportType: 'fcm'` for a Firebase Cloud Messaging registration token, or `transportType: 'apns'` for a raw APNs device token obtained from `messaging().getAPNSToken()`.
 
 `AblyProvider` makes the Ably client available to all child components via React context. `ChannelProvider` scopes child components to `my-first-push-channel`. `useChannel` subscribes to realtime messages published on the channel.
 
 ## Step 2: Set up push notifications <a id="step-2"/>
 
-Push notification activation in React Native requires obtaining an FCM registration token and registering the device with Ably. Add the following inside `PushScreen`:
+Activate push notifications with [`push.activate()`](/docs/api/realtime-sdk/push#activate). Your app must request notification permission from the user before activation. Add the following inside `PushScreen`:
 
 <Code>
 ```react
 // Inside PushScreen:
 const client = useAbly();
-
-// Randomly generated on each app start for simplicity — in production, persist this (e.g. using AsyncStorage) to reuse the same device registration across restarts
-const [deviceId] = useState(
-  `push-tutorial-${Platform.OS}-${Math.random().toString(36).slice(2, 9)}`,
-);
-const tokenRefreshUnsubscribeRef = useRef<(() => void) | null>(null); // To store the FCM token refresh listener unsubscribe function
 
 async function requestPermission(): Promise<boolean> {
   if (Platform.OS === 'android') {
@@ -256,22 +268,6 @@ async function requestPermission(): Promise<boolean> {
   );
 }
 
-// Save the device registration with Ably using the FCM token
-async function saveDeviceRegistration(token: string) {
-  await client.push.admin.deviceRegistrations.save({
-    id: deviceId,
-    clientId: 'push-tutorial-client',
-    platform: Platform.OS === 'ios' ? 'ios' : 'android',
-    formFactor: 'phone',
-    push: {
-      recipient: {
-        transportType: 'fcm', // FCM on both platforms — messaging().getToken() returns an FCM token even on iOS
-        registrationToken: token,
-      },
-    },
-  });
-}
-
 async function activatePush() {
   try {
     showStatus('Activating push notifications...');
@@ -282,20 +278,11 @@ async function activatePush() {
     }
 
     await messaging().registerDeviceForRemoteMessages(); // Required to receive push notifications on iOS, no-op on Android
-    const fcmToken = await messaging().getToken();
-    await saveDeviceRegistration(fcmToken);
+    await client.push.activate();
 
-    tokenRefreshUnsubscribeRef.current?.();
-    tokenRefreshUnsubscribeRef.current = messaging().onTokenRefresh(async newToken => {
-      try {
-        await saveDeviceRegistration(newToken);
-      } catch (error) {
-        console.error('Failed to update FCM token:', (error as Ably.ErrorInfo).message);
-      }
-    });
-
-    showStatus(`Push activated. Device ID: ${deviceId}`);
-    addLog(`Push activated. Device ID: ${deviceId}`);
+    const device = await client.getDevice();
+    showStatus(`Push activated. Device ID: ${device.id}`);
+    addLog(`Push activated. Device ID: ${device.id}`);
   } catch (error) {
     showStatus(`Failed to activate push: ${(error as Ably.ErrorInfo).message}`);
   }
@@ -304,9 +291,7 @@ async function activatePush() {
 async function deactivatePush() {
   try {
     showStatus('Deactivating push notifications...');
-    await client.push.admin.deviceRegistrations.remove(deviceId);
-    tokenRefreshUnsubscribeRef.current?.();
-    tokenRefreshUnsubscribeRef.current = null;
+    await client.push.deactivate();
     showStatus('Push notifications deactivated.');
   } catch (error) {
     showStatus(`Failed to deactivate push: ${(error as Ably.ErrorInfo).message}`);
@@ -315,18 +300,33 @@ async function deactivatePush() {
 ```
 </Code>
 
-`activatePush()` does the following:
+`client.push.activate()` does the following:
 
-1. Requests notification permission from the user.
-2. Obtains the FCM registration token from Firebase.
+1. Generates a unique device identifier and secret, and persists them in the storage you supplied to `ReactNativePush.create()`.
+2. Calls your `requestToken` callback to obtain the FCM registration token.
 3. Registers the device with Ably's push notification service using the token.
-4. Sets up a listener for FCM token refresh events to update the registration with Ably if the token changes.
+4. Persists the resulting device identity, so the registration survives app restarts. Calling `activate()` again on a registered device resolves immediately.
 
-After successful activation, `deviceId` can be used to publish push notifications to this device.
+After successful activation, use `client.getDevice()` to read the device's state, including the `id` that push notifications can be published to.
 
 <Aside data-type='note'>
-In React Native `realtime.push.activate()` is not used because it's a JS SDK and it registers browser for push notifications, which is not what you want in a React Native app. Instead, use `realtime.push.admin.deviceRegistrations` API to register the device.
+Reading local device state on React Native uses the asynchronous `client.getDevice()`. The synchronous `client.device()` is deprecated and throws on platforms with asynchronous storage.
 </Aside>
+
+### Keep the push token up to date <a id="step-2-token-refresh"/>
+
+FCM can rotate the device's push token at any time. When that happens, the token registered with Ably no longer matches the device and push notifications silently stop arriving. Forward rotated tokens to Ably with [`push.updateToken()`](/docs/api/realtime-sdk/push#update-token), which updates the device registration in place.
+
+<Code>
+```react
+useEffect(() => {
+  const unsubscribe = messaging().onTokenRefresh(async token => {
+    await client.push.updateToken({transportType: 'fcm', token});
+  });
+  return unsubscribe;
+}, []);
+```
+</Code>
 
 ### Handle push notifications <a id="step-2-handle"/>
 
@@ -363,16 +363,13 @@ useEffect(() => {
 
 ## Step 3: Subscribe to channel push notifications <a id="step-3"/>
 
-To subscribe your device to a channel so it can receive channel-based push notifications, add the following functions inside `PushScreen`, after the functions from Step 2:
+To subscribe your device to a channel so it can receive channel-based push notifications, use [`channel.push.subscribeDevice()`](/docs/api/realtime-sdk/push). The device must be activated first. Add the following functions inside `PushScreen`, after the functions from Step 2:
 
 <Code>
 ```react
 async function subscribeToChannel() {
   try {
-    await client.push.admin.channelSubscriptions.save({
-      deviceId,
-      channel: CHANNEL_NAME,
-    });
+    await client.channels.get(CHANNEL_NAME).push.subscribeDevice();
     showStatus(`Subscribed to push on channel: ${CHANNEL_NAME}`);
   } catch (error) {
     showStatus(`Failed to subscribe: ${(error as Ably.ErrorInfo).message}`);
@@ -381,10 +378,7 @@ async function subscribeToChannel() {
 
 async function unsubscribeFromChannel() {
   try {
-    await client.push.admin.channelSubscriptions.remove({
-      deviceId,
-      channel: CHANNEL_NAME,
-    });
+    await client.channels.get(CHANNEL_NAME).push.unsubscribeDevice();
     showStatus(`Unsubscribed from push on channel: ${CHANNEL_NAME}`);
   } catch (error) {
     showStatus(`Failed to unsubscribe: ${(error as Ably.ErrorInfo).message}`);

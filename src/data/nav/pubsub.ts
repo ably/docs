@@ -277,6 +277,10 @@ export default {
               name: 'FCM',
               link: '/docs/push/getting-started/fcm',
             },
+            {
+              name: 'React Native',
+              link: '/docs/push/getting-started/react-native',
+            },
           ],
         },
         {
