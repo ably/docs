@@ -122,6 +122,29 @@ if (pending) {
 
 The result is addressed to the suspended assistant message by `codecMessageId`. Reusing the original `runId` keeps the resume on the same run instead of starting a fresh one.
 
+## OpenAI codec <a id="openai"/>
+
+The examples above use the Vercel codec, but the OpenAI Responses codec supports the same tool surface: server-executed function calls, client-executed tools, tool failures, and human approvals. The suspend and resume mechanics live in the transport, so they are identical for both codecs. The wire types and the factory payload field names differ.
+
+The OpenAI codec expresses tool state against the Responses types, so a tool call is a `function_call` item and its result is a `function_call_output` item. The client factories take snake_case payloads keyed by `call_id`, and you address each to the assistant message that holds the call:
+
+<Code>
+```javascript
+import { ResponsesCodec } from '@ably/ai-transport/openai';
+
+// A client-run tool succeeded.
+await view.send(ResponsesCodec.createToolResult(codecMessageId, { call_id, output }), { runId });
+
+// A client-run tool failed. The message becomes the output the model sees next turn.
+await view.send(ResponsesCodec.createToolResultError(codecMessageId, { call_id, message }), { runId });
+
+// A user approved or denied a gated tool. A denial resolves entirely on the client.
+await view.send(ResponsesCodec.createToolApprovalResponse(codecMessageId, { call_id, approved, reason }), { runId });
+```
+</Code>
+
+The Responses `function_call_output` item has no field for an approval decision or an error, so the codec holds that render-only state on `OpenAIMessage.toolCallStates`, a map keyed by `call_id`. `toResponsesInput` never reads it, so it cannot reach the model. See [OpenAI Responses](/docs/ai-transport/frameworks/openai) for the agentic loop and the approval-request output.
+
 ## History persistence <a id="history"/>
 
 Tool invocations and results are part of the channel's message history. When a client reconnects or a late joiner loads the conversation, tool activity is replayed along with text messages. The view reconstructs tool state so the UI shows the correct status: pending, complete, or failed.
