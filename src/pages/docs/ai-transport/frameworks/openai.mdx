@@ -1,7 +1,7 @@
 ---
 title: "OpenAI Responses"
 meta_description: "How Ably AI Transport integrates with the OpenAI Responses API. The ResponsesCodec encodes the Responses event stream onto an Ably channel, and toResponsesInput feeds the conversation back to the model."
-meta_keywords: "AI Transport, OpenAI, Responses API, ResponsesCodec, toResponsesInput, function calling, reasoning, durable sessions, server"
+meta_keywords: "AI Transport, OpenAI, Responses API, ResponsesCodec, toResponsesInput, function calling, client-side tools, tool approval, reasoning, durable sessions, server"
 intro: "The OpenAI Responses API streams model output as typed events over HTTP. AI Transport's ResponsesCodec encodes that stream onto an Ably channel, so the same server code feeds durable sessions instead of an ephemeral HTTP response."
 ---
 
@@ -96,13 +96,34 @@ Server-executed tools do not suspend the Run. The agent runs an agentic loop: ca
 
 For reasoning models, the loop must re-append the whole turn's output items, including the reasoning items that preceded a function call, since reasoning models expect that reasoning to travel with the call on the next request. The [runnable demo](https://github.com/ably/ably-ai-transport-js) implements the full loop.
 
-<Aside data-type='note'>
-The Run outcome for the OpenAI codec is text-only today: `complete`, `cancelled`, or `error`. A run-outcome mapper that forwards an in-band model failure lands with the client-side tool and approval increments.
-</Aside>
+## Run client-side tools and approvals <a id="client-tools"/>
+
+The codec also carries the client-driven half of tool calling: a client executes a tool in the browser and publishes the result, reports a tool failure, or answers a human approval prompt. The suspend and resume mechanics belong to the transport, so they work the same way they do for the Vercel codec. The agent calls `run.suspend()` to wait for a client, the client publishes its input on the same `runId`, and a continuation resumes the Run.
+
+`ResponsesCodec` exposes the full well-known factory set. You address each client input to the assistant message that holds the `function_call`, and key each payload by the OpenAI snake_case `call_id`:
+
+<Code>
+```javascript
+import { ResponsesCodec } from '@ably/ai-transport/openai';
+
+// A client-run tool succeeded.
+await view.send(ResponsesCodec.createToolResult(codecMessageId, { call_id, output }), { runId });
+
+// A client-run tool failed. The message becomes the output the model sees next turn.
+await view.send(ResponsesCodec.createToolResultError(codecMessageId, { call_id, message }), { runId });
+
+// A user approved or denied a gated tool. A denial resolves entirely on the client.
+await view.send(ResponsesCodec.createToolApprovalResponse(codecMessageId, { call_id, approved, reason }), { runId });
+```
+</Code>
+
+To gate a tool on a human decision, the agent publishes the codec's own `tool-approval-request` output, carrying the `call_id`, the tool name, and the arguments so a client can render the prompt without the streamed `function_call`.
+
+The Responses `function_call_output` item has no field for an approval decision or an error, so the codec holds that render-only state out of band on `OpenAIMessage.toolCallStates`, a map keyed by `call_id`. `toResponsesInput` never reads that state, so it cannot reach the model.
 
 ## Scope and trade-offs <a id="scope"/>
 
-The `ResponsesCodec` is scoped to the streamed shapes the Responses API produces: assistant text, refusals, reasoning (summary and raw), and server-executed function calls. Client-side tools, hosted tools, and approval-gated tools are not yet supported; the codec exposes the user-message and regenerate input variants, with the tool variants to follow.
+The `ResponsesCodec` covers the shapes the Responses API streams: assistant text, refusals, reasoning (summary and raw), and server-executed function calls. It also covers the client-driven tool surface: client-executed tools, tool failures, and human approvals. Hosted tools (web and file search, code interpreter, image generation, MCP, custom tools) are not yet supported.
 
 The codec transmits the raw Responses events rather than a normalised abstraction. The wire therefore tracks OpenAI's own event model, which keeps stored items round-trippable to the Responses API but ties a conversation to the Responses shape. To integrate a different model provider behind one abstraction, use [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) instead.
 
