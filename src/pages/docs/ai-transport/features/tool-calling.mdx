@@ -80,19 +80,23 @@ if (outcome.reason === 'suspend') {
 
 [`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) returns `'suspend'` when `streamText` finishes with `finishReason: 'tool-calls'`, so the agent suspends instead of ending. The pending tool call stays on the channel for any connected client to fulfil.
 
-On the client, find the assistant message with the pending tool call and publish a `tool-result` input addressed to its `codecMessageId`. The codec folds the result onto the suspended assistant message, and the agent picks it up to continue the run:
+On the client, find the assistant message with the pending tool call and publish a `tool-result` input addressed to its `codecMessageId`. The codec folds the result onto the suspended assistant message, and the agent picks it up to continue the run.
+
+A tool part arrives in one of two representations: a statically-declared tool (one defined in the `tools` object, like `getUserLocation` above) as `tool-${name}`, and a dynamic tool as `dynamic-tool`. Match both so the lookup works regardless of how the tool was declared:
 
 <Code>
 ```javascript
 const { messages, runOf, send } = useView();
 
+const isToolPart = (p) => p.type === 'dynamic-tool' || p.type.startsWith('tool-');
+
 const pending = messages.find(({ message }) =>
-  message.parts?.some((p) => p.type === 'dynamic-tool' && p.state === 'input-available'),
+  message.parts?.some((p) => isToolPart(p) && p.state === 'input-available'),
 );
 
 if (pending) {
   const toolCall = pending.message.parts.find(
-    (p) => p.type === 'dynamic-tool' && p.state === 'input-available',
+    (p) => isToolPart(p) && p.state === 'input-available',
   );
 
   const location = await new Promise((resolve, reject) => {

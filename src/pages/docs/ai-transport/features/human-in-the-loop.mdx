@@ -31,25 +31,42 @@ The flow:
 
 ## Define an approval tool <a id="approval-tool"/>
 
-On the server, define a tool without an `execute` function. The tool's description tells the LLM when to request approval:
+On the server, define a tool with an `execute` function and a `needsApproval` gate. The AI SDK calls `needsApproval` per tool call: while it returns `true`, the SDK emits an approval request instead of running `execute`, so the tool pauses for the user. Make the gate per call rather than per tool name, so a call that has already been approved does not ask again on the continuation:
 
 <Code>
 ```javascript
+// True once this specific tool call has an approved response in the
+// conversation. `streamText` passes the model-message list, where an approval
+// shows up as a `tool-approval-request` on an assistant message paired with a
+// `tool-approval-response` on a later tool message, correlated by `approvalId`.
+const isApprovedToolCall = (toolCallId, messages) => {
+  const approvalIdToToolCallId = new Map();
+  for (const message of messages) {
+    if (message.role !== 'assistant' || typeof message.content === 'string') continue;
+    for (const part of message.content) {
+      if (part.type === 'tool-approval-request') {
+        approvalIdToToolCallId.set(part.approvalId, part.toolCallId);
+      }
+    }
+  }
+  for (const message of messages) {
+    if (message.role !== 'tool') continue;
+    for (const part of message.content) {
+      if (part.type !== 'tool-approval-response' || !part.approved) continue;
+      if (approvalIdToToolCallId.get(part.approvalId) === toolCallId) return true;
+    }
+  }
+  return false;
+};
+
 const result = streamText({
   model: anthropic('claude-sonnet-4-20250514'),
   messages: conversationHistory,
   tools: {
-    requestApproval: {
-      description: 'Request user approval before executing a sensitive action',
-      inputSchema: z.object({
-        action: z.string().describe('Description of the action to approve'),
-        details: z.string().describe('Additional context for the user'),
-      }),
-      // No execute function: requires client-side approval.
-    },
     executeTransfer: {
-      description: 'Execute a bank transfer',
+      description: 'Execute a bank transfer. Requires user approval before running.',
       inputSchema: z.object({ amount: z.number(), recipient: z.string() }),
+      needsApproval: (_input, { toolCallId, messages }) => !isApprovedToolCall(toolCallId, messages),
       execute: async ({ amount, recipient }) => {
         return await processTransfer(amount, recipient);
       },
@@ -69,28 +86,32 @@ if (outcome.reason === 'suspend') {
 ```
 </Code>
 
-When the LLM decides an action needs approval, it invokes `requestApproval`. `streamText` finishes with `finishReason: 'tool-calls'`; [`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) translates that to `'suspend'`, so the agent calls `run.suspend()` and the pending tool call stays on the channel for any connected client to act on.
+When the LLM invokes `executeTransfer` and `needsApproval` returns `true`, `streamText` finishes with `finishReason: 'tool-calls'`; [`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) translates that to `'suspend'`, so the agent calls `run.suspend()` and the pending tool call stays on the channel for any connected client to act on. On the continuation, the approval response is in the conversation, `needsApproval` returns `false`, and `execute` runs.
 
 ## Handle approval on the client <a id="client-approval"/>
 
-On the client, detect pending approval requests and present them to the user:
+On the client, detect pending approval requests and present them to the user. A statically-declared tool arrives as a `tool-${name}` part, not `dynamic-tool`, so match both representations and read the name with the AI SDK's `getToolName`:
 
 <Code>
 ```javascript
+import { getToolName } from 'ai';
+
 const { messages, runOf, send } = useView();
+
+const isToolPart = (p) => p.type === 'dynamic-tool' || p.type.startsWith('tool-');
 
 const pending = messages.find(({ message }) =>
   message.parts?.some(
-    (p) => p.type === 'dynamic-tool' && p.toolName === 'requestApproval' && p.state === 'approval-requested',
+    (p) => isToolPart(p) && getToolName(p) === 'executeTransfer' && p.state === 'approval-requested',
   ),
 );
 
 const pendingApproval = pending?.message.parts?.find(
-  (p) => p.type === 'dynamic-tool' && p.state === 'approval-requested',
+  (p) => isToolPart(p) && p.state === 'approval-requested',
 );
 
 if (pending && pendingApproval) {
-  const { action, details } = pendingApproval.input;
+  const { amount, recipient } = pendingApproval.input;
   const runId = runOf(pending.codecMessageId).runId;
 
   const respond = async (approved) => {
@@ -112,8 +133,8 @@ if (pending && pendingApproval) {
 
   return (
     <ApprovalDialog
-      action={action}
-      details={details}
+      amount={amount}
+      recipient={recipient}
       onApprove={() => respond(true)}
       onReject={() => respond(false)}
     />
@@ -147,7 +168,7 @@ The agent's turn has already ended, so no connection or timeout is at risk. The 
 
 ### How is this different from a regular tool call? <a id="faq-vs-tool"/>
 
-A regular client-executed tool runs as soon as the client receives the call. Human-in-the-loop blocks until a human submits the result. The mechanics are the same; the user experience is different.
+A regular client-executed tool has no `execute` function, so its call sits in the `input-available` state and the client runs it and returns a `tool-result` as soon as it receives the call. An approval tool has an `execute` function gated by `needsApproval`, so its call sits in the `approval-requested` state until a human returns a `tool-approval-response`; the tool then runs on the server. Both suspend the run and resume on a continuation, but the approval path waits for a person.
 
 ### Can the agent see who approved it? <a id="faq-approver"/>
 
