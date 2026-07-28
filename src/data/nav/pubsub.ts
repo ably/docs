@@ -661,11 +661,6 @@ export default {
           name: 'SSE API',
           link: '/docs/api/sse',
         },
-        {
-          link: 'https://ably.com/docs/sdk/js/v2.0/',
-          name: 'JavaScript SDK (TypeDoc)',
-          external: true,
-        },
       ],
     },
   ],
