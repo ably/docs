@@ -7,9 +7,9 @@ redirect_from:
   - /docs/ai-transport/sessions-identity/resuming-sessions
 ---
 
-Streams survive connection drops automatically. When a client disconnects, the agent keeps streaming to the [session](/docs/ai-transport/concepts/sessions). When the client reconnects, it resumes from the exact point it left off, with no lost tokens, no broken responses, and no manual retry code.
+Streams survive connection drops automatically. When a client disconnects, the agent keeps streaming to the session. When the client reconnects, it resumes from the exact point it left off, with no lost tokens and no manual retry code.
 
-This is built into the transport layer. Application code does not need to do anything.
+This is built into the transport layer, so application code does not need to do anything.
 
 ![Diagram showing a client disconnecting mid-stream and resuming from the exact point of disconnection on reconnect](../../../../images/content/diagrams/ait-reconnection-recovery.png)
 
@@ -17,14 +17,14 @@ This is built into the transport layer. Application code does not need to do any
 
 The durable session on the Ably channel persists independently of any single connection. When a client's connection drops:
 
-1. The agent continues streaming tokens to the channel; the stream is not tied to the client's connection.
+1. The agent continues streaming tokens to the session; the stream is not tied to the client's connection.
 2. The Ably SDK reconnects automatically.
 3. On reconnect, the client transport uses `untilAttach` to load any messages it missed during the gap.
-4. The conversation state is restored. The client sees the complete response.
+4. The conversation state is restored. The user sees the complete response.
 
 ## Recovery scenarios <a id="recovery-scenarios"/>
 
-Two recovery paths exist depending on how long the client was disconnected.
+The recovery path depends on how long the client was disconnected.
 
 When the disconnection is brief, Ably's connection protocol handles it. The client reconnects and the SDK uses `untilAttach` to load any messages published during the gap. There is no missing window; the response resumes exactly where it left off.
 
@@ -42,13 +42,13 @@ This happens inside `run.pipe()`. The accumulated response is never lost, even w
 
 ## Mid-stream joins <a id="mid-stream-joins"/>
 
-When a client joins a channel while a response is already streaming, the lifecycle tracker delivers the correct sequence of events. Missing lifecycle events (such as the stream start) are synthesised so the client processes the in-progress stream correctly.
+When a client joins a session while a response is already streaming, the lifecycle tracker delivers the correct sequence of events. Missing lifecycle events (such as the stream start) are synthesised so the client processes the in-progress stream correctly.
 
 A second tab opened during streaming sees the streaming content immediately.
 
 ## Load history on reconnect <a id="loading-history"/>
 
-`useView` loads conversation history using Ably's `untilAttach` parameter:
+On the client, `useView` loads conversation history using Ably's `untilAttach` parameter:
 
 <Code>
 ```javascript
@@ -56,7 +56,7 @@ const { messages, hasOlder, loadOlder } = useView({ limit: 30 });
 ```
 </Code>
 
-`useView` loads history on mount. The `untilAttach` flag prevents a gap between historical messages and live messages; every message is accounted for.
+`useView` loads history on mount. The `untilAttach` flag prevents a gap between historical messages and live messages.
 
 To load older messages beyond the initial window:
 
@@ -72,11 +72,11 @@ if (hasOlder) {
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- A client that drops mid-stream and reconnects after the live recovery window does not get every individual token replayed. It receives the accumulated content of the message up to the latest append. The user-visible result is the same.
-- A client without channel history capability cannot reconnect after the live recovery window. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
-- An agent that crashes mid-stream leaves the partial message on the channel. Its `status` header stays at `streaming` because the stream never closed. A retry creates a new message, not a continuation of the partial one.
+- A client that drops mid-stream and reconnects after the live recovery window receives the accumulated content of the message up to the latest append rather than a replay of every individual token. The user-visible result is the same.
+- A client without channel history capability cannot reconnect after the live recovery window. Capability scoping is part of [authentication](/docs/ai-transport/getting-started/authentication).
+- An agent that crashes mid-stream leaves the partial message on the session. Its `status` header stays at `streaming` because the stream never closed. A retry creates a new message rather than continuing the partial one.
 - The encoder fallback to a full message update is invisible to subscribers. If you log channel operations, you see periodic updates between appends.
-- A client clock drift does not affect recovery. Reconnection uses the channel's serial, not wall-clock time.
+- A client clock drift does not affect recovery. Reconnection uses the channel's serial rather than wall-clock time.
 
 ## FAQ <a id="faq"/>
 
@@ -90,11 +90,11 @@ No. The view emits the accumulated content of the streamed message on reconnect,
 
 ### How long is the response retained after the agent ends the turn? <a id="faq-retention"/>
 
-For the channel history retention period. Configure this through the channel's persistence settings. See [history and replay](/docs/ai-transport/features/history) for the recovery patterns.
+For the channel history retention period. Configure this through the channel's persistence settings, then recover past responses with [history and replay](/docs/ai-transport/features/history).
 
 ### What if the agent process dies before the stream finishes? <a id="faq-agent-crash"/>
 
-The partial message stays on the channel with its `status` header at `streaming` because the stream never closed. The session is intact. A new turn restarts the work; AI Transport does not automatically retry the LLM call. To survive an agent-process crash mid-Run without abandoning the turn, run the agent inside a durable workflow engine and adopt the Run from the retry process. See [Durable execution](/docs/ai-transport/features/durable-execution).
+The partial message stays on the session with its `status` header at `streaming` because the stream never closed. The session is intact. A new turn restarts the work; AI Transport does not automatically retry the LLM call. To survive an agent-process crash mid-run without abandoning the turn, run the agent inside a durable workflow engine and [adopt the run from the retry process](/docs/ai-transport/features/durable-execution).
 
 ### Does the client need special code to handle reconnection? <a id="faq-app-code"/>
 

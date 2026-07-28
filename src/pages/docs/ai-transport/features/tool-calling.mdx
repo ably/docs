@@ -2,24 +2,24 @@
 title: "Tool calling"
 meta_description: "Stream tool invocations and results through Ably AI Transport. Server-executed and client-executed tools with persistent state."
 meta_keywords: "tool calling, AI tools, function calling, tool invocation, AI Transport, Ably"
-intro: "Your agents call tools and every client sees the invocation, the result, and the follow-up in real time. Tool state persists in the session so a user picks up the workflow on any device."
+intro: "Your agents call tools and every client sees the invocation, the result, and the follow-up in realtime. Tool state persists in the session so a user picks up the workflow on any device."
 redirect_from:
   - /docs/ai-transport/messaging/tool-calls
 ---
 
-Tool calling in AI Transport supports both server-executed and client-executed tools. Tool invocations and results are published to the channel, so every client sees tool activity in real time and tool state persists in history.
+Tool calling in AI Transport supports both server-executed and client-executed tools. Tool invocations and results are published to the session, so every client sees tool activity in realtime and tool state persists in history.
 
-![Diagram showing tool invocations and results streaming through the channel for server- and client-executed tools](../../../../images/content/diagrams/ait-tool-calling.png)
+![Diagram showing tool invocations and results streaming through the session for server- and client-executed tools](../../../../images/content/diagrams/ait-tool-calling.png)
 
 ## How it works <a id="how-it-works"/>
 
-When the LLM invokes a tool, the invocation is streamed through the channel like any other turn event. Clients see tool calls appear as they are generated. If the tool runs on the server, the result is streamed back in the same run. If the tool runs on the client, the agent calls `run.suspend()` so the Run stays live; the client submits the result, and a continuation invocation resumes the same Run.
+When the LLM invokes a tool, the invocation is streamed through the session like any other turn event. Clients see tool calls appear as they are generated. If the tool runs on the server, the result is streamed back in the same run. If the tool runs on the client, the agent calls `run.suspend()` so the run stays live; the client submits the result, and a continuation invocation resumes the same run.
 
-Tool state (invocations, arguments, results) is part of the channel's message history. Late joiners and reconnecting clients see the full tool activity, not just the final text.
+Tool state (invocations, arguments, results) is part of the session's history. Late joiners and reconnecting clients see the full tool activity as well as the final text.
 
 ## Server-executed tools <a id="server-executed"/>
 
-Server-executed tools are the default path. The AI SDK handles tool execution during the LLM stream. Tool invocations and results are encoded by the codec and published to the channel as part of the turn.
+Server-executed tools are the default path. On the agent, the AI SDK handles tool execution during the LLM stream. Tool invocations and results are encoded by the codec and published to the session as part of the turn.
 
 <Code>
 ```javascript
@@ -78,7 +78,7 @@ if (outcome.reason === 'suspend') {
 ```
 </Code>
 
-[`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) returns `'suspend'` when `streamText` finishes with `finishReason: 'tool-calls'`, so the agent suspends instead of ending. The pending tool call stays on the channel for any connected client to fulfil.
+[`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) returns `'suspend'` when `streamText` finishes with `finishReason: 'tool-calls'`, so the agent suspends instead of ending. The pending tool call stays on the session for any connected client to fulfil.
 
 On the client, find the assistant message with the pending tool call and publish a `tool-result` input addressed to its `codecMessageId`. The codec folds the result onto the suspended assistant message, and the agent picks it up to continue the run.
 
@@ -128,13 +128,13 @@ The result is addressed to the suspended assistant message by `codecMessageId`. 
 
 ## History persistence <a id="history"/>
 
-Tool invocations and results are part of the channel's message history. When a client reconnects or a late joiner loads the conversation, tool activity is replayed along with text messages. The view reconstructs tool state so the UI shows the correct status: pending, complete, or failed.
+Tool invocations and results are part of the session's history. When a client reconnects or a late joiner loads the conversation, tool activity is replayed along with text messages. The view reconstructs tool state so the UI shows the correct status: pending, complete, or failed.
 
 A user who starts a tool-assisted workflow on a laptop continues it on a phone without losing context.
 
 ## Durable tool execution <a id="durable-tools"/>
 
-When the agent runs inside a workflow engine such as [Temporal](/docs/ai-transport/frameworks/temporal) or [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk), each tool execution can be its own retryable activity. Wrap the tool call in [`AgentRun.createStep({ stepId })`](/docs/ai-transport/api/javascript/core/agent-session#create-step) and publish the result via [`RunStep.send`](/docs/ai-transport/api/javascript/core/agent-session#step-send). A retry of the same tool activity re-enters `createStep` with the same `stepId`, so the retry's tool result supersedes the failed attempt on the channel rather than appending beside it. See [Durable execution](/docs/ai-transport/features/durable-execution).
+When the agent runs inside a workflow engine such as [Temporal](/docs/ai-transport/frameworks/temporal) or [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk), each tool execution can be its own [retryable activity](/docs/ai-transport/features/durable-execution). Wrap the tool call in [`AgentRun.createStep({ stepId })`](/docs/ai-transport/api/javascript/core/agent-session#create-step) and publish the result via [`RunStep.send`](/docs/ai-transport/api/javascript/core/agent-session#step-send). A retry of the same tool activity re-enters `createStep` with the same `stepId`, so the retry's tool result supersedes the failed attempt on the session rather than appending beside it.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
@@ -160,15 +160,15 @@ Submit a tool result with an error payload. The agent receives it on the continu
 
 ### Are tool inputs and outputs visible to every participant? <a id="faq-visibility"/>
 
-Yes. Tool calls are messages on the channel, so every subscriber sees them. Scope channel capabilities if you need to restrict visibility.
+Yes. Tool calls are messages on the session, so every subscriber sees them. Scope channel capabilities if you need to restrict visibility.
 
 ### How big can a tool result be? <a id="faq-size"/>
 
-Subject to Ably's message size limit. See [the platform limits](/docs/platform/pricing/limits). Stream large results across multiple events or persist them externally and reference the URL.
+Subject to Ably's [message size limit](/docs/platform/pricing/limits). Stream large results across multiple events or persist them externally and reference the URL.
 
 ## Related features <a id="related"/>
 
 - [Human-in-the-loop](/docs/ai-transport/features/human-in-the-loop): approval gates built on tool calling.
 - [Token streaming](/docs/ai-transport/features/token-streaming): how tool events are streamed.
 - [History and replay](/docs/ai-transport/features/history): loading past tool activity from history.
-- [Durable execution](/docs/ai-transport/features/durable-execution): run each tool as its own retryable Step under a workflow engine.
+- [Durable execution](/docs/ai-transport/features/durable-execution): run each tool as its own retryable step under a workflow engine.

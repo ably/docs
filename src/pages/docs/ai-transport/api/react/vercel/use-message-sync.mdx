@@ -7,9 +7,9 @@ redirect_from:
   - /docs/ai-transport/api/react/use-message-sync
 ---
 
-`useMessageSync` subscribes to view updates and syncs them into Vercel AI SDK's `useChat` overlay through the `setMessages` updater. It is how observer clients (other tabs, other devices) catch up with messages that arrive on the channel rather than from `useChat`'s own `sendMessage` calls.
+`useMessageSync` subscribes to view updates and syncs them into Vercel AI SDK's `useChat` overlay through the `setMessages` updater. It is how observer clients (other tabs, other devices) catch up with messages that arrive on the session rather than from `useChat`'s own `sendMessage` calls.
 
-During an active own-run stream the sync is gated so it does not race the AI SDK's internal `write()` and produce an ID mismatch. When the stream ends, the gate opens and the next view update is merged in. Tool resolutions in the local overlay that have not yet echoed back through the channel are preserved during the merge.
+During an active own-run stream the sync is gated so it does not race the AI SDK's internal `write()` and produce an ID mismatch. When the stream ends, the gate opens and the next view update is merged in. Tool resolutions in the local overlay that have not yet echoed back through the session are preserved during the merge.
 
 <Code>
 ```javascript
@@ -36,7 +36,7 @@ This hook must be used within a `ChatTransportProvider` (exported from `@ably/ai
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
 | setMessages | required | The `setMessages` updater function from `useChat()`. Called with an updater that returns the next overlay. | `(updater: (prev: UIMessage[]) => UIMessage[]) => void` |
-| messages | optional | The application's seeded conversation, typically `useChat()`'s `messages` where persisted history was supplied via `useChat({ messages })`. When non-empty, the hook reconciles it with the live channel: it takes the newest entry's `id` as the seam, pages the channel back to it, and composes stored history with the live tail with no duplicate. Omit it, or pass `[]`, for the full live channel history. See [database hydration](/docs/ai-transport/features/database-hydration). | `UIMessage[]` |
+| messages | optional | The application's seeded conversation for [database hydration](/docs/ai-transport/features/database-hydration), typically `useChat()`'s `messages` where persisted history was supplied via `useChat({ messages })`. When non-empty, the hook reconciles it with the live session: it takes the newest entry's `id` as the seam, pages the session back to it, and composes stored history with the live tail with no duplicate. Omit it, or pass `[]`, for the full live session history. | `UIMessage[]` |
 | channelName | optional | Channel name of the `ChatTransportProvider` to observe. Omit to use the nearest provider. | String |
 | skip | optional | When `true`, skip all subscriptions. | Boolean |
 
@@ -53,15 +53,15 @@ The hook does two things:
 - Subscribes to the `ChatTransport`'s `onStreamingChange` event. While `streaming` is `true` (own-run stream consumed by `useChat`), the gate is closed and no `setMessages` calls are made.
 - Subscribes to the underlying `View`'s `'update'` event. When the view changes and the gate is open, the hook calls `setMessages` with an updater that merges the view's messages into the overlay.
 
-The merge is per message, not a wholesale replace. For each assistant message, the merge matches tool parts by `toolCallId` in either representation, a statically-declared tool's `tool-${name}` part or a dynamic tool's `dynamic-tool` part, and preserves any overlay part whose state is `output-available`, `output-error`, `approval-responded`, or `output-denied` while the tree's part is still in an unresolved state. That keeps local `addToolResult` and `addToolApprovalResponse` actions visible until the channel echo lands.
+The merge runs per message rather than as a wholesale replace. For each assistant message, the merge matches tool parts by `toolCallId` in either representation, a statically-declared tool's `tool-${name}` part or a dynamic tool's `dynamic-tool` part, and preserves any overlay part whose state is `output-available`, `output-error`, `approval-responded`, or `output-denied` while the tree's part is still in an unresolved state. That keeps local `addToolResult` and `addToolApprovalResponse` actions visible until the session echo lands.
 
 ## When to use it <a id="when-to-use"/>
 
-Use `useMessageSync` whenever you mount a `ChatTransportProvider` and render messages through `useChat`. Without it, observer tabs or devices that did not originate a Run never see its messages because `useChat`'s state is local to each `useChat` instance.
+Use `useMessageSync` whenever you mount a `ChatTransportProvider` and render messages through `useChat`. Without it, observer tabs or devices that did not originate a run never see its messages because `useChat`'s state is local to each `useChat` instance.
 
 If you render messages directly from [`useView`](/docs/ai-transport/api/react/core/use-view) instead of from `useChat`, you do not need `useMessageSync`; `useView` already reflects the view state.
 
-To seed the conversation from your own database, pass the loaded history as `messages`, both to `useChat` and to `useMessageSync`. The hook reconciles the seed with the live channel at the seam, so a reloaded conversation shows its stored history plus the live tail exactly once. See [database hydration](/docs/ai-transport/features/database-hydration).
+To [seed the conversation from your own database](/docs/ai-transport/features/database-hydration), pass the loaded history as `messages`, both to `useChat` and to `useMessageSync`. The hook reconciles the seed with the live session at the seam, so a reloaded conversation shows its stored history plus the live tail exactly once.
 
 <Code>
 ```javascript
@@ -72,7 +72,7 @@ useMessageSync({ messages: seed, setMessages });
 
 ## Example <a id="example"/>
 
-A complete Vercel-React chat with sync wired in. A second browser tab pointing at the same `channelName` sees every message as soon as it arrives on the channel.
+A complete Vercel-React chat with sync wired in. A second browser tab pointing at the same `channelName` sees every message as soon as it arrives on the session.
 
 <Code>
 ```javascript

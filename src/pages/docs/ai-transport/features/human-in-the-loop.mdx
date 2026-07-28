@@ -15,16 +15,16 @@ redirect_from:
 
 Human-in-the-loop uses the tool-calling primitives to create approval gates. The agent requests approval, the run suspends, and any connected client approves or rejects. Because the session is durable, the approval request reaches the user even after a reconnect or device switch.
 
-![Diagram showing an agent suspending mid-Run for a human approval and resuming when any client responds](../../../../images/content/diagrams/ait-human-in-the-loop.png)
+![Diagram showing an agent suspending mid-run for a human approval and resuming when any client responds](../../../../images/content/diagrams/ait-human-in-the-loop.png)
 
 ## How it works <a id="how-it-works"/>
 
-The pattern builds on [tool calling](/docs/ai-transport/features/tool-calling). The agent defines a tool that requires human approval. When the LLM invokes that tool, the agent calls `run.suspend()` instead of `run.end()` so the Run stays live, and the pending tool call is published to the channel. The client presents the approval request to the user. When the user approves or rejects, the client publishes a `tool-approval-response` input addressed to the suspended assistant, and a continuation invocation resumes the Run under the same `runId`.
+The pattern builds on [tool calling](/docs/ai-transport/features/tool-calling). The agent defines a tool that requires human approval. When the LLM invokes that tool, the agent calls `run.suspend()` instead of `run.end()` so the run stays live, and the pending tool call is published to the session. The client presents the approval request to the user. When the user approves or rejects, the client publishes a `tool-approval-response` input addressed to the suspended assistant, and a continuation invocation resumes the run under the same `runId`.
 
 The flow:
 
 1. The agent streams a response that includes a tool call requiring approval.
-2. The LLM's stream finishes with `finishReason: 'tool-calls'`. The agent calls `run.suspend()` and the pending tool call is visible on the channel.
+2. The LLM's stream finishes with `finishReason: 'tool-calls'`. The agent calls `run.suspend()` and the pending tool call is visible on the session.
 3. Any connected client renders the pending approval.
 4. The user approves or rejects. The client publishes a `tool-approval-response` input addressed to the pending message, then POSTs a continuation invocation to the agent.
 5. A continuation invocation enters the same `runId` and the agent picks up the approval result and proceeds.
@@ -86,11 +86,11 @@ if (outcome.reason === 'suspend') {
 ```
 </Code>
 
-When the LLM invokes `executeTransfer` and `needsApproval` returns `true`, `streamText` finishes with `finishReason: 'tool-calls'`; [`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) translates that to `'suspend'`, so the agent calls `run.suspend()` and the pending tool call stays on the channel for any connected client to act on. On the continuation, the approval response is in the conversation, `needsApproval` returns `false`, and `execute` runs.
+When the LLM invokes `executeTransfer` and `needsApproval` returns `true`, `streamText` finishes with `finishReason: 'tool-calls'`; [`vercelRunOutcome`](/docs/ai-transport/api/javascript/vercel/run-outcome) translates that to `'suspend'`, so the agent calls `run.suspend()` and the pending tool call stays on the session for any connected client to act on. On the continuation, the approval response is in the conversation, `needsApproval` returns `false`, and `execute` runs.
 
 ## Handle approval on the client <a id="client-approval"/>
 
-On the client, detect pending approval requests and present them to the user. A statically-declared tool arrives as a `tool-${name}` part, not `dynamic-tool`, so match both representations and read the name with the AI SDK's `getToolName`:
+On the client, detect pending approval requests and present them to the user. A statically-declared tool arrives as a `tool-${name}` part rather than `dynamic-tool`, so match both representations and read the name with the AI SDK's `getToolName`:
 
 <Code>
 ```javascript
@@ -176,11 +176,11 @@ Yes. Each Ably message carries the publisher's `clientId`. Pass approver identit
 
 ### What if the user closes the app before approving? <a id="faq-closed"/>
 
-The pending approval stays on the channel. The user sees it when they next open the app on any device, within the channel's history retention window.
+The pending approval stays on the session. The user sees it when they next open the app on any device, within the channel's history retention window.
 
-### How do I escalate an unanswered approval? <a id="faq-escalate"/>
+### How do I chase an unanswered approval? <a id="faq-escalate"/>
 
-Set a server-side timer or scheduled job that checks for stale pending tool calls and sends a notification. Use [push notifications](/docs/ai-transport/features/push-notifications) for app-level escalation.
+Set a server-side timer or scheduled job that checks for stale pending tool calls and sends a notification. Use [push notifications](/docs/ai-transport/features/push-notifications) to reach the user when the app is closed.
 
 ### Can a non-human submit the approval? <a id="faq-bot"/>
 

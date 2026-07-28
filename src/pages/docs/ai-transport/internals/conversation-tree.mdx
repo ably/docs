@@ -2,10 +2,10 @@
 title: "Conversation tree"
 meta_description: "How AI Transport maintains a branching conversation tree. The two-node turn model, sibling resolution, and message-anchored branch selection."
 meta_keywords: "conversation tree, branching, fork, sibling resolution, regenerate group, InputNode, RunNode, AI Transport, Ably"
-intro: "Internal mechanics of the conversation tree: the input-and-run two-node turn model, message-anchored sibling resolution, and how the View walks the tree to produce a flat message list."
+intro: "Internal mechanics of the conversation tree: the input-and-run two-node turn model, message-anchored sibling resolution, and how the view walks the tree to produce a flat message list."
 ---
 
-AI Transport models a conversation as a tree of two node kinds: an `InputNode` for every user prompt and a `RunNode` for every agent reply. Each turn is two nodes joined by a parent edge: the input node hangs off the previous reply, and the reply run hangs off its input. Each node holds a per-node codec projection folded from the events published under its key; the View walks the chosen branch and extracts a flat `CodecMessage<TMessage>[]` from those projections. Each entry pairs the domain message with the codec-message-id the SDK keys on.
+AI Transport models a conversation as a tree of two node kinds: an `InputNode` for every user prompt and a `RunNode` for every agent reply. Each turn is two nodes joined by a parent edge: the input node hangs off the previous reply, and the reply run hangs off its input. Each node holds a per-node codec projection folded from the events published under its key; the view walks the chosen branch and extracts a flat `CodecMessage<TMessage>[]` from those projections. Each entry pairs the domain message with the codec-message-id the SDK keys on.
 
 A conversation with one edit and one regenerate looks like:
 
@@ -21,13 +21,13 @@ A conversation with one edit and one regenerate looks like:
             └── R3 (runId R3, assistant M4': "Food-focused itinerary...")
 ```
 
-Two kinds of sibling groups surface:
+The tree has two kinds of sibling group:
 
 Input edits are sibling input nodes. `I2` and `I2'` share the same parent (`R1`'s `codecMessageId M2`), and `I2'.forkOf = M3` links it to the original prompt.
 
-Regenerate siblings are sibling reply runs. `R1` and `R1'` share the same parent (`I1`'s `codecMessageId M1`), and `R1'.regeneratesCodecMessageId = M2` records the slot it replaces. Reply-run siblings group by shared parent; they carry no Run-level `forkOf`.
+Regenerate siblings are sibling reply runs. `R1` and `R1'` share the same parent (`I1`'s `codecMessageId M1`), and `R1'.regeneratesCodecMessageId = M2` records the slot it replaces. Reply-run siblings group by shared parent; they carry no run-level `forkOf`.
 
-Branch selection is message-anchored: the branch decision lives on a `codec-message-id`, not on a `runId`. The View exposes `branchSelection(codecMessageId)`, whose returned handle carries a `select(index)` verb, so a UI renders navigation arrows next to a bubble without knowing whether it is an input or a run.
+Branch selection is message-anchored: the branch decision is keyed on a `codec-message-id` rather than on a `runId`. The View exposes `branchSelection(codecMessageId)`, whose returned handle carries a `select(index)` verb, so a UI renders navigation arrows next to a bubble without knowing whether it is an input or a run.
 
 ## Why two node kinds <a id="why-two-node-kinds"/>
 
@@ -55,27 +55,27 @@ Every node in the tree is a `ConversationNode = InputNode | RunNode`. Narrow on 
 | --- | --- |
 | `kind` | `'run'`. |
 | `runId` | Primary key. Agent-minted. |
-| `parentCodecMessageId` | The `codec-message-id` of the input node this Run replies to (the user prompt the agent answered). `undefined` for the root Run. |
-| `forkOf` | The node key of the node this Run replaces, or `undefined` if this Run is not a fork. Reply-run regenerate siblings do not use this; they group by shared parent. |
-| `regeneratesCodecMessageId` | The `codec-message-id` of the assistant message this Run regenerates. Verbatim from the wire's `msg-regenerate`. |
-| `clientId` | The Ably `clientId` of the client that started the Run, from `run-client-id`. |
+| `parentCodecMessageId` | The `codec-message-id` of the input node this run replies to (the user prompt the agent answered). `undefined` for the root run. |
+| `forkOf` | The node key of the node this run replaces, or `undefined` if this run is not a fork. Reply-run regenerate siblings do not use this; they group by shared parent. |
+| `regeneratesCodecMessageId` | The `codec-message-id` of the assistant message this run regenerates. Verbatim from the wire's `msg-regenerate`. |
+| `clientId` | The Ably `clientId` of the client that started the run, from `run-client-id`. |
 | `state` | A `RunNodeState` discriminated on `status`: `{ status }` is `'active'` between `ai-run-start` and `ai-run-end`, `'suspended'` after `ai-run-suspend` until `ai-run-resume`, otherwise a non-error terminal `RunEndReason`; the `{ status: 'error', error }` arm carries the terminal `Ably.ErrorInfo`. |
-| `projection` | The codec's per-Run projection, folded from every event published under this `run-id`. |
+| `projection` | The codec's per-run projection, folded from every event published under this `run-id`. |
 | `invocationId` | The agent-minted invocation id observed from the most recent `ai-run-start` (or `ai-run-resume` for continuations). Empty string until run-start arrives. |
 | `startSerial` / `endSerial` | Ably serials of the lifecycle events. Used for sibling ordering. |
 
 ## Run identity is resolved on the channel <a id="run-identity"/>
 
-The Tree adopts run identity from the wire, not from the HTTP POST body. A fresh run begins when the client publishes an input event with no `run-id`; the agent's `createRun` mints a `run-id`, stamps it on `ai-run-start` and every output event, and the Tree creates a `RunNode` from the run-start. A continuation begins when the input event carries an existing `run-id` (the client knew it from `clientRun.runId` and stamped it on the publish); the agent reads that id from the input event's wire headers, reuses it instead of minting fresh, and publishes `ai-run-resume` so the Tree routes the resume to the existing `RunNode`.
+The Tree adopts run identity from the wire rather than the HTTP POST body. A fresh run begins when the client publishes an input event with no `run-id`; the agent's `createRun` mints a `run-id`, stamps it on `ai-run-start` and every output event, and the Tree creates a `RunNode` from the run-start. A continuation begins when the input event carries an existing `run-id` (the client knew it from `clientRun.runId` and stamped it on the publish); the agent reads that id from the input event's wire headers, reuses it instead of minting fresh, and publishes `ai-run-resume` so the Tree routes the resume to the existing `RunNode`.
 
 There is no `run-continue` header: the presence or absence of `run-id` on the input event is the entire signal.
 
-## Coordination via Run lifecycle events <a id="coordination"/>
+## Coordination via run lifecycle events <a id="coordination"/>
 
 The Tree does not arbitrate winners. Coordination is explicit:
 
-- Lifecycle is paired: every Run begins with `ai-run-start` and ends with `ai-run-end`. The View filters active Runs by `status === 'active'`; without an `ai-run-end` the Run stays active.
-- Suspend and resume are distinct events: `ai-run-suspend` parks a Run at `'suspended'` (still live); `ai-run-resume` re-activates it. Both are non-terminal; only `ai-run-end` is terminal.
+- Lifecycle is paired: every run begins with `ai-run-start` and ends with `ai-run-end`. The View filters active runs by `status === 'active'`; without an `ai-run-end` the run stays active.
+- Suspend and resume are distinct events: `ai-run-suspend` parks a run at `'suspended'` (still live); `ai-run-resume` re-activates it. Both are non-terminal; only `ai-run-end` is terminal.
 - Sibling order is by serial: when more than one node lands at the same parent, they are ordered by serial (oldest first). The default selection at a fork point is the newest sibling.
 
 Earlier versions of the SDK described a "winner / precedence" model on the Tree. That model is gone. The current design relies on `Run.start()` to publish the bracketing events explicitly and on `ai-run-resume` to mark continuations; no implicit precedence is needed.
@@ -92,7 +92,7 @@ The View consumes this to compute `branchSelection(codecMessageId)`, which retur
 
 The View walks the tree to produce a flat ordered list of nodes along the currently selected branch:
 
-1. Start at the root. The root is either the first input node (a conversation that opens with a user prompt) or, in rare cases, a Run with no `parentCodecMessageId`.
+1. Start at the root. The root is either the first input node (a conversation that opens with a user prompt) or, in rare cases, a run with no `parentCodecMessageId`.
 2. Add the current node to the visible chain.
 3. If the current node has siblings, select the one indicated by the View's `selections` map (or default to the newest).
 4. Move to the selected node's children: nodes whose `parentCodecMessageId` is the current node's primary key.
@@ -110,15 +110,15 @@ The `Tree` interface exposes:
 
 | Method | Description |
 | --- | --- |
-| `getRunNode(runId)` | Look up a Run by id. |
+| `getRunNode(runId)` | Look up a run by id. |
 | `getNodeByCodecMessageId(codecMessageId)` | Find the input or run node that owns a given codec-message-id. Returns a `ConversationNode` union; narrow on `kind` before reading kind-specific fields. |
 | `getSiblingNodes(key)` | The sibling group for a node key (edit siblings for an input, regenerate siblings for a run). Ordered oldest-first; single-element when there are no siblings; empty when the key is unknown. |
 | `on('update', ...)` | Structural changes (node insert, delete, sort). |
 | `on('ably-message', ...)` | Raw inbound channel messages. |
 | `on('run', ...)` | Run lifecycle events. |
-| `on('output', ...)` | Decoded agent outputs folded for a Run, with routing metadata (`runId`, `inputCodecMessageId`, `codecMessageId`, `serial`). Fires once per inbound message after its fold; fires with an empty `events` array for inputs-only folds so it doubles as a projection-changed signal. |
+| `on('output', ...)` | Decoded agent outputs folded for a run, with routing metadata (`runId`, `inputCodecMessageId`, `codecMessageId`, `serial`). Fires once per inbound message after its fold; fires with an empty `events` array for inputs-only folds so it doubles as a projection-changed signal. |
 
-The View consumes these to drive its branch-aware projection. Most application code reaches for the View; the Tree is the lower-level surface for inspection.
+The View consumes these to drive its branch-aware projection. Most application code uses the View, and the Tree is the lower-level API for inspection.
 
 ## Related pages <a id="related"/>
 

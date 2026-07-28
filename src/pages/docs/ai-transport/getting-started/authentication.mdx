@@ -1,15 +1,17 @@
 ---
 title: "Set up authentication"
 meta_description: "Wire AI Transport to your auth: a token-issuing endpoint that signs Ably JWTs, and an authenticated Ably client on the browser."
-meta_keywords: "AI Transport, authentication setup, Ably JWT, authCallback, token endpoint, getting started"
-intro: "AI Transport authenticates through your existing auth: your server validates the user and signs an Ably token, and the browser's Ably client fetches it through `authCallback`and refreshes it before expiry."
+meta_keywords: "AI Transport, authentication setup, Ably JWT, authCallback, token endpoint, capabilities, getting started"
+intro: "AI Transport authenticates through the auth you already have. Your server validates the user and signs a short-lived Ably token, and the browser fetches that token and refreshes it before it expires."
+redirect_from:
+  - /docs/ai-transport/concepts/authentication
+  - /docs/ai-transport/how-it-works/authentication
+  - /docs/ai-transport/sessions-identity/identifying-users-and-agents
 ---
 
-<Aside data-type='note'>
-This page is the practical setup. For the conceptual model (the three auth layers, capabilities, token lifecycle, cancel authorisation), see the [authentication concept](/docs/ai-transport/concepts/authentication).
-</Aside>
-
 AI Transport reuses the authentication you already have. Your server validates the user and signs a short-lived Ably JWT, scoped to the channels that user can reach. The browser's Ably client fetches that token through an `authCallback` and refreshes it before it expires, so the connection stays authenticated for the whole conversation. The steps below wire up the server endpoint, the client, and the separate POST that wakes the agent.
+
+Two separate credentials are involved. The Ably token controls what a client can do on the channel. The credentials on the POST that wakes the agent control who can trigger a run, and those are whatever your application already uses. Who can stop a run that is already in flight is a third question, and the [cancel authorisation hook](/docs/ai-transport/features/cancellation#authorization) on the agent answers it.
 
 <Aside data-type='important'>
 Never embed an Ably API key in client-side code. API keys do not expire and are not suitable for untrusted clients.
@@ -17,7 +19,7 @@ Never embed an Ably API key in client-side code. API keys do not expire and are 
 
 ## Sign tokens on the server <a id="server"/>
 
-Create an endpoint that authenticates the user and returns a short-lived Ably JWT with the [capabilities](/docs/ai-transport/concepts/authentication#capabilities) AI Transport needs:
+On the server, create an endpoint that authenticates the user and returns a short-lived Ably JWT with the [capabilities](#capabilities) AI Transport needs:
 
 <Code>
 ```javascript
@@ -56,6 +58,43 @@ export async function GET(req: Request) {
 
 The capability grants `conversations:*`, every channel in the `conversations` namespace, because a session's channel name (`conversations:my-chat-session` in these guides) is not known when the token is signed. The `x-ably-clientId` claim binds the token to a specific user identity that the Ably service verifies on every publish. In production, scope the capability more tightly to the channels each user may access.
 
+## Scope capabilities <a id="capabilities"/>
+
+Capabilities are permissions on the Ably channel. The capability claim in the token names which operations a user can perform on which channels:
+
+| Feature | Required capabilities |
+| --- | --- |
+| Send user messages to the channel | `publish` |
+| Receive streamed tokens | `subscribe` |
+| Replay history on reconnect | `subscribe`, `history` |
+| Cancel a run | `publish` |
+| Read and write shared objects | `object-subscribe`, `object-publish` |
+| All AI Transport features | `publish`, `subscribe`, `history` |
+
+A token missing a capability fails when the operation runs. The client constructs and connects successfully, so the error appears further into the flow than the mistake that caused it. This is one of the most common setup problems, and [troubleshooting](/docs/ai-transport/troubleshooting#capability-mismatch) covers how to spot it.
+
+Capabilities are keyed by channel name pattern, so the same token grants different operations on different channels:
+
+* `my-conversation`: a specific conversation channel.
+* `conversations:*`: all channels in the `conversations:` namespace.
+* `*`: all channels.
+
+Scope tokens to the smallest channel set the user needs. A token for a user who is in one conversation should name that conversation rather than the whole namespace.
+
+## Refresh and revoke tokens <a id="token-lifecycle"/>
+
+The SDK refreshes tokens for you when you use `authCallback` or `authUrl`. It fetches a new token before the current one expires.
+
+To change a user's capabilities mid-session, issue a new token from your auth server and re-authenticate the client:
+
+<Code>
+```javascript
+await realtimeClient.auth.authorize();
+```
+</Code>
+
+To remove access immediately, [revoke issued tokens](/docs/auth/revocation). If your capability JSON is too large for a JWT claim, or it must stay confidential, use native [Ably Tokens](/docs/auth/token/ably-tokens) instead.
+
 ## Fetch tokens from the client <a id="client"/>
 
 Construct an Ably Realtime client with `authCallback`. The SDK calls it on first auth and again whenever a refresh is needed:
@@ -81,7 +120,7 @@ const realtimeClient = new Ably.Realtime({
 
 ## Wire it into the React provider stack <a id="react"/>
 
-In a React app, hold the client in state, wrap the tree in `AblyProvider`, then in `ClientSessionProvider` for the channel:
+In a React app on the client, hold the client in state, wrap the tree in `AblyProvider`, then in `ClientSessionProvider` for the session:
 
 <Code>
 ```javascript
@@ -135,7 +174,7 @@ function Chat() {
 
 ## Authenticate the agent POST <a id="agent-post"/>
 
-The application's POST that wakes the agent is a separate HTTP request from the channel auth. Authenticate it however you normally do (session cookie, bearer token, signed header) when you call `fetch` on the core flow:
+The application's POST that wakes the agent is a separate HTTP request from the channel auth. On the client, authenticate it however you normally do (session cookie, bearer token, signed header) when you call `fetch` on the core flow:
 
 <Code>
 ```javascript
@@ -157,7 +196,6 @@ For the Vercel flow, [`ChatTransportProvider`](/docs/ai-transport/api/react/verc
 
 ## Read next <a id="next"/>
 
-- [Authentication concept](/docs/ai-transport/concepts/authentication): the three auth layers, capabilities, and token lifecycle.
 - [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules): the one-time namespace configuration AI Transport requires.
 - [Core SDK getting started](/docs/ai-transport/getting-started/core-sdk): build a chat app on the auth set up here.
 - [Vercel AI SDK getting started](/docs/ai-transport/getting-started/vercel-ai-sdk): build a chat app using the Vercel wrapper.

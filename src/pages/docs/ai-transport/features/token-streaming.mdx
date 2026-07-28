@@ -1,8 +1,8 @@
 ---
 title: "Token streaming"
 meta_description: "Stream AI-generated tokens to clients in realtime using AI Transport. Tokens are appended to a single durable message, and the full response is served to clients that join later."
-meta_keywords: "AI Transport, token streaming, LLM streaming, message appends, real-time AI, durable streaming, Ably"
-intro: "Tokens are streamed to subscribing clients in realtime, as the model generates them. The same response is available as a single aggregated message to clients connecting later. AI Transport streams tokens by appending to a durable channel message."
+meta_keywords: "AI Transport, token streaming, LLM streaming, message appends, realtime AI, durable streaming, Ably"
+intro: "Tokens are streamed to subscribing clients in realtime, as the model generates them. The same response is available as a single aggregated message to clients connecting later. AI Transport streams tokens by appending to one durable message on the session."
 redirect_from:
   - /docs/ai-transport/token-streaming
   - /docs/ai-transport/token-streaming/message-per-response
@@ -51,11 +51,11 @@ const { reason } = await run.pipe(result.toUIMessageStream());
 ```
 </Code>
 
-That single line reads the LLM stream, encodes tokens through the codec, publishes messages to the Ably channel, handles abort signals, and returns when the stream completes or is cancelled.
+That single line reads the LLM stream, encodes tokens through the codec, publishes messages to the session, handles abort signals, and returns when the stream completes or is cancelled.
 
 ## How it works <a id="how-it-works"/>
 
-The transport layer treats a streamed response as one logical message built incrementally by appending each token to a single Ably channel message. A real-time subscriber receives each appended token as it arrives. A client that joins later, refreshes, or reconnects sees the accumulated content of that message up to the latest append; it does not need to replay each token to rebuild the response.
+The transport layer treats a streamed response as one logical message built incrementally by appending each token to a single Ably channel message. A realtime subscriber receives each appended token as it arrives. A client that joins later, refreshes, or reconnects sees the accumulated content of that message up to the latest append; it does not need to replay each token to rebuild the response.
 
 A streamed message moves through three states:
 
@@ -122,7 +122,7 @@ With the generic hooks:
 <Code>
 ```javascript
 const { messages } = useView();
-// Each message updates in real time as tokens are appended on the channel.
+// Each message updates in realtime as tokens are appended on the channel.
 ```
 </Code>
 
@@ -144,11 +144,11 @@ LLM token streaming produces high-rate traffic. Some models emit over 150 distin
 2. Ably publishes the first token immediately, then rolls up subsequent tokens within the rollup window.
 3. Clients receive the same content, delivered in fewer discrete messages.
 
-By default, Ably delivers a single response stream at 25 messages per second, or the model output rate, whichever is lower. Ably charges for the number of published messages, not the number of streamed tokens.
+By default, Ably delivers a single response stream at 25 messages per second, or the model output rate, whichever is lower. Ably charges per published message rather than per streamed token.
 
 ### Configure rollup behaviour <a id="configure-rollup"/>
 
-Set the rollup window for a connection using the `appendRollupWindow` [transport parameter](/docs/api/realtime-sdk#client-options):
+On the client, set the rollup window for a connection using the `appendRollupWindow` [transport parameter](/docs/api/realtime-sdk#client-options):
 
 | `appendRollupWindow` | Maximum message rate for a single response |
 |---|---|
@@ -173,8 +173,8 @@ If `appendRollupWindow` allows a single response to exceed your [connection inbo
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- A network drop during streaming pauses delivery to the affected client. The server keeps publishing. On reconnect, the client receives the accumulated content of the message up to the latest append, not a replay of every token. This allows the client to efficiently catchup to the latest response state without replaying the response token-by-token.
-- A cancelled stream leaves the partial message on the channel with status `cancelled`. Render it the same as a complete message; treat the absence of further tokens as the signal to stop animating.
+- A network drop during streaming pauses delivery to the affected client. The server keeps publishing. On reconnect, the client receives the accumulated content of the message up to the latest append rather than a replay of every token.
+- A cancelled stream leaves the partial message on the session with status `cancelled`. Render it the same as a complete message; treat the absence of further tokens as the signal to stop animating.
 - If `appendRollupWindow` is set to `0ms` to maximise model output rate, you become responsible for keeping the publish rate under your connection limit.
 - An append fallback (full message update) is invisible to subscribers; the message content is consistent. If you log channel operations, you see periodic updates instead of appends.
 - A turn that times out on the server before the stream finishes ends with run reason `'error'`. The partial message is closed with status `cancelled`.
@@ -183,15 +183,15 @@ If `appendRollupWindow` allows a single response to exceed your [connection inbo
 
 ### What happens to the stream when the client tab closes? <a id="faq-tab-close"/>
 
-The agent keeps streaming. The session and message persist on the channel. When the user returns, the client loads the accumulated content of the message and receives any further tokens in real time.
+The agent keeps streaming. The session and its messages persist. When the user returns, the client loads the accumulated content of the message and receives any further tokens in realtime.
 
 ### Does Ably charge per token? <a id="faq-pricing"/>
 
-No. Ably charges per published message, not per token. The append rollup reduces the publish rate; multiple tokens become one published message. See [pricing](/docs/platform/pricing) for the current rates.
+No. Ably charges at the current [message rates](/docs/platform/pricing) per published message rather than per token. The append rollup reduces the publish rate; multiple tokens become one published message.
 
 ### How do I stream more than one message per turn? <a id="faq-multi-message"/>
 
-A single `run.pipe(stream)` consumes the LLM's output stream and appends each chunk as it arrives. Multiple assistant messages, tool calls, and follow-on text within one stream all flow through the same `pipe` call. If your framework produces several discrete streams in one turn (for example a planner emits a status line, then the responder streams the answer), call `run.pipe` once per stream; the Run is the unit that groups them.
+A single `run.pipe(stream)` consumes the LLM's output stream and appends each chunk as it arrives. Multiple assistant messages, tool calls, and follow-on text within one stream all flow through the same `pipe` call. If your framework produces several discrete streams in one turn (for example a planner emits a status line, then the responder streams the answer), call `run.pipe` once per stream; the run is the unit that groups them.
 
 ### Why does my client see fewer tokens than the model emits? <a id="faq-fewer-tokens"/>
 

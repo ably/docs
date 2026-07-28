@@ -38,15 +38,15 @@ Eighteen principles govern Ably docs pages, distilled from the AI Transport wire
 9. **Concept pages convey what the layer requires.** The pattern is *problem → model → what this layer requires → code proof*. Name the technical properties (ordering, persistence, accumulation, fan-out, presence) and why each matters.
 10. **Concept pages do not teach features.** One minimal code-proof sample max. No API surface walkthrough. If a concept page drifts into method-by-method content, it stops being a concept page and the feature pages around it feel thin.
 11. **Features map to jobs to be done.** Each feature page maps to what a developer is trying to accomplish ("barge-in" = "let my users change direction mid-response"). Page names and intros use the JTBD framing.
-12. **Framework pages: intentional design framing, not "missing features".** Frame the framework's scope as a deliberate boundary the framework chose, and Ably as the layer that fills the gap. Never "the framework can't do X" — always "the framework intentionally doesn't do X". Sibling framework pages (for example UI vs Core) use verbatim-aligned capability bullets.
-13. **Positioning pages: open problem-first, turn positive.** "Why X" pages may lead with the problem, but must pivot to the capability section by mid-page. Pages that stay defensive end-to-end become gripe lists, not pitches.
+12. **Framework pages: intentional design framing, not "missing features".** Frame the framework's scope as a deliberate boundary the framework chose, and Ably as the layer that fills the gap. Never "the framework can't do X" — always "the framework intentionally doesn't do X". Sibling framework pages (for example UI vs Core) use verbatim-aligned feature bullets.
+13. **Positioning pages: open problem-first, turn positive.** "Why X" pages may lead with the problem, but must pivot to the feature section by mid-page. Pages that stay defensive end-to-end become gripe lists, not pitches.
 
 ### Mechanical (binary, agent-checkable)
 
 14. **Layer 0 hook in the first 5 seconds.** Every page opens with a hook that answers "what is this, why should I care?". The `intro:` frontmatter feeds the auto-generated PageHeader; the body's first paragraph reinforces it. On feature pages, the hook is two sentences: outcome first ("Your users can change direction mid-response"), mechanism second ("AI Transport's session layer lets a client cancel and re-prompt without breaking the stream"). **Per-interface API reference pages are the one exception**: they drop `intro:` and let the opening paragraph carry the hook. Navigational API pages (the API reference hub, the errors page) keep `intro:` like every other page type. See the `## API reference pages` section for the full standard.
 15. **Cover unhappy paths.** Every feature page has an edge-cases section. Race conditions, timeouts, network drops, capability-missing failures, what happens when the LLM errors. This is what separates trusted docs from marketing.
 16. **FAQ with three to five real entries on feature pages.** Surface what developers actually ask. Do not pad to meet a count.
-17. **No API keys in client code — but server-side agent code is the opposite.** In client (browser) code, never show an API key; use `authUrl: '/auth'` as the placeholder and link out to `concepts/authentication` (or the equivalent setup page) once. In **server-side or agent code** (durable-execution activities, agent routes, workers, anything that runs on your own infrastructure), do the reverse: construct the Realtime client with `new Ably.Realtime({ key: process.env.ABLY_API_KEY })`. An `authUrl` on the server is wrong — there is no browser to fetch a token, and the key is already trusted in that environment. When you see `authUrl` in an agent/server snippet, that is a bug to fix, not a rule to preserve. (The line 380 verification grep excludes `process.env`-sourced keys, so this pattern passes it.)
+17. **No API keys in client code — but server-side agent code is the opposite.** In client (browser) code, never show an API key; use `authUrl: '/auth'` as the placeholder and link out to `getting-started/authentication` (or the equivalent setup page) once. In **server-side or agent code** (durable-execution activities, agent routes, workers, anything that runs on your own infrastructure), do the reverse: construct the Realtime client with `new Ably.Realtime({ key: process.env.ABLY_API_KEY })`. An `authUrl` on the server is wrong — there is no browser to fetch a token, and the key is already trusted in that environment. When you see `authUrl` in an agent/server snippet, that is a bug to fix, not a rule to preserve. (The line 380 verification grep excludes `process.env`-sourced keys, so this pattern passes it.)
 18. **Visual rhythm.** Diagram, code block, card layout, or icon table every few paragraphs. No walls of text.
 
 ### Cross-product orientation
@@ -57,7 +57,7 @@ AI Transport is the testbed for the new principles. Other Ably products will ali
 
 Pick the template that matches the page you are writing.
 
-**Templates describe structure, not headings.** The numbered items below are the *section shape* — what each section covers and roughly in what order. They are not the literal H2 text for the page. A concept-page template item like "Problem statement" becomes a descriptive imperative on the page itself: `## Why Runs exist`, `## Why sessions exist`. "Model" becomes `## Understand the Run lifecycle`, `## Understand sessions and channels`. "Code proof" becomes `## Trigger a Run`, `## Attach to a session`. Adapt the heading to the specific concept; never copy the template label verbatim. Use imperative or descriptive verb phrases per the writing-style guide.
+**Templates describe structure, not headings.** The numbered items below are the *section shape* — what each section covers and roughly in what order. They are not the literal H2 text for the page. A concept-page template item like "Problem statement" becomes a descriptive imperative on the page itself: `## Why runs exist`, `## Why sessions exist`. "Model" becomes `## Understand the run lifecycle`, `## Understand sessions and channels`. "Code proof" becomes `## Trigger a run`, `## Attach to a session`. Adapt the heading to the specific concept; never copy the template label verbatim. Use imperative or descriptive verb phrases per the writing-style guide.
 
 ### Feature page
 
@@ -89,8 +89,8 @@ Concept pages convey the mental model. The pattern is *problem → model → wha
 
 A page that explains how Ably composes with a third-party framework (Vercel AI SDK, Temporal, Inngest, and so on).
 
-1. **What the framework brings.** A capability table — what the framework owns by design.
-2. **What Ably adds.** A capability table for what Ably layers on. **Sibling framework pages** are pages in the same `frameworks/` sub-tree that compete for the same developer JTBD (for example, Vercel AI SDK UI alongside a future Temporal page). Align bullets across siblings where the capability genuinely overlaps so a reader can compare like for like. Introduce framework-specific rows where the integration shape differs. Do not force parity when one framework simply does not own that capability. Comparability is the goal, not forced parity.
+1. **What the framework brings.** A feature table, naming what the framework owns by design.
+2. **What Ably adds.** A feature table for what Ably layers on. **Sibling framework pages** are pages in the same `frameworks/` sub-tree that compete for the same developer JTBD (for example, Vercel AI SDK UI alongside a future Temporal page). Align bullets across siblings where the feature genuinely overlaps so a reader can compare like for like. Introduce framework-specific rows where the integration shape differs. Do not force parity when one framework simply does not own that feature. Comparability is the goal, not forced parity.
 3. **Where they connect.** The minimal integration code. The plug-in point (`ChatTransport`, codec, adapter).
 4. **Scope and trade-offs.** Frame the framework's scope as intentional design. Never "the framework can't…".
 5. **Read next.** Getting-started, sibling framework page, API reference for the integration.
@@ -101,7 +101,7 @@ A page that explains how Ably composes with a third-party framework (Vercel AI S
 
 1. **One-sentence opening.** The shape of the product, not the problem.
 2. **Problem statement** (one or two paragraphs). What current solutions miss.
-3. **Pivot.** A clearly-marked "How Ably solves this" or equivalent capability section. Everything below the pivot is positive-forward.
+3. **Pivot.** A clearly-marked "How Ably solves this" or equivalent feature section. Everything below the pivot is positive-forward.
 4. **Comparison table** (optional). Direct HTTP vs durable sessions, default cache vs Ably, and so on. Each row is checkable.
 5. **How Ably implements this.** The primitives that back the model — link out to concepts.
 6. **Read next.** Getting-started + concepts.
@@ -362,12 +362,24 @@ Spelling to enforce on every page:
 
 Use the terms the product actually defines. Do not introduce vocabulary that is not part of the AI Transport domain — not internal-codebase jargon, and not generic AI/ML terms the docs have chosen not to use. A reader who has read the concept pages should never hit a word the docs never taught them.
 
-- **Prefer the named primitives.** The concept pages define the vocabulary: [Session](/docs/ai-transport/concepts/sessions), [Connection](/docs/ai-transport/concepts/connections), [Run](/docs/ai-transport/concepts/runs), [Step](/docs/ai-transport/concepts/steps), [Invocation](/docs/ai-transport/concepts/invocations), [Codec](/docs/ai-transport/concepts/codecs), [conversation tree](/docs/ai-transport/concepts/conversation-tree), and view. Reach for these before inventing a synonym.
+- **Prefer the named primitives.** The concept pages define the vocabulary: [session](/docs/ai-transport/concepts/sessions), [run](/docs/ai-transport/concepts/runs), [step](/docs/ai-transport/concepts/runs#steps), [invocation](/docs/ai-transport/concepts/runs#invocations), [conversation tree](/docs/ai-transport/concepts/conversation-tree), and view. Reach for these before inventing a synonym. Codec and connection no longer have their own concept pages: the codec is covered by the [codec API reference](/docs/ai-transport/api/javascript/core/codec) and [codec architecture](/docs/ai-transport/internals/codec-architecture), and connection behaviour lives on [sessions](/docs/ai-transport/concepts/sessions#connect).
 - **Do not leak internal jargon.** Words that name SDK internals but never appear in the concept or API docs (for example `projection`, `RunNode`, or other type names not documented for readers) read as jargon. Use the documented term instead: "the conversation" or "the Run's view", not "the projection"; "the Run" or "the conversation tree", not "`RunNode`".
 - **Do not smuggle in generic AI/ML vocab the docs avoid.** Describe a loop cycle as an "iteration", not a "pass". Describe a model invocation as a "model call" or "response", not an "inference pass". The verb "pass" (to pass an argument, hook, or signal) is fine; the noun "pass" (meaning a loop cycle) is not.
-- **Respect the Run/turn split.** "Run" is the only primitive the docs explain. Use "turn" only in jobs-to-be-done framing (titles, intros, the "concurrent turns" feature name), never as a defined primitive alongside Run.
+- **Respect the run/turn split.** "Run" is the only primitive the docs explain. Use "turn" only in jobs-to-be-done framing (titles, intros, the "concurrent turns" feature name), never as a defined primitive alongside run.
+- **Lowercase the named primitives.** Write "run", "session", "step", "connection", "invocation", "codec": "the run ends", "every device on the session", "each step retries". This applies mid-heading too, because headings are sentence case: `## Close the run only once`, `## Look up a run by id`. Capitalise only where any word would be capitalised, which means the first word of a sentence or heading (`## Run the app`, `## Sessions do not span devices`) and API reference headings that name an actual type (`## Invocation`). Never capitalise mid-sentence to signal "this is the primitive". Exact type names stay in backticks with their real casing (`AgentRun`, `ClientSession`, `RunStep`).
+- **"Capability" names the authentication model only.** Ably capabilities are the token permission model. Do not use "capability" or "capabilities" in a loose descriptive sense (a feature the SDK offers). Write "feature" or name the specific thing. Reserve "capability" for auth.
+- **"AI application", never "AI app".** Readers do not call their software an "AI app". Write "AI application", or name what it is (the agent, the chat interface, your server).
+- **Session is the default term for the durable conversation channel; use "channel" only for Ably-technical reasons.** When you mean the durable conversation a client attaches to, say Session. Reach for "Ably channel" only when the reader genuinely needs the channel-level detail (capabilities, channel naming, raw publish/subscribe, dashboard inspection). Do not drift between the two for the same idea.
 
 When a word is genuinely new and needed, define it on first use or link to the concept page that does. If you cannot point to where it is defined, it does not belong on the page.
+
+### Intros, links, and code labelling
+
+- **No property or method names in the intro or Layer-0 hook.** The opening describes the outcome and the mechanism in plain language, not `run.pipe`, `createAgentSession`, or an option key. API names belong in the code samples and the body. If the first sentence of a page reads like a signature, rewrite it around what the reader gets.
+- **No cross-page links in the opening paragraph.** The first paragraph must stand on its own. Reinforce principle 4 and principle 14: hook first, then link to concepts lower down. A reader should not have to leave the page before they have read what it is about. **Index and hub pages are the exception.** On a section index such as `concepts/index.mdx`, the opening paragraph names the concepts the section covers and links each one on first use. There the links are the content rather than a detour, so add them and do not strip them.
+- **Inline links, not "see X for more".** Weave the link into the sentence at the phrase the reader would click. Do not append a bare "see [the codec page] for details" at the end of a paragraph when the link belongs on a noun inside it. A trailing "see also" is only acceptable in a dedicated Read next / Related section.
+- **Label every code block as client or agent.** A reader must know where a snippet runs. Server-side or agent code (agent routes, workers, durable-execution activities) and client-side or browser code look similar but differ on auth (principle 17) and on which SDK surface they use. Say which it is in the sentence that introduces the block, or in a comment on the first line.
+- **Consistent client and user.** "client" is the SDK, the connection, or the device; "user" is the human. Pick the right one for the actor you mean and do not drift between them mid-page. When the human acts through the UI, that is the user; when code attaches to a Session, that is the client.
 
 ## Per-page workflow
 
@@ -411,6 +423,26 @@ grep -rn "—" "$P"
 
 # "realtime" is one word (no "real time" / "real-time")
 grep -rn "real[- ]time" "$P"
+
+# "AI application", never "AI app"
+grep -rn "AI app\b" "$P"
+
+# "Capability" reserved for the auth model — not a table header or loose descriptor
+grep -rn "| Capability |" "$P"
+grep -rniE "\bcapabilit(y|ies)\b" "$P" | grep -viE "token|auth|permission|channel"
+
+# Primitives stay lowercase except at the start of a sentence or heading.
+# Matches a lowercase word or comma, then a capitalised primitive: "the Run", "a Session".
+grep -rnE "[a-z,] (Run|Runs|Session|Sessions|Step|Steps|Invocation|Invocations|Codec|Codecs)\b" "$P"
+
+# No trailing "See [X]" pointer sentences. A pointer link only belongs in a
+# Read next / Related section; elsewhere the link goes inline on the noun.
+grep -rnE "\. See \[|; see \[|^- See \[|^See \[" "$P"
+
+# "Session" is the default term for the durable conversation. This grep is a
+# review prompt, not a hard failure: every hit must justify channel-level detail
+# (channel rules, namespaces, capabilities, wire protocol, rate limits, channelName).
+grep -rn "the channel\b" "$P"
 
 # No off-vocabulary terms. Noun "pass" (loop cycle), "inference pass", and internal
 # jargon that never appears in the concept/API docs. The verb "pass" (an argument,

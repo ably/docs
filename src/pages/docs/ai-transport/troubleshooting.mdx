@@ -5,11 +5,11 @@ meta_keywords: "AI Transport troubleshooting, channel namespace, capability, his
 intro: "Common AI Transport problems and how to fix them. Each entry follows the same shape: the symptom you see, what to check to confirm the cause, and the fix to apply."
 ---
 
-Entries are ordered roughly by how often they cause support tickets, with the most common failure modes first.
+Entries are ordered roughly by how often they cause support tickets, most common first.
 
 ## Channel namespace not configured for AI Transport <a id="namespace-not-configured"/>
 
-**Symptom:** Clients see an empty assistant message, or a message containing only the first token. The server errors on subsequent publishes. The initial `message.create` succeeds, but the `message.append` operations that AI Transport uses to stream tokens fail with error code `93002` (`Can only update/delete/append messages on channels with mutableMessages enabled`) because the namespace does not permit appends. This is the single most common AI Transport failure.
+**Symptom:** Users see an empty assistant message, or a message containing only the first token. The server errors on subsequent publishes. The initial `message.create` succeeds, but the `message.append` operations that AI Transport uses to stream tokens fail with error code `93002` (`Can only update/delete/append messages on channels with mutableMessages enabled`) because the namespace does not permit appends. This is the single most common AI Transport failure.
 
 **Confirm:**
 
@@ -20,7 +20,7 @@ Entries are ordered roughly by how often they cause support tickets, with the mo
 
 **Fix:**
 
-- Enable the *Message annotations, updates, deletes, and appends* rule on the namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+- Enable the *Message annotations, updates, deletes, and appends* rule on the namespace, using the [dashboard, Control API, or CLI](/docs/ai-transport/getting-started/channel-rules).
 - Note that enabling this rule causes messages to be [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether persistence is enabled on the namespace.
 
 ## Capability or token scope mismatch <a id="capability-mismatch"/>
@@ -38,7 +38,7 @@ Entries are ordered roughly by how often they cause support tickets, with the mo
 **Fix:**
 
 - Make the channel pattern in the capability cover the channel names your application uses. Patterns are case-sensitive; wildcards like `conversations:*` only cover channels with that exact prefix.
-- Grant every operation the application needs: `subscribe` and `publish` for messages, `history` for loading past conversation, `presence` for agent presence. See [capability operations](/docs/auth/capabilities#capability-operations) for the full list and [authentication](/docs/ai-transport/concepts/authentication) for the AI Transport capability shape.
+- Grant every operation the application needs: `subscribe` and `publish` for messages, `history` for loading past conversation, `presence` for agent presence. Check the full list of [capability operations](/docs/auth/capabilities#capability-operations) against the [AI Transport capability shape](/docs/ai-transport/getting-started/authentication).
 
 ## History disappears <a id="history-disappears"/>
 
@@ -56,23 +56,23 @@ In both cases the cause is the same: the channel namespace is not configured to 
 
 **Fix:**
 
-- Enable persistence on the channel namespace and set a retention period that covers your expected scroll-back window. See [history and replay](/docs/ai-transport/features/history#faq-retention) for the persistence options.
-- For conversations that need to be retained for longer than the channel allows, persist completed turns to your own store and hydrate from it on session load. See [reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery#loading-history) for how reconnect interacts with history.
+- Enable persistence on the channel namespace and set a [retention period](/docs/ai-transport/features/history#faq-retention) that covers your expected scroll-back window.
+- For conversations that need to be retained for longer than the channel allows, persist completed turns to your own store and [hydrate from it when the client reconnects](/docs/ai-transport/features/reconnection-and-recovery#loading-history).
 
 ## Run never ends <a id="turn-never-ends"/>
 
-**Symptom:** The streamed message renders with the streaming status forever. `session.view.runs()` shows the Run with `status: 'active'` long after the model finished generating.
+**Symptom:** The streamed message renders with the streaming status forever. `session.view.runs()` shows the run with `status: 'active'` long after the model finished generating.
 
 **Confirm:**
 
-- Check the server logs around the affected Run. Did `run.end({ reason })` execute? If the route handler threw between `run.pipe` and `run.end`, the Run never closes.
+- Check the server logs around the affected run. Did `run.end({ reason })` execute? If the route handler threw between `run.pipe` and `run.end`, the run never closes.
 - Inspect the channel in the Ably dashboard. The `ai-run-end` lifecycle message should appear after the streamed message's close event. If it is missing, the encoder did not publish it.
 
 **Fix:**
 
-- Wrap streaming work in `try`/`finally` and always call `run.end()` in the `finally` block. A Run that errored should end with reason `'error'`.
+- Wrap streaming work in `try`/`finally` and always call `run.end()` in the `finally` block. A run that errored should end with reason `'error'`.
 - If you use Next.js `after()`, confirm the callback runs to completion. An unhandled promise rejection inside `after()` aborts the rest of the handler, including `run.end()`.
-- See [Runs](/docs/ai-transport/concepts/runs#lifecycle) for the full lifecycle contract.
+- Check your lifecycle handling against the [run lifecycle contract](/docs/ai-transport/concepts/runs#lifecycle).
 
 ## Cancel doesn't stop the agent <a id="cancel-doesnt-stop"/>
 
@@ -88,7 +88,7 @@ In both cases the cause is the same: the channel namespace is not configured to 
 
 - Pass `run.abortSignal` to every LLM call, for example `streamText({ abortSignal: run.abortSignal, ... })`.
 - In server-executed tools, wire `run.abortSignal` into long-running operations so they exit promptly when the signal fires.
-- See [cancellation](/docs/ai-transport/features/cancellation#abort-signal) for the full flow.
+- Trace the signal end to end against the [cancellation flow](/docs/ai-transport/features/cancellation#abort-signal).
 
 ## Duplicate or unexpected turns <a id="duplicate-turns"/>
 
@@ -105,7 +105,7 @@ In both cases the cause is the same: the channel namespace is not configured to 
 **Fix:**
 
 - Guard `view.send()` so it fires once per user action. Avoid placing it inside an effect without a dependency that prevents re-firing.
-- Before editing or regenerating, cancel the in-flight Run explicitly. AI Transport does not auto-cancel an active Run on edit; see [conversation branching](/docs/ai-transport/features/branching#edit) for the recommended pattern.
+- Before editing or regenerating, cancel the in-flight run explicitly, following the [recommended edit pattern](/docs/ai-transport/features/branching#edit). AI Transport does not auto-cancel an active run on edit.
 
 ## Message too large to publish <a id="message-too-large"/>
 
@@ -133,7 +133,7 @@ In both cases the cause is the same: the channel namespace is not configured to 
 **Fix:**
 
 - Assign a unique `clientId` per device or per session for any case where ownership matters. A common pattern is `<userId>:<deviceId>` so the user remains identifiable while devices remain distinguishable.
-- See [multi-device sessions](/docs/ai-transport/features/multi-device) for the model.
+- Check your ownership assumptions against the [multi-device session model](/docs/ai-transport/features/multi-device).
 
 ## Branch selection out of sync across devices <a id="branch-out-of-sync"/>
 
@@ -144,7 +144,7 @@ This is intentional. Branch selection is a per-view, per-device choice. Each dev
 **Fix:**
 
 - If branch selection should be shared (for example, a co-pilot where both devices must agree), synchronise the chosen leaf through your own application state, or by sending a message on the channel that the other client can react to and change its selections.
-- See [conversation branching](/docs/ai-transport/features/branching#navigate) for how branch selection works.
+- Confirm how [branch selection works](/docs/ai-transport/features/branching#navigate) before you design the sync.
 
 ## Reconnect loop <a id="reconnect-loop"/>
 
@@ -163,7 +163,7 @@ This is intentional. Branch selection is a per-view, per-device choice. Each dev
 
 ## Agent process crashes mid-stream <a id="agent-crash"/>
 
-**Symptom:** A streamed message stops part-way through and stays in `streaming` status forever. No more tokens arrive and no run-end event ever fires. From the client's point of view this is indistinguishable from [Run never ends](#turn-never-ends): both leave the Run in `active` state. The root cause here is the process dying rather than the handler skipping `run.end()`.
+**Symptom:** A streamed message stops part-way through and stays in `streaming` status forever. No more tokens arrive and no run-end event ever fires. From the client's point of view this is indistinguishable from [Run never ends](#turn-never-ends): both leave the run in `active` state. The root cause here is the process dying rather than the handler skipping `run.end()`.
 
 **Confirm:**
 
@@ -173,7 +173,7 @@ This is intentional. Branch selection is a per-view, per-device choice. Each dev
 **Fix:**
 
 - Add structured error logging around the streaming path so the cause is visible. Common causes are model provider errors, OOM in long tool calls, and serverless function timeouts.
-- Decide on the application response: surface a retry control to the user, or auto-retry from the application layer. AI Transport does not retry the LLM call automatically. See [reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery#faq-agent-crash) for the contract.
+- Decide on the application response: surface a retry control to the user, or auto-retry from the application layer. AI Transport [does not retry the LLM call automatically](/docs/ai-transport/features/reconnection-and-recovery#faq-agent-crash).
 
 ## Publish fails in suspended state <a id="publish-suspended"/>
 
@@ -188,7 +188,7 @@ This is intentional. Branch selection is a per-view, per-device choice. Each dev
 - Check connection state before publishing user-driven actions, and queue them locally while the connection is not `connected`.
 - Flush the queue once the connection returns to `connected`. `ably-js` does not buffer publishes through a `suspended` state because continuity has already been lost.
 
-## When to escalate <a id="escalate"/>
+## When to contact support <a id="escalate"/>
 
 If you have worked through the entries on this page and the symptom does not match, or the fix did not work, capture:
 
