@@ -96,5 +96,12 @@ describe('<Anchor/>', () => {
 
       expect(a).toHaveAttribute('href', '#');
     });
+
+    it('preserves the fragment on internal links with anchors', () => {
+      const { getByTestId } = render(<Anchor href="/docs/channels#publish">Example docs</Anchor>);
+      const a = getByTestId('link-internal');
+
+      expect(a).toHaveAttribute('href', '/docs/channels?lang=javascript#publish');
+    });
   });
 });
