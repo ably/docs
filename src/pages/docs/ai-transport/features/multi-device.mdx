@@ -1,11 +1,11 @@
 ---
 title: "Multi-device sessions"
-meta_description: "Share AI conversations across tabs, phones, and laptops with Ably AI Transport. All devices see the same session in real time."
+meta_description: "Share AI conversations across tabs, phones, and laptops with Ably AI Transport. All devices see the same session in realtime."
 meta_keywords: "multi-device AI, shared sessions, cross-device streaming, AI Transport, Ably"
-intro: "Your users move between devices and the conversation follows them. AI Transport puts every device on the same channel, so the second tab and the phone see the same session in real time."
+intro: "Your users move between devices and the conversation follows them. AI Transport puts every device on the same session, so the second tab and the phone see the same conversation in realtime."
 ---
 
-A multi-device session works because the [session](/docs/ai-transport/concepts/sessions) is backed by a shared Ably channel, not a single client-to-server HTTP connection. Any device that subscribes to the channel sees every message: user prompts, agent responses, and control signals. Open a second tab, switch to a phone, or share a session with a colleague.
+A multi-device session works because the session is backed by a shared Ably channel rather than a single client-to-server HTTP connection. Any device that joins the session sees every message: user prompts, agent responses, and control signals. Your users can open a second tab, switch to a phone, or share a session with a colleague.
 
 ![Diagram showing a user switching from laptop to phone mid-response, with the response continuing uninterrupted on the new device](../../../../images/content/diagrams/ait-multi-device-handover.png)
 
@@ -30,24 +30,24 @@ const { session } = useClientSession();
 
 ## How it works <a id="how-it-works"/>
 
-Every client connected to the same Ably channel shares the same durable session. When any participant publishes (a user message, an agent response, a cancel signal), every other participant receives it through their channel subscription.
+Every client connected to the same Ably channel shares the same durable session. When any participant publishes (a user message, an agent response, a cancel signal), every other participant receives it through their own subscription.
 
 The client transport distinguishes between own turns (started by this client) and observer turns (started by someone else). Both types are tracked, decoded, and added to the conversation tree. The UI updates for every client, regardless of who initiated the action.
 
 ## Distinguish own and observer runs <a id="own-vs-observer"/>
 
-The client session separates Runs initiated by the current client from those by other participants:
+The client session separates runs initiated by the current client from those by other participants:
 
 | Type | Origin | Handle |
 | --- | --- | --- |
-| Own Run | This client sent the HTTP POST that created the Run. | A `ClientRun` returned from `view.send`, with `runId` (populated after `started`), `inputCodecMessageId`, `cancel()`, and `toInvocation()`. |
-| Observer Run | Another client or agent created the Run. | Lifecycle events and folded outputs through the tree; no per-client handle. |
+| Own run | This client sent the HTTP POST that created the run. | A `ClientRun` returned from `view.send`, with `runId` (populated after `started`), `inputCodecMessageId`, `cancel()`, and `toInvocation()`. |
+| Observer run | Another client or agent created the run. | Lifecycle events and folded outputs through the tree; no per-client handle. |
 
-Both types appear in the conversation tree and the UI. Folded outputs flow through the tree the same way regardless of origin; `RunInfo.clientId` on the view tells you which client started any given Run.
+Both types appear in the conversation tree and the UI. Folded outputs flow through the tree the same way regardless of origin; `RunInfo.clientId` on the view tells you which client started any given run.
 
 ## Track active runs across clients <a id="active-runs"/>
 
-The session's default view exposes `runs()`. It returns a snapshot of visible Runs as projection-free `RunInfo`, consistent across every connected client:
+On the client, the session's default view exposes `runs()`. It returns a snapshot of visible runs as projection-free `RunInfo`, consistent across every connected client:
 
 <Code>
 ```javascript
@@ -59,7 +59,7 @@ const isAgentWorking = runs.some((r) => r.status === 'active' && r.clientId === 
 ```
 </Code>
 
-If client A starts a Run, client B's view updates immediately as the `ai-run-start` lands on the channel.
+If client A starts a run, client B's view updates immediately as the `ai-run-start` lands on the channel.
 
 ## Sync with useChat <a id="syncing"/>
 
@@ -73,11 +73,11 @@ useMessageSync({ setMessages });
 ```
 </Code>
 
-Without `useMessageSync`, `useChat` only renders messages from its own sends. The sync hook bridges the gap by feeding observer messages into state.
+Without `useMessageSync`, `useChat` only renders messages from its own sends.
 
 ## Handle late joiners <a id="late-joiners"/>
 
-A client that connects after the conversation has started loads the full history from the channel:
+A client that connects after the conversation has started loads the full history from the session:
 
 <Code>
 ```javascript
@@ -89,7 +89,7 @@ const { messages, hasOlder, loadOlder } = useView({ limit: 30 });
 
 ## Identify the client <a id="client-identity"/>
 
-Each client has a `clientId` that identifies it across the session. Set the client ID through Ably token authentication so it is verified and cannot be spoofed:
+Each client has a `clientId` that identifies it across the session. On your server, set the client ID through Ably token authentication so it is verified and cannot be spoofed:
 
 <Code>
 ```javascript
@@ -101,41 +101,41 @@ const token = jwt.sign({
 ```
 </Code>
 
-The `clientId` is used throughout: turn ownership, cancel authorisation in the agent's `onCancel` hook, and active turn tracking. Filter `view.runs()` by `clientId === ably.auth.clientId` when you want to act on this client's own Runs only. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
+The `clientId` is used throughout: turn ownership, cancel authorisation in the agent's `onCancel` hook, and active turn tracking. Filter `view.runs()` by `clientId === ably.auth.clientId` when you want to act on this client's own runs only. Issue the `clientId` from your auth endpoint, as described in [Set up authentication](/docs/ai-transport/getting-started/authentication).
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- Two clients sharing the same `clientId` are indistinguishable to the transport. A cancel filter that keys on `clientId` (for example "cancel only my own Runs") cancels Runs from both. Use a unique `clientId` per device when ownership matters.
-- A late joiner without channel history capability sees the live stream but not the conversation that came before. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
+- Two clients sharing the same `clientId` are indistinguishable to the transport. A cancel filter that keys on `clientId` (for example "cancel only my own runs") cancels runs from both. Use a unique `clientId` per device when ownership matters.
+- A late joiner without channel history capability sees the live stream but not the conversation that came before. Capability scoping is part of [authentication](/docs/ai-transport/getting-started/authentication).
 - A client that loses connectivity mid-stream resumes its own view on reconnect. Other clients' views are unaffected.
-- Two devices sending messages at the same time create two separate turns on the same session. See [concurrent turns](/docs/ai-transport/features/concurrent-turns) for the multiplexing model.
+- Two devices sending messages at the same time create two separate [concurrent turns](/docs/ai-transport/features/concurrent-turns), multiplexed on the same session.
 - A regenerate triggered on one device updates the conversation tree on every device. The visible branch on each device depends on its current view selection.
 
 ## FAQ <a id="faq"/>
 
 ### Do I need to write any sync code? <a id="faq-sync-code"/>
 
-No. The channel subscription is the sync. For Vercel `useChat`, add `useMessageSync` to bridge observer messages into its state.
+No. The session subscription is the sync. For Vercel `useChat`, add `useMessageSync` to bridge observer messages into its state.
 
 ### How many clients connect to one session? <a id="faq-many-clients"/>
 
-There is no fixed limit. The channel is the share point; usage scales with the number of subscribers. See [the platform pricing page](/docs/platform/pricing) for the connection and message rate limits in effect.
+There is no fixed limit. Every client subscribes to the same session, so usage scales with the number of subscribers, up to the [connection and message rate limits](/docs/platform/pricing) in effect.
 
 ### Can two users have different branch selections on the same session? <a id="faq-branches"/>
 
-Yes. Each view holds its own selection. The conversation tree is shared; the view is per-participant. See [conversation branching](/docs/ai-transport/features/branching).
+Yes. Each view holds its own [branch selection](/docs/ai-transport/features/branching). The conversation tree is shared; the view is per-participant.
 
 ### What stops a stranger from joining my session? <a id="faq-auth"/>
 
-Channel capabilities. Issue tokens that scope `subscribe` and `publish` to the specific channel name for authenticated users. See [authentication](/docs/ai-transport/concepts/authentication) for scoping examples.
+Channel capabilities. Issue tokens that [scope](/docs/ai-transport/getting-started/authentication) `subscribe` and `publish` to the specific channel name for authenticated users.
 
 ### Does presence work across devices? <a id="faq-presence"/>
 
-Yes. Each device enters presence with its own `clientId`. See [agent presence](/docs/ai-transport/features/agent-presence) for the patterns.
+Yes. Each device enters presence with its own `clientId`, following the [agent presence patterns](/docs/ai-transport/features/agent-presence).
 
 ## Related features <a id="related"/>
 
 - [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery): each device reconnects independently.
 - [Cancellation](/docs/ai-transport/features/cancellation): cancel from any device.
 - [History and replay](/docs/ai-transport/features/history): late joiners load the full conversation.
-- [Database hydration](/docs/ai-transport/features/database-hydration): seed a device from your own store and reconcile it with the live channel.
+- [Database hydration](/docs/ai-transport/features/database-hydration): seed a device from your own store and reconcile it with the live session.

@@ -2,16 +2,16 @@
 title: "Cancellation"
 meta_description: "Cancel AI responses mid-stream with Ably AI Transport. Scoped cancel signals, server-side authorization, and graceful abort handling."
 meta_keywords: "AI cancellation, cancel streaming, abort signal, AI Transport, cancel filter, Ably"
-intro: "Your users can stop an agent mid-response without breaking the session. AI Transport sends cancel as a signal on the channel, so other turns continue and the session stays open."
+intro: "Your users can stop an agent mid-response without breaking the session. AI Transport sends cancel as a signal on the session, so other turns continue and the session stays open."
 redirect_from:
   - /docs/ai-transport/messaging/completion-and-cancellation
 ---
 
-Cancellation is a turn-level operation. The client publishes a cancel signal on the Ably channel; the agent receives it on the run with the matching `runId` and fires its abort signal. Unlike closing an HTTP connection, cancellation is an explicit signal: the session remains intact, other runs continue, and both sides handle cleanup gracefully.
+Cancellation is a turn-level operation. The client publishes a cancel signal on the session; the agent receives it on the run with the matching `runId` and fires its abort signal. Cancellation is an explicit signal, so the session remains intact and other runs continue while both sides clean up gracefully.
 
-![Diagram showing a cancel signal stopping the in-progress Run](../../../../images/content/diagrams/ait-cancellation.png)
+![Diagram showing a cancel signal stopping the in-progress run](../../../../images/content/diagrams/ait-cancellation.png)
 
-A minimal cancel:
+On the client, a minimal cancel:
 
 <Code>
 ```javascript
@@ -21,7 +21,7 @@ await activeRun.cancel();
 
 ## How it works <a id="how-it-works"/>
 
-Sessions are bidirectional, so a cancel is just a signal on the channel. The client publishes a cancel message keyed on the triggering input's `codec-message-id` (the synchronous handle the client owns from send time). Once the agent has resolved the cancel to a registered Run, that Run's `abortSignal` fires. The LLM stream stops, the run ends with reason `'cancelled'`, and every subscriber receives the lifecycle update. A cancel published before the agent has minted the run-id is still honoured: the agent buffers it and fires once the input-event lookup resolves.
+Sessions are bidirectional, so a cancel is just a signal on the session. The client publishes a cancel message keyed on the triggering input's `codec-message-id` (the synchronous handle the client owns from send time). Once the agent has resolved the cancel to a registered run, that run's `abortSignal` fires. The LLM stream stops, the run ends with reason `'cancelled'`, and every subscriber receives the lifecycle update. A cancel published before the agent has assigned the run-id is still honoured: the agent buffers it and fires once the input-event lookup resolves.
 
 <Code>
 ```javascript
@@ -43,7 +43,7 @@ const result = streamText({
 
 ## Cancel one run, several, or all <a id="cancel-filters"/>
 
-`activeRun.cancel()` targets the run the client just kicked off. To cancel several runs, iterate the visible Runs and cancel each by id:
+`activeRun.cancel()` targets the run the client just started. To cancel several runs, iterate the visible runs on the client and cancel each by id:
 
 <Code>
 ```javascript
@@ -66,7 +66,7 @@ Every run exposes an `abortSignal` that fires when the run is cancelled. Pass it
 const run = session.createRun(invocation, { signal: req.signal });
 
 // Drain run.view for the full conversation to feed the model. run.messages
-// is only this Run's own turn.
+// is only this run's own turn.
 while (run.view.hasOlder()) await run.view.loadOlder();
 await run.start();
 
@@ -118,7 +118,7 @@ const run = session.createRun(invocation, {
 
 ## Cancel on close <a id="cancel-on-close"/>
 
-`ClientSession.close()` is local-state-only: it does not cancel runs on the wire. To stop in-progress runs before closing, cancel them explicitly:
+`ClientSession.close()` is local-state-only: it does not cancel runs on the wire. On the client, cancel in-progress runs explicitly before closing:
 
 <Code>
 ```javascript
@@ -132,15 +132,15 @@ await session.close();
 
 - Cancellation is asynchronous. A few more tokens arrive after `cancel()` returns and before the server's `abortSignal` fires. Render them on the cancelled turn.
 - The server is responsible for honouring the abort signal. A tool invocation that does not check the signal continues to run until it completes.
-- Cancel signals from a client without the channel [publish capability](/docs/auth/capabilities#capability-operations) will silently fail. Verify capabilities on the [authentication](/docs/ai-transport/concepts/authentication) endpoint.
+- Cancel signals from a client without the channel [publish capability](/docs/auth/capabilities#capability-operations) will silently fail. Verify capabilities on the [authentication](/docs/ai-transport/getting-started/authentication) endpoint.
 - An `onCancel` that returns `false` does not notify the requesting client. Surface the rejection through your own application protocol if the user needs to know.
-- A cancel sent before the turn starts is delivered to the channel and accumulated; the server applies it as soon as the turn is created.
+- A cancel sent before the turn starts is delivered to the session and accumulated; the server applies it as soon as the turn is created.
 
 ## FAQ <a id="faq"/>
 
 ### Why use cancel signals instead of closing the connection? <a id="faq-vs-close"/>
 
-Closing the connection disconnects a client from the session. The session and connection are distinct and not coupled. A cancel signal notifies the agent to stop the stream but leaves the session intact, so the next message starts a new turn immediately, on every connected device. See [reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery) for how clients that disconnect mid-stream can reconnect and resume.
+Closing the connection disconnects a client from the session. The session and connection are distinct and not coupled. A cancel signal notifies the agent to stop the stream but leaves the session intact, so the next message starts a new turn immediately, on every connected device. Clients that disconnect mid-stream [reconnect and resume](/docs/ai-transport/features/reconnection-and-recovery).
 
 ### Can a user on another device cancel my turn? <a id="faq-cross-device"/>
 
@@ -150,16 +150,16 @@ Yes, if your `onCancel` hook authorises it. The default accepts all cancel reque
 
 The turn cancels once. Subsequent matching signals are no-ops; the abort signal does not refire.
 
-### How do I tell a cancelled run apart from one that finished normally? <a id="faq-detect"/>
+### How do I distinguish a cancelled run from one that finished normally? <a id="faq-detect"/>
 
-`run.end(reason)` reports the reason on the channel. Clients receive it through the view's `run` lifecycle event. The reason is `'cancelled'` for a cancel and `'complete'` for a normal finish.
+`run.end(reason)` reports the reason on the session. Clients receive it through the view's `run` lifecycle event. The reason is `'cancelled'` for a cancel and `'complete'` for a normal finish.
 
 ### Does cancel cost a message? <a id="faq-pricing"/>
 
-The cancel signal is a published message on the channel. See [pricing](/docs/platform/pricing) for current rates.
+The cancel signal is a published message on the channel, billed at the current [message rates](/docs/platform/pricing).
 
 ## Related features <a id="related"/>
 
-- [Interruption and steering](/docs/ai-transport/features/interruption-and-steering): steer the active Run, cancel and re-prompt, or send alongside.
+- [Interruption and steering](/docs/ai-transport/features/interruption-and-steering): steer the active run, cancel and re-prompt, or send alongside.
 - [Concurrent turns](/docs/ai-transport/features/concurrent-turns): multiple turns with independent cancel handles.
 - [Token streaming](/docs/ai-transport/features/token-streaming): what gets cancelled when the abort fires.

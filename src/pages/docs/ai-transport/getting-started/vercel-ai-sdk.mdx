@@ -15,10 +15,10 @@ redirect_from:
 
 A Next.js chat app where:
 
-- Tokens stream from the model into a durable [session](/docs/ai-transport/concepts/sessions), not the HTTP response.
+- Tokens stream from the model into a durable [session](/docs/ai-transport/concepts/sessions) rather than the HTTP response.
 - Closing a tab and reopening it resumes the in-progress response.
-- A second tab on the same session sees the same conversation in real time.
-- A stop button cancels the in-progress [Run](/docs/ai-transport/concepts/runs).
+- A second tab on the same session sees the same conversation in realtime.
+- A stop button cancels the in-progress [run](/docs/ai-transport/concepts/runs).
 
 For direct access to the conversation tree, branching, and pagination, see [Get started with the Core SDK](/docs/ai-transport/getting-started/core-sdk).
 
@@ -38,7 +38,7 @@ npm install @ably/ai-transport ably ai @ai-sdk/react @ai-sdk/anthropic next reac
 
 ## Set up authentication <a id="set-up-authentication"/>
 
-Create an auth endpoint at `/api/auth/token` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need. See [Set up authentication](/docs/ai-transport/getting-started/authentication) for the full setup.
+Create an auth endpoint at `/api/auth/token` that returns an Ably JWT to the client. The endpoint validates the user and signs a token with their client ID and the channel capabilities they need, as described in [Set up authentication](/docs/ai-transport/getting-started/authentication).
 
 The client below uses `authUrl: '/api/auth/token'` to fetch tokens from this endpoint.
 
@@ -46,7 +46,7 @@ The client below uses `authUrl: '/api/auth/token'` to fetch tokens from this end
 
 AI Transport streams each response by appending tokens to a single channel message. That requires the **Message annotations, updates, deletes, and appends** channel rule (`mutableMessages`) on the namespace your conversations live on.
 
-In your Ably dashboard, enable **Message annotations, updates, deletes, and appends** on the `conversations` namespace. See [Configure the channel rule](/docs/ai-transport/getting-started/channel-rules) for the dashboard, Control API, and CLI steps.
+In your Ably dashboard, enable **Message annotations, updates, deletes, and appends** on the `conversations` namespace, using the [dashboard, Control API, or CLI](/docs/ai-transport/getting-started/channel-rules).
 
 <Aside data-type='important'>
 This is a one-time setup per Ably app. Without the rule, the first token append fails with error `93002` and no tokens stream. The `channelName` you set below must live in a namespace with this rule enabled.
@@ -54,7 +54,7 @@ This is a one-time setup per Ably app. Without the rule, the first token append 
 
 ## Create the agent route <a id="create-the-agent-route"/>
 
-Create `app/api/chat/route.ts`. The agent receives an [Invocation](/docs/ai-transport/concepts/invocations), creates an [AgentSession](/docs/ai-transport/api/javascript/core/agent-session) pre-bound to the Vercel codec, starts a Run, hydrates the conversation, pipes the LLM stream, and ends the Run.
+On the agent, create `app/api/chat/route.ts`. The agent receives an [invocation](/docs/ai-transport/concepts/runs#invocations), creates an [AgentSession](/docs/ai-transport/api/javascript/core/agent-session) pre-bound to the Vercel codec, starts a run, hydrates the conversation, pipes the LLM stream, and ends the run.
 
 <Code>
 ```javascript
@@ -118,12 +118,12 @@ export async function POST(req) {
 </Code>
 
 <Aside data-type='note'>
-`after()` is a Next.js function that extends the serverless function's lifetime beyond the HTTP response. The HTTP request triggers the agent; tokens reach the client through the Ably channel, not the response body.
+`after()` is a Next.js function that extends the serverless function's lifetime beyond the HTTP response. The HTTP request triggers the agent; tokens reach the client through the session rather than the response body.
 </Aside>
 
 ## Create the chat component <a id="create-the-chat-component"/>
 
-Create `app/chat.tsx`. The component reads the chat transport from the nearest [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) with [`useChatTransport`](/docs/ai-transport/api/react/vercel/use-chat-transport) and passes it to Vercel's `useChat` hook. The transport owns the agent-invocation POST; `useChat` calls into it as if it were the default HTTP transport. [`useMessageSync`](/docs/ai-transport/api/react/vercel/use-message-sync) feeds channel updates back into `useChat`, so other clients see messages they did not publish.
+On the client, create `app/chat.tsx`. The component reads the chat transport from the nearest [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) with [`useChatTransport`](/docs/ai-transport/api/react/vercel/use-chat-transport) and passes it to Vercel's `useChat` hook. The transport owns the agent-invocation POST; `useChat` calls into it as if it were the default HTTP transport. [`useMessageSync`](/docs/ai-transport/api/react/vercel/use-message-sync) feeds session updates back into `useChat`, so other clients see messages they did not publish.
 
 <Code>
 ```javascript
@@ -187,7 +187,7 @@ export function Chat() {
 
 ## Wire it together <a id="wire-it-together"/>
 
-Create `app/page.tsx`. `Providers` sets up an authenticated Ably client. [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) constructs the underlying [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session) bound to the channel and the [`ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport) over it. It POSTs invocations to `/api/chat` by default, matching the agent route above; set `api` to point elsewhere.
+On the client, create `app/page.tsx`. `Providers` sets up an authenticated Ably client. [`ChatTransportProvider`](/docs/ai-transport/api/react/vercel/chat-transport-provider) constructs the underlying [`ClientSession`](/docs/ai-transport/api/javascript/core/client-session) bound to the channel and the [`ChatTransport`](/docs/ai-transport/api/javascript/vercel/chat-transport) over it. It POSTs invocations to `/api/chat` by default, matching the agent route above; set `api` to point elsewhere.
 
 Update `channelName` to match a namespace with the AIT [channel rules](/docs/ai-transport/getting-started/channel-rules) configured.
 
@@ -228,22 +228,22 @@ export default function Page() {
 
 Run `npm run dev` and open `http://localhost:3000`. Open a second tab to the same URL; both tabs share the same durable session.
 
-## What is happening <a id="what-is-happening"/>
+## What happens when you send a message <a id="what-is-happening"/>
 
 1. `sendMessage({ text })` calls the `ChatTransport`'s `sendMessages`. Under the hood, the AI Transport client SDK mints `inputEventId` and the message's `codecMessageId`, stamps them on the channel publish under `extras.ai.transport`, and returns a `ClientRun` carrying the synchronous `inputCodecMessageId`. The `ChatTransport` then calls `clientRun.toInvocation().toJSON()` and POSTs the resulting `InvocationData` body (`{ inputEventId, sessionName }`) to your agent endpoint.
-2. The agent route receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a Run. `session.createRun(invocation)` mints `runId` (for a fresh run) and `invocationId` (one per HTTP request); the agent stamps both on every event it publishes and returns them on the response. `run.start()` waits until the trigger input event has been observed on the channel, whether paged in from history (as the drain above does) or arriving live.
-3. The agent streams the LLM response through `run.pipe()` to the channel. Outputs carry `input-codec-message-id` so the client can correlate by an id it owned at send time.
-4. Every client subscribed to the channel decodes the streamed messages in real time. `useChat` re-renders as `UIMessage` parts accumulate.
+2. The agent route receives the POST, calls `Invocation.fromJSON`, creates an `AgentSession`, and starts a run. `session.createRun(invocation)` mints `runId` (for a fresh run) and `invocationId` (one per HTTP request); the agent stamps both on every event it publishes and returns them on the response. `run.start()` waits until the trigger input event has been observed on the session, whether paged in from history (as the drain above does) or arriving live.
+3. The agent streams the LLM response through `run.pipe()` to the session. Outputs carry `input-codec-message-id` so the client can correlate by an id it owned at send time.
+4. Every client subscribed to the session decodes the streamed messages in realtime. `useChat` re-renders as `UIMessage` parts accumulate.
 5. If a client disconnects mid-stream, Ably resumes the subscription from the last serial on reconnect; the session rehydrates without losing tokens.
 
 ## Understand the architecture <a id="understand-the-architecture"/>
 
-Vercel AI SDK handles model orchestration and UI. AI Transport handles the durable session between agent and devices. See [Vercel AI SDK UI](/docs/ai-transport/frameworks/vercel-ai-sdk-ui) for the client-side integration and [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) for the server-side integration.
+Vercel AI SDK handles model orchestration and UI. AI Transport handles the durable session between agent and devices, through the [client-side UI integration](/docs/ai-transport/frameworks/vercel-ai-sdk-ui) and the [server-side Core integration](/docs/ai-transport/frameworks/vercel-ai-sdk-core).
 
 ## Explore next <a id="explore-next"/>
 
 - [Vercel AI SDK UI](/docs/ai-transport/frameworks/vercel-ai-sdk-ui): client-side integration with `useChat`.
 - [Cancellation](/docs/ai-transport/features/cancellation): the stop button pattern and the agent-side `onCancel` authorisation hook.
-- [Multi-device sessions](/docs/ai-transport/features/multi-device): open another tab to see real-time sync.
+- [Multi-device sessions](/docs/ai-transport/features/multi-device): open another tab to see realtime sync.
 - [History and replay](/docs/ai-transport/features/history): load past conversation on mount.
 - [Sessions](/docs/ai-transport/concepts/sessions): durable sessions and how the conversation persists.

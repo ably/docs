@@ -60,11 +60,11 @@ This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api
 | loading | Whether a page load is currently in progress. | Boolean |
 | loadError | Set when the most recent `loadOlder` call failed. Cleared automatically on the next successful load. | `Ably.ErrorInfo` or Undefined |
 | loadOlder | Reveal older messages, resolving to the revealed page (oldest-first). Returns `[]` when nothing was revealed: already loading, no view resolved, history exhausted, or the load failed. | `() => Promise<CodecMessage<TMessage>[]>` |
-| runOf | Look up the `RunInfo` for the Run that owns the given `codecMessageId`. | <Table id='RunInfo'/> |
-| run | Direct lookup by Run id. | <Table id='RunInfo'/> |
-| runs | Snapshot of the visible Runs along the selected branch, in chronological order. Returns `[]` when the view isn't resolved. | `() => RunInfo[]` |
+| runOf | Look up the `RunInfo` for the run that owns the given `codecMessageId`. | <Table id='RunInfo'/> |
+| run | Direct lookup by run id. | <Table id='RunInfo'/> |
+| runs | Snapshot of the visible runs along the selected branch, in chronological order. Returns `[]` when the view isn't resolved. | `() => RunInfo[]` |
 | branchSelection | Resolve the `BranchHandle` anchored at `codecMessageId`: the sibling state plus a `select(index)` verb to navigate it. Always returns a safe handle. | <Table id='BranchHandle'/> |
-| send | Send an input on the channel and fire a POST. At most one new message per send; the array form carries only wire-only inputs (tool results, approvals). Wrap a domain message via `codec.createUserMessage` (or build the `{ kind: 'user-message', message }` literal) to send a fresh user message. Takes optional <Table id='SendOptions'/>. | `(events, options?) => Promise<ClientRun<TMessage>>` |
+| send | Publish an input on the session. The core session is HTTP-free, so wake the agent by POSTing `run.toInvocation().toJSON()` to your agent endpoint. At most one new message per send; the array form carries only wire-only inputs (tool results, approvals). Wrap a domain message via `codec.createUserMessage` (or build the `{ kind: 'user-message', message }` literal) to send a fresh user message. Takes optional <Table id='SendOptions'/>. | `(events, options?) => Promise<ClientRun<TMessage>>` |
 | regenerate | Regenerate an assistant message using this view's branch for history. | `(messageId, options?) => Promise<ClientRun<TMessage>>` |
 | edit | Edit a user message, forking from this view's branch. | `(messageId, inputs, options?) => Promise<ClientRun<TMessage>>` |
 
@@ -74,11 +74,11 @@ This hook must be used within a [`ClientSessionProvider`](/docs/ai-transport/api
 
 | Property | Description | Type |
 | --- | --- | --- |
-| runId | The Run's unique identifier. | String |
-| clientId | Identity of the Ably client that started this Run. Empty string when the wire didn't carry an owner client id. | String |
-| status | Run lifecycle status. `'active'` while streaming, `'suspended'` while paused awaiting input, otherwise the `RunEndReason` the Run terminated with. | `'active' \| 'suspended' \| RunEndReason` |
-| error | The terminal error, present exactly when `status` is `'error'`. Carries the agent-stamped error detail so a UI can show why a Run failed. | `Ably.ErrorInfo` |
-| invocationId | The agent-minted `invocationId` observed for this Run, adopted from `ai-run-start`. Empty string until run-start arrives, or if the wire didn't carry an invocation-id. | String |
+| runId | The run's unique identifier. | String |
+| clientId | Identity of the Ably client that started this run. Empty string when the wire didn't carry an owner client id. | String |
+| status | Run lifecycle status. `'active'` while streaming, `'suspended'` while paused awaiting input, otherwise the `RunEndReason` the run terminated with. | `'active' \| 'suspended' \| RunEndReason` |
+| error | The terminal error, present exactly when `status` is `'error'`. Carries the agent-stamped error detail so a UI can show why a run failed. | `Ably.ErrorInfo` |
+| invocationId | The agent-minted `invocationId` observed for this run, adopted from `ai-run-start`. Empty string until run-start arrives, or if the wire didn't carry an invocation-id. | String |
 
 </Table>
 
@@ -112,23 +112,23 @@ Reveal older messages into the view, resolving to the revealed page (oldest-firs
 
 On failure, `loadError` is set. On the next successful load, `loadError` is cleared automatically.
 
-## Look up a Run by message id <a id="run-of"/>
+## Look up a run by message id <a id="run-of"/>
 
 <MethodSignature>{`runOf(codecMessageId: string): RunInfo | undefined`}</MethodSignature>
 
-Look up the [`RunInfo`](#returns) for the Run that owns the given `codecMessageId`. Returns `undefined` when the codec-message-id has not been observed.
+Look up the [`RunInfo`](#returns) for the run that owns the given `codecMessageId`. Returns `undefined` when the codec-message-id has not been observed.
 
-## Look up a Run by id <a id="run"/>
+## Look up a run by id <a id="run"/>
 
 <MethodSignature>{`run(runId: string): RunInfo | undefined`}</MethodSignature>
 
-Direct lookup by Run id. Symmetric with [`runOf`](#run-of) for callers that already hold a `runId`.
+Direct lookup by run id. Symmetric with [`runOf`](#run-of) for callers that already hold a `runId`.
 
 ## Resolve a branch selection <a id="branch-selection"/>
 
 <MethodSignature>{`branchSelection(codecMessageId: string): BranchHandle<TMessage>`}</MethodSignature>
 
-Resolve the `BranchHandle` anchored at `codecMessageId`: the sibling state plus a `select(index)` verb to navigate it. Always returns a safe handle: for branch anchors with N siblings, `siblings` carries every sibling Run's view of the anchor slot; for non-anchor messages, `siblings` is `[thisMessage]` and `hasSiblings` is `false`.
+Resolve the `BranchHandle` anchored at `codecMessageId`: the sibling state plus a `select(index)` verb to navigate it. Always returns a safe handle: for branch anchors with N siblings, `siblings` carries every sibling run's view of the anchor slot; for non-anchor messages, `siblings` is `[thisMessage]` and `hasSiblings` is `false`.
 
 ## Select a sibling <a id="select-sibling"/>
 
@@ -146,21 +146,21 @@ view.branchSelection(codecMessageId).select(1);
 
 <MethodSignature>{`send(events: TInput | TInput[], options?: SendOptions): Promise<ClientRun<TMessage>>`}</MethodSignature>
 
-Send an input on the channel and fire a POST. Each `TInput` carries its own routing metadata (`parent`, `target`, `codecMessageId`).
+Publish an input on the session. The core session is HTTP-free, so wake the agent by POSTing `run.toInvocation().toJSON()` to your agent endpoint. Each `TInput` carries its own routing metadata (`parent`, `target`, `codecMessageId`).
 
-To send a fresh user message, build a `UserMessage` input. Use the codec factory (`codec.createUserMessage(message)`) or build the literal directly: `{ kind: 'user-message', message }`. A send introduces at most one new message: exactly one `UserMessage` for a fresh send (which mints a new Run), or none for a continuation. The array form exists only to carry the wire-only inputs that resolve a single assistant turn (`tool-result`, `tool-result-error`, `tool-approval-response`); pair it with `options.runId` to extend a suspended Run. Passing more than one new message rejects with `InvalidArgument`.
+To send a fresh user message, build a `UserMessage` input. Use the codec factory (`codec.createUserMessage(message)`) or build the literal directly: `{ kind: 'user-message', message }`. A send introduces at most one new message: exactly one `UserMessage` for a fresh send (which mints a new run), or none for a continuation. The array form exists only to carry the wire-only inputs that resolve a single assistant turn (`tool-result`, `tool-result-error`, `tool-approval-response`); pair it with `options.runId` to extend a suspended run. Passing more than one new message rejects with `InvalidArgument`.
 
 ## Regenerate an assistant message <a id="regenerate"/>
 
 <MethodSignature>{`regenerate(messageId: string, options?: SendOptions): Promise<ClientRun<TMessage>>`}</MethodSignature>
 
-Regenerate an assistant message. Creates a new Run that targets the message and threads under its parent user message. Both ids are computed automatically from this view's branch.
+Regenerate an assistant message. Creates a new run that targets the message and threads under its parent user message. Both ids are computed automatically from this view's branch.
 
 ## Edit a user message <a id="edit"/>
 
 <MethodSignature>{`edit(messageId: string, inputs: TInput | TInput[], options?: SendOptions): Promise<ClientRun<TMessage>>`}</MethodSignature>
 
-Edit a user message. Creates a new Run that forks the target message with the replacement inputs. `forkOf`, `parent`, and history are computed automatically from this view's branch.
+Edit a user message. Creates a new run that forks the target message with the replacement inputs. `forkOf`, `parent`, and history are computed automatically from this view's branch.
 
 ## Example <a id="example"/>
 

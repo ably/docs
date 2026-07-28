@@ -2,14 +2,14 @@
 title: "History and replay"
 meta_description: "Load conversation history from Ably channels with AI Transport. Paginated history, gapless continuity, and scroll-back patterns."
 meta_keywords: "history, replay, conversation history, AI Transport, Ably, pagination, scroll-back"
-intro: "Your users see the conversation when they come back to it. AI Transport loads history from the channel itself, with gapless continuity into the live stream."
+intro: "Your users see the conversation when they come back to it. AI Transport loads history from the session itself, with gapless continuity into the live stream."
 ---
 
-History comes from the Ably channel itself. Every message (user prompts, agent responses, lifecycle events) persists on the channel. Clients load history on connect and paginate backward through the conversation. No separate database is required.
+History comes from the session itself. Every message (user prompts, agent responses, lifecycle events) persists on the Ably channel that backs it. Clients load history on connect and paginate backward through the conversation. No separate database is required.
 
 ![Diagram showing a client loading conversation history from the channel and paginating older messages on scroll](../../../../images/content/diagrams/ait-history-replay.png)
 
-A minimal history-loading hook:
+On the client, a minimal history-loading hook:
 
 <Code>
 ```javascript
@@ -19,7 +19,7 @@ const { messages, hasOlder, loadOlder } = useView({ limit: 30 });
 
 ## How it works <a id="how-it-works"/>
 
-`useView` loads history using `view.loadOlder()` with the `untilAttach` parameter. `untilAttach` keeps history and the live subscription gapless: every message between the historical window and the latest live message is accounted for.
+`useView` loads history using `view.loadOlder()` with the `untilAttach` parameter. `untilAttach` accounts for every message between the historical window and the latest live message, so history joins the live subscription with no gap.
 
 `loadOlder()` expands the view window and resolves to the page it revealed (the older messages, oldest-first). The view's `messages` array also updates with those messages, so you can either read the return value or re-render from `messages`. The fetch size per channel round trip is set by `historyPageSize` on the session options (default 100), independent of the `limit` you reveal per call.
 
@@ -55,25 +55,25 @@ function handleScrollToTop() {
 
 History includes branch information. Messages carry `parent` and `forkOf` headers that indicate which conversation branch they belong to. When history is loaded, the conversation tree reconstructs branches from these headers and places each message on the correct branch.
 
-Loading history does not produce a flat list of messages. It rebuilds the full tree structure, including any points where the conversation forked because of edits, regenerations, or explicit branching.
+Loading history rebuilds the full tree structure rather than a flat list of messages, including every point where the conversation forked because of edits, regenerations, or explicit branching.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
 - Channel history is bounded by your retention policy. A client connecting after retention expires sees only the live stream. Persist completed turns to your own store if you need longer-term retention.
 - `loadOlder()` while `loading` is already `true` is a no-op. Guard against double-trigger from rapid scroll events.
-- A late joiner that arrives mid-stream receives the streamed message in its accumulated form, not as a replay of every token. The view renders it correctly through the lifecycle tracker.
-- A client without `history` capability cannot load anything beyond the live subscription window. Capability scoping is part of [authentication](/docs/ai-transport/concepts/authentication).
-- A regenerated branch shows up in history with its `forkOf` header. The view's branch selection determines which sibling renders. See [conversation branching](/docs/ai-transport/features/branching).
+- A late joiner that arrives mid-stream receives the streamed message in its accumulated form rather than as a replay of every token. The view renders it correctly through the lifecycle tracker.
+- A client without `history` capability cannot load anything beyond the live subscription window. Capability scoping is part of [authentication](/docs/ai-transport/getting-started/authentication).
+- A regenerated [branch](/docs/ai-transport/features/branching) shows up in history with its `forkOf` header. The view's branch selection determines which sibling renders.
 
 ## FAQ <a id="faq"/>
 
 ### Do I need a database for chat history? <a id="faq-database"/>
 
-Not for AI Transport's own behaviour. The channel is the source of truth within retention. Add a database for analytics, search, longer retention, or external integrations.
+Not for AI Transport's own behaviour. The session is the source of truth within retention. Add a database for analytics, search, longer retention, or external integrations.
 
 ### How do I retain history longer than the channel keeps it? <a id="faq-retention"/>
 
-Persist completed runs to your own store as they end, then reconcile that stored history with the live channel on reload. The channel handles live and in-progress activity. See [database hydration](/docs/ai-transport/features/database-hydration).
+Persist completed runs to your own store as they end, then [hydrate from the database](/docs/ai-transport/features/database-hydration) and reconcile that stored history with the live session on reload. The session handles live and in-progress activity.
 
 ### What does `loadOlder()` return? <a id="faq-loadolder-shape"/>
 
@@ -85,11 +85,11 @@ Yes. Cancelled messages keep their partial content with a status of `cancelled`.
 
 ### Can I paginate forward as well as backward? <a id="faq-forward"/>
 
-`useView` is backward-only because the live subscription handles forward delivery. New messages arrive in real time without an explicit fetch.
+`useView` is backward-only because the live subscription handles forward delivery. New messages arrive in realtime without an explicit fetch.
 
 ## Related features <a id="related"/>
 
 - [Token streaming](/docs/ai-transport/features/token-streaming): how streamed responses are persisted and replayed from history.
 - [Reconnection and recovery](/docs/ai-transport/features/reconnection-and-recovery): how history loading fits into reconnection.
 - [Conversation branching](/docs/ai-transport/features/branching): how branches are created and navigated.
-- [Database hydration](/docs/ai-transport/features/database-hydration): retain conversations beyond channel retention by reconciling a stored seed with the live channel.
+- [Database hydration](/docs/ai-transport/features/database-hydration): retain conversations beyond channel retention by reconciling a stored seed with the live session.

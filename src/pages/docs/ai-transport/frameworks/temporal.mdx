@@ -1,41 +1,41 @@
 ---
 title: "Temporal"
-meta_description: "How Ably AI Transport composes with Temporal. One activity per Step, activity ids as stepIds, retry supersedes on the channel, cancels routed through Ably rather than Temporal signals."
+meta_description: "How Ably AI Transport composes with Temporal. One activity per step, activity ids as stepIds, retry supersedes on the session, cancels routed through Ably rather than Temporal signals."
 meta_keywords: "AI Transport, Temporal, durable execution, workflow, activity, stepIdFor, adoptRun, createStep, retry"
-intro: "Temporal owns the durability of your agent's execution. AI Transport owns the durability of the conversation the user sees. The two compose without either owning the other's job."
+intro: "Temporal owns the durability of your agent's execution. AI Transport owns the durability of the conversation the user sees."
 ---
 
-[Temporal](https://temporal.io/) runs your agent's loop as a workflow. Each stage of the loop is a Temporal activity that a worker executes and Temporal retries on failure. AI Transport publishes each activity's output as a [Step](/docs/ai-transport/concepts/steps) inside a [Run](/docs/ai-transport/concepts/runs). When Temporal retries an activity, the retry lands on the channel under the same `stepId` and supersedes the failed attempt.
+[Temporal](https://temporal.io/) runs your agent's loop as a workflow. Each stage of the loop is a Temporal activity that a worker executes and Temporal retries on failure. AI Transport publishes each activity's output as a step inside a run. When Temporal retries an activity, the retry lands on the session under the same `stepId` and supersedes the failed attempt.
 
-![Diagram mapping Temporal activities on the left to AI Transport Steps on a single Run on the right. openRun opens the Run with no Step; runInferenceStep publishes Step A; runToolStep fails on attempt 1 and its attempt-2 retry supersedes it under the same stepId B; a follow-up runInferenceStep publishes Step C and ends the Run. Each activity maps to one Step, sharing the activityId as the stepId.](../../../../images/content/diagrams/ait-frameworks-temporal.png)
+![Diagram mapping Temporal activities on the left to AI Transport steps on a single run on the right. openRun opens the run with no step; runInferenceStep publishes step A; runToolStep fails on attempt 1 and its attempt-2 retry supersedes it under the same stepId B; a follow-up runInferenceStep publishes step C and ends the run. Each activity maps to one step, sharing the activityId as the stepId.](../../../../images/content/diagrams/ait-frameworks-temporal.png)
 
 ## What Temporal brings <a id="temporal-brings"/>
 
-| Capability | Description |
+| Feature | Description |
 | --- | --- |
 | Workflow durability | The workflow's execution history persists in Temporal. A worker crash resumes the workflow on a different worker without losing progress. |
 | Activity retries | Failed activities retry under configurable policies. The retry gets the same `activityId`, so Ably can supersede its predecessor. |
 | Cancellation | A workflow cancel propagates as an `AbortSignal` inside each activity, which flows into the LLM call and stops it gracefully. |
-| Observability | The Temporal Web UI shows activity attempts, retry counts, error traces, and workflow history. Pair it with the channel to see the whole turn. |
+| Observability | The Temporal Web UI shows activity attempts, retry counts, error traces, and workflow history. Pair it with the session to see the whole turn. |
 
 ## What AI Transport adds <a id="ait-adds"/>
 
-| Capability | Description |
+| Feature | Description |
 | --- | --- |
-| Durable sessions | Tokens flow through an Ably channel that outlives any single connection. A client reconnects and resumes from where it left off. |
+| Durable sessions | Tokens flow through a session that outlives any single connection. A client reconnects and resumes from where it left off. |
 | Multi-device sync | Every device subscribed to the session sees the same conversation in realtime. |
 | Bidirectional control | Cancel, steer, and interrupt the agent from any client. No separate control channel. |
-| Retry supersede | When Temporal retries an activity, [`AgentRun.createStep({ stepId })`](/docs/ai-transport/api/javascript/core/agent-session#create-step) causes the retry's channel output to supersede the failed attempt's rather than append beside it. |
-| Cancel routing on the channel | Cancels published to the Ably channel reach every activity's session directly, so a stop button in the browser aborts the LLM call inside the in-flight activity without a Temporal signal. |
+| Retry supersede | When Temporal retries an activity, [`AgentRun.createStep({ stepId })`](/docs/ai-transport/api/javascript/core/agent-session#create-step) causes the retry's output to supersede the failed attempt's on the session rather than append beside it. |
+| Cancel routing on the session | A cancel published to the session reaches every activity directly, so a stop button in the browser aborts the LLM call inside the in-flight activity without a Temporal signal. |
 | History and replay | Load the full conversation on reconnect, page refresh, or new device join. |
 
 ## Where they connect <a id="connect"/>
 
-Each activity publishes its output as a single Step, using the Temporal activity id as that Step's `stepId`. That is the join between the two systems: Temporal's retryable unit and AI Transport's supersedable unit share one identifier.
+Each activity publishes its output as a single step, using the Temporal activity id as that step's `stepId`. Temporal's retryable unit and AI Transport's supersedable unit share one identifier, which is what joins the two systems.
 
-Use [`stepIdFor`](/docs/ai-transport/api/javascript/temporal) from `@ably/ai-transport/temporal` to derive the `stepId`. It reads the activity id from the Temporal activity context and prefixes it with the Run's invocation id. Two workflows both have `activityId === '1'` for their first activity; the invocation-id prefix keeps their Steps distinct on the channel.
+Use [`stepIdFor`](/docs/ai-transport/api/javascript/temporal) from `@ably/ai-transport/temporal` to derive the `stepId`. It reads the activity id from the Temporal activity context and prefixes it with the run's invocation id. Two workflows both have `activityId === '1'` for their first activity; the invocation-id prefix keeps their steps distinct on the session.
 
-An inference activity:
+On the agent, an inference activity:
 
 <Code>
 ```javascript
@@ -79,11 +79,11 @@ export async function runInferenceStep({ ids, invocation }) {
 ```
 </Code>
 
-`stopWhen: stepCountIs(1)` prevents the Vercel AI SDK from running its own multi-step tool loop inside the activity. The workflow drives the loop instead: a first activity opens the Run, then one activity per inference (the first and every follow-up) and one activity per server tool call. This is what makes each unit retryable in isolation.
+`stopWhen: stepCountIs(1)` prevents the Vercel AI SDK from running its own multi-step tool loop inside the activity. The workflow drives the loop instead: a first activity opens the run, then one activity per inference (the first and every follow-up) and one activity per server tool call. This is what makes each unit retryable in isolation.
 
-Open the Run in its own activity, separate from the first inference. That activity only calls `createRun` and `run.start()`; it publishes `ai-run-start` and returns the Run's ids without running the model. Two things follow from the split. An inference failure retries the inference alone and never re-opens the Run. And the Run's ids reach the workflow before any inference runs, so if the very first inference exhausts its retries your failure path still has the ids to end the Run rather than leaving it open. Pin the Run id to the Temporal `workflowId` in that opening activity so a fresh-process retry of it re-enters the same Run instead of opening a parallel one; the republished `ai-run-start` folds idempotently.
+Open the run in its own activity, separate from the first inference. That activity only calls `createRun` and `run.start()`; it publishes `ai-run-start` and returns the run's ids without running the model. Two things follow from the split. An inference failure retries the inference alone and never re-opens the run. And the run's ids reach the workflow before any inference runs, so if the very first inference exhausts its retries your failure path still has the ids to end the run rather than leaving it open. Pin the run id to the Temporal `workflowId` in that opening activity so a fresh-process retry of it re-enters the same run instead of opening a parallel one; the republished `ai-run-start` folds idempotently.
 
-## Route cancels through the channel <a id="cancel-routing"/>
+## Route cancels through the session <a id="cancel-routing"/>
 
 Cancels do not need a Temporal signal. A `clientRun.cancel()` in the browser publishes `ai-cancel` on the Ably channel. The activity's own `AgentSession` subscribes to that channel and routes the cancel to [`run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run) via the SDK's built-in cancel routing:
 
@@ -110,7 +110,7 @@ Because each activity constructs its own session and routes its own cancels, no 
 
 A [suspend](/docs/ai-transport/features/human-in-the-loop) does not resume the current workflow. The suspending activity calls `run.suspend()`, publishes `ai-run-suspend`, and returns. The workflow ends. When the client posts a continuation invocation (a tool result or an approval response), the HTTP handler starts a fresh workflow. That workflow's first activity calls `session.createRun(invocation, { invocationId })` with the new invocation id; the SDK sees the existing `runId` on the continuation input event and publishes `ai-run-resume` rather than `ai-run-start`.
 
-`workflowId = invocationId` for every workflow: one workflow per HTTP POST. Continuations are new workflows on the same `runId`, not resumes of the original.
+`workflowId = invocationId` for every workflow: one workflow per HTTP POST. Continuations are new workflows on the same `runId` rather than resumes of the original.
 
 ## Scope and trade-offs <a id="scope"/>
 
@@ -118,13 +118,13 @@ Temporal is intentionally focused on execution durability. By design, it does no
 
 Two boundaries to keep in mind:
 
-- Durability applies at the Step boundary, not mid-chunk of an LLM stream. Temporal retries the whole activity. The activity's Step opens fresh under the same `stepId` and the retry's output supersedes the failed attempt.
-- Publish `run.end({ reason: 'error' })` from your workflow's outermost catch when activity retries are truly exhausted. Otherwise the Run stays open on the channel and every observer's UI stays on `streaming`.
+- Durability applies at the step boundary rather than mid-chunk of an LLM stream. Temporal retries the whole activity. The activity's step opens fresh under the same `stepId` and the retry's output supersedes the failed attempt.
+- Publish `run.end({ reason: 'error' })` from your workflow's outermost catch when activity retries are truly exhausted. Otherwise the run stays open on the session and every observer's UI stays on `streaming`.
 
 ## Read next <a id="next"/>
 
 - [Durable execution](/docs/ai-transport/features/durable-execution): the framework-agnostic pattern.
-- [Steps](/docs/ai-transport/concepts/steps): the retry unit Temporal activities map to.
+- [Steps](/docs/ai-transport/concepts/runs#steps): the retry unit Temporal activities map to.
 - [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk): the same composition inside your Next.js app.
 - [`stepIdFor` API reference](/docs/ai-transport/api/javascript/temporal): the helper that produces a Temporal-safe `stepId`.
 - [AgentSession API reference](/docs/ai-transport/api/javascript/core/agent-session): `adoptRun`, `createStep`, `detach`, and `end`.

@@ -74,36 +74,12 @@ export default {
           link: '/docs/ai-transport/concepts/sessions',
         },
         {
-          name: 'Connections',
-          link: '/docs/ai-transport/concepts/connections',
-        },
-        {
           name: 'Runs',
           link: '/docs/ai-transport/concepts/runs',
         },
         {
-          name: 'Steps',
-          link: '/docs/ai-transport/concepts/steps',
-        },
-        {
-          name: 'Invocations',
-          link: '/docs/ai-transport/concepts/invocations',
-        },
-        {
-          name: 'Codecs',
-          link: '/docs/ai-transport/concepts/codecs',
-        },
-        {
           name: 'Conversation tree',
           link: '/docs/ai-transport/concepts/conversation-tree',
-        },
-        {
-          name: 'Authentication',
-          link: '/docs/ai-transport/concepts/authentication',
-        },
-        {
-          name: 'Infrastructure',
-          link: '/docs/ai-transport/concepts/infrastructure',
         },
       ],
     },
@@ -176,7 +152,7 @@ export default {
           link: '/docs/ai-transport/features/interruption-and-steering',
         },
         {
-          name: 'LiveObjects State',
+          name: 'LiveObjects state',
           link: '/docs/ai-transport/features/liveobjects',
         },
         {

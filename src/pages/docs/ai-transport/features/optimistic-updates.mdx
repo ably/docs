@@ -5,7 +5,7 @@ meta_keywords: "optimistic updates, optimistic UI, instant messages, reconciliat
 intro: "Your users see their messages the instant they hit send. AI Transport inserts the message into the local tree before the server confirms, and reconciles automatically using the message ID."
 ---
 
-User messages appear in the conversation immediately, before the server confirms. The client inserts the message into the tree optimistically. When the server publishes it to the channel, the transport reconciles using the message ID. The user sees no flash, no re-render, and no position change.
+User messages appear in the conversation immediately, before the server confirms. The client inserts the message into the tree optimistically. When the server publishes it to the session, the transport reconciles using the message ID. The user sees no flash, re-render, or position change.
 
 ![Diagram showing the same message id on a local-insert path and a wire-publish path, reconciling by id when the channel echo arrives](../../../../images/content/diagrams/ait-optimistic-update.png)
 
@@ -15,23 +15,23 @@ When a user sends a message, the client inserts it into the conversation tree be
 
 Behind the scenes:
 
-1. The client mints a `codec-message-id` and inserts the message into the conversation tree.
-2. The client publishes the input directly to the Ably channel, stamped with that `codec-message-id`.
-3. The application POSTs the invocation pointer (`inputEventId`, `sessionName`) to the agent endpoint to wake the agent. The POST does not carry the message body; the agent reads the input event off the channel.
-4. The client receives its own publish back through the channel subscription.
+1. The client generates a `codec-message-id` and inserts the message into the conversation tree.
+2. The client publishes the input directly to the session, stamped with that `codec-message-id`.
+3. The application POSTs the invocation pointer (`inputEventId`, `sessionName`) to the agent endpoint to wake the agent. The POST does not carry the message body; the agent reads the input event off the session.
+4. The client receives its own publish back through its session subscription.
 5. The session matches the echo to the optimistic insert by `codec-message-id` and promotes it to a confirmed message.
 
-After reconciliation, the optimistic message is replaced by the wire-confirmed version. From the user's perspective, the message was always there.
+After reconciliation, the optimistic message is replaced by the wire-confirmed version.
 
 ## Serial promotion <a id="serial-promotion"/>
 
-Optimistic messages do not have an Ably serial number; they exist only in the local tree. When the server publishes the message to the channel, the reconciled message receives a real Ably serial. This is serial promotion.
+Optimistic messages do not have an Ably serial number; they exist only in the local tree. When the server publishes the message to the session, the reconciled message receives a real Ably serial. This is serial promotion.
 
 Serial promotion matters for ordering. Messages in the conversation tree are ordered by their Ably serial. Optimistic messages sit at the end of the tree until they are promoted. Once promoted, their position reflects the true order of publication assigned by the Ably channel.
 
 ## Send multiple messages in one turn <a id="multi-message"/>
 
-A single turn includes one or more user messages. When sending more than one, each is inserted optimistically in sequence:
+A single turn includes one or more user messages. When the client sends more than one, each is inserted optimistically in sequence:
 
 <Code>
 ```javascript
@@ -46,7 +46,7 @@ Each message in the array is inserted into the tree optimistically. When the ser
 
 ## Handle errors <a id="error-handling"/>
 
-If the channel publish fails, the SDK removes the optimistic message from the tree automatically and the session emits an `error` event. If the channel publish succeeds but the agent-wake POST fails, the optimistic message stays in the tree (it is a real, published message); your application chooses whether to surface a retry to the user:
+On the client, if the publish to the session fails, the SDK removes the optimistic message from the tree automatically and the session emits an `error` event. If the publish succeeds but the agent-wake POST fails, the optimistic message stays in the tree (it is a real, published message); your application chooses whether to surface a retry to the user:
 
 <Code>
 ```javascript
@@ -61,21 +61,19 @@ session.on('error', (error) => {
 ```
 </Code>
 
-Your application decides whether to notify the user, offer a retry, or take other action.
-
 ## Reconciliation details <a id="reconciliation"/>
 
-The session uses the `codec-message-id` header (under the `extras.ai.codec` tier) to match published messages to optimistic inserts. When the client publishes an input, the SDK mints a client-side codec-message-id and stamps it on the wire. The domain message's own `id` is preserved verbatim from the source stream; correlation does not rely on it. When the client receives the published message through its subscription, the SDK matches on the codec-message-id and promotes the optimistic message to a confirmed one.
+The session uses the `codec-message-id` header (under the `extras.ai.codec` tier) to match published messages to optimistic inserts. When the client publishes an input, the SDK generates a client-side codec-message-id and stamps it on the wire. The domain message's own `id` is preserved verbatim from the source stream; correlation does not rely on it. When the client receives the published message through its subscription, the SDK matches on the codec-message-id and promotes the optimistic message to a confirmed one.
 
 A published message that does not match any optimistic insert (for example, a message from another client) is added to the tree normally. The reconciliation logic only applies to messages the current client sent.
 
 ## Edge cases and unhappy paths <a id="edge-cases"/>
 
-- A failed channel publish is rolled back: the optimistic message is removed from the tree and the session emits an `error` event. A failed agent-wake POST leaves the (published) message in the tree because it is a real conversation entry; your application chooses whether to surface a retry.
-- A message ID collision (the same ID used twice on the same channel) confuses reconciliation. Use `crypto.randomUUID()` to generate IDs.
-- A published message that arrives before the server returns from POST still reconciles correctly. Reconciliation uses the message ID, not request ordering.
+- A failed publish to the session is rolled back: the optimistic message is removed from the tree and the session emits an `error` event. A failed agent-wake POST leaves the (published) message in the tree because it is a real conversation entry; your application chooses whether to surface a retry.
+- A message ID collision (the same ID used twice in the same session) confuses reconciliation. Use `crypto.randomUUID()` to generate IDs.
+- A published message that arrives before the server returns from POST still reconciles correctly. Reconciliation uses the message ID rather than request ordering.
 - Two clients sending at the same time produce two distinct optimistic messages and two server publishes. Each client only reconciles its own; the other side appears as a normal observer message.
-- A server that publishes the message without the `codec-message-id` header is treated as a new message, not a reconciliation. The SDK stamps this header automatically; only custom codecs that publish raw need to wire it through.
+- A server that publishes the message without the `codec-message-id` header is treated as a new message rather than a reconciliation. The SDK stamps this header automatically; only custom codecs that publish raw need to wire it through.
 
 ## FAQ <a id="faq"/>
 
@@ -85,7 +83,7 @@ The optimistic insert is a local UI optimisation. The server publishes the canon
 
 ### Does optimistic insertion work for assistant messages? <a id="faq-assistant"/>
 
-No. Assistant messages stream from the server through the channel. Optimistic insertion is for user messages that the local client originates.
+No. Assistant messages stream from the server through the session. Optimistic insertion is for user messages that the local client originates.
 
 ### What if the server publishes the message but the response never arrives? <a id="faq-publish-no-response"/>
 
@@ -97,7 +95,7 @@ Yes. Remove it from your application state when you decide the send has failed. 
 
 ### Does this work with branching? <a id="faq-branching"/>
 
-Yes. The optimistic message receives the correct `parent` and `forkOf` headers when reconciled. See [conversation branching](/docs/ai-transport/features/branching).
+Yes. The optimistic message receives the correct `parent` and `forkOf` headers for its [branch](/docs/ai-transport/features/branching) when reconciled.
 
 ## Related features <a id="related"/>
 
