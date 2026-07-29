@@ -2,7 +2,6 @@ import js from './images/js.svg';
 import java from './images/java.svg';
 import python from './images/python.svg';
 import react from './images/react.svg';
-import reactnative from './images/reactnative.svg';
 import csharp from './images/csharp.svg';
 import go from './images/go.svg';
 import nodejs from './images/nodejs.svg';
@@ -57,7 +56,7 @@ export const data = {
         {
           title: 'React Native',
           text: 'Ably React Native SDK.',
-          image: { src: reactnative, isWide: false },
+          image: { src: react, isWide: false },
           setupLink: 'getting-started/react-native',
         },
         {
@@ -143,12 +142,6 @@ export const data = {
           text: 'Ably SDK for NativeScript.',
           image: { src: nativescript, isWide: false },
           setupLink: 'https://github.com/ably/ably-js-nativescript#how-to-use-this-library',
-        },
-        {
-          title: 'React Native',
-          text: 'Ably SDK for React Native.',
-          image: { src: react, isWide: false },
-          setupLink: 'getting-started/react-native',
         },
         {
           title: 'Cordova',
