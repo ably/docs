@@ -19,7 +19,7 @@ export type CardProps = {
 
 const Card = ({ githubRepoURL, setupLink, title, image, text }: CardProps) => {
   return (
-    <section className="p-6 bg-extra-light-grey rounded-lg flex-1">
+    <section className="p-6 bg-extra-light-grey dark:bg-neutral-1200 rounded-lg flex-1">
       <div className="flex items-center justify-between">
         <h3 className="ui-text-h3">{title}</h3>
         <img key={image.src} src={image.src} height="40px" width={`${image.isWide ? '68px' : '40px'}`} />
