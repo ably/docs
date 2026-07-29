@@ -82,7 +82,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
         <hr />
       </div>
       <div className={`${container}`}>
-        <p className="ui-text-p1 text-charcoal-grey py-[4.5rem]">{data.tabs[activeTab].text}</p>
+        <p className="ui-text-p1 py-[4.5rem]">{data.tabs[activeTab].text}</p>
       </div>
       <CardGrid currentProduct={data.tabs[activeTab].cards} />
     </div>
