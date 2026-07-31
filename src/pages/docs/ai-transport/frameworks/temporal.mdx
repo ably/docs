@@ -2,62 +2,48 @@
 title: "Temporal"
 meta_description: "How Ably AI Transport composes with Temporal. One activity per step, activity ids as stepIds, retry supersedes on the session, cancels routed through Ably rather than Temporal signals."
 meta_keywords: "AI Transport, Temporal, durable execution, workflow, activity, stepIdFor, adoptRun, createStep, retry"
-intro: "Temporal owns the durability of your agent's execution. AI Transport owns the durability of the conversation the user sees."
+intro: "Ably AI Transport allows Temporal activities to publish their output directly to clients
+over Ably Pub/Sub channels."
 ---
 
-The Temporal integration with Ably AI Transport lets an AI agent running as a workflow publish its output to a durable session, so every device on the conversation receives it in realtime and keeps it through reconnects and retries.
+The Ably AI Transport integration with Temporal lets an AI agent running as a Temporal workflow publish its output directly to clients over a durable session, so every device in the conversation receives messages in realtime, and survives reconnects and workflow retries without polluting the conversation.
 
-Ably AI Transport is built on top of Ably Pub/Sub channels, so a conversation inherits the platform underneath it. Tokens arrive in the [order](/docs/platform/architecture/message-ordering) the model produced them, a client [recovers](/docs/platform/architecture/connection-recovery) its stream after a disruption without gaps, and messages travel at [low latency](/docs/platform/architecture/latency).
+Temporal AI Agent activities can publish their output directly to clients over Ably Pub/Sub channels using the AI Transport SDK, so clients can receive messages in realtime without the need for those messages to be proxied back through either Temporal or another database and API server.
+
+Ably AI Transport is built on top of [Ably Pub/Sub channels](/docs/basics), so a conversation inherits all the features of the Ably platform. Tokens arrive in the [order](/docs/platform/architecture/message-ordering), a client [recovers](/docs/platform/architecture/connection-recovery) its stream after a disruption without gaps, and messages travel at [low latency](/docs/platform/architecture/latency).
 
 ![Diagram mapping Temporal activities on the left to AI Transport steps on a single run on the right. openRun opens the run with no step; runInferenceStep publishes step A; runToolStep fails on attempt 1 and its attempt-2 retry supersedes it under the same stepId B; a follow-up runInferenceStep publishes step C and ends the run. Each activity maps to one step, sharing the activityId as the stepId.](../../../../images/content/diagrams/ait-frameworks-temporal.png)
 
-## Map the concepts onto Temporal <a id="concepts"/>
+## How AI Transport works with Temporal <a id="concepts"/>
 
 These are AI Transport's four concepts and their Temporal equivalents:
 
-| AI Transport | What it is | Temporal counterpart |
+| AI Transport concept | What it is | Temporal counterpart |
 | --- | --- | --- |
-| Session | The durable conversation, made up of runs. It exists whether or not anyone is connected. | None. It outlives every workflow that publishes to it. |
-| Run | One turn inside a session, from the user's message to the agent's final answer. | One workflow execution, or several if the run is continued. |
-| Step | One unit of a run's output: a model response or a tool result. The retry boundary. | One activity. |
-| Invocation | One request to the agent. Its id stamps every event that request produces. | The `workflowId`. |
+| Session | The complete state of the conversation, that clients can connect and disconnect from independently. | None. The Session is the conversation that multiple Temporal workflows can publish to and read from. |
+| Run | One turn, from the user's prompt to the agent's final answer. | One or more workflow executions. |
+| Step | One unit within a run's output: a model response or a tool result. | One activity. Steps match the retry boundaries and guarantees provided by Temporal activities. |
+| Invocation | One request to start an agent. | A single workflow invocation. |
 
-## Where systems connect <a id="connect"/>
+## How AI Transport handles Workflows and Activities <a id="workflows-and-activities"/>
 
-Each activity publishes its output as a single step, using the Temporal activity id as that step's `stepId`. Temporal's retryable unit and AI Transport's supersedable unit share one identifier, which is what joins the two systems.
+When an AI Agent's loop is implemented as a Temporal workflow the entire execution of the workflow is a single Ably AI Transport run.
 
-Use [`stepIdFor`](/docs/ai-transport/api/javascript/temporal) from `@ably/ai-transport/temporal` to derive the `stepId`. It reads the activity id from the Temporal activity context and prefixes it with the run's invocation id. Two workflows both have `activityId === '1'` for their first activity; the invocation-id prefix keeps their steps distinct on the session.
+Each activity within the workflow maps to a single step within the run. Steps within a run are deduplicated based on their `stepId`, which means that if an activity fails and Temporal retries it, the retried activity's output automatically supersedes the failed attempt's output in the run. This keeps the conversation clean, and prevents messages from a failed activity polluting what the user will see.
 
-## Route cancels through the session <a id="cancel-routing"/>
+## Cancellation and steering messages <a id="cancellation-and-steering"/>
 
-Cancels do not need a Temporal signal. A `clientRun.cancel()` in the browser publishes `ai-cancel` on the Ably channel. The activity's own `AgentSession` subscribes to that channel and routes the cancel to [`run.abortSignal`](/docs/ai-transport/api/javascript/core/agent-session#run) via the SDK's built-in cancel routing:
+The Ably Pub/Sub channel that the AI agent's output it published to also allows bi-directional streaming and control between the AI agent and the clients. This allows the client to cancel a run mid-stream, or to send interrupt or steering messages to the AI agent to shape the agent's output while it is running. This is possible without having to build a custom API server to proxy those messages and signals into the Temporal workflow.
 
-```text
-Browser client
-      │  clientRun.cancel()
-      ▼
-Ably channel
-      │  ai-cancel published
-      ▼
-Activity's AgentSession (subscribes on adoptRun/createRun)
-      │  matches by run-id
-      ▼
-run.abortSignal fires
-      │  passed to streamText as abortSignal
-      ▼
-LLM call aborts · step.end()
-run.end({ reason: 'cancelled' })
-```
+## Getting started
 
-Because each activity constructs its own session and routes its own cancels, no long-running listener activity is needed for cancels. Temporal-level cancellation (a workflow cancel) still propagates via the activity's `Context.current().cancellationSignal`, which the code above passes into `adoptRun` as the runtime signal.
-
-## Prerequisites <a id="prerequisites"/>
+### Prerequisites <a id="prerequisites"/>
 
 - Working knowledge of Temporal workflows and activities. If you are new to Temporal, start with [Understanding Temporal](https://docs.temporal.io/evaluate/understanding-temporal) and the [Temporal 101](https://learn.temporal.io/courses/temporal_101/) course.
 - A local Temporal development environment, including the [Temporal CLI](https://learn.temporal.io/getting_started/typescript/dev_environment/).
 - An [Ably account](https://ably.com/sign-up) with an API key, and an OpenAI API key.
 
-## Install the packages <a id="install"/>
+### Install the packages <a id="install"/>
 
 Install the SDK, the Ably client, the OpenAI client, and the Temporal packages:
 
@@ -74,38 +60,27 @@ The `@ably/ai-transport/temporal` subpath declares `@temporalio/activity` as an 
 Each session is backed by an Ably channel, and AI Transport streams a response by appending tokens to a single message on it. That requires the **Message annotations, updates, deletes, and appends** rule on the channel namespace your conversations use, which you enable per namespace in your Ably dashboard. Without it, the first token append fails with error `93002` and nothing streams.
 </Aside>
 
-## Decide what runs in the workflow <a id="workflow-vs-activity"/>
+### Decide the agent layout <a id="agent-layout"/>
 
-Temporal replays workflow code on every wake-up, so workflow functions must be deterministic and free of I/O. Every interaction with the session is therefore an activity, and the workflow holds nothing but the run's identity and the loop's control flow.
+Temporal workflows should be free of I/O and deterministic, so the workflow itself does not call the model or run tools. The workflow also does not interact with the Ably AI Transport session directly. Instead, all interaction with the AI Transport session happens through Temporal activities.
 
-| Work | Where it runs | Why |
+The session, a run, and a step all have ids. These ids thread through the workflow and its activities.
+
+| AI Transport | Where it runs | Why |
 | --- | --- | --- |
-| `createAgentSession`, `session.connect()`, `createRun`, `adoptRun`, `run.load()` | Activity | Opens an Ably connection and reads the session. Temporal loads workflow bundles in a sandbox with no access to the Ably SDK at import time. |
-| `createStep`, `step.pipe()`, `step.send()`, `run.start()`, `run.end()` | Activity | Publishes steps and run lifecycle events to the session. |
 | The run's `runId`, `invocationId`, and `triggerEventId` | Workflow | Plain strings. The workflow threads them into every activity it schedules. |
-| The agent loop: whether to run another model call, which tool calls to dispatch | Workflow | Deterministic control flow over values the activities returned. |
-| Cancel handling | Neither | Cancels arrive on the session and fire `run.abortSignal` inside whichever activity holds the run. |
-
-## Follow one run end to end <a id="one-turn"/>
-
-Before the code, the shape of a single run that calls one tool:
-
-1. The browser publishes the user's message to the session, then posts the run's invocation pointer to your agent route.
-2. The route starts a workflow named after that invocation and returns immediately.
-3. `openRun` opens the run on the session, so every attached client knows a run has begun.
-4. `runInferenceStep` calls the model and pipes the response onto the session as it arrives. The browser renders it as it lands.
-5. The model asks for the tool, so the workflow schedules `runToolStep`, which runs the tool and publishes its result as a step of its own.
-6. `runInferenceStep` runs again, reads the tool result back off the session, streams the final answer, and ends the run.
-
-Each numbered activity is retried independently by Temporal, and each publishes under its own step id.
+| Connecting to a session, creating and adopting a run, and publishing through steps. | Activity | Reads and writes to the Ably AI Transport session. |
+| Cancellation and steering | Neither | Cancels arrive on the session and fire `run.abortSignal` inside whichever activity holds the run. |
 
 ## Implement the agent <a id="implement"/>
 
-The agent side is three activities, the workflow that schedules them, and the route that starts a workflow per user run.
+The agent side is made up of: three Temporal activities, the workflow that schedules them, and the route that starts a workflow per user run.
 
-### 1. Open the run in its own activity <a id="open-run"/>
+### 1. Creating a new run in its own activity <a id="create-run"/>
 
-Opening the run is its own activity, separate from the first model call. It calls `createRun` and `run.start()`, publishes the opening event, and returns the run's ids without calling the model:
+Creating a new run is its own activity, separate from the first model call. This allows the run's identifiers to be persisted in the Temporal workflow log, and later activities can re-use the same run across the workflow.
+
+This activity calls `createRun` and `run.start()`, publishes the run-start event, and returns the run's ids without calling the model:
 
 <Code>
 ```javascript
@@ -126,8 +101,9 @@ export async function openRun({ invocation, invocationId }) {
     await session.connect();
     const run = session.createRun(Invocation.fromJSON(invocation), {
       invocationId,
-      // Pin the run id to the Temporal workflowId so a fresh-process retry
-      // re-enters the same run instead of opening a parallel one.
+      // The route passes this id as both the workflowId and the invocationId,
+      // so it is stable across retries. A continuation ignores it and reads
+      // the run id off the channel.
       runId: invocationId,
       signal: Context.current().cancellationSignal,
     });
@@ -153,13 +129,17 @@ export async function openRun({ invocation, invocationId }) {
 ```
 </Code>
 
-Two things follow from keeping this out of the first model call. If a model call fails, only that activity retries, and the run stays open because a different activity opened it. The workflow also holds the run's ids before any model call runs, so when one does exhaust its retries, your failure path knows which run to close instead of leaving it open.
+A run's `runId` must be stable across retries, so an activity that retries in a fresh process re-enters the same run rather than opening a second one. Use the invocation id as the Temporal workflow id and the run id.
 
-Pinning `runId` to the workflow id is what makes retrying this activity safe. If it dies after publishing, Temporal runs it again in a fresh process, and the second attempt re-enters the same run instead of opening a parallel one. The duplicate start event is harmless, because the first start wins. Continuations work differently: their run id comes from the event that triggered them, so the override only affects a fresh run.
+<Aside data-type='important'>
+Do not use Temporal's own run id, `workflowInfo().runId`, as the AI Transport `runId`. The names match but the ids are unrelated, and Temporal changes its own run id on a workflow retry and on continue-as-new, so using it opens a new AI Transport run every time.
+</Aside>
+
+This only covers a run the workflow opens itself. When a client resumes a [suspended](/docs/ai-transport/concepts/runs) run, a second workflow continues it under a new workflow id, and AI Transport takes the run id from the resuming event's headers instead. So a run can span several workflow executions, and only the first one supplies the run id.
 
 ### 2. Run each model call in its own activity <a id="inference"/>
 
-Every model call, the first and each follow-up alike, goes through the same activity. It adopts the open run, rebuilds the conversation from the session, opens a step under the activity's id, and pipes one Responses run into it:
+Each model call is executed through the same activity. The activity adopts the open run, rebuilds the conversation from the session history, opens a step under the activity's id, and pipes one model response run into it:
 
 <Code>
 ```javascript
@@ -220,13 +200,9 @@ export async function runInferenceStep({ ids, invocation }) {
 ```
 </Code>
 
-The activity runs exactly one Responses turn. If the model emitted function calls, it leaves the run open and returns them, and the workflow schedules the next unit of work.
-
-The activity publishes its own terminal event before returning. A run that ends inside the activity that produced the outcome never depends on the workflow surviving long enough to close it.
-
 ### 3. Publish each tool result in its own activity <a id="tool-calls"/>
 
-The workflow schedules one tool activity per call the model emitted. Each tool execution gets its own step, so a tool that throws retries alone and its retry's output supersedes the failed attempt. The activity publishes the result as a `function_call_output` item, which the codec folds onto the conversation for the next model call to read:
+The workflow schedules one tool activity per call the model emitted. Each tool execution gets its own step, so a tool that throws retries and its retry's output supersedes the failed attempt.
 
 <Code>
 ```javascript
@@ -271,11 +247,9 @@ export async function runToolStep({ ids, invocation, call }) {
 ```
 </Code>
 
-`executeTool` is your own dispatch over the `tools` array you advertise to the model. Because the workflow owns the loop, you never execute a tool inside the model call itself, which is what keeps each one on its own step.
+### 4. Drive the loop from the workflow <a id="workflow-loop"/>
 
-### 4. Drive the loop from the workflow <a id="workflow"/>
-
-The workflow opens the run, runs the first model call, then alternates tool activities and follow-up model calls until a model call returns a terminal outcome. Its outer catch handles the case where Temporal has given up on an activity:
+The workflow opens the run, runs the first model call, then handles tool activities and follow-up model calls until a model call returns a terminal outcome. Its outer catch handles the case where Temporal has given up on an activity:
 
 <Code>
 ```javascript
@@ -320,28 +294,9 @@ export async function chatWorkflow({ invocation, invocationId }) {
 
 `server-tools` is the only outcome the loop continues on. Every other kind means the activity that returned it has already published the run's terminal event, so the workflow returns without touching the session.
 
-### 5. Register the activities and start a workflow <a id="worker"/>
+### 5. Trigger the workflow <a id="invoke"/>
 
-The worker hosts the workflow and its activities on a single task queue. Point `workflowsPath` at the module holding `chatWorkflow` and pass the activity module as `activities`:
-
-<Code>
-```javascript
-import { NativeConnection, Worker } from '@temporalio/worker';
-import * as activities from './activities.js';
-
-const connection = await NativeConnection.connect({ address: 'localhost:7233' });
-const worker = await Worker.create({
-  connection,
-  namespace: 'default',
-  taskQueue: 'ai-transport-demo',
-  workflowsPath: require.resolve('./workflows'),
-  activities,
-});
-await worker.run();
-```
-</Code>
-
-The agent route starts a workflow and returns immediately with the id the client observes. Give the workflow the same id as the invocation, so every POST gets its own workflow and one value names both the workflow in Temporal and the run on the session:
+The agent exposes an HTTP API endpoint to start a workflow. The endpoint returns immediately after the workflow is started, and the client receives the rest of the output by subscribing to the AI Transport session. Give the workflow the same id as the invocation, so every HTTP request gets its own workflow:
 
 <Code>
 ```javascript
@@ -365,105 +320,69 @@ export async function POST(req) {
 ```
 </Code>
 
-Cache the Temporal client across requests in production rather than connecting on each one. A continuation POST, such as a regenerate or an edit, starts a fresh workflow on the same run id.
-
 ## Connect the browser <a id="client"/>
 
-Nothing on the client is workflow-aware. Wrap the subtree in a [`ClientSessionProvider`](/docs/ai-transport/api/react/core/providers) naming the conversation, and authenticate the Ably client from a token endpoint rather than an API key:
+Nothing on the client is workflow-aware. Create a [client session](/docs/ai-transport/api/javascript/core/client-session) naming the conversation, and authenticate the Ably client from a token endpoint rather than an API key:
 
 <Code>
 ```javascript
-'use client';
-
 // Client-side. Never put an API key here; the browser fetches a token instead.
 import * as Ably from 'ably';
-import { AblyProvider } from 'ably/react';
-import { ClientSessionProvider } from '@ably/ai-transport/react';
+import { createClientSession } from '@ably/ai-transport';
 import { ResponsesCodec } from '@ably/ai-transport/openai';
 
 const ably = new Ably.Realtime({ authUrl: '/auth' });
 
-export function App({ conversationId }) {
-  return (
-    <AblyProvider client={ably}>
-      <ClientSessionProvider channelName={conversationId} codec={ResponsesCodec}>
-        <Chat />
-      </ClientSessionProvider>
-    </AblyProvider>
-  );
-}
+const session = createClientSession({
+  client: ably,
+  channelName: conversationId,
+  codec: ResponsesCodec,
+});
+
+await session.connect();
 ```
 </Code>
 
-Inside it, [`useView`](/docs/ai-transport/api/react/core/use-view) gives you the conversation and the send path. Sending is two steps, and the split is what keeps the client independent of Temporal. `view.send` publishes the user's message to the session and hands back a run, but the session speaks only to Ably and never makes an HTTP request. Waking the agent is yours: post the run's invocation pointer to your agent route, which is the JSON that route's `Invocation.fromJSON` rebuilds before it [starts the workflow](#worker):
+The session's `view` holds the conversation and publishes new messages. Sending is two steps, and that split keeps the client independent of Temporal. `view.send` publishes the user's message to the session and hands back a run, but the session only publishes to Ably and never makes an HTTP request. You wake the agent yourself, by posting the run's invocation pointer to your agent route. That pointer is the JSON the route's `Invocation.fromJSON` rebuilds before it [starts the workflow](#invoke):
 
 <Code>
 ```javascript
-'use client';
-
-// Client-side component, inside the provider above.
-import { useClientSession, useView } from '@ably/ai-transport/react';
+// Client-side, on the session created above.
 import { ResponsesCodec } from '@ably/ai-transport/openai';
 
-export function Chat() {
-  const { session } = useClientSession();
-  const { messages, hasOlder, loadOlder, send, runs } = useView({ limit: 30 });
+const { view } = session;
 
-  const ask = async (text) => {
-    const run = await send(
-      ResponsesCodec.createUserMessage({
-        role: 'user',
-        items: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text }] }],
-      }),
-    );
+// Fires on every change: tokens appended, steps opening, runs ending.
+view.on('update', () => render(view.getMessages()));
 
-    // The session is pure Ably transport, so the application owns the wake POST.
-    await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(run.toInvocation().toJSON()),
-    });
-  };
+// Reveal a page of history before the first paint.
+await view.loadOlder(30);
 
-  const stop = () => {
-    const active = runs.find((run) => run.status === 'active');
-    if (active) void session.cancel(active.runId);
-  };
+async function ask(text) {
+  const run = await view.send(
+    ResponsesCodec.createUserMessage({
+      role: 'user',
+      items: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text }] }],
+    }),
+  );
 
-  // Render messages, wire ask to your form, stop to a button while a run is
-  // active, and loadOlder to a control shown while hasOlder is true.
+  // The session is pure Ably transport, so the application owns the wake POST.
+  await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(run.toInvocation().toJSON()),
+  });
+
+  return run;
 }
 ```
 </Code>
 
-Everything the workflow publishes arrives through `messages` as it is produced, including a retry that supersedes a failed attempt, because the view tracks each step by id. Nothing here names a workflow, an activity, or a task queue, so the same component works whether the route behind it starts a Temporal workflow or calls the model directly. [Set up authentication](/docs/ai-transport/getting-started/authentication) covers the token endpoint behind `authUrl`.
-
-## Size timeouts and retries <a id="activity-options"/>
-
-The workflow above uses a flat five-minute timeout and three attempts, which is enough to see retries locally. In production, size the options to the work each activity does. A model-call activity holds a streaming call open for as long as the model takes, so size `startToCloseTimeout` to the whole call rather than to a single token, and set `heartbeatTimeout` alongside it to catch a stalled provider sooner than the start-to-close deadline would.
-
-Nothing heartbeats on its own while the model streams. Because the step's source is an async iterable, wrap it in a generator that heartbeats as each event passes through:
-
-<Code>
-```javascript
-const context = Context.current();
-
-async function* withHeartbeat(source) {
-  for await (const event of source) {
-    context.heartbeat();
-    yield event;
-  }
-}
-
-const result = await step.pipe(withHeartbeat(modelTurn(input, run.abortSignal, calls)));
-```
-</Code>
-
-Turn the OpenAI client's own retries off with `new OpenAI({ maxRetries: 0 })` so Temporal is the only layer retrying. The client retries a failed request twice by default. Left on, one activity attempt can make several API calls before Temporal sees a failure, stretching the activity past its timeout and hiding the error from workflow history. It also costs you the supersede: a retry buried inside one activity never reopens the step, so the failed attempt's tokens stay on the session beside the new ones.
+Cancel a run with `run.cancel()` on the handle `ask` returned. The cancel is keyed on the id of the message the client published, which the client knows as soon as it publishes, so a cancel sent before the agent has created the run id still works. That matters with Temporal, because the run id does not exist until the workflow has been scheduled and `openRun` has run, and a user who wants to stop the agent usually clicks during that gap.
 
 ## End the run when retries are exhausted <a id="cleanup"/>
 
-A run left open pins every observer's UI on `streaming` indefinitely, so the workflow's outer catch schedules one best-effort cleanup activity:
+All runs should be ended with the workflow they belong to ends. So a workflow should implement error handling that starts a cleanup activity if the workflow catches an error.
 
 <Code>
 ```javascript
@@ -493,38 +412,29 @@ export async function cleanupRun({ ids, channelName, errorMessage }) {
 ```
 </Code>
 
-`run.load()` gates on status, rejecting if the run has already ended, so scheduling cleanup on every failure path is safe. Give it one attempt and a short timeout so its own failure cannot cascade.
-
-## Scope and trade-offs <a id="scope"/>
-
-Temporal is intentionally focused on execution durability. By design, it does not model conversation state or route cancels between clients and the agent. AI Transport adds those without changing how you write workflows and activities. The workflow decides what runs and when; AI Transport decides what appears in the conversation and to whom.
-
-Two boundaries to keep in mind:
-
-- Durability applies at the step boundary rather than mid-chunk of an LLM stream. Temporal retries the whole activity. The activity's step opens fresh under the same `stepId` and the retry's output supersedes the failed attempt.
-- Publish `run.end({ reason: 'error' })` from your workflow's outermost catch when activity retries are truly exhausted. Otherwise the run stays open on the session and every observer's UI stays on `streaming`.
+`run.load()` promise checks the run status, rejecting if the run has already ended, so scheduling cleanup on every failure path is safe. Give it one attempt and a short timeout so its own failure cannot cascade.
 
 ## FAQ <a id="faq"/>
 
 ### Do I need this to run an agent in Temporal?
 
-No. Temporal runs the agent loop on its own. AI Transport covers the other half, getting output to a browser and accepting input back.
+Temporal is a workflow engine that can run the agent loop. Ably AI Transport is how you get AI agent responses from those activities to clients in realtime.
 
-### Why not send the output out of the workflow directly?
+### Why not send the output out of the workflow/activity directly?
 
-Getting bytes out of a workflow is one half of the problem. The other half is what the browser needs: rejoining a stream it was disconnected from, seeing the same conversation on a second device, loading what it missed, and sending a cancel back.
+Temporal workflows are started by a HTTP request, but the workflow's activities are scheduled and executed on a Temporal worker. This worker might not be the same process that received the HTTP request, so it won't be able to reach the client that made the request. AI Transport solves that problem by publishing the output to a channel that any client can subscribe to, regardless of which process started the workflow.
 
 ### What if nobody is watching while the agent runs?
 
-The run completes anyway. Each activity publishes its output as it goes, so a client that attaches later loads the finished answer rather than needing to have been connected throughout. How far back a client can load depends on how long the session retains history; for conversations longer than that, [hydrate from your own database](/docs/ai-transport/features/database-hydration) and the session merges the two.
+The run completes anyway. Each activity publishes its output as it goes, so a client that attaches later loads the finished answer rather than needing to have been connected throughout. How far back a client can load depends on how long the session retains history; for conversations longer than that, [hydrate from your own database](/docs/ai-transport/features/database-hydration).
 
 ### Does the browser talk to Temporal?
 
-No. The browser attaches to the session and posts to your agent route, and the route starts the workflow. Nothing on the client is workflow-aware, so you can move the agent into or out of Temporal without changing client code.
+No. The browser attaches to the session and posts to your agent's HTTP endpoint, and the endpoint starts the workflow. Nothing on the client is workflow-aware, so you can move the agent into or out of Temporal without changing client code.
 
-## Demo app <a id="sample"/>
+## Demo app <a id="demo"/>
 
-The [Temporal demo app](https://github.com/ably/ably-ai-transport-js/tree/main/demo/temporal/use-client-session-temporal) is the runnable version of the workflow and activity structure: one activity opens the run, one runs each model call, one publishes each tool result, and a Next.js route starts a workflow per run. Its walkthrough exercises a server tool call as its own activity, a deliberately flaky tool that throws on roughly half its attempts so Temporal retries it and the retry supersedes the failed attempt, a cancel mid-stream, and a second tab streaming the same run. Note that it is built on the Vercel codec rather than the OpenAI one.
+Next, explore the [Temporal demo app](https://github.com/ably/ably-ai-transport-js/tree/main/demo/temporal/use-client-session-temporal). It is a complete Next.js chat app with the Temporal worker built in, and a deliberately flaky tool that throws on roughly half its attempts so you can see Temporal retries in action. The demo app is built on the Vercel codec rather than the OpenAI one, but the workflow and activity structure is the same.
 
 ## Read next <a id="next"/>
 
@@ -533,3 +443,4 @@ The [Temporal demo app](https://github.com/ably/ably-ai-transport-js/tree/main/d
 - [Steps](/docs/ai-transport/concepts/runs#steps): the retry unit Temporal activities map to.
 - [`stepIdFor` API reference](/docs/ai-transport/api/javascript/temporal): the helper that produces a Temporal-safe step id.
 - [AgentSession API reference](/docs/ai-transport/api/javascript/core/agent-session): `adoptRun`, `createStep`, `detach`, and `end`.
+- [ClientSession API reference](/docs/ai-transport/api/javascript/core/client-session): `createClientSession`, `view.send`, `view.loadOlder`, and `run.cancel`.
