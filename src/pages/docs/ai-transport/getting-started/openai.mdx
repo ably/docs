@@ -74,24 +74,28 @@ export async function POST(req) {
 
   await session.connect();
 
-  const run = session.createRun(invocation, { signal: req.signal });
+  // No identity is pinned: this run is not retried, so a generated run id and
+  // invocation id are correct.
+  const run = session.createRun(invocation, {}, { signal: req.signal });
+
+  // Load the full conversation from history before starting the run.
+  // run.start() needs to have seen this run's triggering input; draining it
+  // from history means run.start() resolves at once instead of waiting for
+  // that input to arrive live on the channel.
+  while (run.view.hasOlder()) {
+    await run.view.loadOlder();
+  }
+
+  // Start before returning the response. A continuation re-keys run.runId from
+  // the triggering input's headers, so the id is only final once start resolves.
+  await run.start();
+
+  // Flatten the conversation into the Responses `input` array. Each stored
+  // message already holds valid model input, so no conversion is needed.
+  const input = toResponsesInput(run.view.getMessages().map(({ message }) => message));
 
   after(async () => {
     try {
-      // Load the full conversation from history before starting the Run.
-      // run.start() needs to have seen this Run's triggering input; draining it
-      // from history means run.start() resolves at once instead of waiting for
-      // that input to arrive live on the channel.
-      while (run.view.hasOlder()) {
-        await run.view.loadOlder();
-      }
-
-      await run.start();
-
-      // Flatten the conversation into the Responses `input` array. Each stored
-      // message already holds valid model input, so no conversion is needed.
-      const input = toResponsesInput(run.view.getMessages().map(({ message }) => message));
-
       const stream = await openai.responses.create(
         { model: 'gpt-5.5', input, stream: true },
         { signal: run.abortSignal },
@@ -99,7 +103,7 @@ export async function POST(req) {
 
       // The Responses stream is an async iterable, and each raw event is valid
       // codec output, so pipe it straight through. run.pipe watches
-      // run.abortSignal, so a cancel ends the Run with no extra handling here.
+      // run.abortSignal, so a cancel ends the run with no extra handling here.
       const { reason } = await run.pipe(stream);
 
       await run.end({ reason });
@@ -107,7 +111,7 @@ export async function POST(req) {
       await run.end({ reason: 'error' });
       throw err;
     } finally {
-      session.end();
+      await session.end();
     }
   });
 
