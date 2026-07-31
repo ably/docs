@@ -90,7 +90,7 @@ const input = toResponsesInput(run.view.getMessages().map(({ message }) => messa
 
 ## Run server-side tools <a id="tools"/>
 
-A Responses stream never carries a function call's *output*. OpenAI surfaces tool output only as model input on the next turn, so the codec adds one event of its own, `function_call_output`, for the agent to publish after it runs a tool.
+A Responses stream never carries a function call's *output*. OpenAI surfaces tool output only as model input on the next turn, so the codec adds an event of its own, `function_call_output`, for the agent to publish after it runs a tool. It adds one other event the Responses API has no equivalent for, the [`tool-approval-request`](#client-tools) that gates a tool on a human decision.
 
 Server-executed tools do not suspend the Run. The agent runs an agentic loop: call the Responses API, and if the model emits function calls, run them, append the model's output items and the tool outputs to the input, and call it again. The loop continues until the model produces a reply with no tool calls. Each unit of work publishes under its own `run.pipe`, so a Run that calls one tool produces three messages: the turn that emitted the calls, the tool outputs, and the final text turn.
 
@@ -98,7 +98,7 @@ For reasoning models, the loop must re-append the whole turn's output items, inc
 
 ## Run client-side tools and approvals <a id="client-tools"/>
 
-The codec also carries the client-driven half of tool calling: a client executes a tool in the browser and publishes the result, reports a tool failure, or answers a human approval prompt. The suspend and resume mechanics belong to the transport, so they work the same way they do for the Vercel codec. The agent calls `run.suspend()` to wait for a client, the client publishes its input on the same `runId`, and a continuation resumes the Run.
+The codec also carries the client-driven half of tool calling: a client executes a tool in the browser and publishes the result, reports a tool failure, or answers a human approval prompt. The agent calls `run.suspend()` to wait for a client, and a continuation resumes the run once the client has answered.
 
 `ResponsesCodec` exposes the full well-known factory set. You address each client input to the assistant message that holds the `function_call`, and key each payload by the OpenAI snake_case `call_id`:
 
@@ -112,18 +112,89 @@ await view.send(ResponsesCodec.createToolResult(codecMessageId, { call_id, outpu
 // A client-run tool failed. The message becomes the output the model sees next turn.
 await view.send(ResponsesCodec.createToolResultError(codecMessageId, { call_id, message }), { runId });
 
-// A user approved or denied a gated tool. A denial resolves entirely on the client.
+// A user approved or denied a gated tool.
 await view.send(ResponsesCodec.createToolApprovalResponse(codecMessageId, { call_id, approved, reason }), { runId });
 ```
 </Code>
 
+The Responses `function_call_output` item has no field for an approval decision or an error, so the codec holds that render-only state out of band on `OpenAIMessage.toolCallStates`, a map keyed by `call_id`. `toResponsesInput` never reads that state, so it cannot reach the model.
+
+### Publish an approval request on the call's own message <a id="approval-request"/>
+
 To gate a tool on a human decision, the agent publishes the codec's own `tool-approval-request` output, carrying the `call_id`, the tool name, and the arguments so a client can render the prompt without the streamed `function_call`.
 
-The Responses `function_call_output` item has no field for an approval decision or an error, so the codec holds that render-only state out of band on `OpenAIMessage.toolCallStates`, a map keyed by `call_id`. `toResponsesInput` never reads that state, so it cannot reach the model.
+The agent publishes the request as the tail of the model turn's own `run.pipe`, so it lands on the same `codec-message-id` as the `function_call` it gates. The pending approval state, the client's decision, and the `function_call` then fold onto one message. Published as a separate message, the request strands its pending state on a message the client's response never amends, so the approval prompt never resolves and the agent never sees the call as approved.
+
+<Code>
+```javascript
+// Agent: the model turn, then an approval request per gated call, on one pipe.
+async function* modelTurnWithGateRequests(input, signal, turn) {
+  yield* modelTurnStream(input, signal, turn);
+  for (const call of turn.calls) {
+    if (needsApproval(call.name)) {
+      yield { type: 'tool-approval-request', call_id: call.call_id, name: call.name, arguments: call.arguments };
+    }
+  }
+}
+
+await run.pipe(modelTurnWithGateRequests(input, run.abortSignal, turn));
+```
+</Code>
+
+### Wait for the run to suspend, then wake the agent <a id="resume"/>
+
+The client must get three things right when it answers a call.
+
+The client waits until the run reports `suspended` before publishing. One model turn can emit a server tool and a client tool on the same message, and resuming while the run is still active races the run's own output, whose server-tool result has not folded in yet. The provider then rejects the resumed request for the missing output. The run flips to `suspended` once the agent pauses it awaiting client input.
+
+The client answers every open call before waking the agent. The model input must carry a matching output for every open `function_call`, so a turn that emits two gated calls needs both answers before either wakes the agent. The client reads the outstanding calls with `unansweredCalls`. Its own resolution is wire-only, since the transport skips the optimistic fold for an input targeting an existing message, so the client tracks the `call_id`s it has answered instead of waiting for them to appear in the view.
+
+Publishing an input resumes nothing on its own. As everywhere else in the core SDK, the client publishes and then POSTs the invocation to wake the agent, in that order: the agent reads the conversation off the channel, so the resolution has to be there before the POST lands.
+
+<Code>
+```javascript
+import { unansweredCalls } from '@ably/ai-transport/openai';
+
+const target = view.runOf(codecMessageId);
+if (target?.status !== 'suspended') return;
+
+answered.add(call_id);
+const runMessages = view.messages
+  .filter((entry) => view.runOf(entry.codecMessageId)?.runId === target.runId)
+  .map((entry) => entry.message);
+const answeredTheLastCall = unansweredCalls(runMessages).every((call) => answered.has(call.call_id));
+
+const run = await view.send([input], { runId: target.runId });
+if (answeredTheLastCall) await wakeAgent(run);
+```
+</Code>
+
+### Run an approved call on resume <a id="approved-calls"/>
+
+An approval records the user's decision without producing the tool's output, so when the user approves a gated call the conversation holds a `function_call` with no `function_call_output`. The agent runs the tool server-side on resume, before the next model turn. It reads those calls with `approvedUnexecutedCalls`, publishes each output as its own message, and feeds them back into the input:
+
+<Code>
+```javascript
+import { approvedUnexecutedCalls } from '@ably/ai-transport/openai';
+
+const approved = approvedUnexecutedCalls(priorMessages);
+if (approved.length > 0) {
+  const { items, events } = runToolCalls(approved);
+  await run.pipe(outputStream(events));
+  input.push(...items);
+}
+```
+</Code>
+
+A denial needs no server execution, because the codec resolves it with a rejection `function_call_output` on the client. The run is still suspended, so the client must wake it to continue.
+
+The third correlation reader, `resolvedCallIds`, returns the `call_id`s that already carry an output, which a renderer uses to skip the calls it has already shown an answer for.
 
 ## Scope and trade-offs <a id="scope"/>
 
-The `ResponsesCodec` covers the shapes the Responses API streams: assistant text, refusals, reasoning (summary and raw), and server-executed function calls. It also covers the client-driven tool surface: client-executed tools, tool failures, and human approvals. Hosted tools (web and file search, code interpreter, image generation, MCP, custom tools) are not yet supported.
+The `ResponsesCodec` covers the shapes the Responses API streams: assistant text, refusals, reasoning (summary and raw), and server-executed function calls. It also covers the client-driven tool surface: client-executed tools, tool failures, and human approvals. Hosted tools (web and file search, code interpreter, image generation, MCP, custom tools) and audio are not yet supported.
+
+The codec's event inventory is total, so an event outside it throws at the encoder instead of being dropped silently. An agent that enables a hosted tool must filter that tool's events, and the `output_text` annotations those tools cite, out of the stream before piping it.
 
 The codec transmits the raw Responses events rather than a normalised abstraction. The wire therefore tracks OpenAI's own event model, which keeps stored items round-trippable to the Responses API but ties a conversation to the Responses shape. To integrate a different model provider behind one abstraction, use [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) instead.
 
