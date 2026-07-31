@@ -68,7 +68,7 @@ The session, a run, and a step all have ids. These ids thread through the workfl
 
 | AI Transport | Where it runs | Why |
 | --- | --- | --- |
-| The run's `runId`, `invocationId`, and `triggerEventId` | Workflow | Plain strings. The workflow threads them into every activity it schedules. |
+| The run's `runId` and `invocationId`, and the invocation itself | Workflow | Plain data. The workflow threads them into every activity it schedules. |
 | Connecting to a session, creating and adopting a run, and publishing through steps. | Activity | Reads and writes to the Ably AI Transport session. |
 | Cancellation and steering | Neither | Cancels arrive on the session and fire `run.abortSignal` inside whichever activity holds the run. |
 
@@ -105,6 +105,7 @@ export async function openRun({ invocation, invocationId }) {
       // so it is stable across retries. A continuation ignores it and reads
       // the run id off the channel.
       runId: invocationId,
+    }, {
       signal: Context.current().cancellationSignal,
     });
 
@@ -120,7 +121,6 @@ export async function openRun({ invocation, invocationId }) {
     return {
       runId: run.runId,
       invocationId: run.invocationId,
-      triggerEventId: invocation.inputEventId,
     };
   } finally {
     ably.close();
@@ -146,7 +146,7 @@ Each model call is executed through the same activity. The activity adopts the o
 // Agent-side activity.
 import { Context } from '@temporalio/activity';
 import Ably from 'ably';
-import { createAgentSession } from '@ably/ai-transport';
+import { createAgentSession, Invocation } from '@ably/ai-transport';
 import { ResponsesCodec, toResponsesInput } from '@ably/ai-transport/openai';
 import { stepIdFor } from '@ably/ai-transport/temporal';
 import { createResponseStream } from './model.js';
@@ -171,7 +171,9 @@ export async function runInferenceStep({ ids, invocation }) {
   });
   try {
     await session.connect();
-    const run = session.adoptRun(ids, { signal: Context.current().cancellationSignal });
+    const run = session.adoptRun(Invocation.fromJSON(invocation), ids, {
+      signal: Context.current().cancellationSignal,
+    });
     await run.load();
     while (run.view.hasOlder()) await run.view.loadOlder();
 
@@ -209,7 +211,7 @@ The workflow schedules one tool activity per call the model emitted. Each tool e
 // Agent-side activity.
 import { Context } from '@temporalio/activity';
 import Ably from 'ably';
-import { createAgentSession } from '@ably/ai-transport';
+import { createAgentSession, Invocation } from '@ably/ai-transport';
 import { ResponsesCodec } from '@ably/ai-transport/openai';
 import { stepIdFor } from '@ably/ai-transport/temporal';
 import { executeTool } from './tools.js';
@@ -223,7 +225,9 @@ export async function runToolStep({ ids, invocation, call }) {
   });
   try {
     await session.connect();
-    const run = session.adoptRun(ids, { signal: Context.current().cancellationSignal });
+    const run = session.adoptRun(Invocation.fromJSON(invocation), ids, {
+      signal: Context.current().cancellationSignal,
+    });
     await run.load();
 
     const step = run.createStep({ stepId: stepIdFor(ids.invocationId) });
@@ -282,7 +286,7 @@ export async function chatWorkflow({ invocation, invocationId }) {
     if (ids) {
       await cleanupRun({
         ids,
-        channelName: invocation.sessionName,
+        invocation,
         errorMessage: error instanceof Error ? error.message : 'workflow failed',
       }).catch(() => {});
     }
@@ -387,12 +391,12 @@ All runs should be ended with the workflow they belong to ends. So a workflow sh
 <Code>
 ```javascript
 // Agent-side activity, in the same module as the three above.
-export async function cleanupRun({ ids, channelName, errorMessage }) {
+export async function cleanupRun({ ids, invocation, errorMessage }) {
   const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
-  const session = createAgentSession({ client: ably, channelName });
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName });
   try {
     await session.connect();
-    const run = session.adoptRun(ids);
+    const run = session.adoptRun(Invocation.fromJSON(invocation), ids);
     try {
       await run.load();
     } catch {
