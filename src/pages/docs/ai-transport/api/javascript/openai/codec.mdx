@@ -1,0 +1,200 @@
+---
+title: "ResponsesCodec"
+meta_description: "API reference for ResponsesCodec, the pre-built AI Transport codec for the OpenAI Responses API."
+meta_keywords: "OpenAI, Responses API, AI Transport, ResponsesCodec, OpenAIInput, OpenAIOutput, OpenAIProjection, OpenAIMessage, call_id, codec, Ably"
+---
+
+`ResponsesCodec` is the pre-built codec for the [OpenAI Responses API](/docs/ai-transport/frameworks/openai). It implements `Codec<OpenAIInput, OpenAIOutput, OpenAIProjection, OpenAIMessage>`, so a session encodes a `ResponseStreamEvent` stream out and decodes it back into `OpenAIMessage` objects without a custom implementation.
+
+It is a single codec value, so you pass `ResponsesCodec` itself and never call it. It takes no type parameters, and one instance serves every session in the process.
+
+On the agent, bind it to the session:
+
+<Code>
+```javascript
+import { createAgentSession } from '@ably/ai-transport';
+import { ResponsesCodec } from '@ably/ai-transport/openai';
+
+const session = createAgentSession({
+  client: ably,
+  channelName: invocation.sessionName,
+  codec: ResponsesCodec,
+});
+```
+</Code>
+
+On the client, the same value goes to the React provider:
+
+<Code>
+```javascript
+'use client';
+
+import { ClientSessionProvider } from '@ably/ai-transport/react';
+import { ResponsesCodec } from '@ably/ai-transport/openai';
+
+<ClientSessionProvider channelName="conversations:demo" codec={ResponsesCodec}>
+  <Chat />
+</ClientSessionProvider>
+```
+</Code>
+
+<Aside data-type='note'>
+`ResponsesCodec()` is a type error, because `ResponsesCodec` is already the codec. Its Vercel counterpart [`createUIMessageCodec()`](/docs/ai-transport/api/javascript/vercel/codec) is a factory you call to get one, which is where the confusion comes from.
+</Aside>
+
+You rarely call the methods below yourself. A session drives `init`, `fold`, `createEncoder`, `createDecoder`, and `getMessages` for you. The methods you do call are `createUserMessage`, to send a user turn, and the three tool factories, to answer a tool call from the client.
+
+## Properties <a id="properties"/>
+
+<Table id='ResponsesCodecProperties'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| init | Build an empty `OpenAIProjection`. | `() => OpenAIProjection` |
+| fold | Fold an `OpenAIInput` or `OpenAIOutput` into the projection. | `(state, event, meta) => OpenAIProjection` |
+| createEncoder | Create an OpenAI encoder bound to the supplied channel writer. | `(channel, options?) => Encoder<OpenAIInput, OpenAIOutput>` |
+| createDecoder | Create an OpenAI decoder for the channel. | `() => Decoder<OpenAIInput, OpenAIOutput>` |
+| getMessages | Extract `{ codecMessageId, message }` pairs from an `OpenAIProjection`. | `(projection) => CodecMessage<OpenAIMessage>[]` |
+| createUserMessage | Wrap an `OpenAIMessage` as the `UserMessage` input variant. | `(message: OpenAIMessage) => OpenAIInput` |
+| createRegenerate | Build a `Regenerate` input targeting an assistant message. | `(target, parent) => OpenAIInput` |
+| createToolResult | Build a `ToolResult` input addressed at the assistant message that holds the `function_call`. Payload keyed by [`call_id`](#tool-payloads). | `(codecMessageId, payload) => OpenAIInput` |
+| createToolResultError | Build a `ToolResultError` input for a tool that failed. Payload keyed by [`call_id`](#tool-payloads). | `(codecMessageId, payload) => OpenAIInput` |
+| createToolApprovalResponse | Build a `ToolApprovalResponse` input answering a gated call. Payload keyed by [`call_id`](#tool-payloads). | `(codecMessageId, payload) => OpenAIInput` |
+
+</Table>
+
+## Tool payloads <a id="tool-payloads"/>
+
+The three tool factories take a payload keyed by OpenAI's snake_case `call_id`, taken from the `function_call` being answered. The Vercel codec uses `toolCallId` for the same purpose, so the two are not interchangeable.
+
+<Table id='OpenAIToolResultPayload'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| call_id | The `call_id` of the `function_call` this result answers. | String |
+| output | The tool's output, either text or a content list. Exactly the `function_call_output.output` shape, so it reaches the model unchanged. | `Responses.ResponseInputItem.FunctionCallOutput['output']` |
+
+</Table>
+
+<Table id='OpenAIToolResultErrorPayload'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| call_id | The `call_id` of the `function_call` that failed. | String |
+| message | Human-readable description of the failure. The reducer folds it into the `function_call_output.output`, so it becomes the output the model reads on the next turn. | String |
+
+</Table>
+
+<Table id='OpenAIToolApprovalResponsePayload'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| call_id | The `call_id` of the gated `function_call`. | String |
+| approved | Whether the user approved the tool execution. | Boolean |
+| reason | Optional human-readable reason, typically supplied on a denial. | String |
+
+</Table>
+
+An approval records a decision and produces no output, so the agent runs an approved call server-side when it resumes. A denial needs no server execution, because the reducer folds a rejection `function_call_output` on the client. [Conversation helpers](/docs/ai-transport/api/javascript/openai/conversation-helpers#correlation) covers reading that state back.
+
+## Types <a id="types"/>
+
+<Table id='OpenAIMessage'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| role | Whether the message is the user's prompt or the assistant's reply. | `'user' \| 'assistant'` |
+| items | The message's items, in wire order. An assistant message can hold several, for example reasoning followed by a `function_call`. | `OpenAIItem[]` |
+| toolCallStates | Approval and client-execution state, keyed by `call_id`. Present only when the message holds at least one tool call, because OpenAI's item model has no field for either. | `Record<string, OpenAIToolCallState>` |
+
+</Table>
+
+<Table id='OpenAIItem'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| OpenAIItem | One item inside a message. Every member is a valid Responses API input item, which is why a stored conversation round-trips to `/responses` with no conversion. | `ResponseOutputMessage \| ResponseReasoningItem \| ResponseFunctionToolCall \| ResponseInputItem.FunctionCallOutput \| ResponseInputItem.Message` |
+
+</Table>
+
+<Table id='OpenAIToolCallState'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| approval | A gated call's approval status, set when the agent requests approval and updated by the client's response. | `'pending' \| 'approved' \| 'denied'` |
+| result | The client-side execution status, set once a tool result or a tool error folds in. | `'ok' \| 'failed'` |
+| name | The tool name, carried on the approval request. | String |
+| arguments | The tool arguments as JSON text, carried on the approval request. | String |
+| reason | Optional reason accompanying an approval decision. | String |
+
+</Table>
+
+<Table id='ToolApprovalRequestEvent'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| type | Discriminator. | `'tool-approval-request'` |
+| call_id | The `call_id` of the `function_call` this approval gates. | String |
+| name | The tool's name, so a client renders the prompt without waiting for the streamed `function_call`. | String |
+| arguments | The tool's arguments as JSON text, mirroring the `function_call`. | String |
+
+</Table>
+
+<Table id='OpenAIInput'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| OpenAIInput | Every record-shape a client publishes on the `ai-input` wire. The SDK's well-known input variants, with the tool variants parameterised by the OpenAI payload shapes. | `UserMessage<OpenAIMessage> \| Regenerate \| ToolResult<OpenAIToolResultPayload> \| ToolResultError<OpenAIToolResultErrorPayload> \| ToolApprovalResponse<OpenAIToolApprovalResponsePayload>` |
+
+</Table>
+
+<Table id='OpenAIOutput'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| OpenAIOutput | Every record-shape the agent publishes on the `ai-output` wire. The codec passes OpenAI's own `ResponseStreamEvent` through, and adds two events of its own: `function_call_output`, because a Responses stream never carries a tool's output, and `tool-approval-request`, because the Responses API has no equivalent. | `ResponseStreamEvent \| { type: 'function_call_output', item } \| ToolApprovalRequestEvent` |
+
+</Table>
+
+The event inventory is total, so an event outside it throws at the encoder rather than being dropped. An agent that enables a hosted tool (web or file search, code interpreter, image generation, MCP, custom tools) or audio must filter those events out of the stream before piping it, as [Scope and trade-offs](/docs/ai-transport/frameworks/openai#scope) describes.
+
+<Table id='OpenAIProjection'>
+
+| Property | Description | Type |
+| --- | --- | --- |
+| OpenAIProjection | Per-run projection, carrying the `{ codecMessageId, message }` pair list in publication order. The SDK does not inspect this shape. Use `getMessages` instead. | `{ messages: CodecMessage<OpenAIMessage>[] }` |
+
+</Table>
+
+The well-known input variants ([`UserMessage`](/docs/ai-transport/api/javascript/core/codec#user-message), [`Regenerate`](/docs/ai-transport/api/javascript/core/codec#regenerate), [`ToolResult`](/docs/ai-transport/api/javascript/core/codec#tool-result), [`ToolResultError`](/docs/ai-transport/api/javascript/core/codec#tool-result-error), [`ToolApprovalResponse`](/docs/ai-transport/api/javascript/core/codec#tool-approval-response)) are documented on the [`Codec` reference page](/docs/ai-transport/api/javascript/core/codec#input-variants).
+
+## Example <a id="example"/>
+
+Decode a single Ably message and fold the resulting events into a fresh projection. `ReducerMeta.serial` is required, because the reducer uses it as the high-water-mark for idempotency.
+
+<Code>
+```javascript
+import { ResponsesCodec } from '@ably/ai-transport/openai';
+
+const decoder = ResponsesCodec.createDecoder();
+let projection = ResponsesCodec.init();
+
+channel.subscribe((message) => {
+  if (!message.serial) return; // live channel-subscribe messages always carry one
+  const { inputs, outputs } = decoder.decode(message);
+  for (const input of inputs) {
+    projection = ResponsesCodec.fold(projection, input, { serial: message.serial });
+  }
+  for (const output of outputs) {
+    projection = ResponsesCodec.fold(projection, output, { serial: message.serial });
+  }
+  render(ResponsesCodec.getMessages(projection).map((entry) => entry.message));
+});
+```
+</Code>
+
+## Read next <a id="next"/>
+
+- [Conversation helpers](/docs/ai-transport/api/javascript/openai/conversation-helpers): `toResponsesInput` and the correlation readers that drive the agent loop.
+- [OpenAI Responses](/docs/ai-transport/frameworks/openai): how the codec fits an agent, including the tool and approval flow.
+- [Codec](/docs/ai-transport/api/javascript/core/codec): the generic `Codec` interface and the well-known input variants.

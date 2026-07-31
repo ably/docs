@@ -235,6 +235,19 @@ export default {
               ],
             },
             {
+              name: 'OpenAI',
+              pages: [
+                {
+                  name: 'Codec',
+                  link: '/docs/ai-transport/api/javascript/openai/codec',
+                },
+                {
+                  name: 'Conversation helpers',
+                  link: '/docs/ai-transport/api/javascript/openai/conversation-helpers',
+                },
+              ],
+            },
+            {
               name: 'Vercel',
               pages: [
                 {

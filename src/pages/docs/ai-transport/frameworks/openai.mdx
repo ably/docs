@@ -34,10 +34,9 @@ AI Transport adds to the Responses API, writing the model stream to a durable se
 | Bidirectional control | Cancel, steer, and interrupt the agent from any client. No separate control channel. |
 | Active run tracking | `view.runs()` exposes which clients have Runs streaming and which Runs are in progress. |
 | Conversation branching | Edit and regenerate create forks in the conversation tree, not destructive replacements. |
+| Approval gates that reach the user anywhere | Pending tool approvals persist on the session until someone acts on them. |
 | History and replay | Load the full conversation on reconnect, page refresh, or new device join. |
 | Token compaction | Reconnecting clients receive accumulated responses, not a replay of every token. |
-
-These are the same capability bullets used on the [Vercel AI SDK Core](/docs/ai-transport/frameworks/vercel-ai-sdk-core) page; the session surface is the same whichever model layer you integrate against.
 
 ## Where they connect <a id="how-they-connect"/>
 
@@ -90,15 +89,15 @@ const input = toResponsesInput(run.view.getMessages().map(({ message }) => messa
 
 ## Run server-side tools <a id="tools"/>
 
-A Responses stream never carries a function call's *output*. OpenAI surfaces tool output only as model input on the next turn, so the codec adds an event of its own, `function_call_output`, for the agent to publish after it runs a tool. It adds one other event the Responses API has no equivalent for, the [`tool-approval-request`](#client-tools) that gates a tool on a human decision.
+A Responses stream never carries a function call's *output*. OpenAI surfaces tool output only as model input on the next turn, so the codec adds an event of its own, `function_call_output`, for the agent to publish after it runs a tool.
 
 Server-executed tools do not suspend the Run. The agent runs an agentic loop: call the Responses API, and if the model emits function calls, run them, append the model's output items and the tool outputs to the input, and call it again. The loop continues until the model produces a reply with no tool calls. Each unit of work publishes under its own `run.pipe`, so a Run that calls one tool produces three messages: the turn that emitted the calls, the tool outputs, and the final text turn.
 
-For reasoning models, the loop must re-append the whole turn's output items, including the reasoning items that preceded a function call, since reasoning models expect that reasoning to travel with the call on the next request. The [runnable demo](https://github.com/ably/ably-ai-transport-js) implements the full loop.
+For reasoning models, the loop must re-append the whole turn's output items, including the reasoning items that preceded a function call, since reasoning models expect that reasoning to travel with the call on the next request. The [runnable demo](https://github.com/ably/ably-ai-transport-js/tree/main/demo/openai/react/use-client-session) implements the full loop.
 
 ## Run client-side tools and approvals <a id="client-tools"/>
 
-The codec also carries the client-driven half of tool calling: a client executes a tool in the browser and publishes the result, reports a tool failure, or answers a human approval prompt. The suspend and resume mechanics belong to the transport, so they work the same way they do for the Vercel codec. The agent calls `run.suspend()` to wait for a client, the client publishes its input on the same `runId`, and a continuation resumes the Run.
+The codec also carries the client-driven half of tool calling: a client executes a tool in the browser and publishes the result, reports a tool failure, or answers a human approval prompt. Gating a call on a human decision needs the codec's second added event, `tool-approval-request`, which the Responses API has no equivalent for. The suspend and resume mechanics belong to the transport rather than the codec. The agent calls `run.suspend()` to wait for a client, the client publishes its input on the same `runId`, and a continuation resumes the Run.
 
 `ResponsesCodec` exposes the full well-known factory set. You address each client input to the assistant message that holds the `function_call`, and key each payload by the OpenAI snake_case `call_id`:
 
@@ -142,8 +141,6 @@ await run.pipe(modelTurnWithGateRequests(input, run.abortSignal, turn));
 </Code>
 
 ### Wait for the run to suspend, then wake the agent <a id="resume"/>
-
-The client must get three things right when it answers a call.
 
 The client waits until the run reports `suspended` before publishing. One model turn can emit a server tool and a client tool on the same message, and resuming while the run is still active races the run's own output, whose server-tool result has not folded in yet. The provider then rejects the resumed request for the missing output. The run flips to `suspended` once the agent pauses it awaiting client input.
 
@@ -201,6 +198,8 @@ The codec transmits the raw Responses events rather than a normalised abstractio
 ## Read next <a id="next"/>
 
 - [Get started with OpenAI](/docs/ai-transport/getting-started/openai): build a working app.
+- [ResponsesCodec reference](/docs/ai-transport/api/javascript/openai/codec): the codec's methods, tool payloads, and types.
+- [Conversation helpers reference](/docs/ai-transport/api/javascript/openai/conversation-helpers): `toResponsesInput` and the correlation readers.
 - [Codec architecture](/docs/ai-transport/internals/codec-architecture): how a codec translates a framework's events into Ably messages.
 - [Tool calling](/docs/ai-transport/features/tool-calling): the tool-calling model across the SDK.
 - [Agent session API reference](/docs/ai-transport/api/javascript/core/agent-session): the full API surface for the agent session.

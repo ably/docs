@@ -1,0 +1,100 @@
+---
+title: "Conversation helpers"
+meta_description: "API reference for the AI Transport OpenAI conversation helpers: toResponsesInput, resolvedCallIds, unansweredCalls, and approvedUnexecutedCalls."
+meta_keywords: "AI Transport, OpenAI, toResponsesInput, resolvedCallIds, unansweredCalls, approvedUnexecutedCalls, correlation, Responses API, Ably"
+---
+
+Four functions in `@ably/ai-transport/openai` read a conversation of [`OpenAIMessage`](/docs/ai-transport/api/javascript/openai/codec#types) objects. `toResponsesInput` turns one into model input, and the three correlation readers tell an agent what its tool calls are still waiting on. All four are pure functions, so you pass them the messages from a drained `run.view`.
+
+A run splits its work across messages, so a `function_call` and its `function_call_output` land on separate messages, and a gated call's approval decision folds onto the message holding the call. These readers pair those pieces up by `call_id`, in whatever order they arrived, so an agent decides what to do next from the conversation alone.
+
+<Code>
+```javascript
+import {
+  toResponsesInput,
+  unansweredCalls,
+  approvedUnexecutedCalls,
+} from '@ably/ai-transport/openai';
+
+// Agent, resuming a suspended run.
+while (run.view.hasOlder()) await run.view.loadOlder();
+const messages = run.view.getMessages().map(({ message }) => message);
+
+// Every open call needs an answer before the model will accept the conversation.
+if (unansweredCalls(messages).length > 0) return;
+
+// An approved call has no output yet, so run it before the next model turn.
+const approved = approvedUnexecutedCalls(messages);
+
+const input = toResponsesInput(messages);
+```
+</Code>
+
+## Build model input <a id="to-responses-input"/>
+
+<MethodSignature>{`toResponsesInput(messages: OpenAIMessage[]): Responses.ResponseInputItem[]`}</MethodSignature>
+
+Flatten a conversation into the `input` array for a Responses API call. Each stored message already holds valid Responses input items, so it needs no conversion.
+
+Every item the codec stores is a `ResponseInputItem`, so adding an item type the model cannot accept breaks the build at this function instead of failing at request time.
+
+`toResponsesInput` reads only `message.items` and never `toolCallStates`, so approval and client-execution state cannot reach the model.
+
+### Parameters <a id="to-responses-input-params"/>
+
+<Table id='ToResponsesInputParameters'>
+
+| Parameter | Required | Description | Type |
+| --- | --- | --- | --- |
+| messages | required | The conversation to flatten, usually `run.view.getMessages().map(({ message }) => message)` after draining history. | `OpenAIMessage[]` |
+
+</Table>
+
+### Returns <a id="to-responses-input-returns"/>
+
+`Responses.ResponseInputItem[]`. Pass it straight to `openai.responses.create({ input, ... })`.
+
+## Correlation readers <a id="correlation"/>
+
+The three readers all take the same `OpenAIMessage[]` and answer a different question about the run's tool calls. An agent resuming a run reads `unansweredCalls` to decide whether it can continue at all, and `approvedUnexecutedCalls` to find the work it owes before the next model turn.
+
+### resolvedCallIds <a id="resolved-call-ids"/>
+
+<MethodSignature>{`resolvedCallIds(messages: OpenAIMessage[]): Set<string>`}</MethodSignature>
+
+The `call_id` of every `function_call_output` in the conversation. A resolved call has its output folded in, so a renderer shows that output attached to the call, and the agent's loop skips it.
+
+### unansweredCalls <a id="unanswered-calls"/>
+
+<MethodSignature>{`unansweredCalls(messages: OpenAIMessage[]): Responses.ResponseFunctionToolCall[]`}</MethodSignature>
+
+The function calls that still owe the model an answer, in message and item order.
+
+The model input must carry a matching output for every open `function_call`, so resuming while any call is unanswered makes the provider reject the request. A turn that emits two gated calls therefore needs both answers before either one wakes the agent.
+
+<Table id='CallAnsweredStates'>
+
+| Call state | Counts as | Why |
+| --- | --- | --- |
+| Has a `function_call_output` | Answered | The output has folded in, which is what `resolvedCallIds` reports. |
+| Approved, no output yet | Answered | The agent runs it server-side on resume, so the output exists by the time the model sees the conversation. `approvedUnexecutedCalls` returns these. |
+| Denied | Answered | The reducer resolves a denial with a rejection `function_call_output`. |
+| Pending a decision | Unanswered | Nobody has approved or denied it yet. |
+| Client-executed, result not arrived | Unanswered | The browser has not published its result. |
+
+</Table>
+
+A client's own resolution is wire-only, because the transport skips the optimistic fold for an input targeting an existing message. A client deciding whether it answered the run's last open call should track the `call_id`s it has answered rather than waiting for them to appear in its view.
+
+### approvedUnexecutedCalls <a id="approved-unexecuted-calls"/>
+
+<MethodSignature>{`approvedUnexecutedCalls(messages: OpenAIMessage[]): Responses.ResponseFunctionToolCall[]`}</MethodSignature>
+
+The gated calls the user approved that the agent has not run yet, in message and item order. Each is a `function_call` whose `toolCallStates[call_id].approval` is `'approved'` with no `function_call_output` present.
+
+An approval is a decision and carries no output, so on resume the agent runs each of these server-side, publishes the outputs, and feeds them back before the next model turn. Skipping this step leaves a dangling `function_call` that the provider rejects.
+
+## Read next <a id="next"/>
+
+- [ResponsesCodec](/docs/ai-transport/api/javascript/openai/codec): the codec, its tool payloads, and the `OpenAIMessage` shape these functions read.
+- [OpenAI Responses](/docs/ai-transport/frameworks/openai#client-tools): the tool and approval flow these functions support, end to end.
