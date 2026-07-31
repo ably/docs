@@ -9,13 +9,22 @@ export default {
   },
   content: [
     {
-      name: 'Getting started',
+      name: 'Why AI Transport?',
       pages: [
         {
-          name: 'About AI Transport',
+          name: 'Overview',
           link: '/docs/ai-transport',
           index: true,
         },
+        {
+          name: 'HTTP streaming and AI',
+          link: '/docs/ai-transport/why/http-streaming-and-ai',
+        },
+      ],
+    },
+    {
+      name: 'Getting started',
+      pages: [
         {
           name: 'By SDK',
           pages: [
@@ -44,20 +53,6 @@ export default {
         {
           name: 'Configure the channel rule',
           link: '/docs/ai-transport/getting-started/channel-rules',
-        },
-      ],
-    },
-    {
-      name: 'Why AI Transport?',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/docs/ai-transport/why',
-          index: true,
-        },
-        {
-          name: 'HTTP streaming and AI',
-          link: '/docs/ai-transport/why/http-streaming-and-ai',
         },
       ],
     },

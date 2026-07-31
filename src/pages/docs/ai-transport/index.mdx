@@ -1,52 +1,177 @@
 ---
-title: "About AI Transport"
-meta_description: "AI Transport is durable session infrastructure for AI applications. Streams survive reconnects, sessions span devices, and any participant signals any other through the same session."
-meta_keywords: "AI Transport, AI infrastructure, durable sessions, token streaming, multi-device, AI agents, Ably"
-intro: "AI Transport is a drop-in durable session layer for AI applications. Conversations survive disconnects, span devices, and let any client signal any agent through the same session."
+title: "AI Transport"
+meta_description: "AI Transport moves an AI response off the HTTP request that asked for it and into a durable session that any client can attach to and any device can resume."
+meta_keywords: "AI Transport, durable sessions, AI infrastructure, resumable token streaming, HTTP streaming limitations, multi-device AI, bidirectional, Ably"
+intro: "AI Transport is a durable session layer for AI applications. Your agent publishes into a session instead of an HTTP response body, so the conversation outlives the connection that started it."
+redirect_from:
+  - /docs/ai-transport/why
+  - /docs/ai-transport/concepts/infrastructure
 ---
 
-AI Transport gives your AI agents a durable session that outlives the connection. Tokens stream over a session rather than a single HTTP request, so a client reconnects without losing the response. The same session is open to any device the user picks up. Any participant publishes to the session, so a stop button on the phone cancels a turn that started on the laptop.
+Answers that vanish when the connection drops, stop buttons that stop the UI but not the generation, conversations that do not exist on the user's phone. The cause is the same each time: the response only exists inside the HTTP request that asked for it. Bad AI UX is usually a transport problem, not a model problem.
 
-It works with any AI model or framework: OpenAI, Anthropic, Vercel AI SDK, LangChain, or your own stack. AI Transport runs on Ably's [fault-tolerant](/docs/platform/architecture/fault-tolerance) global platform, with messaging at [low latency](/docs/platform/architecture/latency) across regions and [elastic scale](/docs/platform/architecture/platform-scalability).
+AI Transport moves the response off that request. Your agent publishes into a durable session held on Ably, and every client attaches to the session by name to read it. The client that dropped resumes mid-response, the phone opens the conversation the laptop started, and the user sends again mid-answer.
+
+AI Transport is delivery infrastructure, not a model or an agent framework. You keep your model provider, whether that is OpenAI, Anthropic, Google, or a model you host, and your prompts, orchestration, and hosting stay where they are. A drop-in transport covers the [Vercel AI SDK](/docs/ai-transport/frameworks/vercel-ai-sdk-ui), and the [Core SDK](/docs/ai-transport/getting-started/core-sdk) composes with other frameworks, including [Vercel WDK](/docs/ai-transport/frameworks/vercel-wdk) and [Temporal](/docs/ai-transport/frameworks/temporal).
+
+![Two-panel architecture diagram. On the left, traditional HTTP streaming: one device sends a prompt and reads the streamed response back over the same request. On the right, with AI Transport: the response is returned as a conversation id, and multiple devices subscribe to the AI Transport session the agent publishes into](../../../images/content/diagrams/ai-transport-before-and-after.png)
 
 <Aside data-type='note'>
-AI Transport is for conversations between a user and an AI agent. If you are building conversations between people, such as human-staffed support, group chat, or livestream chat, use the [Chat SDK](/docs/chat). The two are separate products today, and [choosing between AI Transport and Chat](/docs/platform/products#ait-vs-chat) covers which one fits your case.
+For conversations between people rather than between a user and an agent, such as group chat or support staffed by humans, use the [Chat SDK](/docs/chat) instead. [Choosing between AI Transport and Chat](/docs/platform/products#ait-vs-chat) covers the boundary.
 </Aside>
 
-![Before and after adding AI Transport](../../../images/content/diagrams/ai-transport-before-and-after.png)
+## What breaks without a durable session <a id="what-breaks-without-it"/>
 
-## Get started <a id="get-started"/>
+Most AI frameworks tie a turn to [one HTTP request](/docs/ai-transport/why/http-streaming-and-ai), so the conversation and the connection share a lifetime. That connection only ever joins one client to one agent.
+
+For a one-shot interaction that holds. The failures start where the two lifetimes come apart:
+
+| In production | Direct HTTP streaming | AI Transport session |
+| --- | --- | --- |
+| The connection drops mid-response | The response is gone. The model keeps generating tokens with nowhere to deliver them, and the user sees an error and starts over. | The agent keeps publishing into the session, and the client reconnects and [picks up where it stopped](/docs/ai-transport/features/reconnection-and-recovery). |
+| The user presses stop | Closing the connection is the only signal available, and the agent cannot tell it apart from a network drop. | The client publishes a [cancel signal](/docs/ai-transport/features/cancellation), and the agent's current [run](/docs/ai-transport/concepts/runs) ends while the session stays open. |
+| The agent process restarts mid-answer | The outbound stream ends with the process, and the client keeps a response that stopped halfway. | Your workflow engine retries the step, which publishes into [the same session](/docs/ai-transport/features/durable-execution), and the client keeps reading. |
+| The user wants to know the agent is still working | A long pause looks the same as a stalled process. | The agent reports thinking, streaming, or idle through [presence](/docs/ai-transport/features/agent-presence) on the session. |
+| The user opens the conversation on a phone | The stream belongs to the client that opened it, so a second device has no way in. | Every device [attaches to the same session](/docs/ai-transport/features/multi-device) and sees the conversation as it streams. |
+| The user changes direction halfway through an answer | There is no upstream channel to send on. | The client [steers the active run](/docs/ai-transport/features/interruption-and-steering), cancels it and re-prompts, or [sends alongside it](/docs/ai-transport/features/double-texting). |
+| The agent needs approval before it acts | The pending request lives on one connection, so a drop before anyone answers loses it. | The request [waits in the session](/docs/ai-transport/features/human-in-the-loop), and any user approves it minutes or hours later. |
+
+A single user on a train, moving from Wi-Fi to cellular and then to a laptop, runs into most of these on their own. The threshold is whether a response takes long enough to be interrupted, or a conversation is worth coming back to.
+
+You meet these failures one at a time and solve them one at a time. What accumulates is a buffer for stream resume, a database for conversation state, a queue or a second WebSocket for upstream signals, a status endpoint with a client polling it, and a [reconciliation path](/docs/ai-transport/why/http-streaming-and-ai) to merge stored state with the live stream every time a client joins.
+
+Each piece is tractable on its own. What does not get easier is keeping them correct together under reconnects, retries, and out-of-order delivery, and none of it is specific to the AI product you are shipping.
+
+## How a durable session changes the architecture <a id="durable-sessions"/>
+
+A [session](/docs/ai-transport/concepts/sessions) is the whole state of a conversation, addressed by name and living independently of anything connected to it. No client or agent is privileged. A client that drops, a serverless agent that exits, a phone joining an hour later, and an orchestrator delegating to sub-agents all read and write the session the same way.
+
+![Diagram showing a laptop, a phone, and a second tab attached to one AI Transport session, with two agents on the other side. The session holds the durable conversation, token streaming, concurrent runs, cancellation, tool calling, multi-device sync, reconnection, history, branching, and agent presence](../../../images/content/diagrams/ait-overview.png)
+
+[Token streams](/docs/ai-transport/features/token-streaming) accumulate in the session as they arrive, so a reconnecting client receives the response as one assembled message, not a replay of every token. Within its retention window the session is also the conversation's [history](/docs/ai-transport/features/history), so a client opening the conversation later reads it from the same place. [Ably Push](/docs/ai-transport/features/push-notifications) reaches a user who closed the application before the answer was ready.
+
+A session outlives the agent process, which is what lets it pair with a workflow engine. [Durable execution](/docs/ai-transport/features/durable-execution) in Temporal or Vercel WDK retries the failed [step](/docs/ai-transport/concepts/runs#steps), and the retry publishes into the session the first attempt was already writing to.
+
+## Keep the stack you have <a id="keep-your-stack"/>
+
+Adoption changes where the response goes. How you produce it stays the same. In the agent, you pipe the stream you already build into a run on the session, using the Vercel entry point:
+
+<Code>
+```javascript
+// Agent-side, in place of `return result.toUIMessageStreamResponse()`:
+import * as Ably from 'ably';
+import { Invocation } from '@ably/ai-transport';
+import { createAgentSession } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ key: process.env.ABLY_API_KEY });
+
+export async function POST(req) {
+  const invocation = Invocation.fromJSON(await req.json());
+  const session = createAgentSession({ client: ably, channelName: invocation.sessionName });
+  await session.connect();
+
+  const run = session.createRun(invocation, { signal: req.signal });
+  // Drain the triggering input first, or run.start() waits for it to arrive live.
+  while (run.view.hasOlder()) await run.view.loadOlder();
+
+  await run.start();
+  const streamResult = await run.pipe(result.toUIMessageStream());
+  await run.end({ reason: streamResult.reason });
+  await session.end();
+
+  return Response.json({ runId: run.runId, invocationId: run.invocationId });
+}
+```
+</Code>
+
+The route returns the run's identifiers instead of the stream, so a client reads the answer from the session rather than from this response. Wrap the body in `try`/`finally` so a thrown error still ends the run. Where an answer can outrun your function's budget, [durable execution](/docs/ai-transport/features/durable-execution) moves the run into a workflow engine and the route returns before it finishes.
+
+In the browser, a client attaches to that same session by name:
+
+<Code>
+```javascript
+// Client-side.
+import * as Ably from 'ably';
+import { createClientSession } from '@ably/ai-transport/vercel';
+
+const ably = new Ably.Realtime({ authUrl: '/auth' });
+const session = createClientSession({ client: ably, channelName: 'conversations:42' });
+
+await session.connect();
+```
+</Code>
+
+Those two changes are the whole diff for an application that already streams. You do not touch prompts, tool definitions, or model calls, and on the UI side AI Transport implements Vercel AI SDK's [`ChatTransport` interface](/docs/ai-transport/frameworks/vercel-ai-sdk-ui), so swapping it into `useChat` leaves your components as they are.
+
+Two one-time setup steps come first. Browser clients connect with [token authentication](/docs/ai-transport/getting-started/authentication) rather than an API key. The namespace your conversations live on needs [one channel rule](/docs/ai-transport/getting-started/channel-rules) enabled, because AI Transport streams tokens by appending to a message.
+
+The SDK is JavaScript and TypeScript, with React hooks for the client. The [roadmap](/docs/ai-transport/roadmap) covers other languages.
+
+## What you take on <a id="what-you-take-on"/>
+
+Before you commit, these are the constraints and dependencies that come with it:
+
+| What you take on | What it means in practice |
+| --- | --- |
+| Retention bounds what the session remembers | The session holds the conversation for as long as [channel retention](/docs/storage-history/storage) covers it, which is a window you set per namespace. Past it you keep your own store, and [database hydration](/docs/ai-transport/features/database-hydration) joins the stored history to the live session with no gaps and no duplicates. An application that already writes conversations to a database carries on doing so. |
+| Hydrated history is linear | Messages you have persisted yourself cannot be edited or regenerated yet, so branching applies to the part of the conversation the session still holds. |
+| Session content is visible to subscribers | Every message reaches every subscriber whose token capability allows it, tool inputs and outputs included. Scope [capabilities](/docs/ai-transport/getting-started/authentication) per namespace to control who sees what. |
+| A network hop and a platform dependency | Conversations travel over Ably rather than down your own response body, on a platform [designed for 99.999% global service availability](/docs/platform/architecture). [Append rollup](/docs/ai-transport/features/token-streaming#rollup) batches tokens rather than publishing one message each. |
+| A pre-1.0 SDK | Minor releases can still change the API. The [wire protocol](/docs/ai-transport/internals/wire-protocol) is documented, and channel activity streams out through [webhooks and Kafka](/docs/platform/integrations/webhooks) for your own analytics and audit. |
+
+[Going to production](/docs/ai-transport/going-to-production) covers limits, retention, monitoring, auth hardening, and pricing in full.
+
+## How a session is built <a id="how-ai-transport-implements-this"/>
+
+Every session runs on an [Ably channel](/docs/channels): a durable, ordered, append-only log that any client or agent attaches to by name. Messages outlive the connection, device, or process that published them, and they carry a total order. A client that drops reattaches and resumes without gaps or duplicates.
+
+Any client or agent publishes, which puts cancel and steering on the same path as tokens. The SDK turns that log into an AI conversation. Subscribers decode the same events the agent published, and a run and step lifecycle gives them structure:
+
+- A [codec](/docs/ai-transport/internals/codec-architecture) maps your framework's event types onto channel messages. Tokens stream by [appending to a single message](/docs/messages/updates-deletes#append), so a client arriving late reads one assembled response instead of every token event separately.
+- The transport has no opinion about what publishes into it, so a [custom codec](/docs/ai-transport/internals/codec-architecture#write-a-custom-codec) carries a framework that has no adapter yet.
+- A [conversation tree](/docs/ai-transport/concepts/conversation-tree) turns the log into branching history, and a [view](/docs/ai-transport/concepts/conversation-tree#views) selects one path through it for each client. That is how edit and regenerate work.
+- [Client and agent sessions](/docs/ai-transport/concepts/sessions#connect) own attachment, the [run lifecycle](/docs/ai-transport/concepts/runs), and cancel routing.
+- React hooks cover streaming, pagination, and branch navigation in the UI.
+
+## When a durable session is unnecessary <a id="when-you-dont-need-this"/>
+
+A single-turn chatbot does not need a durable session. If a user asks one question, reads the answer, and never returns to that conversation, direct HTTP streaming is the simpler choice.
+
+## Where the guarantees come from <a id="why-ably"/>
+
+Ordering, persistence, replication, and [regional failover](/docs/platform/architecture/fault-tolerance) are guarantees of the Ably platform. They hold for AI Transport on the same terms as for every other product on it.
+
+Ably is [SOC 2 Type II certified and HIPAA compliant](https://ably.com/security-and-compliance), and operates a bug bounty program.
+
+## Start building <a id="start-building"/>
+
+Pick the route that matches what you need next:
 
 <Tiles>
 {[
   {
-    title: 'Getting started',
-    description: 'Build a working app with Vercel AI SDK or the Core SDK in a few minutes.',
+    title: 'Get started',
+    description: 'Build a working chat application with the Vercel AI SDK.',
     image: 'icon-tech-javascript',
     link: '/docs/ai-transport/getting-started/vercel-ai-sdk',
   },
   {
-    title: 'Frameworks',
-    description: 'See how AI Transport composes with the AI framework you already use.',
-    image: 'icon-tech-javascript',
-    link: '/docs/ai-transport/frameworks/vercel-ai-sdk-ui',
-  },
-  {
     title: 'Features',
-    description: 'Browse what AI Transport does once you have a session running.',
-    image: 'icon-tech-javascript',
+    description: 'What a session gives you once it is running, from streaming to branching.',
+    image: 'icon-product-ai-transport',
     link: '/docs/ai-transport/features/token-streaming',
   },
   {
-    title: 'Why AI Transport',
-    description: 'Understand the production problems that direct HTTP streaming does not solve.',
-    image: 'icon-tech-javascript',
-    link: '/docs/ai-transport/why',
+    title: 'Concepts',
+    description: 'Sessions, runs, and the conversation tree behind the SDK.',
+    image: 'icon-gui-resources',
+    link: '/docs/ai-transport/concepts',
+  },
+  {
+    title: 'Going to production',
+    description: 'Limits, retention, monitoring, auth hardening, and pricing.',
+    image: 'icon-product-platform',
+    link: '/docs/ai-transport/going-to-production',
   },
 ]}
 </Tiles>
-
-## Read next <a id="read-next"/>
-
-- [Concepts](/docs/ai-transport/concepts): sessions, runs, and the conversation tree.
-- [Going to production](/docs/ai-transport/going-to-production): the production checklist for shipping AI Transport.
