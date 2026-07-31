@@ -109,7 +109,7 @@ await session.connect();
 
 Create a new run for the input event named in the `Invocation`. Returns synchronously and publishes nothing to the session until [`start`](#run-start) is called. The run is registered for cancel routing immediately so early cancels fire the `abortSignal`.
 
-Identity and behaviour are separate arguments. The second argument pins the run's ids, and the third carries the abort signal and the hooks. On the normal one-request path there is no identity to pin, so the second argument is `{}`:
+Identity and behaviour are separate arguments. The second overrides the run's ids, and the third carries the abort signal and the hooks. On the normal one-request path there is no id to override, so the second argument is `{}`:
 
 <Code>
 ```javascript
@@ -125,8 +125,8 @@ const run = session.createRun(invocation, {}, { signal: req.signal });
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
 | invocation | required | The `Invocation` carrying run identity and conversation context. | <Table id='Invocation'/> |
-| identity | optional | Run ids to pin. Each absent field is minted. Omit it on the one-request path. | <Table id='RunIdentity'/> |
-| hooks | optional | Per-run callbacks and an external abort signal. | <Table id='RunHooks'/> |
+| identity | optional | Run ids to override. Each absent field is minted. Omit it on the one-request path. | <Table id='RunIdentity'/> |
+| hooks | optional | Per-run hooks and an external abort signal. | <Table id='RunHooks'/> |
 
 </Table>
 
@@ -143,8 +143,8 @@ const run = session.createRun(invocation, {}, { signal: req.signal });
 
 | Property | Description | Type |
 | --- | --- | --- |
-| runId | The run id to pin for a fresh run. Defaults to a fresh `crypto.randomUUID()`. Continuations ignore it and read the existing `runId` off the triggering input event. Supply a stable value under [durable execution](/docs/ai-transport/features/durable-execution) so a fresh-process retry re-enters the same run instead of opening a parallel one. The empty string is rejected; omit the field to have one minted. | String |
-| invocationId | The invocation id to pin, one per HTTP request on the normal path or one per activity of a durable turn. Defaults to a fresh `crypto.randomUUID()`. The empty string is rejected. | String |
+| invocationId | Override the invocation id for this run. Defaults to a fresh `crypto.randomUUID()` (the normal path; one per HTTP request). Supply a non-empty value for deterministic ids in tests. The empty string is rejected. | String |
+| runId | Override the run id for a fresh run. Defaults to a fresh `crypto.randomUUID()`. Continuations ignore this and read the existing `runId` off the triggering input event. Supply a non-empty value for deterministic ids in tests. The empty string is rejected. Under [durable execution](/docs/ai-transport/features/durable-execution), supply a stable value so a fresh-process retry re-enters the same run instead of opening a parallel one. | String |
 
 </Table>
 
@@ -153,7 +153,7 @@ const run = session.createRun(invocation, {}, { signal: req.signal });
 | Property | Description | Type |
 | --- | --- | --- |
 | signal | External `AbortSignal` (typically the HTTP request's `req.signal`) that cancels the run when fired. | `AbortSignal` |
-| onAblyMessage | Called before each Ably message the run's encoder publishes, after the SDK stamps its own transport headers. Mutate the message in place to add custom headers under `extras.ai`. Run and step lifecycle messages publish straight to the channel, so they do not pass through this hook. | `(message: Ably.Message) => void` |
+| onAblyMessage | Called before each Ably message is published. Mutate the message in place to add custom headers under `extras.ai`. | `(message: Ably.Message) => void` |
 | onCancelled | Called when the run is cancelled. Receives a `write` function to publish final outputs before cancellation finalises. | `(write: (output: TOutput) => Promise<void>) => void \| Promise<void>` |
 | onCancel | Called when a cancel arrives. Return `true` to accept, `false` to reject. Defaults to accepting all. | `(req: CancelRequest) => Promise<boolean>` |
 | onError | Called with non-fatal run-scoped errors. | `(error: Ably.ErrorInfo) => void` |
@@ -163,15 +163,13 @@ const run = session.createRun(invocation, {}, { signal: req.signal });
 
 ### Returns <a id="create-run-returns"/>
 
-An `OpenableRun<TOutput, TProjection, TMessage>` handle: an [`AgentRun`](#run) with a [`start`](#run-start) method that publishes the run's opening event. The caller must call `start` before any other run method.
+An `OpenableRun<TOutput, TProjection, TMessage>` handle for publishing lifecycle events, user messages, and streamed output. It extends [`AgentRun`](#run) with the [`start`](#run-start) method the caller must call before any other.
 
 ## Adopt an existing run <a id="adopt-run"/>
 
 <MethodSignature>{`adoptRun(invocation: Invocation, identity: RunIdentity, hooks?: RunHooks<TOutput>): AdoptedRun<TOutput, TProjection, TMessage>`}</MethodSignature>
 
-Adopt an already-open run so a fresh process can publish further steps and lifecycle events for it. Returns synchronously and does no I/O; publishes nothing to the session until [`AdoptedRun.load`](#adopted-load) resolves. Use it from a step, tool, or cleanup activity that [runs in a separate process](/docs/ai-transport/features/durable-execution) from the one that opened the run.
-
-The identity is authoritative here. Both fields are required, and the trigger's `run-id` header never re-keys the run.
+Adopt an already-open run by its identity so a fresh process can publish further steps and lifecycle events for it. Returns synchronously and does no I/O; publishes nothing to the session until [`AdoptedRun.load`](#adopted-load) resolves. Use it from a step, tool, or cleanup activity that [runs in a separate process](/docs/ai-transport/features/durable-execution) from the one that opened the run.
 
 <Code>
 ```javascript
@@ -190,9 +188,9 @@ await run.load();
 
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
-| invocation | required | The `Invocation` pointing at the event whose headers resolve the run's write-time anchors. Every activity of a turn resolves against the same trigger, since a step carries no input event of its own. | <Table id='Invocation'/> |
-| identity | required | The existing run's ids, threaded across the process boundary by the workflow that opened it. | <Table id='AdoptRunIdentity'/> |
-| hooks | optional | Per-run callbacks and an external abort signal. | <Table id='RunHooks'/> |
+| invocation | required | The `Invocation` pointing at the event whose headers resolve the run's write-time anchors, typically an `ai-input` for a normal turn. Every activity of an invocation resolves against the same trigger. | <Table id='Invocation'/> |
+| identity | required | The run's identity, threaded across the process boundary by the workflow that opened it. | <Table id='AdoptRunIdentity'/> |
+| hooks | optional | Per-run hooks and an external abort signal. | <Table id='RunHooks'/> |
 
 </Table>
 
@@ -200,8 +198,8 @@ await run.load();
 
 | Property | Description | Type |
 | --- | --- | --- |
-| runId | The existing run's id. Required. Authoritative: unlike `createRun`'s continuation path, `AdoptedRun.load` does not re-key the run from the trigger event's `run-id` header. For a delegation trigger that header names the parent run. | String |
-| invocationId | This activity's invocation id (a step activity's id, or a cancel-cleanup id). Required. Stamped on every event this process publishes for the run. Independent of the run's owner identity. | String |
+| runId | The existing run's id. Authoritative: unlike `createRun`'s continuation path, `AdoptedRun.load` does not re-key the run from the trigger event's `run-id` header. | String |
+| invocationId | This activity's invocation id (a step activity's id, or a cancel-cleanup id). Stamped on every event this process publishes for the run. Independent of the run's owner identity. | String |
 
 </Table>
 
@@ -284,7 +282,7 @@ await run.end({ reason: 'complete' });
 
 Pipe a source of outputs through the encoder to the session. Returns when the source completes, is cancelled, or errors. Does NOT call `end()`; the caller must call `end()` after `pipe()` returns.
 
-The source is a `ReadableStream` or any `AsyncIterable` of codec outputs, so a provider SDK stream that is async-iterable pipes in directly with no `ReadableStream` wrapper. The transport pulls one output at a time and closes the source when the pipe ends, is cancelled, or errors: it releases a stream reader's lock, or calls an iterator's `return()`.
+The source is a `ReadableStream` or any `AsyncIterable` of codec outputs, so a provider SDK stream that is async-iterable pipes in directly with no `ReadableStream` wrapper.
 
 #### Parameters <a id="pipe-params"/>
 
@@ -292,7 +290,7 @@ The source is a `ReadableStream` or any `AsyncIterable` of codec outputs, so a p
 
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
-| source | required | The output source from your model call. | `ReadableStream<TOutput> \| AsyncIterable<TOutput>` |
+| source | required | The output source from your LLM call. | `ReadableStream<TOutput> \| AsyncIterable<TOutput>` |
 
 </Table>
 
@@ -414,7 +412,7 @@ Pipe an output source through the encoder to the session, stamping every output 
 
 | Parameter | Required | Description | Type |
 | --- | --- | --- | --- |
-| source | required | The output source from your model call. | `ReadableStream<TOutput> \| AsyncIterable<TOutput>` |
+| source | required | The output source from your LLM call. | `ReadableStream<TOutput> \| AsyncIterable<TOutput>` |
 
 </Table>
 
