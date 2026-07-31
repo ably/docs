@@ -103,7 +103,6 @@ import type { InvocationData } from '@ably/ai-transport';
 export interface RunIds {
   runId: string;
   invocationId: string;
-  triggerEventId: string;
 }
 
 export interface ChatWorkflowInput {
@@ -238,6 +237,7 @@ export async function openRun(input: {
       // Pin the run id to the Temporal workflowId so a fresh-process retry of
       // openRun re-enters the same run instead of opening a parallel one.
       runId: input.invocationId,
+    }, {
       signal: Context.current().cancellationSignal,
     });
     while (run.view.hasOlder()) await run.view.loadOlder();
@@ -249,7 +249,6 @@ export async function openRun(input: {
     return {
       runId: run.runId,
       invocationId: run.invocationId,
-      triggerEventId: input.invocation.inputEventId,
     };
   } finally {
     ably.close();
@@ -261,7 +260,9 @@ export async function runInferenceStep(input: StepInput): Promise<InferenceOutco
   const session = createAgentSession({ client: ably, channelName: input.invocation.sessionName });
   try {
     await session.connect();
-    const run = session.adoptRun(input.ids, { signal: Context.current().cancellationSignal });
+    const run = session.adoptRun(Invocation.fromJSON(input.invocation), input.ids, {
+      signal: Context.current().cancellationSignal,
+    });
     await run.load();
     while (run.view.hasOlder()) await run.view.loadOlder();
 
@@ -278,7 +279,9 @@ export async function runToolStep(input: StepInput & { toolCall: ToolCallInfo })
   const session = createAgentSession({ client: ably, channelName: input.invocation.sessionName });
   try {
     await session.connect();
-    const run = session.adoptRun(input.ids, { signal: Context.current().cancellationSignal });
+    const run = session.adoptRun(Invocation.fromJSON(input.invocation), input.ids, {
+      signal: Context.current().cancellationSignal,
+    });
     await run.load();
 
     const step = run.createStep({ stepId: stepIdFor(input.ids.invocationId) });
