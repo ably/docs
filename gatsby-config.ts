@@ -86,13 +86,6 @@ export const plugins = [
     },
   },
   'gatsby-plugin-react-helmet',
-  {
-    resolve: `gatsby-source-rss-feed`,
-    options: {
-      url: `https://changelog.ably.com/rss`,
-      name: `AblyChangelog`,
-    },
-  },
   'gatsby-plugin-root-import',
   {
     resolve: 'gatsby-plugin-mdx',
