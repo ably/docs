@@ -21,6 +21,7 @@ export const productTags = {
   liveobjects: { label: 'LiveObjects', colorClass: 'text-green-600' },
   livesync: { label: 'LiveSync', colorClass: 'text-blue-600' },
   'ai-transport': { label: 'AI Transport', colorClass: 'text-cyan-500' },
+  'asset-tracking': { label: 'Asset Tracking', colorClass: 'text-red-500' },
   platform: { label: 'Platform', colorClass: 'text-neutral-700' },
 } satisfies Record<string, ProductTag>;
 

@@ -1,0 +1,42 @@
+---
+title: "Ephemeral messages"
+meta_description: "Sometimes you care about some messages more than others."
+date: "2025-05-02"
+products:
+  - pub-sub
+---
+
+Sometimes you care about some messages more than others.
+
+Imagine you have a channel carrying the messages for a chat room. You want to add a new feature to the chatroom: room reactions, where a chatter can react with an emote that will ephemerally flash up for everyone else in the room, but which does not leave any permanent record (e.g. it doesn't stick around in the scrollback).
+
+You could send the room reactions as normal messages on the chat channel. But this does have some downsides. The room reactions would unnecessarily end up in persisted history, and be sent to the integration endpoints you've set up, needing to be filtered out later. And there's more subtle issues: say you were populating the scrollback using `rewind=100`, so that new attachments to the chat room get the last one hundred messages sent. But if the last hundred things to happen includes 70 room reactions, you might only get 30 'real' messages from the rewind, so your chatroom scrollback starts out much shorter than it should be. And all the reactions are charged as messages when persisted, sent to integration rules, or included in resumes and rewinds, all for events that you no longer care about once they happen.
+
+One way of solving this would be to send the room reactions on a separate channel, which you have not enabled history or integrations on, and aren't attaching with rewind. But this also has downsides. You now have multiple channels whose lifecycle you need to watch, need more complex capabilities, and of course, you're using and paying for twice as many channels.
+
+We now support another solution to this. You can mark a message as _ephemeral_ to exempt it from:
+
+- being stored in [persisted history](https://ably.com/docs/storage-history/storage)
+
+- being sent in [attachment rewinds](https://ably.com/docs/channels/options/rewind)
+
+- being sent to clients [resuming over a period of disconnection](https://ably.com/docs/connect/states)
+
+- being sent to [firehose, webhooks, and queue integrations](https://ably.com/docs/integrations)
+
+In other words, it will skip everything except being delivered to currently-connected realtime connections.
+
+Ephemeral messages still cost one message per message, but since they're exempted from all these things (like persisted storage) which would otherwise be chargable, they can end up being significantly cheaper in practice.
+
+To mark a message as ephemeral, either include `ephemeral: true` in the message's extras object, or (for REST publishes) include `ephemeral: true` in the publish params. For example:
+
+```
+// Realtime SDK
+const channel = realtime.channels.get('chatroom');
+await channel.publish({name: 'emote', data: ':heart:', extras: { ephemeral: true }});
+// REST SDK
+const channel = rest.channels.get('chatroom');
+await channel.publish('emote', ':heart:', { ephemeral: true });
+```
+
+You can find more information in our [docs](https://ably.com/docs/pub-sub/advanced#ephemeral)
