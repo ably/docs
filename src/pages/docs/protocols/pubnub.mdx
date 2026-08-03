@@ -1,20 +1,30 @@
 ---
 title: PubNub Adapter
-meta_description: "Use the PubNub Adapter to migrate from PubNub to Ably by only changing your API key."
+meta_description: "Use the PubNub adapter to migrate from PubNub to Ably by changing your API key and endpoint, or to add failover options."
+meta_keywords: "PubNub adapter, PubNub protocol, migrate from PubNub, PubNub failover, Ably"
+intro: "The PubNub adapter connects your existing PubNub application to Ably by changing an API key and endpoint. Use it to migrate off PubNub, or to add failover options, without rewriting your application."
 languages:
   - javascript
   - ruby
 ---
 
-Ably enables migration from PubNub to Ably using its PubNub Adapter. The protocol adapter handles all background translation and only requires an API key change.
+The PubNub adapter connects an existing PubNub application to Ably. It translates between the PubNub protocol and Ably's native protocol, and only requires a change to your API key and endpoint. Ably is the only cloud vendor that supports the PubNub protocol.
 
-Using an adapter introduces some latency and is slower than using an Ably SDK. The PubNub adapter can have more variable latency than other adapters because PubNub's protocol is inherently long-polling based, which creates an impedance mismatch with Ably's WebSocket-based architecture. Some operations are quick with PubNub, but slower or impossible with Ably, and vice versa.
+## When to use the PubNub adapter <a id="when-to-use"/>
 
-Many of the advantages associated with using Ably, such as the use of WebSockets rather than long polling, [continuity guarantees](https://ably.com/four-pillars-of-dependability), and fallback host support are only available when using an Ably SDK. If an [Ably SDK](/docs/sdks) is available in your chosen platform, it is recommended you use that, or plan to transition to it eventually.
+Use the PubNub adapter to move onto Ably's network without changing your application logic. Your existing PubNub client and server libraries keep working, so you can migrate off PubNub, or add failover options, incrementally.
 
-You can use PuBNub and and an Ably SDK side-by-side as they are interoperable, with the exception of a few features.
+The adapter is a bridge onto Ably. Several Ably advantages are available only when you connect with an [Ably SDK](/docs/sdks), including the use of WebSockets rather than long polling, [continuity guarantees](https://ably.com/four-pillars-of-dependability) with multi-region fallback, and fallback host support.
 
-For a detailed comparison of Ably and PubNub features, see [Ably vs PubNub](https://ably.com/compare/ably-vs-pubnub).
+There is no time limit on connecting through the adapter. Migrate to an Ably SDK when you want the full feature set and the strongest guarantees, at whatever pace suits you.
+
+The PubNub adapter can have more variable latency than other adapters. PubNub's protocol is long-polling based, which creates an impedance mismatch with Ably's WebSocket-based architecture, so some operations take longer through the adapter and some PubNub features are unavailable.
+
+You can run PubNub clients and an Ably SDK side by side, as they are interoperable with the exception of a few features. For a detailed comparison of Ably and PubNub features, see [Ably vs PubNub](https://ably.com/compare/ably-vs-pubnub).
+
+<Aside data-type='note'>
+An Ably SDK is the recommended way to connect when one is available for your platform. To decide between the native protocol, this adapter, and other protocols, see [choosing a protocol or adapter](/docs/protocols#choose).
+</Aside>
 
 <Aside data-type='usp'>
 Automatic connection recovery and message continuity.
@@ -35,24 +45,21 @@ A typical migration from PubNub to Ably follows these steps:
 
 ## Supported features <a id="features"/>
 
-The following PubNub features are supported using the adapter:
+The adapter supports the following PubNub features:
 
-* Publish
-* Subscribe
-* Presence
-* History
-* getState
-* setState
-* hereNow
-* Global hereNow
-
-The following PubNub features are not supported using the adapter:
-
-* PAM
-* whereNow
-* Channel groups
-* Backfill subscribes
-* Stream filters
+| PubNub feature | Support |
+| --- | --- |
+| Publish | Yes |
+| Subscribe | Yes |
+| Presence | Yes |
+| History | Yes |
+| getState and setState | Yes |
+| hereNow and global hereNow | Yes |
+| PAM | No. Manage access through Ably [capabilities](/docs/auth/capabilities) instead. |
+| whereNow | No |
+| Channel groups | No |
+| Backfill subscribes | No |
+| Stream filters | No |
 
 ## Configure a PubNub SDK <a id="configure"/>
 
@@ -128,3 +135,43 @@ Some PubNub API requests are mapped to multiple Ably requests and will count as 
 
 * A global hereNow request is mapped to a request for a list of active channels, followed by a presence request for each channel. This is a total of *n+1* requests for *n* channels.
 * A mismatch exists between how Ably and PubNub paginate history requests. For example, any PubNub history requests that would result in Ably providing a paginated result will involve two Ably API requests.
+
+## Edge cases <a id="edge-cases"/>
+
+Be aware of the following behavior when running production traffic through the adapter:
+
+* The adapter provides at least two minutes of message continuity over client disconnections. After two minutes without a subscribe poll the adapter disconnects from Ably, any presence members entered by that connection leave, and further subscribe polls are treated as a new connection.
+* On reconnection, clients receive the last 100 messages for each channel they are subscribed to. The PubNub protocol has no way to signal whether this covers all missed messages. Use an Ably SDK if you need to be notified of [continuity losses](/docs/channels/states#non-fatal-errors).
+* Each UUID, for a given API key in a given region, counts as a separate connection. Generating a new UUID on every page refresh, for example with the `unique_uuid` option, inflates connection counts quickly because each connection stays alive for at least two minutes.
+* Ably channels with commas in their names cannot be accessed through the adapter, because PubNub uses commas as delimiters.
+* Some PubNub API requests map to multiple Ably requests and count as such for rate limits. See [REST requests](#rest).
+
+## FAQ <a id="faq"/>
+
+The following questions come up most often when teams evaluate the adapter:
+
+### How much latency does the adapter add? <a id="faq-latency"/>
+
+More than the other adapters, and more variably. PubNub's long-polling protocol creates an impedance mismatch with Ably's WebSocket-based architecture, so some operations take longer through the adapter. Use an Ably SDK for the lowest and most consistent latency.
+
+### Can PubNub clients and Ably SDKs run at the same time? <a id="faq-interop"/>
+
+Yes. They are interoperable on the same channels, with the exception of a few features, so you can migrate one app at a time. See the [migration process](#migration-process).
+
+### What happens when a client briefly disconnects? <a id="faq-disconnect"/>
+
+The adapter provides at least two minutes of message continuity, and clients receive the last 100 messages per channel on reconnection. The PubNub protocol cannot signal whether those 100 messages cover everything that was missed. An Ably SDK notifies clients of continuity losses explicitly.
+
+### Why is the connection count higher than expected? <a id="faq-connections"/>
+
+Each UUID for a given API key in a given region counts as a separate connection, and each connection stays alive for at least two minutes after its last subscribe poll. Reuse UUIDs across page refreshes to keep counts accurate.
+
+### Is PAM supported? <a id="faq-pam"/>
+
+No. Manage access through Ably API key and token [capabilities](/docs/auth/capabilities) instead.
+
+## Read next <a id="read-next"/>
+
+* [Choose a protocol or adapter](/docs/protocols#choose): the decision guide for all connection methods.
+* [Pusher adapter](/docs/protocols/pusher): the equivalent migration path from Pusher.
+* [Ably SDKs](/docs/sdks): the native protocol, for when you want the full feature set.

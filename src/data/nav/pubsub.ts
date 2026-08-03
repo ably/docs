@@ -335,7 +335,7 @@ export default {
       ],
     },
     {
-      name: 'Supported protocols',
+      name: 'Protocols & adapters',
       pages: [
         {
           name: 'Overview',
@@ -343,12 +343,17 @@ export default {
           index: true,
         },
         {
-          name: 'Server-Sent Events (SSE)',
-          link: '/docs/protocols/sse',
+          name: 'Ably SDKs (native protocol)',
+          link: '/docs/sdks',
+          external: true,
         },
         {
           name: 'MQTT',
           link: '/docs/protocols/mqtt',
+        },
+        {
+          name: 'Server-Sent Events (SSE)',
+          link: '/docs/protocols/sse',
         },
         {
           name: 'Pusher Adapter',
@@ -357,6 +362,14 @@ export default {
         {
           name: 'PubNub Adapter',
           link: '/docs/protocols/pubnub',
+        },
+        {
+          name: 'AMQP',
+          link: '/docs/protocols/amqp',
+        },
+        {
+          name: 'STOMP',
+          link: '/docs/protocols/stomp',
         },
       ],
     },
