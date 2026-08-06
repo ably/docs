@@ -25,10 +25,15 @@ meta_description: "Create, update and receive updates for a numerical counter th
 
 `LiveCounter` is a synchronized numerical counter that supports increment and decrement operations. It ensures that all updates are correctly applied and synchronized across clients in realtime, preventing inconsistencies when multiple clients modify the counter value simultaneously.
 
-<If lang="javascript,java">
+<If lang="javascript,swift,java">
 
 You interact with `LiveCounter` through a [PathObject](/docs/liveobjects/concepts/path-object) or by obtaining a specific [Instance](/docs/liveobjects/concepts/instance).
 
+<If lang="swift">
+<Aside data-type='note'>
+Mutation methods like `increment` and `decrement` are asynchronous: they suspend with `try await` until the operation completes. Reads are synchronous and run locally, so they need no `await`. Subscription callbacks fire on the configured callback queue, which is the main queue by default, so you can update your UI directly from them.
+</Aside>
+</If>
 <If lang="java">
 <Aside data-type='note'>
 Mutation methods like `increment` and `decrement` return a `CompletableFuture<Void>`. Current examples use `.join()` for brevity, which blocks the calling thread. In production code, compose the future with `thenCompose`/`thenAccept`/`exceptionally` rather than blocking on it. See the [quickstart](/docs/liveobjects/quickstart/java#step-4) for details.
@@ -51,6 +56,28 @@ await rootObject.set('score', LiveCounter.create(100));
 
 // Create a counter without specifying initial value (defaults to 0)
 await rootObject.set('clicks', LiveCounter.create());
+```
+
+```swift
+// rootObject obtained from channel.object.get()
+
+// Create a counter with initial value 0
+let visits = LiveCounter.create(initialCount: 0)
+
+// Assign the counter to the 'visits' key on the channel object
+try await rootObject.set(key: "visits", value: .liveCounter(visits))
+
+// Create a counter with initial value 100
+let score = LiveCounter.create(initialCount: 100)
+
+// Assign the counter to the 'score' key on the channel object
+try await rootObject.set(key: "score", value: .liveCounter(score))
+
+// Create a counter without specifying initial value (defaults to 0)
+let clicks = LiveCounter.create()
+
+// Assign the counter to the 'clicks' key on the channel object
+try await rootObject.set(key: "clicks", value: .liveCounter(clicks))
 ```
 
 ```java
@@ -92,6 +119,22 @@ const id2 = rootObject.get('counter2').instance()?.id;
 console.log(id1 === id2); // false
 ```
 
+```swift
+let counterValue = LiveCounter.create(initialCount: 0)
+
+// Each assignment creates a different object
+try await rootObject.set(key: "counter1", value: .liveCounter(counterValue))
+try await rootObject.set(key: "counter2", value: .liveCounter(counterValue))
+
+// counter1 and counter2 are different objects with different IDs
+let counter1Instance = try rootObject.get(key: "counter1").instance()
+let counter2Instance = try rootObject.get(key: "counter2").instance()
+if case .liveCounter(let c1)? = counter1Instance,
+   case .liveCounter(let c2)? = counter2Instance {
+    print(c1.id == c2.id) // false
+}
+```
+
 ```java
 LiveCounter counterValue = LiveCounter.create(0);
 
@@ -111,7 +154,7 @@ if (counter1Instance != null && counter2Instance != null) {
 
 ## Get counter value <a id="value"/>
 
-Access a `LiveCounter` through a [PathObject](/docs/liveobjects/concepts/path-object) for path-based operations, or obtain a specific [Instance](/docs/liveobjects/concepts/instance) to work with the underlying object directly. <If lang="javascript">Use the `value()` method to get the value of the `LiveCounter`:</If><If lang="java">Cast with `asLiveCounter()` and use the `value()` method to get the value of the `LiveCounter`:</If>
+Access a `LiveCounter` through a [PathObject](/docs/liveobjects/concepts/path-object) for path-based operations, or obtain a specific [Instance](/docs/liveobjects/concepts/instance) to work with the underlying object directly. <If lang="javascript">Use the `value()` method to get the value of the `LiveCounter`:</If><If lang="swift">Cast with `asLiveCounter()` and use the `value()` method to get the value of the `LiveCounter`:</If><If lang="java">Cast with `asLiveCounter()` and use the `value()` method to get the value of the `LiveCounter`:</If>
 
 <Code>
 ```javascript
@@ -124,6 +167,18 @@ console.log(visits.value()); // e.g. 5
 // Instance access: reference to a specific counter object
 const visitsInstance = rootObject.get('visits').instance();
 console.log(visitsInstance?.value()); // e.g. 5
+```
+
+```swift
+let rootObject = try await channel.object.get()
+
+// PathObject access - Double, or nil when the path doesn't resolve to a counter
+print(try rootObject.get(key: "visits").asLiveCounter().value() as Any) // e.g. 5.0
+
+// Instance access - value is a non-optional Double
+if case .liveCounter(let counter)? = try rootObject.get(key: "visits").instance() {
+    print(try counter.value) // e.g. 5.0
+}
 ```
 
 ```java
@@ -143,6 +198,11 @@ if (visitsInstance != null) {
 <If lang="javascript">
 <Aside data-type="note">
 Calling `value()` on a `PathObject` may return `undefined` if a primitive value or `LiveCounter` instance cannot be found at that path. Calling `value()` on an `Instance` returns `undefined` if the instance is not a primitive or `LiveCounter`. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object#read-values) and [`Instance`](/docs/liveobjects/concepts/instance#read-values).
+</Aside>
+</If>
+<If lang="swift">
+<Aside data-type="note">
+Calling `value()` on a `PathObject` returns `nil` if the path is missing or doesn't hold a counter. Reading `value` on a `LiveCounterInstance` never returns `nil`, because it is a non-optional property and the `asLiveCounter()` cast has already refined the type. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=swift#read-values) and [`Instance`](/docs/liveobjects/concepts/instance?lang=swift#read-values).
 </Aside>
 </If>
 <If lang="java">
@@ -180,6 +240,36 @@ console.log(stats.compact());  // e.g. { visits: 5 }
 // Get the Instance of a LiveMap stored in 'stats'
 const statsInstance = rootObject.get('stats').instance();
 console.log(statsInstance?.compact());  // e.g. { visits: 5 }
+```
+</Code>
+</If>
+
+<If lang="swift">
+Get a numeric representation of the counter using the `compactJson()` method (the Swift SDK has no `compact()` equivalent). It returns the same result as `value()`:
+
+<Code>
+```swift
+// Get a PathObject to a LiveCounter stored in 'visits'
+print(try rootObject.get(key: "visits").compactJson() as Any) // JSONValue?, nil if unresolved; e.g. 5.0
+
+// Get the Instance of a LiveCounter stored in 'visits'
+if case .liveCounter(let counter)? = try rootObject.get(key: "visits").instance() {
+    print(try counter.compactJson()) // non-null JSONValue, e.g. 5.0
+}
+```
+</Code>
+
+When calling `compactJson()` on a `LiveMap`, nested `LiveCounter` objects are included as a number:
+
+<Code>
+```swift
+// Get a PathObject to a LiveMap stored in 'stats'
+print(try rootObject.get(key: "stats").compactJson() as Any)  // JSONValue?, nil if unresolved; e.g. {"visits":5.0}
+
+// Get the Instance of a LiveMap stored in 'stats'
+if case .liveMap(let stats)? = try rootObject.get(key: "stats").instance() {
+    print(try stats.compactJson()) // non-null JSONValue, e.g. {"visits":5.0}
+}
 ```
 </Code>
 </If>
@@ -236,6 +326,19 @@ await visitsInstance?.increment(5);   // increment by 5
 await visitsInstance?.increment();    // increment by 1 (default)
 ```
 
+```swift
+// PathObject: increment counter at path
+let visits = rootObject.get(key: "visits").asLiveCounter()
+try await visits.increment(amount: 5)  // increment by 5
+try await visits.increment()           // increment by 1 (default)
+
+// Instance: increment specific counter instance
+if case .liveCounter(let counter)? = try rootObject.get(key: "visits").instance() {
+    try await counter.increment(amount: 5)  // increment by 5
+    try await counter.increment()           // increment by 1 (default)
+}
+```
+
 ```java
 // PathObject: increment counter at path
 LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
@@ -265,6 +368,19 @@ await rootObject.get('visits').decrement();   // decrement by 1 (default)
 const visitsInstance = rootObject.get('visits').instance();
 await visitsInstance?.decrement(5);   // decrement by 5
 await visitsInstance?.decrement();    // decrement by 1 (default)
+```
+
+```swift
+// PathObject: decrement counter at path
+let visits = rootObject.get(key: "visits").asLiveCounter()
+try await visits.decrement(amount: 5)  // decrement by 5
+try await visits.decrement()           // decrement by 1 (default)
+
+// Instance: decrement specific counter instance
+if case .liveCounter(let counter)? = try rootObject.get(key: "visits").instance() {
+    try await counter.decrement(amount: 5)  // decrement by 5
+    try await counter.decrement()           // decrement by 1 (default)
+}
 ```
 
 ```java
@@ -343,6 +459,27 @@ if (visitsInstance) {
 }
 ```
 
+```swift
+// PathObject: observe location - tracks changes even if counter instance is replaced
+let visits = rootObject.get(key: "visits").asLiveCounter()
+let subscription = try visits.subscribe { _ in
+    print("Visits: \(String(describing: try? visits.value()))")
+}
+
+// Later, stop listening to changes
+subscription.unsubscribe()
+
+// Instance: track specific counter instance - follows it even if moved in object tree
+if case .liveCounter(let counter)? = try rootObject.get(key: "visits").instance() {
+    let instanceSub = try counter.subscribe { _ in
+        print("This counter instance updated")
+    }
+
+    // Later, stop listening to changes
+    instanceSub.unsubscribe()
+}
+```
+
 ```java
 // PathObject: observe location - tracks changes even if counter instance is replaced
 LiveCounterPathObject visits = rootObject.get("visits").asLiveCounter();
@@ -394,191 +531,12 @@ if (visitsInstance) {
 </Code>
 </If>
 
+<If lang="swift">
+Alternatively, every `PathObject` and counter instance exposes an `events()` method returning an [`AsyncStream`](https://developer.apple.com/documentation/swift/asyncstream) that you can consume with `for await`. Breaking out of the loop, or cancelling the enclosing task, automatically unsubscribes. See the [quickstart](/docs/liveobjects/quickstart/swift#step-6) for an example.
+</If>
+
 <If lang="java">
 The Java SDK has no `subscribeIterator()` equivalent; a listener plus the returned `Subscription` is the only subscription form.
 </If>
-
-</If>
-
-<If lang="swift">
-
-## Create LiveCounter <a id="create"/>
-
-A `LiveCounter` instance can be created using the `channel.objects.createCounter()` method. It must be stored inside a `LiveMap` object that is reachable from the [root object](/docs/liveobjects/concepts/objects#root-object).
-
-`channel.objects.createCounter()` is asynchronous, as the client sends the create operation to the Ably system and waits for an acknowledgment of the successful counter creation.
-
-<Aside data-type='note'>
-Note that you need to first [attach to the channel](/docs/liveobjects/quickstart/javascript#step-3) before creating a new `LiveCounter` instance, as this operation requires sending a message to the Ably system.
-</Aside>
-
-<Code>
-```swift
-let counter = try await channel.objects.createCounter()
-try await root.set("counter", .liveCounter(counter))
-```
-</Code>
-
-Optionally, you can specify an initial value when creating the counter:
-
-<Code>
-```swift
-let counter = try await channel.objects.createCounter(count: 100) // Counter starts at 100
-```
-</Code>
-
-## Get counter value <a id="value"/>
-
-Get the current value of a counter using the `LiveCounter.value()` method:
-
-<Code>
-```swift
-print("Counter value: \(try counter.value)")
-```
-</Code>
-
-## Subscribe to data updates <a id="subscribe-data"/>
-
-You can subscribe to data updates on a counter to receive realtime changes made by you or other clients.
-
-<If lang="swift">
-<Aside data-type='note'>
-`LiveCounter` mutation methods send operations to the Ably system and apply changes locally as soon as the operations are acknowledged. When a mutation method returns, the operation has been applied and you can immediately read the updated state. You will also be notified via subscription when the counter is updated.
-</Aside>
-</If>
-
-Subscribe to data updates on a counter using the `LiveCounter.subscribe()` method:
-
-<Code>
-```swift
-try counter.subscribe { update, _ in
-    do {
-        print("Counter updated: \(try counter.value)")
-    } catch {
-        // Error handling of counter.value omitted for brevity
-    }
-    print("Update details: \(update)")
-}
-```
-</Code>
-
-The update object provides details about the change, such as the amount by which the counter value was changed.
-
-It may also include the client ID of the client that made the change, if the change can be attributed to a specific client. For example, the client ID may be missing if the update was triggered by data resynchronization after a disconnection and the change occurred while the client was offline.
-
-Example structure of an update object when the counter was incremented by 5 by a client with the ID `my-client`:
-
-<Code>
-```json
-{
-  "update": {
-    "amount": 5
-  },
-  "clientId": "my-client"
-}
-```
-</Code>
-
-Or decremented by 10:
-
-<Code>
-```json
-{
-  "amount": -10
-}
-```
-</Code>
-
-### Unsubscribe from data updates <a id="unsubscribe-data"/>
-
-Use the `unsubscribe()` function returned in the `subscribe()` response to remove a counter update listener:
-
-<Code>
-```swift
-// Initial subscription
-let subscriptionResponse = try counter.subscribe { _, _ in
-    do {
-        print(try counter.value)
-    } catch {
-        // Error handling of counter.value omitted for brevity
-    }
-}
-// To remove the listener
-subscriptionResponse.unsubscribe()
-```
-</Code>
-
-<If lang="swift">
-To remove a counter update listener from _inside_ the listener function, you can call `unsubscribe()` on the subscription response that is passed as the second argument to the listener function:
-
-<Code>
-```swift
-try counter.subscribe { _, subscriptionResponse in
-    // Remove the listener so that this callback
-    // no longer gets called
-    subscriptionResponse.unsubscribe()
-}
-```
-</Code>
-</If>
-
-Use the `LiveCounter.unsubscribeAll()` method to deregister all counter update listeners:
-
-<Code>
-```swift
-counter.unsubscribeAll();
-```
-</Code>
-
-## Update LiveCounter <a id="update"/>
-
-Update the counter value by calling <If lang="swift">`LiveCounter.increment(amount:)` or `LiveCounter.decrement(amount:)`</If>. These operations are synchronized across all clients and trigger data subscription callbacks for the counter, including on the client making the request.
-
-These operations are asynchronous, as the client sends the corresponding update operation to the Ably system and waits for acknowledgment of the successful counter update.
-
-<Code>
-```swift
-try await counter.increment(amount: 5) // Increase value by 5
-try await counter.decrement(amount: 2) // Decrease value by 2
-```
-</Code>
-
-## Subscribe to lifecycle events <a id="subscribe-lifecycle"/>
-
-Subscribe to lifecycle events on a counter using the <If lang="swift">`LiveCounter.on(event:callback:)`</If> method:
-
-<Code>
-```swift
-counter.on(event: .deleted) { _ in
-  print("Counter has been deleted")
-}
-```
-</Code>
-
-Read more about [objects lifecycle events](/docs/liveobjects/lifecycle#objects).
-
-### Unsubscribe from lifecycle events <a id="unsubscribe-lifecycle"/>
-
-Use the `off()` function returned in the `on()` response to remove a lifecycle event listener:
-
-<Code>
-```swift
-// Initial subscription
-let eventResponse = counter.on(event: .deleted) { _ in
-  print("Counter deleted")
-}
-// To remove the listener
-eventResponse.off()
-```
-</Code>
-
-Use the `LiveCounter.offAll()` method to deregister all lifecycle event listeners:
-
-<Code>
-
-```swift
-counter.offAll()
-```
-</Code>
 
 </If>

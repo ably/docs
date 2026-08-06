@@ -16,7 +16,8 @@ You will learn how to:
 * Create an Ably account and get an API key for authentication.
 * Install the Ably Pub/Sub SDK.
 * Create a channel with LiveObjects functionality enabled.
-* Create, update and subscribe to changes on LiveObjects data structures: [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/counter).
+* Use the [PathObject API](/docs/liveobjects/concepts/path-object?lang=swift) to access objects on a channel.
+* Create, update and subscribe to changes on LiveObjects data structures: [LiveMap](/docs/liveobjects/map?lang=swift) and [LiveCounter](/docs/liveobjects/counter?lang=swift).
 
 ## Authentication <a id="step-0"/>
 
@@ -30,7 +31,7 @@ The examples use [basic authentication](/docs/auth/basic) to demonstrate feature
 
 API keys and tokens have a set of [capabilities](/docs/auth/capabilities) assigned to them that specify which operations can be performed on which resources. The following capabilities are available for LiveObjects:
 
-* `object-subscribe` - grants clients read access to LiveObjects, allowing them to get the root object and subscribe to updates.
+* `object-subscribe` - grants clients read access to LiveObjects, allowing them to get the channel object and subscribe to updates.
 * `object-publish` - grants clients write access to LiveObjects, allowing them to perform mutation operations on objects.
 
 To use LiveObjects, an API key must have at least the `object-subscribe` capability. With only this capability, clients will have read-only access, preventing them from calling mutation methods on LiveObjects.
@@ -39,18 +40,21 @@ For the purposes of this guide, make sure your API key includes both `object-sub
 
 ## Install Ably Pub/Sub SDK <a id="step-1"/>
 
-LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated LiveObjects plugin.
+LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated LiveObjects plugin. The plugin is distributed inside the `ably-cocoa` package and is available through Swift Package Manager only.
 
-### Xcode <a id="xcode"/>
+The LiveObjects plugin requires a minimum deployment target of iOS 14, macOS 11, or tvOS 14, and Xcode 16.3 or later.
+
+### Follow along in Xcode <a id="xcode"/>
 
 To follow this guide in Xcode, use a new iOS project with the SwiftUI App template. All code can be added directly to your `ContentView.swift` file, inside the `ContentView` struct. Use the `.task` modifier with a `do { … } catch { … }` inside to run the Ably code when the view appears. No additional files or setup are needed. All `print` output will appear in Xcode's debug console (View > Debug Area > Activate Console, or press Cmd+Shift+C).
 
-Install the Ably SDK and the LiveObjects plugin in your Xcode project:
+### Install with Swift Package Manager <a id="swift-package-manager"/>
 
-1. Paste `https://github.com/ably/ably-cocoa` in the Swift Packages search box (File → Add Package Dependencies).
-2. Add the `Ably` product.
-3. Paste `https://github.com/ably/ably-liveobjects-swift-plugin` in the Swift Packages search box.
-4. Add the `AblyLiveObjects` product.
+Add the Ably SDK and the LiveObjects plugin to your Xcode project:
+
+1. Select File → Add Package Dependencies.
+2. Paste `https://github.com/ably/ably-cocoa` in the search box.
+3. Add both the `Ably` and `AblyLiveObjects` products to your target.
 
 Import the SDK and the LiveObjects plugin into your project:
 
@@ -70,132 +74,170 @@ Instantiate an Ably Realtime client from the Pub/Sub SDK, providing the LiveObje
 let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
 clientOptions.plugins = [.liveObjects: AblyLiveObjects.Plugin.self]
 
-let realtimeClient = ARTRealtime(options: clientOptions)
+let realtime = ARTRealtime(options: clientOptions)
 ```
 </Code>
 
-A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key and provide the `.liveObjects` plugin so that the client can use LiveObjects functionality.
+A [`ClientOptions`](/docs/api/realtime-sdk?lang=swift#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key and register the LiveObjects plugin through `clientOptions.plugins` so that the client can use LiveObjects functionality.
 
 ## Create a channel <a id="step-3"/>
 
-LiveObjects is managed and persisted on [channels](/docs/channels). To use LiveObjects, you must first create a channel with the correct [channel mode flags](/docs/channels/options#modes):
+LiveObjects is managed and persisted on [channels](/docs/channels?lang=swift). To use LiveObjects, you must first create a channel with the correct [channel mode flags](/docs/channels/options?lang=swift#modes):
 
 * `OBJECT_SUBSCRIBE` - required to access objects on a channel.
 * `OBJECT_PUBLISH` - required to create and modify objects on a channel.
 
 <Aside data-type='note'>
-When you provide an explicit `modes` property for a channel, you override the set of [default modes](/docs/channels/options#modes) used for that channel. So, if you're using the channel for anything in addition to LiveObjects, you need to ensure that you also include the other modes required by the features you are using.
+When you provide an explicit `modes` property for a channel, you override the set of [default modes](/docs/channels/options?lang=swift#modes) used for that channel. So, if you're using the channel for anything in addition to LiveObjects, you need to ensure that you also include the other modes required by the features you are using.
 </Aside>
 
 <Code>
 ```swift
 let channelOptions = ARTRealtimeChannelOptions()
 channelOptions.modes = [.objectPublish, .objectSubscribe]
-let channel = realtimeClient.channels.get("my_liveobjects_channel", options: channelOptions)
+let channel = realtime.channels.get("test-channel", options: channelOptions)
 ```
 </Code>
 
-Next, you need to [attach to the channel](/docs/channels/states). Attaching to a channel starts an initial synchronization sequence where the objects on the channel are sent to the client.
+## Get the channel object <a id="step-4"/>
 
-<Code>
-{/* This is cumbersome and we'd really like to just write `try await channel.attach()`; see https://github.com/ably/ably-cocoa/issues/2087 */}
-```swift
-try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-    channel.attach { error in
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }
-}
-```
-</Code>
+The [`channel.object`](/docs/api/realtime-sdk/channels?lang=swift#object) property gives access to the LiveObjects API for a channel.
 
-## Get root object <a id="step-4"/>
+Use `channel.object.get()` to obtain the channel object. The channel object is a [`LiveMap`](/docs/liveobjects/map?lang=swift) that always exists on a channel and acts as the top-level entry point for accessing and persisting objects. It is returned as a [`LiveMapPathObject`](/docs/liveobjects/concepts/path-object?lang=swift#get), which provides a path-based API for accessing and manipulating the object hierarchy.
 
-The [`channel.objects`](/docs/api/realtime-sdk/channels#objects) property gives access to the LiveObjects API for a channel.
-
-Use it to get the root object, which is the entry point for accessing and persisting objects on a channel. The root object is a [`LiveMap`](/docs/liveobjects/map) instance that always exists on a channel and acts as the top-level node in your object tree. You can get the root object using the `getRoot()` function of LiveObjects:
+`channel.object.get()` is an `async` function that suspends with `try await` until the LiveObjects state is synchronized with the Ably system. Reads are synchronous and local:
 
 <Code>
 ```swift
-// The getRoot call returns once the LiveObjects state is synchronized with the Ably system
-let root = try await channel.objects.getRoot()
+let rootObject = try await channel.object.get()
 ```
 </Code>
 
-## Create objects <a id="step-5"/>
-
-You can create new objects using dedicated functions of the LiveObjects API at [`channel.objects`](/docs/api/realtime-sdk/channels#objects). To persist them on a channel and share them between clients, you must assign objects to a parent `LiveMap` instance connected to the root object. The root object itself is a `LiveMap` instance, so you can assign objects to the root and start building your object tree from there.
-
-<Aside data-type='note'>
-Objects that are not descendants of the root object are "unreachable" and will eventually be garbage collected. Read more in the [objects lifecycle events section](/docs/liveobjects/lifecycle#objects-lifecycle).
+<Aside data-type='important'>
+Mutations and `channel.object.get()` are asynchronous: they suspend with `try await` until the operation completes. Reads, navigation and casts are synchronous and run locally, so they need no `await`. There are no blocking variants of these calls. Subscription callbacks fire on ably-cocoa's callback queue, which is the main queue by default, so you can update your UI directly from them without hopping queues. If you set a custom `dispatchQueue` on `ARTClientOptions`, hop back to the main actor yourself before touching UI.
 </Aside>
 
+<Aside data-type='note'>
+Calling `channel.object.get()` implicitly attaches to the channel if it's not already attached. You don't need to manually call `channel.attach()` before getting the object.
+</Aside>
+
+## Create and assign objects <a id="step-5"/>
+
+You can create and assign objects using the `LiveMap.create()` and `LiveCounter.create()` static methods. These methods return a blueprint describing the object to create; the actual object is created when you assign it to a key with `set()`. Wrap a blueprint in `.liveCounter(...)` or `.liveMap(...)` when passing it to `set()`, while primitive values such as strings and numbers can be passed directly:
+
 <Code>
 ```swift
-let visitsCounter = try await channel.objects.createCounter()
-let reactionsMap = try await channel.objects.createMap()
+// Create a LiveCounter with initial value 0
+let visits = LiveCounter.create(initialCount: 0)
 
-try await root.set(key: "visits", value: .liveCounter(visitsCounter))
-try await root.set(key: "reactions", value: .liveMap(reactionsMap))
+// Assign it to the 'visits' key on the channel object
+try await rootObject.set(key: "visits", value: .liveCounter(visits))
+
+// Create a LiveMap with initial entries
+let reactions = LiveMap.create(entries: [
+    "likes": 0,
+    "hearts": 0,
+])
+
+// Assign it to the 'reactions' key on the channel object
+try await rootObject.set(key: "reactions", value: .liveMap(reactions))
+
+// Infer types for the assigned objects
+let visitsCounter = rootObject.get(key: "visits").asLiveCounter()
+let reactionsMap = rootObject.get(key: "reactions").asLiveMap()
 ```
 </Code>
+
+`rootObject.get(key:)` returns a general [`PathObject`](/docs/liveobjects/concepts/path-object?lang=swift) that doesn't yet know the type of the value it points to. Call one of the `as*` methods, such as `asLiveCounter()` or `asLiveMap()`, to work with the value as a specific type. These casts are always safe to call: they never throw, even if the value at the path has a different type. Learn more about [Type inference](/docs/liveobjects/typing?lang=swift#type-inference).
+
+<Aside data-type='note'>
+You can create deeply nested structures in a single operation by nesting `LiveMap.create()` and `LiveCounter.create()` calls.
+</Aside>
 
 ## Subscribe to updates <a id="step-6"/>
 
-Subscribe to realtime updates to objects on a channel. You will be notified when an object is updated by other clients or by you.
+Subscribe to realtime updates using the `subscribe()` method on a `PathObject`. You will be notified when the object at that path is updated by other clients or by you:
 
 <Code>
 ```swift
-try visitsCounter.subscribe { _, _ in
-    do {
-        print("Visits counter updated: \(try visitsCounter.value)")
-    } catch {
-        // Error handling of visitsCounter.value omitted for brevity
-    }
+// Subscribe to counter updates
+let counterSubscription = try visitsCounter.subscribe { event in
+    guard let value = try? event.object.asLiveCounter().value() else { return }
+    print("Visits counter updated: \(value)")
 }
 
-try reactionsMap.subscribe { _, _ in
-    do {
-        print("Reactions map updated: \(try reactionsMap.entries)")
-    } catch {
-        // Error handling of reactionsMap.entries omitted for brevity
-    }
+// Subscribe to map updates
+let mapSubscription = try reactionsMap.subscribe { event in
+    guard let json = try? event.object.compactJson() else { return }
+    print("Reactions updated: \(json)")
+}
+```
+</Code>
+
+The subscription callback receives an event that exposes:
+- `object`: A `PathObject` pointing to the path where the change occurred.
+- `message`: The `ObjectMessage` that carried the operation that led to the change (nullable).
+
+The `subscribe()` method also returns a `Subscription` object. When you no longer want to receive updates, call `unsubscribe()` on it:
+
+<Code>
+```swift
+// Keep the Subscription returned by subscribe()
+let subscription = try visitsCounter.subscribe { event in
+    guard let value = try? event.object.asLiveCounter().value() else { return }
+    print("Visits counter updated: \(value)")
+}
+
+// Later, stop receiving updates
+subscription.unsubscribe()
+```
+</Code>
+
+Every `PathObject` also exposes an `events()` [`AsyncStream`](https://developer.apple.com/documentation/swift/asyncstream), so you can consume updates with `for await`, which is often the more idiomatic pattern in Swift. Breaking out of the loop, or cancelling the enclosing task, automatically unsubscribes:
+
+<Code>
+```swift
+for await event in try visitsCounter.events() {
+    guard let value = try? event.object.asLiveCounter().value() else { continue }
+    print("Visits counter updated: \(value)")
 }
 ```
 </Code>
 
 ## Update objects <a id="step-7"/>
 
-Update objects using mutation methods. All subscribers (including you) will be notified of the changes when you update an object:
+Update objects using mutation methods on `PathObject`. All subscribers (including you) will be notified of the changes:
 
 <Code>
 ```swift
+// Update counter
 try await visitsCounter.increment(amount: 5)
-// console: "Visits counter updated: 5.0"
-try await visitsCounter.decrement(amount: 2)
-// console: "Visits counter updated: 3.0"
+// console: Visits counter updated: 5.0
 
-try await reactionsMap.set(key: "like", value: 10)
-// console: "Reactions map updated: [(key: "like", value: AblyLiveObjects.LiveMapValue.number(10.0))]"
-try await reactionsMap.set(key: "love", value: 5)
-// console: "Reactions map updated: [(key: "like", value: AblyLiveObjects.LiveMapValue.number(10.0)), (key: "love", value: AblyLiveObjects.LiveMapValue.number(5.0))]"
-try await reactionsMap.remove(key: "like")
-// console: "Reactions map updated: [(key: "love", value: AblyLiveObjects.LiveMapValue.number(5.0))]"
+try await visitsCounter.decrement(amount: 2)
+// console: Visits counter updated: 3.0
+
+// Update map
+try await reactionsMap.set(key: "likes", value: 10)
+// console: Reactions updated: {"likes":10.0,"hearts":0.0}
+
+try await reactionsMap.set(key: "hearts", value: 5)
+// console: Reactions updated: {"likes":10.0,"hearts":5.0}
+
+try await reactionsMap.remove(key: "likes")
+// console: Reactions updated: {"hearts":5.0}
 ```
 </Code>
 
 <Aside data-type='note'>
-Mutation methods (such as `LiveMap.set(key:value:)`, `LiveCounter.increment(amount:)`, etc.) send operations to the Ably system and apply changes locally as soon as the operations are acknowledged. When a mutation method returns, the operation has been applied and you can immediately read the updated state. You will also be notified via subscription when the object is updated.
+Mutation methods send operations to the Ably system and apply changes locally as soon as the operations are acknowledged. Once the `await` completes, the operation has been applied locally and you can read the updated state immediately. You will also be notified via subscription when the object is updated.
 </Aside>
 
 ## Next steps <a id="step-8"/>
 
-This quickstart introduced the basic concepts of LiveObjects and demonstrated how it works. The next steps are to:
+This quickstart introduced the basic concepts of LiveObjects and demonstrated how the path-based API works. The next steps are to:
 
-* Read more about [LiveCounter](/docs/liveobjects/counter) and [LiveMap](/docs/liveobjects/map).
-* Learn about [Batching Operations](/docs/liveobjects/batch).
-* Learn about [Objects Lifecycle Events](/docs/liveobjects/lifecycle).
-* Add [Typings](/docs/liveobjects/typing) for your LiveObjects.
+* Learn about the [PathObject](/docs/liveobjects/concepts/path-object?lang=swift) and [Instance](/docs/liveobjects/concepts/instance?lang=swift) APIs.
+* Read more about [LiveCounter](/docs/liveobjects/counter?lang=swift) and [LiveMap](/docs/liveobjects/map?lang=swift).
+* Learn about [Objects Lifecycle Events](/docs/liveobjects/lifecycle?lang=swift).
+* Learn about [Type inference](/docs/liveobjects/typing?lang=swift) for your LiveObjects.
