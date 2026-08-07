@@ -134,6 +134,139 @@ if (scoreInstance != null) {
 Learn more about type inference on the [PathObject](/docs/liveobjects/concepts/path-object?lang=java#typing) and [Instance](/docs/liveobjects/concepts/instance?lang=java#typing) concept pages.
 </If>
 
+<If lang="swift">
+## Type inference <a id="type-inference"/>
+
+The Swift SDK doesn't take user-supplied type parameters to describe the structure of your data. Instead, you work with the type of a value differently on each layer:
+
+- On a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=swift), infer the type by calling one of the `as*` methods: `asLiveMap()`, `asLiveCounter()` or `asPrimitive()`. These casts **never throw**. A wrong cast only surfaces later, when you use the result.
+- On an [`Instance`](/docs/liveobjects/concepts/instance?lang=swift), there are no casts at all. `Instance` is an enum, and you discriminate between its cases with an exhaustive `switch` that the compiler checks.
+
+### Cast on the path layer <a id="path-layer-casts"/>
+
+A `PathObject` is a reference to a location, not to a value, so an `as*` cast can't check what is actually stored at the path. The cast always succeeds, and a mismatch only shows up when you use the result:
+
+- Reads, such as `value()` or `entries()`, return `nil` or an empty result instead of the expected value, and never throw for the mismatch.
+- Writes, such as `set()` or `increment()`, throw an `ARTErrorInfo` from a local check inside the awaited call, before any operation is sent: error code `92007` when the value at the path doesn't match the inferred type, or `92005` when nothing resolves at the path at all.
+
+There is a single primitive cast, `asPrimitive()`, whose `value()` returns a `Primitive` enum that you pattern-match to get the concrete value, or read through convenience getters such as `stringValue` and `numberValue`.
+
+<Code>
+```swift
+let rootObject = try await channel.object.get()
+
+// Infer the 'visits' path as a LiveCounter; the cast itself never throws
+let visits = rootObject.get(key: "visits").asLiveCounter()
+
+try await visits.increment(amount: 1)
+
+// A typed read returns the value, or nil when the path is missing
+// or holds a value of a different type
+let theme = try rootObject.at(path: "settings.theme").asPrimitive().value()?.stringValue // String or nil
+```
+</Code>
+
+Reads are marked `try` only because they throw when LiveObjects cannot be accessed at all: the channel is in the `DETACHED` or `FAILED` state (error code `90001`), or the channel is missing the `object_subscribe` mode (error code `40024`). They never throw for a type mismatch or an absent path.
+
+### Discriminate on the instance layer <a id="instance-layer-casts"/>
+
+An `Instance` wraps a value that has already been resolved, so its type is known the moment you obtain it. `Instance` is an enum with three cases — `.liveMap`, `.liveCounter` and `.primitive` — so instead of casting, you discriminate between the cases with an exhaustive `switch`. The compiler checks that you handle every case, and the type mismatch error (code `92007`) that the path layer throws for wrong-typed writes cannot occur from this discrimination. In return, reads on a typed instance never return `nil` for a type mismatch: `try map.size` and `try counter.value` are non-optional.
+
+<Code>
+```swift
+switch try rootObject.get(key: "score").instance() {
+case .liveCounter(let score):
+    print(try score.value) // non-optional Double
+case .liveMap(let map):
+    print(try map.size)
+case .primitive(let primitive):
+    print(try primitive.value)
+case .none:
+    print("Nothing exists at the 'score' path")
+}
+```
+</Code>
+
+Use `if case` when you only need to handle one type:
+
+<Code>
+```swift
+if case .liveCounter(let score)? = try rootObject.get(key: "score").instance() {
+    print(try score.value) // non-optional Double
+}
+```
+</Code>
+
+### Check a value's type <a id="get-type"/>
+
+When you don't know what is stored at a path, check its type before committing to a cast. The path layer exposes `type()` (a method) and the instance layer exposes `type` (a property). Both return a `ValueType` enum with one of the following values: `.string`, `.number`, `.boolean`, `.binary`, `.jsonObject`, `.jsonArray`, `.liveMap`, `.liveCounter` or `.unknown`.
+
+The result tells you slightly different things on each layer:
+
+- On a `PathObject`, `type()` returns `nil` when nothing resolves at the path. This makes the two cases easy to tell apart: `nil` means there is no value at the path, while `.unknown` means a value exists but its type is not recognized.
+- On an `Instance`, the `type` property is non-optional, because an instance always wraps an existing value. It also doesn't return `.unknown` in normal operation.
+- A `PathObject` additionally provides `exists()`, a lightweight, best-effort check for whether anything is currently stored at the path.
+
+On a `PathObject`, `type()` returns an optional; check it for `nil` before acting on it:
+
+<Code>
+```swift
+let score = rootObject.get(key: "score")
+
+// type() returns nil when nothing resolves at the path
+if let type = try score.type() {
+    if type == .liveCounter {
+        print(try score.asLiveCounter().value() ?? 0)
+    } else {
+        print(try score.compactJson() as Any)
+    }
+} else {
+    print("Nothing exists at the 'score' path")
+}
+```
+</Code>
+
+On an `Instance`, the `type` property is never `nil`, so you can inspect every `ValueType` value directly:
+
+<Code>
+```swift
+if let scoreInstance = try rootObject.get(key: "score").instance() {
+    switch scoreInstance.type {
+    case .liveCounter:
+        if case .liveCounter(let counter) = scoreInstance {
+            print(try counter.value)
+        }
+    case .liveMap:
+        if case .liveMap(let map) = scoreInstance {
+            print(try map.size)
+        }
+    case .string, .number, .boolean, .binary, .jsonObject, .jsonArray:
+        // Primitive values are wrapped in read-only primitive instances
+        print(try scoreInstance.compactJson())
+    case .unknown:
+        // Never produced by an Instance in normal operation
+        break
+    }
+}
+```
+</Code>
+
+On the write side, `set(key:value:)` takes a `LiveMapValue`. Primitive literals convert automatically through Swift's `ExpressibleBy*Literal` conformances, so passing a `String`, number or `Bool` directly works. To store a nested object, pass a blueprint created with `LiveMap.create(entries:)` or `LiveCounter.create(initialCount:)`, wrapped in the matching `LiveMapValue` case:
+
+<Code>
+```swift
+// Primitive literals convert automatically to LiveMapValue
+try await rootObject.set(key: "name", value: "Alice")
+
+// Store a nested object with a blueprint
+let scores = LiveMap.create(entries: ["total": .liveCounter(LiveCounter.create(initialCount: 0))])
+try await rootObject.set(key: "scores", value: .liveMap(scores))
+```
+</Code>
+
+Learn more about type inference on the [PathObject](/docs/liveobjects/concepts/path-object?lang=swift#typing) and [Instance](/docs/liveobjects/concepts/instance?lang=swift#typing) concept pages.
+</If>
+
 <If lang="javascript">
 If you are using TypeScript in your project, you can leverage built-in TypeScript support to ensure type safety and enable autocompletion when working with the channel object.
 

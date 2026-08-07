@@ -31,9 +31,7 @@ An `Instance` can also wrap a primitive value, for example when obtained from a 
 
 <If lang="swift">
 <Aside data-type='note'>
-`Instance` is not yet available in the Swift SDK; support is coming soon.
-
-See the [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/counter) documentation for SDK-specific examples.
+Mutations on an `Instance` are asynchronous: they suspend with `try await` until the operation completes. Reads, navigation and case matching on an `Instance` are synchronous and run locally, so they need no `await`. There are no blocking variants. Subscription callbacks fire on ably-cocoa's callback queue, which is the main queue by default, so you can update your UI directly from them without hopping queues.
 </Aside>
 </If>
 
@@ -50,6 +48,18 @@ const rootObject = await channel.object.get();
 const visits = rootObject.get('visits').instance(); // undefined only if nothing exists at the path
 console.log(visits?.id); // e.g. counter:abc123@1234567890
 console.log(visits?.value()); // e.g. 5
+```
+
+```swift
+// Get a PathObject for the channel object
+let rootObject = try await channel.object.get()
+
+// Get the specific Instance of a LiveCounter located at the 'visits' key
+let visitsInstance = try rootObject.get(key: "visits").instance() // nil only if nothing exists at the path
+if case .liveCounter(let visits)? = visitsInstance {
+    print(visits.id)        // e.g. counter:abc123@1234567890
+    print(try visits.value) // e.g. 5.0
+}
 ```
 
 ```java
@@ -69,6 +79,9 @@ if (visitsInstance != null) {
 <If lang="javascript">
 The `instance()` method returns `undefined` only if nothing exists at that path. It wraps whatever value resolves there: a `LiveMap`, a `LiveCounter`, or a primitive value. A primitive-backed `Instance` is read-only: it has no `id` and exposes the primitive via `value()`.
 </If>
+<If lang="swift">
+The `instance()` method returns `nil` only if nothing exists at that path. It wraps whatever value resolves there, surfaced as the corresponding case of the `Instance` enum: a `LiveMap` becomes `.liveMap`, a `LiveCounter` becomes `.liveCounter`, and a primitive value becomes `.primitive`. A primitive-backed `Instance` (`.primitive`) is read-only: it has no `id` and exposes the value through its `value` property.
+</If>
 <If lang="java">
 The `instance()` method returns `null` only if nothing exists at that path. It wraps whatever value resolves there: a `LiveMap` or `LiveCounter` becomes a `LiveMapInstance` or `LiveCounterInstance`, and a primitive value becomes a read-only primitive instance (for example `StringInstance`).
 </If>
@@ -82,6 +95,16 @@ const visits = rootObject.get('visits').instance();
 
 // Increment the specific LiveCounter instance
 await visits?.increment(5);
+```
+
+```swift
+// Obtain an Instance for a LiveCounter
+let visitsInstance = try rootObject.get(key: "visits").instance()
+
+// Increment the specific LiveCounter instance
+if case .liveCounter(let visits)? = visitsInstance {
+    try await visits.increment(amount: 5)
+}
 ```
 
 ```java
@@ -153,6 +176,51 @@ if (visitsInstance != null && visitsInstance.getType() == ValueType.LIVE_COUNTER
 See the [Type inference documentation](/docs/liveobjects/typing?lang=java#type-inference) for the full contract, including how the path-layer casts differ.
 </If>
 
+<If lang="swift">
+## Type inference <a id="typing"/>
+
+`Instance` is an enum with three cases: `.liveMap`, `.liveCounter` and `.primitive`. There are no casts on an `Instance`; discriminate between the cases with an exhaustive `switch`, which the compiler checks. A type mismatch error (code 92007, which the path layer throws for wrong-typed writes) cannot occur from this discrimination. In exchange, reads on a typed instance never return `nil` for a type mismatch: `try map.size` and `try counter.value` are non-optional.
+
+<Code>
+```swift
+switch try rootObject.get(key: "visits").instance() {
+case .liveCounter(let visits):
+    try await visits.increment(amount: 1)
+case .liveMap(let map):
+    print(try map.size)
+case .primitive(let primitive):
+    print(try primitive.value)
+case .none:
+    print("nothing exists at this path")
+}
+```
+</Code>
+
+Use `if case` when you only need to handle one type:
+
+<Code>
+```swift
+if case .liveCounter(let visits)? = try rootObject.get(key: "visits").instance() {
+    try await visits.increment(amount: 1)
+}
+```
+</Code>
+
+When you only need to inspect the type, read the `type` property on the `Instance`, which is non-optional and runs in constant time:
+
+<Code>
+```swift
+if let instance = try rootObject.get(key: "visits").instance() {
+    print(instance.type) // e.g. liveCounter
+}
+```
+</Code>
+
+Reads on an instance throw an `ARTErrorInfo` only when LiveObjects cannot be accessed at all: the channel is in the `DETACHED` or `FAILED` state (error code 90001), or the channel is missing the `object_subscribe` mode (error code 40024). They never throw for a type mismatch or an absent entry.
+
+See the [Type inference documentation](/docs/liveobjects/typing?lang=swift#type-inference) for the full contract, including how the path-layer casts differ.
+</If>
+
 ## Navigate an Instance <a id="navigate"/>
 
 For `LiveMap` instances, use the `get(key)` method to navigate to a child value:
@@ -160,6 +228,11 @@ For `LiveMap` instances, use the `get(key)` method to navigate to a child value:
 <If lang="javascript">
 <Aside data-type="note">
 Unlike `PathObject`, the `get(key)` method on an `Instance` can return `undefined` if the entry doesn't exist, if the object at that location has been deleted, or if the current instance is not a `LiveMap`.
+</Aside>
+</If>
+<If lang="swift">
+<Aside data-type="note">
+Unlike `PathObject`, the `get(key:)` method on a `LiveMapInstance` returns `nil` if the entry doesn't exist or the object at that location has been deleted. "Not a `LiveMap`" cannot happen, because `get(key:)` only exists on `LiveMapInstance`.
 </Aside>
 </If>
 <If lang="java">
@@ -181,6 +254,21 @@ console.log(settings?.id); // e.g. "map:abc123@1234567890"
 // is not a LiveMap or the accessed entry does not exist
 const color = settings?.get('theme')?.get('color');
 console.log(color?.value()); // e.g. blue
+```
+
+```swift
+// Obtain an instance
+if case .liveMap(let settings)? = try rootObject.get(key: "settings").instance() {
+    print(settings.id) // e.g. "map:abc123@1234567890"
+
+    // Chain get() calls for deeper navigation.
+    // get(key:) returns nil at any point if the accessed entry does not exist
+    if case .liveMap(let theme)? = try settings.get(key: "theme"),
+       case .primitive(let color)? = try theme.get(key: "color"),
+       case .string(let colorValue) = try color.value {
+        print(colorValue) // e.g. "blue"
+    }
+}
 ```
 
 ```java
@@ -205,6 +293,9 @@ if (settingsInstance != null) {
 
 <If lang="javascript">
 The `id` getter returns the [object ID](/docs/liveobjects/concepts/objects#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage). On a primitive-backed instance, `id` returns `undefined`, because primitives have no object ID.
+</If>
+<If lang="swift">
+The `id` property returns the [object ID](/docs/liveobjects/concepts/objects?lang=swift#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage). A primitive-backed instance has no `id` property, because primitives have no object ID.
 </If>
 <If lang="java">
 The `getId()` method returns the [object ID](/docs/liveobjects/concepts/objects?lang=java#object-ids) of the instance, which can be used with the [REST API](/docs/liveobjects/rest-api-usage).
@@ -232,6 +323,23 @@ const visits = user?.get('visits');
 console.log(visits?.value()); // e.g. 5
 ```
 
+```swift
+// Get an instance
+if case .liveMap(let user)? = try rootObject.get(key: "user").instance() {
+
+    // Get the value of an entry containing a primitive
+    if case .primitive(let username)? = try user.get(key: "username"),
+       case .string(let name) = try username.value {
+        print("Username: \(name)") // e.g. "alice"
+    }
+
+    // Get the value of the LiveCounter stored in 'visits'
+    if case .liveCounter(let visits)? = try user.get(key: "visits") {
+        print(try visits.value) // e.g. 5.0
+    }
+}
+```
+
 ```java
 // Get an instance
 Instance userInstance = rootObject.get("user").instance();
@@ -256,6 +364,9 @@ if (userInstance != null) {
 <If lang="javascript">
 If the entry doesn't exist, `get()` returns undefined:
 </If>
+<If lang="swift">
+If the entry doesn't exist, `get(key:)` returns `nil`:
+</If>
 <If lang="java">
 If the entry doesn't exist, `get()` returns `null`:
 </If>
@@ -266,6 +377,13 @@ const user = rootObject.get('user').instance();
 if (user) {
   // Get an entry that doesn't exist on the instance
   console.log(user.get('nonexistent')); // undefined
+}
+```
+
+```swift
+if case .liveMap(let user)? = try rootObject.get(key: "user").instance() {
+    // Get an entry that doesn't exist on the instance
+    print(String(describing: try user.get(key: "nonexistent"))) // nil
 }
 ```
 
@@ -312,6 +430,25 @@ if (settingsInstance != null) {
 </Code>
 </If>
 
+<If lang="swift">
+In Swift, a wrong-typed call cannot happen: the method simply doesn't exist on the typed instance, and the `Instance` enum has no casts to get wrong. Match the case you need, or check the [`type`](/docs/liveobjects/typing?lang=swift#get-type) property when the type isn't known. See the [Type inference documentation](/docs/liveobjects/typing?lang=swift#type-inference) for the full contract:
+
+<Code>
+```swift
+if let settings = try rootObject.get(key: "settings").instance() { // a LiveMap
+    print(settings.type) // liveMap
+
+    // Maps expose entries()/keys()/values()/size and counters expose value -
+    // those members simply don't exist on the wrong type, so the compiler
+    // rejects a wrong-typed call before it can run:
+    if case .liveMap(let map) = settings {
+        print(try map.size)
+    }
+}
+```
+</Code>
+</If>
+
 ### Enumerate collections
 
 For `LiveMap` instances, you can iterate over the entries, keys, and values:
@@ -336,6 +473,23 @@ if (settings) {
   for (const value of settings.values()) {
     console.log('Value:', value.value());
   }
+}
+```
+
+```swift
+if case .liveMap(let settings)? = try rootObject.get(key: "settings").instance() {
+
+    // Iterate over key-value pairs.
+    // Each key is a String, and the value is an Instance for the entry.
+    for (key, value) in try settings.entries() {
+        print("\(key): \(try value.compactJson())")
+    }
+
+    // Iterate over keys only
+    for key in try settings.keys() { print("Key: \(key)") }
+
+    // Iterate over values
+    for value in try settings.values() { print("Value: \(try value.compactJson())") }
 }
 ```
 
@@ -387,6 +541,13 @@ const settings = rootObject.get('settings').instance();
 console.log(settings?.size());
 ```
 
+```swift
+if case .liveMap(let settings)? = try rootObject.get(key: "settings").instance() {
+    // Get the number of entries - non-optional Int on an Instance
+    print(try settings.size)
+}
+```
+
 ```java
 Instance settingsInstance = rootObject.get("settings").instance();
 if (settingsInstance != null) {
@@ -411,6 +572,12 @@ console.log(visits?.size()); // undefined
 ### Get a compact object <a id="get-a-compact-object"/>
 
 The Java SDK exposes `compactJson()` as the supported snapshot of an instance; there is no `compact()` equivalent. On an `Instance` the result is non-null; cyclic references are broken via `{"objectId": …}` markers and binary data is base64-encoded.
+</If>
+
+<If lang="swift">
+### Get a compact object <a id="get-a-compact-object"/>
+
+The Swift SDK exposes `compactJson()` as the supported snapshot of an instance; there is no `compact()` equivalent. On an `Instance` the result is a non-optional `JSONValue`; cyclic references are broken via `{"objectId": …}` markers and binary data is base64-encoded.
 </If>
 
 <If lang="javascript">
@@ -470,7 +637,7 @@ It is possible for the value returned from `compact()` to contain cyclic referen
 <If lang="javascript">
 Use the `compactJson()` method to obtain a value that can be safely passed to `JSON.stringify()`:
 </If>
-<If lang="java">
+<If lang="swift,java">
 Use the `compactJson()` method to obtain a JSON representation of the instance:
 </If>
 
@@ -494,6 +661,20 @@ if (userInstance) {
   //   "profile": { "objectId": "map:abc123@1234567890" },
   //   "name": "Alice"
   // }
+}
+```
+
+```swift
+// Example: Using the same cyclic structure from before
+// user (LiveMap)
+//   ├─ profile -> references user (creates cycle)
+//   └─ name: "Alice"
+
+if let userInstance = try rootObject.get(key: "user").instance() {
+    // compactJson() breaks cycles, making it safe to serialize.
+    // The cycle is broken via an objectId reference.
+    print(try userInstance.compactJson()) // non-optional on an Instance
+    // {"profile":{"objectId":"map:abc123@1234567890"},"name":"Alice"}
 }
 ```
 
@@ -527,6 +708,20 @@ if (rootInstance) {
   // compactJson() converts binary data to base64 strings
   const compactJson = rootInstance.compactJson();
   console.log(compactJson.hello); // "d29ybGQ=" (base64 encoded)
+}
+```
+
+```swift
+// The channel object always exists, so instance() resolves to a LiveMap here
+if case .liveMap(let rootInstance)? = try rootObject.instance() {
+
+    // Store binary data in the LiveMap
+    let binaryData = Data("world".utf8)
+    try await rootInstance.set(key: "hello", value: .primitive(.data(binaryData)))
+
+    // compactJson() converts binary data to base64 strings
+    let json = try rootInstance.compactJson()
+    print(json.objectValue?["hello"]?.stringValue ?? "") // "d29ybGQ="
 }
 ```
 
@@ -564,6 +759,20 @@ await settings?.remove('oldSetting');
 const visits = rootObject.get('visits').instance();
 await visits?.increment(5);
 await visits?.decrement(2);
+```
+
+```swift
+// Update a LiveMap instance
+if case .liveMap(let settings)? = try rootObject.get(key: "settings").instance() {
+    try await settings.set(key: "theme", value: "dark")
+    try await settings.remove(key: "oldSetting")
+}
+
+// Update a LiveCounter instance
+if case .liveCounter(let visits)? = try rootObject.get(key: "visits").instance() {
+    try await visits.increment(amount: 5)
+    try await visits.decrement(amount: 2)
+}
 ```
 
 ```java
@@ -628,6 +837,17 @@ if (visits) {
 }
 ```
 
+```swift
+if case .liveCounter(let visits)? = try rootObject.get(key: "visits").instance() {
+    let subscription = try visits.subscribe { _ in
+        print("Visits updated")
+    }
+
+    // Later, stop listening to changes
+    subscription.unsubscribe()
+}
+```
+
 ```java
 Instance visitsInstance = rootObject.get("visits").instance();
 if (visitsInstance != null) {
@@ -660,9 +880,32 @@ if (visits) {
 </Code>
 </If>
 
+<If lang="swift">
+Alternatively, use the `events()` method to consume updates as an [`AsyncStream`](https://developer.apple.com/documentation/swift/asyncstream) with `for await`. Breaking out of the loop, or cancelling the enclosing task, automatically unsubscribes:
+
+<Code>
+```swift
+if case .liveCounter(let visits)? = try rootObject.get(key: "visits").instance() {
+    for await _ in try visits.events() {
+        print("Visits updated")
+
+        if someCondition {
+            break // Unsubscribes
+        }
+    }
+}
+```
+</Code>
+</If>
+
 <If lang="javascript">
 <Aside data-type='important'>
 The `subscribe()` and `subscribeIterator()` methods are only available on `LiveMap` and `LiveCounter` instances. To subscribe to a specific entry in a `LiveMap`, regardless of the type of the entry's value, [subscribe](/docs/liveobjects/concepts/path-object#subscribe) through a `PathObject` instead.
+</Aside>
+</If>
+<If lang="swift">
+<Aside data-type='important'>
+`subscribe()` and `events()` are only available on `LiveMapInstance` and `LiveCounterInstance`; this is enforced at compile time, as `PrimitiveInstance` has no `subscribe` method. To subscribe to a specific entry in a `LiveMap`, regardless of the type of the entry's value, [subscribe](/docs/liveobjects/concepts/path-object?lang=swift#subscribe) through a `PathObject` instead.
 </Aside>
 </If>
 <If lang="java">
@@ -693,6 +936,21 @@ if (visits) {
 }
 ```
 
+```swift
+if case .liveCounter(let visits)? = try rootObject.get(key: "visits").instance() {
+    try visits.subscribe { event in
+        if event.message?.operation.action == .objectDelete {
+            print("visits counter was deleted")
+            // This listener is automatically unsubscribed after this event
+        }
+    }
+
+    // Make the LiveCounter stored in visits unreachable.
+    // It will eventually be deleted.
+    try await rootObject.remove(key: "visits")
+}
+```
+
 ```java
 Instance visitsInstance = rootObject.get("visits").instance();
 if (visitsInstance != null) {
@@ -719,6 +977,10 @@ The subscription receives an argument with information about the update:
 - The `object` field contains an `Instance` representing the same object instance you called `subscribe()` on
 - The `message` field contains the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made.
 </If>
+<If lang="swift">
+- The `object` property contains the same object instance you called `subscribe()` on, as the `Instance` enum. Match it back with `if case`; the match always succeeds here because you already know the type you subscribed on.
+- The `message` property contains the [`ObjectMessage`](/docs/liveobjects/concepts/operations?lang=swift#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made. It is optional.
+</If>
 <If lang="java">
 - `getObject()` returns the same object instance you called `subscribe()` on, as the base `Instance` type. Cast it back with the matching `as*` method; the cast is safe here because you already know the type you subscribed on.
 - `getMessage()` returns the [`ObjectMessage`](/docs/liveobjects/concepts/operations#properties) which details the operation that caused the change, including information about the client that performed the operation and the specific changes made. It is nullable.
@@ -735,6 +997,23 @@ if (visits) {
     console.log('Operation:', message?.operation.action);
     console.log(object.id === visits.id); // true
   });
+}
+```
+
+```swift
+if case .liveCounter(let visits)? = try rootObject.get(key: "visits").instance() {
+    try visits.subscribe { event in
+        if case .liveCounter(let object) = event.object {
+            if let value = try? object.value {
+                print("New value: \(value)")
+            }
+            if let message = event.message {
+                print("Updated by: \(message.clientId ?? "")")
+                print("Operation: \(message.operation.action)") // e.g. counterInc
+            }
+            print(object.id == visits.id) // true - same instance
+        }
+    }
 }
 ```
 
@@ -775,6 +1054,24 @@ if (settings) {
 
   // This does NOT trigger the subscription (change to nested object)
   await settings.get('preferences')?.set('language', 'en');
+}
+```
+
+```swift
+if case .liveMap(let settings)? = try rootObject.get(key: "settings").instance() {
+
+    // Subscribe to the settings LiveMap instance
+    try settings.subscribe { _ in
+        print("Settings LiveMap updated")
+    }
+
+    // This triggers the subscription (direct change to settings)
+    try await settings.set(key: "theme", value: "dark")
+
+    // This does NOT trigger the subscription (change to nested object)
+    if case .liveMap(let preferences)? = try settings.get(key: "preferences") {
+        try await preferences.set(key: "language", value: "en")
+    }
 }
 ```
 
