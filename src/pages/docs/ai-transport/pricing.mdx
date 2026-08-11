@@ -1,0 +1,106 @@
+---
+title: "AI Transport pricing"
+meta_description: "Understand how AI Transport operations contribute to your message count, including token streaming appends, run lifecycle events, message persistence, and cost optimization strategies."
+meta_keywords: "AI Transport pricing, message counting, token streaming, append rollup, cost optimization"
+intro: "How AI Transport operations contribute to your message count and strategies to optimize costs."
+---
+
+The [AI Transport SDK](/docs/ai-transport) is built on top of [Pub/Sub](/docs/pub-sub). All AI Transport operations generate Pub/Sub messages that follow the same [counting rules](/docs/platform/pricing/message-counting): each message counts once inbound when it is published, once outbound for every subscriber that receives it, and once more when it is stored. Ably counts messages rather than tokens, and the [append rollup](#rollup) decides how many messages a streamed response becomes.
+
+## AI Transport operations <a id="operations"/>
+
+The following table shows how AI Transport operations contribute to your message count:
+
+| Operation | Messages counted |
+| --- | --- |
+| [User input](/docs/ai-transport/concepts/runs#invocations) ||
+| Send a message | 1 inbound message per message part |
+| Cancel a run | 1 inbound message |
+| Input delivery | 1 outbound message per subscriber |
+| [Token streaming](/docs/ai-transport/features/token-streaming) ||
+| Open a streamed message | 1 inbound message |
+| Token append | 1 inbound message per published append after [rollup](#rollup) |
+| Close a streamed message | 1 inbound message |
+| Append delivery | 1 outbound message per subscriber per published append |
+| [Run and step lifecycle](/docs/ai-transport/concepts/runs) ||
+| Run start | 1 inbound message |
+| Run suspend | 1 inbound message |
+| Run resume | 1 inbound message |
+| Run end | 1 inbound message |
+| Step start | 1 inbound message |
+| Step end | 1 inbound message |
+| [Codec lifecycle event](/docs/ai-transport/internals/codec-architecture#two-layer-split) | 1 inbound message per event |
+| Lifecycle event delivery | 1 outbound message per subscriber |
+| [Message persistence](#persistence) ||
+| Persistence storage | 1 additional message per stored message |
+| [History and replay](/docs/ai-transport/features/history) ||
+| History retrieval | 1 outbound message per retrieved message |
+| [Agent presence](/docs/ai-transport/features/agent-presence) ||
+| Presence enter | 1 inbound message |
+| Presence leave | 1 inbound message |
+| Presence update | 1 inbound message |
+| Presence event delivery | 1 outbound message per presence subscriber |
+
+A message part is one entry in the message's parts, such as text or an attached file, and the codec publishes each part it can encode as its own channel message.
+
+Each streamed part is its own channel message too. A response that emits reasoning and then text opens and closes two messages, and every tool call opens another. The [wire protocol](/docs/ai-transport/internals/wire-protocol#event-names) lists the exact channel message each operation publishes.
+
+The codec publishes its own lifecycle events alongside the transport's run and step events, so a single model call bills a step pair from each layer. The Vercel codec publishes `start`, `start-step`, `finish-step`, and `finish` as discrete messages, and a codec you write yourself publishes whichever lifecycle events it declares.
+
+Individual appends each count as one message, but Ably stores and serves a streamed response as one aggregated message, so retrieving it from history counts as one outbound message rather than one per append.
+
+Both the browser client and the agent attach to the same channel, and [echo](/docs/pub-sub/advanced#echo) is enabled by default, so a publisher receives its own message back and counts as one of the subscribers above. Leave echo enabled. AI Transport reconciles a client's own sends against the channel, and disabling it breaks steering and optimistic updates.
+
+Editing a message or regenerating a response does not overwrite anything. Each one starts a new run and costs the same as any other run, and the original [branch](/docs/ai-transport/features/branching) stays on the session.
+
+## Append rollup <a id="rollup"/>
+
+An agent appends each token event to the streamed message as the model produces it, and Ably coalesces the appends that fall inside the rollup window into a single published message. Each published message is what gets counted, inbound and then outbound to every subscriber, so the rollup window sets the ceiling on the message count for a stream.
+
+The default window of 40ms caps a single response at 25 published messages per second, or the model's output rate if that is lower. Raising the window lowers the ceiling: at 100ms a stream publishes at most 10 messages per second. Clients receive identical content either way, delivered in fewer and larger updates. The [rollup configuration table](/docs/ai-transport/features/token-streaming#configure-rollup) lists every `appendRollupWindow` value and where to set it.
+
+## Sessions and channels <a id="channels"/>
+
+Each AI Transport [session](/docs/ai-transport/concepts/sessions#session-and-channel) maps to a single Ably channel. Everything in the conversation shares that channel: user input, streamed responses, lifecycle events, presence, and LiveObjects state. [Concurrent turns](/docs/ai-transport/features/concurrent-turns) are multiplexed onto the same channel rather than opening more.
+
+Channel time contributes to your [channel minutes](/docs/platform/pricing#channels). A channel stays active until no clients are attached, about a minute has passed since the last client detached, and about a minute has passed since the last message was published. The billable channel time for a conversation therefore tracks how long a client or an agent stays attached rather than how many messages pass through it.
+
+## Connections <a id="connections"/>
+
+Ably bills each connected client for [connection minutes](/docs/platform/pricing#connections). A connection-minute is counted for every minute a client maintains an open connection, regardless of activity. Clients that remain connected but idle still accrue connection minutes.
+
+An agent holds a connection too. Closing a session detaches its channel but leaves the Ably client connected, so connection minutes stop only when the application closes the client or the process exits. A serverless agent that exits after each response accrues connection minutes only while it runs; a long-lived agent process accrues them continuously.
+
+## Message persistence <a id="persistence"/>
+
+AI Transport requires the **Message annotations, updates, deletes, and appends** [channel rule](/docs/ai-transport/getting-started/channel-rules) on the namespace your sessions live on, because appends only work on channels that have it. Enabling the rule [persists](/docs/storage-history/storage#all-message-persistence) the channel messages in that namespace whether or not you enable persistence separately, and each stored message counts as one additional message.
+
+This applies to the whole namespace, not just to AI Transport channels. Enabling the rule on a namespace that also carries unrelated channels persists those messages as well.
+
+## Cost optimization <a id="optimization"/>
+
+### Tune the append rollup window
+
+Raise [`appendRollupWindow`](/docs/ai-transport/features/token-streaming#configure-rollup) above the 40ms default on the connection that publishes the stream. This is the largest single lever on the message count of a streamed response, because it caps how many appends Ably publishes per second. Trade it against how granular you want token delivery to feel.
+
+### Scope the channel rule to a conversation namespace
+
+Enable the channel rule on a namespace that carries conversations only, such as `conversations:`, rather than on a broad prefix. Persistence applies to every message in the namespace, so a narrow namespace keeps unrelated channels out of the persisted count.
+
+### Hydrate long conversations from your own store
+
+Loading history from the channel counts one outbound message per retrieved message. Use [database hydration](/docs/ai-transport/features/database-hydration) to serve the stored part of a conversation from your own database and let the session cover only what is live. This also lets you set a shorter channel retention.
+
+### Close sessions and connections when the conversation stops
+
+On the client, call `session.close()` when the user navigates away. On the agent, call `session.end()` when the response completes, or `session.detach()` when a durable activity is handing an open run to the next one. Each of these detaches the channel so it can go inactive, which stops channel minutes. Closing the Ably client is what stops connection minutes, on both sides.
+
+### Keep steps proportionate to the work
+
+Each [step](/docs/ai-transport/concepts/runs#steps) publishes two lifecycle events, and each `run.pipe` call brackets a step of its own. Bracket any further steps around units you want to retry independently rather than around every model call.
+
+## Read next <a id="next"/>
+
+- [Ably pricing](/docs/platform/pricing): the current message, channel, and connection rates. [Contact Ably](https://ably.com/contact) for a quote.
+- [AI chatbot pricing example](/docs/platform/pricing/examples/ai-chatbot): a worked monthly cost for a chatbot handling 35,000 conversations.
+- [Going to production](/docs/ai-transport/going-to-production): the limits, retention, and monitoring to settle alongside cost.

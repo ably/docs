@@ -207,6 +207,10 @@ export default {
       ],
     },
     {
+      name: 'AI Transport pricing',
+      link: '/docs/ai-transport/pricing',
+    },
+    {
       name: 'API reference',
       pages: [
         {
