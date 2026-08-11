@@ -34,6 +34,7 @@ import IconSocialLinkedinMono from "./icon-social-linkedin-mono";
 import IconSocialStackoverflowMono from "./icon-social-stackoverflow-mono";
 import IconSocialXMono from "./icon-social-x-mono";
 import IconSocialYoutubeMono from "./icon-social-youtube-mono";
+import IconTechAmqp from "./icon-tech-amqp";
 import IconTechAndroidFull from "./icon-tech-android-full";
 import IconTechClaudeMono from "./icon-tech-claude-mono";
 import IconTechCsharp from "./icon-tech-csharp";
@@ -44,16 +45,21 @@ import IconTechJavascript from "./icon-tech-javascript";
 import IconTechJson from "./icon-tech-json";
 import IconTechKotlin from "./icon-tech-kotlin";
 import IconTechLaravelBroadcast from "./icon-tech-laravel-broadcast";
+import IconTechMqtt from "./icon-tech-mqtt";
 import IconTechNextjs from "./icon-tech-nextjs";
 import IconTechNodejs from "./icon-tech-nodejs";
 import IconTechObjectivec from "./icon-tech-objectivec";
 import IconTechOpenai from "./icon-tech-openai";
 import IconTechPhp from "./icon-tech-php";
 import IconTechPostgres from "./icon-tech-postgres";
+import IconTechPubnub from "./icon-tech-pubnub";
+import IconTechPusher from "./icon-tech-pusher";
 import IconTechPython from "./icon-tech-python";
 import IconTechReact from "./icon-tech-react";
 import IconTechReactnative from "./icon-tech-reactnative";
 import IconTechRuby from "./icon-tech-ruby";
+import IconTechSse from "./icon-tech-sse";
+import IconTechStomp from "./icon-tech-stomp";
 import IconTechSwift from "./icon-tech-swift";
 import IconTechTypescript from "./icon-tech-typescript";
 import IconTechVercel from "./icon-tech-vercel";
@@ -99,6 +105,7 @@ export const glyphs = {
   "icon-social-stackoverflow-mono": IconSocialStackoverflowMono,
   "icon-social-x-mono": IconSocialXMono,
   "icon-social-youtube-mono": IconSocialYoutubeMono,
+  "icon-tech-amqp": IconTechAmqp,
   "icon-tech-android-full": IconTechAndroidFull,
   "icon-tech-claude-mono": IconTechClaudeMono,
   "icon-tech-csharp": IconTechCsharp,
@@ -109,16 +116,21 @@ export const glyphs = {
   "icon-tech-json": IconTechJson,
   "icon-tech-kotlin": IconTechKotlin,
   "icon-tech-laravel-broadcast": IconTechLaravelBroadcast,
+  "icon-tech-mqtt": IconTechMqtt,
   "icon-tech-nextjs": IconTechNextjs,
   "icon-tech-nodejs": IconTechNodejs,
   "icon-tech-objectivec": IconTechObjectivec,
   "icon-tech-openai": IconTechOpenai,
   "icon-tech-php": IconTechPhp,
   "icon-tech-postgres": IconTechPostgres,
+  "icon-tech-pubnub": IconTechPubnub,
+  "icon-tech-pusher": IconTechPusher,
   "icon-tech-python": IconTechPython,
   "icon-tech-react": IconTechReact,
   "icon-tech-reactnative": IconTechReactnative,
   "icon-tech-ruby": IconTechRuby,
+  "icon-tech-sse": IconTechSse,
+  "icon-tech-stomp": IconTechStomp,
   "icon-tech-swift": IconTechSwift,
   "icon-tech-typescript": IconTechTypescript,
   "icon-tech-vercel": IconTechVercel,

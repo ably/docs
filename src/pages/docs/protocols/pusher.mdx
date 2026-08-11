@@ -1,15 +1,27 @@
 ---
 title: Pusher Adapter
-meta_description: "Use the Pusher Adapter to migrate from Pusher to Ably by only changing your API key."
+meta_description: "Use the Pusher adapter to migrate from Pusher to Ably by changing your API key and endpoint, or to run Ably as a failover for Pusher."
+meta_keywords: "Pusher adapter, Pusher protocol, migrate from Pusher, Pusher failover, Ably"
+intro: "The Pusher adapter connects your existing Pusher application to Ably by changing an API key and endpoint. Use it to migrate off Pusher, or to run Ably as a failover, without rewriting your application."
 languages:
   - javascript
 ---
 
-Ably enables migration from Pusher to Ably using its Pusher Adapter. The protocol adapter handles all background translation and only requires an API key change.
+The Pusher adapter connects an existing Pusher application to Ably. It translates between the Pusher protocol and Ably's native protocol, and only requires a change to your API key and endpoint. Ably is the only cloud vendor that supports the Pusher protocol.
 
-Using an adapter introduces some latency and is slower than using an Ably SDK, however the impact is typically 1-10ms. It will also be slightly slower than using Pusher natively, but only if you are close to whichever Pusher data center used. If you aren't close to the Pusher data center you've chosen, then the extra latency from using the adapter should be more than compensated for by being able to use a data center that is close to you. This is because Ably automatically connects clients to the data center closest to them.
+## When to use the Pusher adapter <a id="when-to-use"/>
 
-The Pusher Adapter provides some of the advantages of Ably, such as inter-regional message federation, however others, such as [continuity guarantees](https://ably.com/four-pillars-of-dependability), fallback host support, and [message history](/docs/storage-history/history) are only available when using an Ably SDK. If an [Ably SDK](/docs/sdks) is available in your chosen platform, it is recommended you use that, or plan to transition to it eventually.
+Use the Pusher adapter to move onto Ably's network quickly, without changing your application logic. Your existing Pusher client and server libraries keep working, so you can migrate off Pusher, or run Ably as a failover for Pusher, in hours rather than months.
+
+The adapter is a bridge onto Ably. It provides Ably advantages such as inter-regional message federation and automatic routing to the nearest datacenter, but the Pusher protocol cannot express some of Ably's capabilities. [Continuity guarantees](https://ably.com/four-pillars-of-dependability) with multi-region fallback, fallback host support, [message history](/docs/storage-history/history), and idempotent publishing are available only when you connect with an [Ably SDK](/docs/sdks).
+
+There is no time limit on connecting through the adapter. Migrate to an Ably SDK when you want the full feature set and the strongest guarantees, at whatever pace suits you.
+
+Using the adapter introduces some latency compared to an Ably SDK, though the impact is typically 1-10ms. It is also slightly slower than using Pusher natively if you are close to your chosen Pusher datacenter. If you are not close to it, the extra latency from the adapter is more than compensated for by Ably connecting clients to the nearest datacenter.
+
+<Aside data-type='note'>
+An Ably SDK is the recommended way to connect when one is available for your platform. To decide between the native protocol, this adapter, and other protocols, see [choosing a protocol or adapter](/docs/protocols#choose).
+</Aside>
 
 <Aside data-type='usp'>
 Automatic routing to the closest datacenter.
@@ -29,7 +41,7 @@ The following Pusher features are supported using the adapter:
 * REST get presence set
 * REST get user count
 
-## Enable the Pusher Adapter <a id="enable"/>
+## Enable the Pusher adapter <a id="enable"/>
 
 The Pusher protocol is not supported by default in Ably apps. This is due to security reasons associated with the use of public channels.
 
@@ -123,7 +135,7 @@ Channel names are mapped when using the adapter as follows:
 * Pusher public channels will use the `public:` namespace.
 * Pusher private channels will use the `private:` namespace.
 * Pusher presence channels will use the `presence:` namespace.
-* Channels not in any of the above namespaces were receive a `private-ablyroot-` prefix.
+* Channels not in any of the above namespaces receive a `private-ablyroot-` prefix.
 
 Colons are not permitted in Pusher channel names, but are used as namespace separators in Ably. Because of this, the adapter maps semicolons to colons in Ably channel names and colons to semicolons in Pusher channel names. This means that you will be unable to access any Ably channels with semicolons in their name.
 
@@ -144,3 +156,42 @@ Both user count and subscriber count currently only work on presence channels.
 
 * User count returns the size of the presence set once it has been made unique by `clientId`.
 * Subscriber count returns the raw size of the presence set.
+
+## Edge cases <a id="edge-cases"/>
+
+Be aware of the following behavior when running production traffic through the adapter:
+
+* When a connection is interrupted, the adapter retries in the normal Ably way and reconnects to the nearest region. The Pusher protocol requires a new connection to be created, so messages published while the client reconnects can be lost. A native Ably client fails over to an alternative region on the existing connection with no loss of messages.
+* When a client publishes a message, is unsure whether the publish succeeded, and retries, the message can be delivered twice. The Pusher protocol cannot carry the unique message ID that Ably SDKs assign to each publish to prevent duplication.
+* Ably channels with semicolons in their names cannot be accessed through the adapter, because the adapter maps semicolons to colons. See [channel mapping](#mapping).
+* Error code `40160` means **Require identification** is enabled on a namespace the adapter needs. See [enable the Pusher adapter](#enable).
+
+## FAQ <a id="faq"/>
+
+The following questions come up most often when teams evaluate the adapter:
+
+### Does the adapter route clients to the nearest datacenter? <a id="faq-routing"/>
+
+Yes. A client connects to the Ably Pusher endpoint and is routed to the nearest datacenter by [latency-based DNS](/docs/platform/architecture/edge-network#dns-organization-and-latency-based-routing), the same as a native connection.
+
+### How much latency does the adapter add? <a id="faq-latency"/>
+
+One extra network hop within Ably's infrastructure, typically 1-10ms. There is no materially significant increase compared to a native connection.
+
+### Are messages delivered in the order they were published? <a id="faq-ordering"/>
+
+Yes. Messages published over a WebSocket connection are delivered to subscribers in the order they were published, within a region. See [message ordering](/docs/platform/architecture/message-ordering).
+
+### Can a message be delivered more than once? <a id="faq-duplicates"/>
+
+Only if a publisher retries a publish that it is unsure succeeded, because the Pusher protocol cannot carry the unique message ID that prevents duplication with an Ably SDK. All other message deliveries behave the same as the core Ably platform.
+
+### Does the adapter limit how far an application can scale? <a id="faq-scaling"/>
+
+No. Ably's scaling of connections, channels and messages applies to adapter traffic as normal.
+
+## Read next <a id="read-next"/>
+
+* [Choose a protocol or adapter](/docs/protocols#choose): the decision guide for all connection methods.
+* [PubNub adapter](/docs/protocols/pubnub): the equivalent migration path from PubNub.
+* [Ably SDKs](/docs/sdks): the native protocol, for when you want the full feature set.
