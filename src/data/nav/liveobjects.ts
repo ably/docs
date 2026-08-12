@@ -125,8 +125,9 @@ export default {
           external: true,
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-liveobjects-swift-plugin/main/AblyLiveObjects/documentation/ablyliveobjects/',
-          name: 'Swift plugin',
+          // TODO: verify this URL resolves once the ably-cocoa-hosted AblyLiveObjects DocC is published
+          link: 'https://sdk.ably.com/builds/ably/ably-cocoa/main/AblyLiveObjects/documentation/ablyliveobjects/',
+          name: 'Swift SDK',
           external: true,
         },
         {

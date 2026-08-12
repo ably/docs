@@ -25,10 +25,15 @@ meta_description: "Create, update and receive updates for a key/value data struc
 
 `LiveMap` is a synchronized key/value data structure that stores [primitive values](/docs/liveobjects/concepts/objects#primitive-types), such as numbers, strings, booleans, binary data, JSON-serializable objects or arrays and other live [object types](/docs/liveobjects/concepts/objects#object-types). It ensures that all updates are correctly applied and synchronized across clients in realtime, automatically resolving conflicts with last-write-wins (LWW) semantics.
 
-<If lang="javascript,java">
+<If lang="javascript,swift,java">
 
 You interact with `LiveMap` through a [PathObject](/docs/liveobjects/concepts/path-object) or by obtaining a specific [Instance](/docs/liveobjects/concepts/instance).
 
+<If lang="swift">
+<Aside data-type='note'>
+Mutation methods like `set(key:value:)` and `remove(key:)` are asynchronous: they suspend with `try await` until the operation completes. Reads, navigation and casts are synchronous and run locally, so they need no `await`. Subscription callbacks fire on the configured callback queue, which is the main queue by default, so you can update your UI directly from them.
+</Aside>
+</If>
 <If lang="java">
 <Aside data-type='note'>
 Mutation methods like `set` and `remove` return a `CompletableFuture<Void>`. Current examples use `.join()` for brevity, which blocks the calling thread. In production code, compose the future with `thenCompose`/`thenAccept`/`exceptionally` rather than blocking on it. See the [quickstart](/docs/liveobjects/quickstart/java#step-4) for details.
@@ -62,6 +67,34 @@ await rootObject.set('config', LiveMap.create({
 }));
 ```
 
+```swift
+// rootObject obtained from channel.object.get()
+
+// Create an empty map
+try await rootObject.set(key: "settings", value: .liveMap(LiveMap.create()))
+
+// Create a map with initial data
+let user = LiveMap.create(entries: [
+    "name": "Alice",
+    "score": 42,
+    "active": true])
+
+// Assign the user map to the channel object
+try await rootObject.set(key: "user", value: .liveMap(user))
+
+// Create a map for the nested theme
+let theme = LiveMap.create(entries: [
+    "color": "dark",
+    "fontSize": 14])
+
+// Create the config map, referencing the nested theme map
+let config = LiveMap.create(entries: [
+    "theme": .liveMap(theme)])
+
+// Assign the config map to the channel object
+try await rootObject.set(key: "config", value: .liveMap(config))
+```
+
 ```java
 // rootObject obtained from channel.object.get()
 
@@ -92,6 +125,9 @@ rootObject.set("config", LiveMapValue.of(config)).join();
 ```
 </Code>
 
+<If lang="swift">
+Primitive values can be passed to `set()` directly as literals, but `LiveMap` and `LiveCounter` blueprints must be wrapped as `.liveMap(...)` or `.liveCounter(...)`, because `LiveMapValue` distinguishes them from primitives.
+</If>
 <If lang="java">
 Unlike JavaScript, Java requires every value passed to `set()` to be wrapped in `LiveMapValue.of(...)`, including the `LiveMap.create()` and `LiveCounter.create()` blueprints.
 </If>
@@ -112,6 +148,21 @@ const id2 = rootObject.get('map2').instance()?.id;
 console.log(id1 === id2); // false
 ```
 
+```swift
+let mapValue = LiveMap.create(entries: ["theme": "dark"])
+
+// Each assignment creates a different object
+try await rootObject.set(key: "map1", value: .liveMap(mapValue))
+try await rootObject.set(key: "map2", value: .liveMap(mapValue))
+
+// map1 and map2 are different objects with different IDs
+let map1Instance = try rootObject.get(key: "map1").instance()
+let map2Instance = try rootObject.get(key: "map2").instance()
+if case .liveMap(let map1)? = map1Instance, case .liveMap(let map2)? = map2Instance {
+    print(map1.id == map2.id) // false
+}
+```
+
 ```java
 LiveMap mapValue = LiveMap.create(Map.of("theme", LiveMapValue.of("dark")));
 
@@ -130,13 +181,17 @@ if (map1Instance != null && map2Instance != null) {
 
 ## Get map values <a id="value"/>
 
-Access a `LiveMap` through a [PathObject](/docs/liveobjects/concepts/path-object) for path-based operations, or obtain a specific [Instance](/docs/liveobjects/concepts/instance) to work with the underlying object directly. <If lang="javascript">Use the `get()` method to navigate to entries within the map.</If><If lang="java">Cast with `asLiveMap()`, then use the `get()` method to navigate to entries within the map.</If>
+Access a `LiveMap` through a [PathObject](/docs/liveobjects/concepts/path-object) for path-based operations, or obtain a specific [Instance](/docs/liveobjects/concepts/instance) to work with the underlying object directly. <If lang="javascript">Use the `get()` method to navigate to entries within the map.</If><If lang="swift">Cast with `asLiveMap()`, then use the `get(key:)` method to navigate to entries within the map.</If><If lang="java">Cast with `asLiveMap()`, then use the `get()` method to navigate to entries within the map.</If>
 
 What you can do with the result depends on the type of value stored in the entry:
 
 <If lang="javascript">
 - For entries containing [primitive values](/docs/liveobjects/concepts/objects#primitive-types) or [`LiveCounter`](/docs/liveobjects/counter) objects, use the `value()` method to get the current value.
 - For entries containing nested `LiveMap` objects, use `get()` to continue navigating deeper into the structure.
+</If>
+<If lang="swift">
+- For entries containing [primitive values](/docs/liveobjects/concepts/objects#primitive-types) or [`LiveCounter`](/docs/liveobjects/counter) objects, infer the matching type and read its value (`asPrimitive().value()`, `asLiveCounter().value()`).
+- For entries containing nested `LiveMap` objects, cast with `asLiveMap()` to continue navigating deeper with `get(key:)`.
 </If>
 <If lang="java">
 - For entries containing [primitive values](/docs/liveobjects/concepts/objects#primitive-types) or [`LiveCounter`](/docs/liveobjects/counter) objects, infer the matching type and read its value (`asString().value()`, `asLiveCounter().value()`, and so on).
@@ -156,6 +211,22 @@ console.log(visits.value()); // e.g. 5
 // Instance access: reference to a specific map object
 const settingsInstance = rootObject.get('settings').instance();
 console.log(settingsInstance?.get('theme')?.value()); // e.g. 'dark' (primitive string)
+```
+
+```swift
+let rootObject = try await channel.object.get()
+
+// PathObject access: path-based operations that resolve at runtime
+let theme = rootObject.get(key: "settings").asLiveMap().get(key: "theme")
+print(try theme.asPrimitive().value()?.stringValue ?? "")            // e.g. "dark"
+print(try rootObject.get(key: "visits").asLiveCounter().value() ?? 0) // e.g. 5.0
+
+// Instance access: reference to a specific map object
+if case .liveMap(let settingsInstance)? = try rootObject.get(key: "settings").instance() {
+    if case .primitive(let themeInstance)? = try settingsInstance.get(key: "theme") {
+        print(try themeInstance.value.stringValue ?? "") // e.g. "dark" (primitive string)
+    }
+}
 ```
 
 ```java
@@ -182,6 +253,11 @@ if (settingsInstance != null) {
 Calling `value()` on a `PathObject` may return `undefined` if a primitive value or `LiveCounter` instance cannot be found at that path. Calling `value()` on an `Instance` returns `undefined` if the instance is not a primitive or `LiveCounter`. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object#read-values) and [`Instance`](/docs/liveobjects/concepts/instance#read-values).
 </Aside>
 </If>
+<If lang="swift">
+<Aside data-type="note">
+Typed reads such as `value()` on a `PathObject` return `nil` when the path is missing or holds a value of a different type. On an `Instance`, reads never return `nil` for a type mismatch, because you match the enum case before reading. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=swift#read-values) and [`Instance`](/docs/liveobjects/concepts/instance?lang=swift#read-values).
+</Aside>
+</If>
 <If lang="java">
 <Aside data-type="note">
 Typed reads such as `value()` on a `PathObject` return `null` when the path is missing or holds a value of a different type. On an `Instance`, typed reads never return `null`, because the `as*` cast has already checked the type. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object?lang=java#read-values) and [`Instance`](/docs/liveobjects/concepts/instance?lang=java#read-values).
@@ -204,6 +280,23 @@ console.log(settings.compact());
 const settingsInstance = rootObject.get('settings').instance();
 console.log(settingsInstance?.compact());
 // e.g. { theme: 'dark', fontSize: 14, notifications: true }
+```
+</Code>
+</If>
+
+<If lang="swift">
+Get a JSON representation of the map using the `compactJson()` method (the Swift SDK has no `compact()` equivalent):
+
+<Code>
+```swift
+// Get a PathObject to a LiveMap stored in 'settings'
+print(try rootObject.get(key: "settings").compactJson() as Any) // JSONValue, nil if unresolved
+// e.g. {"theme":"dark","fontSize":14.0,"notifications":true}
+
+// Get the Instance of a LiveMap stored in 'settings'
+if case .liveMap(let settingsInstance)? = try rootObject.get(key: "settings").instance() {
+    print(try settingsInstance.compactJson()) // non-optional JSONValue
+}
 ```
 </Code>
 </If>
@@ -256,6 +349,30 @@ await settingsInstance?.set('theme', 'dark');
 await settingsInstance?.set('fontSize', 14);
 ```
 
+```swift
+// PathObject: set values at path
+let settings = rootObject.get(key: "settings").asLiveMap()
+try await settings.set(key: "theme", value: "dark")
+try await settings.set(key: "fontSize", value: 14)
+try await settings.set(key: "notifications", value: true)
+
+// Set a nested map
+let advanced = LiveMap.create(entries: [
+    "debugMode": false,
+    "logLevel": "info"])
+try await settings.set(key: "advanced", value: .liveMap(advanced))
+
+// Set a counter
+let visitsCounter = LiveCounter.create(initialCount: 0)
+try await settings.set(key: "visits", value: .liveCounter(visitsCounter))
+
+// Instance: set values on specific map instance
+if case .liveMap(let settingsInstance)? = try rootObject.get(key: "settings").instance() {
+    try await settingsInstance.set(key: "theme", value: "dark")
+    try await settingsInstance.set(key: "fontSize", value: 14)
+}
+```
+
 ```java
 // PathObject: set values at path
 LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
@@ -300,6 +417,16 @@ const settingsInstance = rootObject.get('settings').instance();
 await settingsInstance?.remove('oldSetting');
 ```
 
+```swift
+// PathObject: remove key at path
+try await rootObject.get(key: "settings").asLiveMap().remove(key: "oldSetting")
+
+// Instance: remove key on specific map instance
+if case .liveMap(let settingsInstance)? = try rootObject.get(key: "settings").instance() {
+    try await settingsInstance.remove(key: "oldSetting")
+}
+```
+
 ```java
 // PathObject: remove key at path
 rootObject.get("settings").asLiveMap().remove("oldSetting").join();
@@ -327,6 +454,17 @@ const settingsInstance = rootObject.get('settings').instance();
 console.log(settingsInstance?.size()); // e.g. 5
 ```
 
+```swift
+// PathObject: get size at path - Int?, or nil when not a LiveMap
+let size = try rootObject.get(key: "settings").asLiveMap().size()
+print(size as Any) // e.g. 5
+
+// Instance: get size of specific map instance - non-optional
+if case .liveMap(let settingsInstance)? = try rootObject.get(key: "settings").instance() {
+    print(try settingsInstance.size) // e.g. 5
+}
+```
+
 ```java
 // PathObject: get size at path - Long, or null when not a LiveMap
 Long size = rootObject.get("settings").asLiveMap().size();
@@ -343,6 +481,11 @@ if (settingsInstance != null) {
 <If lang="javascript">
 <Aside data-type="note">
 Calling `size()` on a `PathObject` may return `undefined` if a `LiveMap` instance cannot be found at that path. Calling `size()` on an `Instance` returns `undefined` if the instance is not a `LiveMap`.
+</Aside>
+</If>
+<If lang="swift">
+<Aside data-type="note">
+Calling `size()` on a `PathObject` returns `nil` if a `LiveMap` instance cannot be found at that path. On a `LiveMapInstance`, `size` is a non-optional throwing property.
 </Aside>
 </If>
 <If lang="java">
@@ -381,6 +524,25 @@ if (settingsInstance) {
   for (const value of settingsInstance.values()) {
     console.log('Value:', value.value());
   }
+}
+```
+
+```swift
+// PathObject: iterate with PathObject values
+let settings = rootObject.get(key: "settings").asLiveMap()
+for (key, value) in try settings.entries() {
+    print("\(key): \(String(describing: try value.compactJson()))")
+}
+for key in try settings.keys()     { print("Key: \(key)") }
+for value in try settings.values() { print("Value: \(String(describing: try value.compactJson()))") }
+
+// Instance: iterate with Instance values
+if case .liveMap(let settingsInstance)? = try rootObject.get(key: "settings").instance() {
+    for (key, value) in try settingsInstance.entries() {
+        print("\(key): \(try value.compactJson())")
+    }
+    for key in try settingsInstance.keys()     { print("Key: \(key)") }
+    for value in try settingsInstance.values() { print("Value: \(try value.compactJson())") }
 }
 ```
 
@@ -471,6 +633,27 @@ if (settingsInstance) {
 }
 ```
 
+```swift
+// PathObject: observe location - tracks changes even if map instance is replaced
+let settings = rootObject.get(key: "settings").asLiveMap()
+let subscription = try settings.subscribe { _ in
+    print("Settings: \(String(describing: try? settings.compactJson()))")
+}
+
+// Later, stop listening to changes
+subscription.unsubscribe()
+
+// Instance: track specific map instance - follows it even if moved in object tree
+if case .liveMap(let settingsInstance)? = try rootObject.get(key: "settings").instance() {
+    let instanceSub = try settingsInstance.subscribe { _ in
+        print("This settings instance changed")
+    }
+
+    // Later, stop listening to changes
+    instanceSub.unsubscribe()
+}
+```
+
 ```java
 // PathObject: observe location - tracks changes even if map instance is replaced
 LiveMapPathObject settings = rootObject.get("settings").asLiveMap();
@@ -522,254 +705,11 @@ if (settingsInstance) {
 </Code>
 </If>
 
+<If lang="swift">
+Alternatively, both `LiveMapPathObject` and `LiveMapInstance` expose an `events()` method returning an [`AsyncStream`](https://developer.apple.com/documentation/swift/asyncstream) that you can consume with `for await`. Breaking out of the loop, or cancelling the enclosing task, automatically unsubscribes. See the [quickstart](/docs/liveobjects/quickstart/swift#step-6) for an example.
+</If>
 <If lang="java">
 The Java SDK has no `subscribeIterator()` equivalent; a listener plus the returned `Subscription` is the only subscription form.
 </If>
-
-</If>
-
-<If lang="swift">
-
-## Create LiveMap <a id="create"/>
-
-A `LiveMap` instance can be created using the `channel.objects.createMap()` method. It must be stored inside another `LiveMap` object that is reachable from the [root object](/docs/liveobjects/concepts/objects#root-object).
-
-`channel.objects.createMap()` is asynchronous, as the client sends the create operation to the Ably system and waits for an acknowledgment of the successful map creation.
-
-<Aside data-type='note'>
-Note that you need to first [attach to the channel](/docs/liveobjects/quickstart/javascript#step-3) before creating a new `LiveMap` instance, as this operation requires sending a message to the Ably system.
-</Aside>
-
-<Code>
-```swift
-let map = try await channel.objects.createMap()
-try await root.set(key: "myMap", value: .liveMap(map))
-```
-</Code>
-
-Optionally, you can specify an initial key/value structure when creating the map:
-
-<Code>
-```swift
-// Pass a Dictionary reflecting the initial state
-let map = try await channel.objects.createMap(entries: ["foo": "bar", "baz": 42])
-// You can also pass other objects as values for keys
-try await channel.objects.createMap(entries: ["nestedMap": .liveMap(map)])
-```
-</Code>
-
-## Get value for a key <a id="get"/>
-
-Get the current value for a key in a map using the `LiveMap.get()` method:
-
-<Code>
-```swift
-let value = try map.get(key: "my-key")
-print("Value for my-key: \(String(describing: value))")
-```
-</Code>
-
-## Subscribe to data updates <a id="subscribe-data"/>
-
-You can subscribe to data updates on a map to receive realtime changes made by you or other clients.
-
-<If lang="swift">
-<Aside data-type='note'>
-`LiveMap` mutation methods send operations to the Ably system and apply changes locally as soon as the operations are acknowledged. When a mutation method returns, the operation has been applied and you can immediately read the updated state. You will also be notified via subscription when the map is updated.
-</Aside>
-</If>
-
-Subscribe to data updates on a map using the `LiveMap.subscribe()` method:
-
-<Code>
-```swift
-try map.subscribe { update, _ in
-    do {
-        print("Map updated: \(try map.entries)")
-    } catch {
-        // Error handling of map.entries omitted for brevity
-    }
-    print("Update details: \(update)")
-}
-```
-</Code>
-
-The update object provides details about the change, listing the keys that were changed and indicating whether they were updated (value changed) or removed from the map.
-
-It may also include the client ID of the client that made the change, if the change can be attributed to a specific client. For example, the client ID may be missing if the update was triggered by data resynchronization after a disconnection and the change occurred while the client was offline.
-
-Example structure of an update object when the key `foo` is updated and the key `bar` is removed, made by a client with the ID `my-client`:
-
-<Code>
-```json
-{
-  "update": {
-    "foo": "updated",
-    "bar": "removed"
-  },
-  "clientId": "my-client"
-}
-```
-</Code>
-
-### Unsubscribe from data updates <a id="unsubscribe-data"/>
-
-Use the `unsubscribe()` function returned in the `subscribe()` response to remove a map update listener:
-
-<Code>
-```swift
-// Initial subscription
-let subscriptionResponse = try map.subscribe { _, _ in
-    print("Map updated")
-}
-// To remove the listener
-subscriptionResponse.unsubscribe()
-```
-</Code>
-
-<If lang="swift">
-To remove a map update listener from _inside_ the listener function, you can call `unsubscribe()` on the subscription response that is passed as the second argument to the listener function:
-
-<Code>
-```swift
-try map.subscribe { _, subscriptionResponse in
-    // Remove the listener so that this callback
-    // no longer gets called
-    subscriptionResponse.unsubscribe()
-}
-```
-</Code>
-</If>
-
-Use the `LiveMap.unsubscribeAll()` method to deregister all map update listeners:
-
-<Code>
-```swift
-map.unsubscribeAll();
-```
-</Code>
-
-## Set keys in a LiveMap <a id="set"/>
-
-Set a value for a key in a map by calling <If lang="swift">`LiveMap.set(key:value:)`</If>. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
-
-Keys in a map can contain numbers, strings, booleans, <If lang="swift">`Data`</If>, JSON-serializable objects or arrays and other `LiveMap` and `LiveCounter` objects.
-
-This operation is asynchronous, as the client sends the corresponding update operation to the Ably system and waits for acknowledgment of the successful map key update.
-
-<Code>
-```swift
-try await map.set(key: "foo", value: "bar")
-try await map.set(key: "baz", value: 42)
-
-// Can also set a reference to another object
-let counter = try await channel.objects.createCounter()
-try await map.set(key: "counter", value: .liveCounter(counter))
-```
-</Code>
-
-## Remove a key from a LiveMap <a id="remove"/>
-
-Remove a key from a map by calling <If lang="swift">`LiveMap.remove(key:)`</If>. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
-
-This operation is asynchronous, as the client sends the corresponding remove operation to the Ably system and waits for acknowledgment of the successful map key removal.
-
-<Code>
-```swift
-try await map.remove(key: "foo")
-```
-</Code>
-
-## Get the number of entries in a LiveMap <a id="size"/>
-
-Get the number of entries in a map using <If lang="swift">`LiveMap.size`</If>:
-
-<Code>
-```swift
-let map = try await channel.objects.createMap(entries: ["foo": "bar", "baz": "qux"])
-print(try map.size) // e.g. 2
-```
-</Code>
-
-## Iterate over key/value pairs <a id="iterate"/>
-
-Iterate over key/value pairs, keys or values using the <If lang="swift">`LiveMap.entries`, `LiveMap.keys` and `LiveMap.values` properties</If> respectively.
-
-<If lang="swift">
-These properties are all `Array`-valued. Note that they do not guarantee that entries are returned in insertion order.
-</If>
-
-<Code>
-```swift
-for (key, value) in try map.entries {
-    print("Key: \(key), Value: \(value)")
-}
-
-for key in try map.keys {
-    print("Key: \(key)")
-}
-
-for value in try map.values {
-    print("Value: \(value)")
-}
-```
-</Code>
-
-## Subscribe to lifecycle events <a id="subscribe-lifecycle"/>
-
-Subscribe to lifecycle events on a map using the <If lang="swift">`LiveMap.on(event:callback:)`</If> method:
-
-<Code>
-```swift
-map.on(event: .deleted) { _ in
-  print("Map has been deleted")
-}
-```
-</Code>
-
-Read more about [objects lifecycle events](/docs/liveobjects/lifecycle#objects).
-
-### Unsubscribe from lifecycle events <a id="unsubscribe-lifecycle"/>
-
-Use the `off()` function returned in the `on()` response to remove a lifecycle event listener:
-
-<Code>
-```swift
-// Initial subscription
-let eventResponse = map.on(event: .deleted) { _ in
-  print("Map deleted")
-}
-// To remove the listener
-eventResponse.off()
-```
-</Code>
-
-Use the `LiveMap.offAll()` method to deregister all lifecycle event listeners:
-
-<Code>
-```swift
-map.offAll()
-```
-</Code>
-
-## Create nested structures <a id="composability"/>
-
-A `LiveMap` can store other `LiveMap` or `LiveCounter` objects as values for its keys, enabling you to build complex, hierarchical object structure. This enables you to represent complex data models in your applications while ensuring realtime synchronization across clients.
-
-<Code>
-```swift
-// Create a hierarchy of objects using LiveMap
-let counter = try await channel.objects.createCounter()
-let map = try await channel.objects.createMap(entries: ["nestedCounter": .liveCounter(counter)])
-let outerMap = try await channel.objects.createMap(entries: ["nestedMap": .liveMap(map)])
-try await root.set(key: "outerMap", value: .liveMap(outerMap))
-
-// resulting structure:
-// root (LiveMap)
-// └── outerMap (LiveMap)
-//     └── nestedMap (LiveMap)
-//         └── nestedCounter (LiveCounter)
-```
-</Code>
 
 </If>

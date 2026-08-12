@@ -55,11 +55,9 @@ await rootObject.get('user').remove('status');
 ```
 
 ```swift
-// Set a value for a key
-try await map.set(key: "username", value: "alice")
-
-// Remove a key
-try await map.remove(key: "username")
+// rootObject obtained from channel.object.get()
+try await rootObject.get(key: "user").asLiveMap().set(key: "username", value: "alice")
+try await rootObject.get(key: "user").asLiveMap().remove(key: "status")
 ```
 
 ```java
@@ -89,11 +87,8 @@ await rootObject.get('score').decrement(2);
 ```
 
 ```swift
-// Increment counter by 5
-try await counter.increment(amount: 5)
-
-// Decrement counter by 2
-try await counter.decrement(amount: 2)
+try await rootObject.get(key: "visits").asLiveCounter().increment(amount: 5)
+try await rootObject.get(key: "score").asLiveCounter().decrement(amount: 2)
 ```
 
 ```java
@@ -106,7 +101,7 @@ rootObject.get("score").asLiveCounter().decrement(2).join();
 
 Create operations are used to instantiate new objects of a given type.
 
-<If lang="javascript,java">
+<If lang="javascript,swift,java">
 Use `LiveMap.create()` and `LiveCounter.create()` to create new objects. These methods create special value types that can be assigned directly to paths:
 
 <Code>
@@ -129,6 +124,42 @@ await rootObject.set('profile', LiveMap.create({
     notifications: true
   })
 }));
+```
+
+```swift
+// Create a map with initial values
+let user = LiveMap.create(entries: [
+    "username": "alice",
+    "status": "online",
+])
+
+// Assign it to the 'user' key on the channel object
+try await rootObject.set(key: "user", value: .liveMap(user))
+
+// Create a counter with initial value
+let scoreCounter = LiveCounter.create(initialCount: 100)
+
+// Assign it to the 'score' key on the channel object
+try await rootObject.set(key: "score", value: .liveCounter(scoreCounter))
+
+// Create a map for the nested settings
+let settings = LiveMap.create(entries: [
+    "theme": "dark",
+    "notifications": true,
+])
+
+// Create a counter for the nested score
+let profileScore = LiveCounter.create(initialCount: 0)
+
+// Compose the profile entries, referencing the nested objects
+let profile = LiveMap.create(entries: [
+    "name": "Alice",
+    "score": .liveCounter(profileScore),
+    "settings": .liveMap(settings),
+])
+
+// Assign the profile map to the channel object
+try await rootObject.set(key: "profile", value: .liveMap(profile))
 ```
 
 ```java
@@ -175,34 +206,11 @@ Objects created with `LiveMap.create()` and `LiveCounter.create()` are automatic
 </Aside>
 </If>
 
-<If lang="swift">
-A create operation can optionally specify an initial value for the object.
-
-<Code>
-```swift
-// Create a map with initial values
-let userMap = try await channel.objects.createMap(entries: [
-    "username": "alice",
-    "status": "online",
-])
-
-// Create a counter with initial value
-let scoreCounter = try await channel.objects.createCounter(count: 100)
-```
-</Code>
-
-When a create operation is processed, an [object ID](/docs/liveobjects/concepts/objects#object-ids) for the new object instance is automatically generated for the object.
-
-<Aside data-type='important'>
-Newly created objects are not automatically [reachable](/docs/liveobjects/concepts/objects#reachability) from the <If lang="javascript">channel object</If><If lang="swift">root object</If>. You must explicitly add them to the object tree to prevent garbage collection.
-</Aside>
-</If>
-
 ## Object IDs <a id="object-ids"/>
 
 Every operation is expressed relative to a specific object instance, identified by its [object ID](/docs/liveobjects/concepts/objects#object-ids), which determines which object the operation is applied to.
 
-<If lang="javascript,java">
+<If lang="javascript,swift,java">
 When using a `PathObject`, the specific object instance at the given path is evaluated at the time a method is called that updates the object. The client library will then publish an operation targeting the resolved object.
 </If>
 
@@ -222,8 +230,14 @@ if (userInstance) {
 ```
 
 ```swift
-// The published operation targets the object ID of the `userMap` object instance
-try await userMap.set(key: "username", "alice")
+// The operation targets the object ID of whatever is at 'user' right now
+try await rootObject.get(key: "user").asLiveMap().set(key: "username", value: "alice")
+
+// Inspect the specific instance and its ID
+if case .liveMap(let userMap)? = try rootObject.get(key: "user").instance() {
+    print("Object ID: \(userMap.id)")
+    try await userMap.set(key: "username", value: "alice")
+}
 ```
 
 ```java
@@ -240,49 +254,7 @@ if (userInstance != null) {
 ```
 </Code>
 
-<If lang="swift">
-Therefore it is important that you obtain an up-to-date object instance before performing operations on an object. For example, you can [subscribe](/docs/liveobjects/map#subscribe-data) to a `LiveMap` instance to ensure you always have an up-to-date reference to any child objects in the map:
-
-<Code>
-{ /* We can't map the JS example directly because Swift concurrency prevents us from mutating local variables in the way that the JS example does, so I tried to show how we might need to handle this scenario in a real-world app where things are isolated to the main actor. But it's long and ugly. */ }
-```swift
-struct MyView: View {
-    var root: any LiveMap
-    @State private var myCounter: (any LiveCounter)?
-
-    var body: some View {
-        Button("Increment the counter") {
-            Task {
-                try await myCounter?.increment(amount: 1)
-            }
-        }.onAppear {
-            do {
-                myCounter = try root.get(key: "myCounter")?.liveCounterValue
-
-                // We keep a reference to the latest value that the root map
-                // stores at the "myCounter" key, to ensure that upon tapping
-                // the button, we increment the correct counter.
-
-                try root.subscribe { _, _ in
-                    MainActor.assumeIsolated {
-                        do {
-                            myCounter = try root.get(key: "myCounter")?.liveCounterValue
-                        } catch {
-                            // Error handling of root.get(key:) omitted for brevity
-                        }
-                    }
-                }
-            } catch {
-                // Error handling of root.get(key:) omitted for brevity
-            }
-        }
-    }
-}
-```
-</Code>
-</If>
-
-In the [REST API](/docs/liveobjects/rest-api-usage#updating-objects-by-id), the relationship between operations and object IDs is made explicit:
+In the [REST API](/docs/liveobjects/rest-api-usage#update-by-id), the relationship between operations and object IDs is made explicit:
 
 <Code>
 ```shell
@@ -311,7 +283,7 @@ curl -X POST https://main.realtime.ably.net/channels/my-channel/objects \
 
 </If>
 
-<If lang="javascript,java">
+<If lang="javascript,swift,java">
 
 ## Object message properties <a id="properties"/>
 
@@ -344,9 +316,9 @@ The `operation` field of an `ObjectMessage` contains an `ObjectOperation` with t
 
 | Property | Description |
 |----------|-------------|
-| **action** | The operation action. <If lang="javascript">One of: `'map.create'`, `'map.set'`, `'map.remove'`, `'counter.create'`, `'counter.inc'`, or `'object.delete'`</If><If lang="java">An `ObjectOperationAction` enum value: `MAP_CREATE`, `MAP_SET`, `MAP_REMOVE`, `MAP_CLEAR`, `COUNTER_CREATE`, `COUNTER_INC`, `OBJECT_DELETE`, or `UNKNOWN` (future-compatibility fallback)</If> |
+| **action** | The operation action. <If lang="javascript">One of: `'map.create'`, `'map.set'`, `'map.remove'`, `'counter.create'`, `'counter.inc'`, or `'object.delete'`</If><If lang="swift">An `ObjectOperationAction` enum value: `mapCreate`, `mapSet`, `mapRemove`, `counterCreate`, `counterInc`, `objectDelete`, or `mapClear`</If><If lang="java">An `ObjectOperationAction` enum value: `MAP_CREATE`, `MAP_SET`, `MAP_REMOVE`, `MAP_CLEAR`, `COUNTER_CREATE`, `COUNTER_INC`, `OBJECT_DELETE`, or `UNKNOWN` (future-compatibility fallback)</If> |
 | **objectId** | The ID of the object the operation was applied to |
-| **mapCreate** | Present for <If lang="javascript">`'map.create'`</If><If lang="java">`MAP_CREATE`</If> operations. Defines the initial value of the map object with `semantics` (conflict-resolution strategy, <If lang="javascript">one of: `'lww'`</If><If lang="java">an `ObjectsMapSemantics` enum value: `LWW`, or `UNKNOWN` as a future-compatibility fallback</If>) and `entries` (initial key-value pairs, where each value is an [`ObjectsMapEntry`](#objects-map-entry)) |
+| **mapCreate** | Present for <If lang="javascript">`'map.create'`</If><If lang="swift">`mapCreate`</If><If lang="java">`MAP_CREATE`</If> operations. Defines the initial value of the map object with `semantics` (conflict-resolution strategy, <If lang="javascript">one of: `'lww'`</If><If lang="swift">an `ObjectsMapSemantics` enum value: `lww`</If><If lang="java">an `ObjectsMapSemantics` enum value: `LWW`, or `UNKNOWN` as a future-compatibility fallback</If>) and `entries` (initial key-value pairs, where each value is an [`ObjectsMapEntry`](#objects-map-entry)) |
 | **mapSet** | Present for `'map.set'` operations. Contains `key` (the key that was set) and `value` (an [`ObjectData`](#object-data) representing the value assigned to the key) |
 | **mapRemove** | Present for `'map.remove'` operations. Contains `key` (the key that was removed) |
 | **counterCreate** | Present for `'counter.create'` operations. Defines the initial value of the counter object with `count` (initial counter value) |
@@ -372,7 +344,7 @@ An `ObjectData` object represents a value assigned to a map key. It is used as t
 |----------|-------------|
 | **objectId** | A reference to another object (such as a `LiveMap` or `LiveCounter`) by its object ID |
 | **boolean** | A boolean leaf value |
-| **bytes** | A binary leaf value (<If lang="javascript">`ArrayBuffer` in browser environments, or `Buffer` in Node.js</If><If lang="java">`byte[]`</If>) |
+| **bytes** | A binary leaf value (<If lang="javascript">`ArrayBuffer` in browser environments, or `Buffer` in Node.js</If><If lang="swift">`Data`</If><If lang="java">`byte[]`</If>) |
 | **number** | A numeric leaf value |
 | **string** | A string leaf value |
 | **json** | A parsed JSON object or array leaf value |

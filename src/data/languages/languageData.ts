@@ -52,7 +52,7 @@ export default {
   },
   liveObjects: {
     javascript: '2.21',
-    swift: '0.4',
+    swift: '1.2',
     java: '1.8',
   },
   liveSync: {
