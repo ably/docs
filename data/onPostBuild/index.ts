@@ -1,6 +1,7 @@
 import { GatsbyNode, Reporter } from 'gatsby';
 import { onPostBuild as llmstxt } from './llmstxt';
 import { onPostBuild as transpileMdxToMarkdown } from './transpileMdxToMarkdown';
+import { onPostBuild as changelogFeed } from './changelogFeed';
 import { onPostBuild as compressAssets } from './compressAssets';
 import { validateRedirectFile, REDIRECT_FILE_PATH } from '../utils/validateRedirectFile';
 
@@ -35,5 +36,6 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async (args) => {
   // Run all onPostBuild functions in sequence
   await llmstxt(args);
   await transpileMdxToMarkdown(args);
+  await changelogFeed(args);
   await compressAssets(args);
 };

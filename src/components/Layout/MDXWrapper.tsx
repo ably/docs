@@ -20,6 +20,9 @@ import { useCopyableHeaders } from './mdx/headers';
 import { Table, NestedTableProvider } from './mdx/NestedTable';
 import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
+import ChangelogHeader from '../Changelog/ChangelogHeader';
+import { CHANGELOG_DEFAULT_OG_IMAGE, CHANGELOG_DEFAULT_OG_IMAGE_ALT } from '../Changelog/og-image';
+import { absolutizeUrl } from '../Changelog/absolutize-url';
 import Admonition from './mdx/Admonition';
 import { MethodSignature } from './mdx/MethodSignature';
 import { Tabs, Tab } from './mdx/Tabs';
@@ -240,8 +243,26 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const identifier = getFrontmatter(frontmatter, 'identifier') as string;
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
-  const { canonicalUrl } = useSiteMetadata();
+  // Changelog entries use a dedicated header (date + product tags) in place of the
+  // standard PageHeader. The template is assigned in data/onCreatePage.ts.
+  const isChangelogEntry = pageContext.layout?.template === 'changelog-entry';
+  const changelogDate = getFrontmatter(frontmatter, 'date') as string;
+
+  const { canonicalUrl, siteUrl } = useSiteMetadata();
   const canonical = canonicalUrl(location.pathname);
+
+  // Social/OG image. Any frontmatter `meta_image` is resolved to an absolute URL.
+  // Changelog entries fall back to a shared default image; other pages set an
+  // image only when they explicitly provide one.
+  const rawMetaImage = getFrontmatter(frontmatter, 'meta_image') as string;
+  const ogImage = rawMetaImage
+    ? absolutizeUrl(rawMetaImage, siteUrl)
+    : isChangelogEntry
+      ? CHANGELOG_DEFAULT_OG_IMAGE
+      : undefined;
+  const ogImageAlt =
+    (getFrontmatter(frontmatter, 'meta_image_alt') as string) ||
+    (isChangelogEntry && ogImage ? CHANGELOG_DEFAULT_OG_IMAGE_ALT : '');
 
   // Generate markdown URL for noscript fallback (uses shared utility for consistent URL handling)
   const markdownUrl = getMarkdownUrl(canonical);
@@ -313,6 +334,8 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
         description={description}
         keywords={keywords}
         structuredData={structuredData}
+        ogImage={ogImage}
+        ogImageAlt={ogImageAlt || undefined}
       />
       {/* Fallback for non-JS clients (LLMs, bots, screen readers with JS disabled) */}
       <noscript>
@@ -365,17 +388,21 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
               RequiredBadge,
             }}
           >
-            <PageHeader
-              title={title}
-              intro={intro}
-              subtitle={
-                identifier ? (
-                  <code className="inline-flex items-center rounded border-[0.5px] border-neutral-500 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-1200 px-1.5 py-[3px] font-mono font-medium text-[20px] leading-normal text-neutral-1000 dark:text-neutral-300">
-                    {identifier}
-                  </code>
-                ) : undefined
-              }
-            />
+            {isChangelogEntry ? (
+              <ChangelogHeader title={title} date={changelogDate} />
+            ) : (
+              <PageHeader
+                title={title}
+                intro={intro}
+                subtitle={
+                  identifier ? (
+                    <code className="inline-flex items-center rounded border-[0.5px] border-neutral-500 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-1200 px-1.5 py-[3px] font-mono font-medium text-[20px] leading-normal text-neutral-1000 dark:text-neutral-300">
+                      {identifier}
+                    </code>
+                  ) : undefined
+                }
+              />
+            )}
             {children}
           </MarkdownProvider>
         </NestedTableProvider>

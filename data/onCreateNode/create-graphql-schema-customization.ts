@@ -27,6 +27,10 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       meta_description: String
       meta_keywords: String
       redirect_from: [String]
+      date: Date @dateformat
+      products: [String]
+      meta_image: String
+      meta_image_alt: String
     }
     type Error implements Node {
       message: String
